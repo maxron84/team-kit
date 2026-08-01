@@ -1,0 +1,240 @@
+#!/usr/bin/env bash
+# install.sh — installiert das T.E.A.M. in ein Zielprojekt.
+#
+# Aufruf:  bash install.sh <zielpfad> [--nicht-interaktiv] [--force]
+#
+#   --nicht-interaktiv  Keine Rückfragen; Werte aus den TEAM_INIT_*-Umgebungs-
+#                       variablen oder den Defaults. Für Skripte und Tests.
+#   --force             Vorhandene Dateien überschreiben (Standard: überspringen).
+#
+# Umgebungsvariablen für den nicht-interaktiven Betrieb:
+#   TEAM_INIT_PROJEKT TEAM_INIT_PRODUKTIVCODE TEAM_INIT_TEST_ORDNER
+#   TEAM_INIT_PLAN_ORDNER TEAM_INIT_SMOKE_TEST TEAM_INIT_TECH_STACK
+#
+# Der Installer ist idempotent: ein zweiter Lauf überschreibt nichts, sondern
+# meldet, was bereits vorhanden ist.
+set -euo pipefail
+
+KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ZIEL=""
+INTERAKTIV=1
+FORCE=0
+
+for arg in "$@"; do
+    case "$arg" in
+        --nicht-interaktiv) INTERAKTIV=0 ;;
+        --force)            FORCE=1 ;;
+        -*) echo "Unbekannte Option: $arg" >&2; exit 2 ;;
+        *)  ZIEL="$arg" ;;
+    esac
+done
+
+rot()  { printf '\033[31m%s\033[0m\n' "$*"; }
+gruen(){ printf '\033[32m%s\033[0m\n' "$*"; }
+gelb() { printf '\033[33m%s\033[0m\n' "$*"; }
+kopf() { printf '\n\033[1m%s\033[0m\n' "$*"; }
+
+[ -n "$ZIEL" ] || { rot "FEHLER: Kein Zielpfad angegeben."; echo "Aufruf: bash install.sh <zielpfad>"; exit 2; }
+ZIEL="$(cd "$ZIEL" 2>/dev/null && pwd)" || { rot "FEHLER: Zielpfad existiert nicht: $ZIEL"; exit 2; }
+
+# ---------------------------------------------------------------- A.1 Vorbedingungen
+kopf "A.1 — Vorbedingungen"
+if ! git -C "$ZIEL" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    rot "FEHLER: $ZIEL ist kein Git-Repository."
+    echo "  Die Rollen committen, rollen zurück und prüfen Commit-Bereiche —"
+    echo "  ohne Git funktioniert davon nichts. Zuerst: git -C \"$ZIEL\" init"
+    exit 2
+fi
+gruen "  ✓ Git-Repository"
+
+if command -v claude >/dev/null 2>&1; then
+    gruen "  ✓ Claude-CLI: $(claude --version 2>/dev/null | head -1)"
+else
+    gelb "  ! Claude-CLI nicht gefunden — die Dateien werden trotzdem installiert,"
+    gelb "    aber kein Loop kann laufen, bis 'claude' im PATH ist."
+fi
+
+if [ -f "$HOME/.config/claude-team/api-key" ] || [ -f "$HOME/.config/claude-team/auth-mode" ]; then
+    gruen "  ✓ Auth-Konfiguration unter ~/.config/claude-team/"
+else
+    gelb "  ! Keine Auth-Konfiguration gefunden. Vor dem ersten Lauf:"
+    gelb "    bash ~/.claude/scripts/team-auth-setup.sh"
+fi
+
+BESTEHENDER_LOOP=""
+for f in ralph.sh team-lib.sh vollautomatik.sh; do
+    [ -e "$ZIEL/$f" ] && BESTEHENDER_LOOP="$BESTEHENDER_LOOP $f"
+done
+if [ -n "$BESTEHENDER_LOOP" ] && [ "$FORCE" -eq 0 ]; then
+    gelb "  ! Vorhandene Team-Dateien:$BESTEHENDER_LOOP"
+    gelb "    Sie bleiben unangetastet (--force überschreibt)."
+fi
+
+# ---------------------------------------------------------------- Aufnahme-Interview
+frage() {  # frage <variable> <text> <default>
+    local var="$1" text="$2" vorgabe="$3" eingabe=""
+    local env_name="TEAM_INIT_${var}"
+    if [ -n "${!env_name:-}" ]; then printf -v "$var" '%s' "${!env_name}"; return; fi
+    if [ "$INTERAKTIV" -eq 0 ]; then printf -v "$var" '%s' "$vorgabe"; return; fi
+    if [ -n "$vorgabe" ]; then read -r -p "  $text [$vorgabe]: " eingabe || true
+    else                     read -r -p "  $text: " eingabe || true; fi
+    printf -v "$var" '%s' "${eingabe:-$vorgabe}"
+}
+
+kopf "Aufnahme-Interview — fünf Werte, alles Weitere per Feld-Default"
+frage PROJEKT        "Projektname"                    "$(basename "$ZIEL")"
+frage PRODUKTIVCODE  "Produktivcode-Ordner (tabu für Red Team)" "src/"
+frage TEST_ORDNER    "Test-Ordner"                    "tests/"
+frage PLAN_ORDNER    "Plan-Ordner"                    "plans/"
+if [ "$INTERAKTIV" -eq 1 ]; then
+    echo "  Smoke-Test: der EINE Befehl, mit dem eine Rolle prüft, ob das Projekt heil ist."
+    echo "  Leer lassen, wenn es ihn noch nicht gibt — dann ist er Stufe 1 der ersten Kaskade."
+fi
+frage SMOKE_TEST     "Smoke-Test-Befehl"              ""
+frage TECH_STACK     "Tech-Stack (eine Zeile)"        "TODO: in CLAUDE.md nachtragen"
+
+PRODUKTIVCODE="${PRODUKTIVCODE%/}/"
+TEST_ORDNER="${TEST_ORDNER%/}/"
+PLAN_ORDNER="${PLAN_ORDNER%/}/"
+DEPLOY="TODO: in CLAUDE.md nachtragen"
+DEPLOY_AUSNAHMEN="keine"
+
+# ---------------------------------------------------------------- Kopieren
+kopf "A.2 — Dateien installieren"
+GESCHRIEBEN=0; UEBERSPRUNGEN=0
+
+kopiere() {  # kopiere <quelle> <ziel-relativ> [modus]
+    local quelle="$1" rel="$2" modus="${3:-644}" ziel="$ZIEL/$2"
+    mkdir -p "$(dirname "$ziel")"
+    if [ -e "$ziel" ] && [ "$FORCE" -eq 0 ]; then
+        UEBERSPRUNGEN=$((UEBERSPRUNGEN + 1)); return
+    fi
+    cp "$quelle" "$ziel"; chmod "$modus" "$ziel"
+    GESCHRIEBEN=$((GESCHRIEBEN + 1))
+}
+
+schreibe() {  # schreibe <ziel-relativ> <inhalt>
+    local ziel="$ZIEL/$1"
+    mkdir -p "$(dirname "$ziel")"
+    if [ -e "$ziel" ] && [ "$FORCE" -eq 0 ]; then
+        UEBERSPRUNGEN=$((UEBERSPRUNGEN + 1)); return
+    fi
+    printf '%s' "$2" > "$ziel"
+    GESCHRIEBEN=$((GESCHRIEBEN + 1))
+}
+
+# Platzhalter in einer Datei ersetzen
+fuelle() {
+    local datei="$ZIEL/$1"
+    [ -f "$datei" ] || return 0
+    python3 - "$datei" "$PROJEKT" "$PRODUKTIVCODE" "$TEST_ORDNER" "$PLAN_ORDNER" \
+                       "$SMOKE_TEST" "$TECH_STACK" "$DEPLOY" "$DEPLOY_AUSNAHMEN" <<'PY'
+import sys, pathlib
+d, projekt, prod, test, plan, smoke, stack, deploy, ausn = sys.argv[1:10]
+p = pathlib.Path(d); t = p.read_text(encoding="utf-8")
+for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
+             ("{{TEST_ORDNER}}", test), ("{{PLAN_ORDNER}}", plan.rstrip("/")),
+             ("{{SMOKE_TEST}}", smoke or "TODO: noch keiner — Stufe 1 der ersten Kaskade"),
+             ("{{TECH_STACK}}", stack), ("{{DEPLOY}}", deploy),
+             ("{{DEPLOY_AUSNAHMEN}}", ausn)]:
+    t = t.replace(a, b)
+p.write_text(t, encoding="utf-8")
+PY
+}
+
+# Kern-Skripte in die Repo-Wurzel (Ablage-Konvention: Entrypoints sichtbar oben)
+for f in team-lib.sh team.config.sh ralph.sh frank.sh axel.sh harry.sh marv.sh \
+         redteam.sh vollautomatik.sh halbautomatik.sh team-status.sh; do
+    kopiere "$KIT/kern/$f" "$f" 755
+done
+# Werkzeuge in scripts/
+for f in kosten.py beutebuch.py; do
+    kopiere "$KIT/kern/scripts/$f" "scripts/$f" 755
+done
+# Rollen-Briefings
+for f in "$KIT"/prompts/rolle-*.md; do
+    kopiere "$f" "prompts/$(basename "$f")"
+done
+# Team-Regressionstests
+for f in "$KIT"/tests/test_*.py; do
+    kopiere "$f" "${TEST_ORDNER}$(basename "$f")"
+done
+gruen "  ✓ Kern, Werkzeuge, Briefings, $(ls "$KIT"/tests/test_*.py | wc -l) Regressionstests"
+
+# ---------------------------------------------------------------- A.0 Bootstrap
+kopf "A.0 — Bootstrap-Dateien"
+kopiere "$KIT/bootstrap/CLAUDE.md.vorlage"    "CLAUDE.md"
+kopiere "$KIT/bootstrap/CHANGELOG.md"          "CHANGELOG.md"
+kopiere "$KIT/bootstrap/beutebuch.md"          "${PLAN_ORDNER}beutebuch.md"
+kopiere "$KIT/bootstrap/roadmap-skizzen.md"    "${PLAN_ORDNER}roadmap-skizzen.md"
+kopiere "$KIT/bootstrap/backlog.md"            "${PLAN_ORDNER}backlog.md"
+schreibe "${PLAN_ORDNER}ermittlungsakten/.gitkeep" ""
+schreibe ".budget-ledger" ""
+schreibe ".ralph-state" "1
+"
+mkdir -p "$ZIEL/${TEST_ORDNER}"
+gruen "  ✓ CLAUDE.md, CHANGELOG, Beutebuch (mit Vorlage-Block), Roadmap, Backlog, Ledger, State"
+
+# Platzhalter füllen
+for d in CLAUDE.md team.config.sh CHANGELOG.md \
+         "${PLAN_ORDNER}roadmap-skizzen.md" "${PLAN_ORDNER}backlog.md"; do
+    fuelle "$d"
+done
+
+# ---------------------------------------------------------------- .gitignore
+if ! grep -q "T.E.A.M.-Loop-Laufzeitartefakte" "$ZIEL/.gitignore" 2>/dev/null; then
+    cat "$KIT/bootstrap/gitignore.fragment" >> "$ZIEL/.gitignore"
+    gruen "  ✓ .gitignore ergänzt"
+else
+    gelb "  · .gitignore enthält den Block bereits"
+fi
+
+# ---------------------------------------------------------------- Selbsttest
+kopf "Selbsttest"
+FEHLER=0
+for f in "$ZIEL"/*.sh; do
+    bash -n "$f" || { rot "  ✗ Syntaxfehler: $(basename "$f")"; FEHLER=1; }
+done
+[ "$FEHLER" -eq 0 ] && gruen "  ✓ Alle Shell-Skripte syntaktisch korrekt"
+
+if python3 -m py_compile "$ZIEL"/scripts/*.py 2>/dev/null; then
+    gruen "  ✓ Python-Werkzeuge kompilieren"
+else
+    rot "  ✗ Python-Werkzeuge fehlerhaft"; FEHLER=1
+fi
+
+if command -v pytest >/dev/null 2>&1; then
+    if (cd "$ZIEL" && pytest -q "${TEST_ORDNER}" >/tmp/team-init-pytest.log 2>&1); then
+        gruen "  ✓ Regressionstests grün ($(grep -oE '[0-9]+ passed' /tmp/team-init-pytest.log | head -1))"
+    else
+        gelb "  ! Regressionstests nicht vollständig grün — Log: /tmp/team-init-pytest.log"
+        gelb "    $(tail -3 /tmp/team-init-pytest.log | head -1)"
+    fi
+else
+    gelb "  · pytest nicht installiert — Regressionstests übersprungen"
+fi
+
+# ---------------------------------------------------------------- Abschluss
+kopf "Fertig — $GESCHRIEBEN Dateien geschrieben, $UEBERSPRUNGEN übersprungen"
+cat <<EOF
+
+Nächste Schritte im Zielprojekt:
+
+  1. Werte prüfen:      \$EDITOR $ZIEL/team.config.sh
+  2. Regeln prüfen:     \$EDITOR $ZIEL/CLAUDE.md   (TODO-Stellen füllen)
+  3. Alles committen:   git -C $ZIEL add -A && git -C $ZIEL commit -m "chore: T.E.A.M. eingerichtet"
+     ^ WICHTIG: vor dem ersten Guard-Lauf committen. Ein Read-Only-Guard
+       betrachtet uncommittete Dateien als Verletzung und räumt sie weg.
+  4. Erste Kaskade planen (Claude-Sitzung im Projekt, Rolle "Der Architekt"):
+     Skizze in ${PLAN_ORDNER}roadmap-skizzen.md aushärten zu
+     ${PLAN_ORDNER}ralph-kaskade-1-….md mit RALPH_CAP= und BUDGET_EMPFEHLUNG_USD=
+  5. Scharfschalten:    echo ${PLAN_ORDNER}ralph-kaskade-1-….md > $ZIEL/.ralph-plan
+  6. Lauf starten:      cd $ZIEL && ./vollautomatik.sh
+EOF
+if [ -z "$SMOKE_TEST" ]; then
+    echo
+    gelb "Hinweis: Kein Smoke-Test konfiguriert. Die Rollen laufen, aber ohne"
+    gelb "Verifikationsschritt — sie melden das in jedem Prompt. Setze ihn in"
+    gelb "team.config.sh, sobald es einen gibt."
+fi
+exit $FEHLER

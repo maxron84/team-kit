@@ -1,0 +1,16 @@
+
+# --- T.E.A.M.-Loop-Laufzeitartefakte (T.E.A.M.-Starterkit) -------------------
+.ralph-logs/
+.team-logs/
+.team-loop.lock
+.ralph-state
+.ralph-plan
+.harry-state
+.marv-state
+.frank-attempts
+.budget-ledger.lock
+backups/
+
+# Python-Laufzeitartefakte
+.pytest_cache/
+__pycache__/
