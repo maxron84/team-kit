@@ -96,6 +96,14 @@ Kostenlogs. Ohne diesen Schritt bleibt seine Sitzung strukturell unerfasst — i
 Ursprungsprojekt waren das real rund 16 USD pro Session. Der Kostenabschluss
 gehört **nach** den Lauf, niemals in eine Loop-Stufe.
 
+**Was `<domaene>` ist:** der Arbeitsstrang, auf den die Kosten gebucht werden —
+bei den meisten Projekten schlicht `produkt`. **Dieses Projekt führt genau eine
+Domäne**, solange du in `team.config.sh` nichts anderes einträgst. Mehrere sind
+nur sinnvoll, wenn *dieses* Projekt fachlich getrennte Stränge hat (etwa
+`backend frontend`). Eine eigene Domäne für die Arbeit am T.E.A.M. brauchst du
+**nicht**: Am Team wird hier nicht entwickelt — was dir am Team auffällt, geht
+ins Kit-Repo zurück und wird dort verbucht.
+
 **Wenn nach dem Closeout noch eine Rolle lief** (z. B. ein Frank-Fix), bricht ein
 zweiter `--rollen-abschluss` ab, statt die erste Buchung zu überschreiben, und
 nennt Alt-, Neu- und Summenwert. Den Nachlauf buchst du mit

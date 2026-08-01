@@ -2,7 +2,11 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
-## [Unreleased]
+## [2.3.0] — 2026-08-01
+
+**Die Kostenerfassung stimmt wieder, und das Kit prüft sich selbst.** Erntelauf
+der ersten Feldkaskade: drei Fehler kamen aus dem Feld zurück (`BL-4`, `BL-5`,
+`BL-9`), drei fielen beim Aufräumen auf (`BL-6`, `BL-7`, `BL-8`).
 
 ### Fixed
 - **Ralphs Baukosten landeten in keiner Ledger-Zeile (`BL-4`).**
@@ -62,7 +66,39 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   durchgetragen. Präzisiert statt gestrichen. Zahlen (Dateien, Tests,
   Zeilenumfänge) auf den Ist-Stand gebracht.
 
+- **`--force` war die einzige dokumentierte Update-Option — und
+  datenvernichtend (`BL-8`).** Ohne Flag ändert `install.sh` an einem
+  bestehenden Projekt gar nichts, mit `--force` überschreibt er auch die
+  Projektdaten. Empirisch nachgestellt: `.budget-ledger` geleert,
+  `.ralph-state` von `5` auf `1` zurück, Beutebuch-Fund weg, `TEAM_SMOKE_TEST`
+  aus `team.config.sh` verschwunden. Ein Feldprojekt konnte die Fixes dieses
+  Releases damit gar nicht bekommen, ohne seine Geschichte zu verlieren.
+- **Feldprojekte führten eine „T.E.A.M."-Domäne, die strukturell null ist
+  (`BL-9`).** Der Kontostand zeigte einen Domänenblock mit einer hart auf die
+  Domäne `team` verdrahteten Zeile. In einem Feldprojekt wird am Team nicht
+  entwickelt — Funde gehen ins Kit zurück und werden dort verbucht —, die
+  Zeile war also immer `0.0000`. Eine Kennzahl, die nie etwas zeigt, erzieht
+  dazu, den ganzen Block zu überlesen. Die Verdrahtung war zudem für **jede**
+  Konfiguration ohne `team` falsch (z. B. `backend frontend`).
+  **Neu:** Installer-Default ist **eine** Domäne (`produkt`); der Block
+  erscheint nur bei mehreren und listet dann **jede** konfigurierte Domäne.
+
 ### Added
+- **`install.sh --update`** — der sichere Weg auf eine neue Kit-Version. Fasst
+  nur die Infrastruktur an (Entrypoints außer `team.config.sh`, `team/lib.sh`,
+  `team/redteam.sh`, `team/tools/`, `team/prompts/`, `team/tests/`) und lässt
+  Ledger, Kaskadenstand, Beutebuch, CHANGELOG, `plans/`, `CLAUDE.md` und
+  `team.config.sh` unberührt. Liest die Projektwerte aus der **installierten**
+  `team.config.sh` (sonst bekämen die Briefings die falschen Pfade und damit
+  eine falsche Guard-Grenze), rettet den Commit-Entscheid aus dem bisherigen
+  Architekten-Briefing, entfernt Testdateien entfallener Versionen und meldet
+  am Ende, welche Doku-Dateien von der Kit-Fassung abweichen — die **Regeln**
+  zieht der Mensch nach, sonst läuft die Doku der Mechanik hinterher (das war
+  die Hälfte von `BL-4`).
+- `kit-test.sh` prüft den Update-Pfad als **Stufe 5**: Es macht das
+  Wegwerf-Projekt künstlich „lebendig" (Ledger, Kaskadenstand, Beutebuch-Fund,
+  eigener Smoke-Test, Alttest einer Vorversion) und weist nach, dass `--update`
+  davon nichts anfasst.
 - `team/tests/test_bl4_ralph_abschluss.py` — vier Prüfungen, darunter die
   entscheidende über die Bedienoberfläche: **ein** `--rollen-abschluss` muss
   **beide** Zeilen erzeugen und beide Log-Ordner rotieren. Gegenprobe gefahren:
@@ -71,7 +107,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   das **Feldszenario mit den echten Zahlen** (1,0969 → Frank-Nachlauf 2,4114 →
   3,5083) inklusive Archivierung. Gegenprobe gefahren: Mit dem alten Verhalten
   sind genau die beiden Kernprüfungen rot.
-- **151 Testfälle** in 30 Dateien (im installierten Projekt).
+- **153 Testfälle** in 30 Dateien (im installierten Projekt).
 - **`kit-test.sh` — das Kit prüft sich jetzt selbst (`BL-6`).** Bisher gab es
   dafür keinen Befehl: `pytest team/tests` schlägt im Kit-Repo mit **17 von 138**
   Tests fehl, weil die Tests die **installierte** Ablage voraussetzen

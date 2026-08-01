@@ -84,20 +84,59 @@ if [ -n "$RESTE" ]; then
 fi
 gruen "  ✓ keine"
 
-kopf "4/4 — Regressionstests in der Installation"
+kopf "4/5 — Regressionstests in der Installation"
 # Vor dem Testlauf committen — dieselbe Reihenfolge, die TEAM.md dem Anwender
 # vorschreibt. Ein Test, der den Git-Zustand liest, sieht damit den echten.
 git -C "$ZIEL" add -A
 git -C "$ZIEL" commit -q -m "chore: T.E.A.M. eingerichtet"
 
 cd "$ZIEL"
-if ./team-test.sh "${PYTEST_ARGS[@]}"; then
-    gruen "
-✓ Kit-Selbstverifikation grün."
-else
+if ! ./team-test.sh "${PYTEST_ARGS[@]}"; then
     RC=$?
     rot "
 ✗ Kit-Selbstverifikation FEHLGESCHLAGEN (Exit $RC)."
     [ "$BEHALTEN" -eq 0 ] && echo "  Mit --behalten erneut laufen lassen, um im Repo nachzusehen." >&2
     exit "$RC"
 fi
+
+# BL-8: --update ist der einzige sichere Weg, ein gelebtes Projekt auf eine
+# neue Kit-Version zu heben. Der Beweis dafuer gehoert ins Gate, nicht in ein
+# einmaliges Handprotokoll: Wir tun so, als sei das Projekt in Betrieb
+# (Ledger, Kaskadenstand, Beutebuch-Fund, eigener Smoke-Test), fahren das
+# Update und pruefen, dass davon NICHTS angefasst wurde.
+kopf "5/5 — Update-Pfad schuetzt Projektdaten"
+echo '2026-08-01 | 1 | 9.4204 | abo | produkt | roles | Lauf' >> "$ZIEL/.budget-ledger"
+echo '### HM-1 — echter Fund' >> "$ZIEL/plans/beutebuch.md"
+echo '5' > "$ZIEL/.ralph-state"
+sed -i 's|^TEAM_SMOKE_TEST=.*|TEAM_SMOKE_TEST="${TEAM_SMOKE_TEST:-./smoke.sh}"|' \
+    "$ZIEL/team.config.sh"
+touch "$ZIEL/team/tests/test_alttest_einer_altversion.py"
+
+if ! bash "$KIT/install.sh" "$ZIEL" --update > "$ZIEL/.update.log" 2>&1; then
+    rot "  ✗ install.sh --update schlug fehl:"
+    tail -20 "$ZIEL/.update.log" >&2
+    exit 1
+fi
+
+UPDATE_FEHLER=0
+pruefe() {  # pruefe <beschreibung> <ist> <soll>
+    if [ "$2" = "$3" ]; then
+        gruen "  ✓ $1"
+    else
+        rot "  ✗ $1 — erwartet '$3', ist '$2'"
+        UPDATE_FEHLER=1
+    fi
+}
+pruefe "Ledger unangetastet"      "$(grep -c 'Lauf$' "$ZIEL/.budget-ledger")" "1"
+pruefe "Kaskadenstand unangetastet" "$(cat "$ZIEL/.ralph-state")"             "5"
+pruefe "Beutebuch-Fund erhalten"  "$(grep -c 'HM-1' "$ZIEL/plans/beutebuch.md")" "1"
+pruefe "Smoke-Test in der Config erhalten" \
+       "$(grep -c 'smoke.sh' "$ZIEL/team.config.sh")" "1"
+pruefe "Alttest einer Altversion entfernt" \
+       "$([ -f "$ZIEL/team/tests/test_alttest_einer_altversion.py" ] && echo da || echo weg)" "weg"
+pruefe "keine offenen Platzhalter in den Briefings" \
+       "$(grep -rlE '\{\{[A-Z_]+\}\}' "$ZIEL/team/prompts/" | wc -l)" "0"
+[ "$UPDATE_FEHLER" -eq 0 ] || exit 1
+
+gruen "
+✓ Kit-Selbstverifikation grün."

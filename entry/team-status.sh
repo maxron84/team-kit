@@ -118,7 +118,8 @@ status_einmal() {
 status_budget() {
     local abo api gesamt empfehlung
     local architekt_usd architekt_status
-    local ledger_gesamt ledger_produkt ledger_team ledger_unzugeordnet
+    local ledger_gesamt ledger_unzugeordnet
+    local _domaenen_liste _domaenen_anzahl _summe_domaenen _d _wert
     local ledger_abo ledger_api ledger_gemischt api_gesamt abo_gesamt
     IFS=$'\t' read -r abo api <<<"$(team_kosten_split .ralph-logs .team-logs)"
     IFS=$'\t' read -r ledger_abo ledger_api ledger_gemischt <<<"$(team_ledger_split)"
@@ -157,19 +158,32 @@ print(f'{a + b:.4f}')
     # Kaskade 13) — Altzeilen davor zählen als "unzugeordnet", NIE
     # stillschweigend einer Domäne zugeschlagen (siehe scripts/kosten.py).
     ledger_gesamt="$(team_ledger_summe)"
-    # Erste konfigurierte Domäne = Produktarbeit, zweite = Team-Infrastruktur.
-    _d1="$(printf %s "${TEAM_DOMAENEN:-produkt team}" | tr "," " " | awk '{print $1}')"
-    ledger_produkt="$(team_ledger_domaene "$_d1")"
-    ledger_team="$(team_ledger_domaene team)"
-    ledger_unzugeordnet="$(python3 -c "
+    # BL-9: Der Block erscheint nur, wenn dieses Projekt WIRKLICH mehrere
+    # Domänen führt. Bei genau einer wiederholt er nur die Gesamtsumme und
+    # zeigte zusätzlich eine feste "🔧 T.E.A.M."-Zeile, die in einem
+    # Feldprojekt strukturell 0.0000 ist: Am Team wird hier nicht gearbeitet,
+    # Funde werden ins Kit-Repo zurückgespielt und dort verbucht. Eine Zeile,
+    # die immer null zeigt, erzieht dazu, den ganzen Block zu überlesen.
+    _domaenen_liste="$(printf %s "${TEAM_DOMAENEN:-produkt}" | tr "," " ")"
+    _domaenen_anzahl="$(printf %s "$_domaenen_liste" | wc -w)"
+    if [ "$_domaenen_anzahl" -gt 1 ]; then
+        echo "  ──────── Domänen (Ledger-Basis) ────────"
+        _summe_domaenen=0
+        for _d in $_domaenen_liste; do
+            _wert="$(team_ledger_domaene "$_d")"
+            printf "    📦 %-30s: %s USD\n" "$_d" "$_wert"
+            _summe_domaenen="$(python3 -c "
 import sys
-g, w, t = (float(x) for x in sys.argv[1:4])
-print(f'{g - w - t:.4f}')
-" "$ledger_gesamt" "$ledger_produkt" "$ledger_team")"
-    echo "  ──────── Domänen (Ledger-Basis, ab Kaskade 13) ────────"
-    printf "    📦 %-30s: %s USD\n" "$_d1" "$ledger_produkt"
-    printf "    🔧 T.E.A.M.                     : %s USD\n" "$ledger_team"
-    printf "    ⚪ unzugeordnet (Altzeilen vor K13): %s USD\n" "$ledger_unzugeordnet"
+print(f'{float(sys.argv[1]) + float(sys.argv[2]):.4f}')
+" "$_summe_domaenen" "$_wert")"
+        done
+        ledger_unzugeordnet="$(python3 -c "
+import sys
+g, d = (float(x) for x in sys.argv[1:3])
+print(f'{g - d:.4f}')
+" "$ledger_gesamt" "$_summe_domaenen")"
+        printf "    ⚪ %-30s: %s USD\n" "unzugeordnet" "$ledger_unzugeordnet"
+    fi
 
     # BL-23: KEIN B/A-Prozent mehr. Der Gesamt-Kontostand B (lebenslang
     # kumuliert) und der Pro-Lauf-Deckel A (BUDGET_EMPFEHLUNG_USD) sind laut

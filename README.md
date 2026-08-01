@@ -44,8 +44,23 @@ Die konzeptionelle Grundlage steht im [LLM-Wiki](../llm-wiki/wiki/vorlagen/claud
 ## Installation
 
 ```bash
-bash install.sh <zielpfad> [--nicht-interaktiv] [--force]
+bash install.sh <zielpfad> [--nicht-interaktiv] [--update|--force]
 ```
+
+**Ein bestehendes Projekt auf eine neue Kit-Version heben:** `--update`. Es
+fasst **nur** die Infrastruktur an (Entrypoints außer `team.config.sh`,
+`team/lib.sh`, `team/redteam.sh`, `team/tools/`, `team/prompts/`,
+`team/tests/`) und lässt Ledger, Kaskadenstand, Beutebuch, CHANGELOG, `plans/`,
+`CLAUDE.md` und `team.config.sh` unberührt. Zum Schluss meldet es, welche
+Doku-Dateien von der Kit-Fassung abweichen — die **Regeln** müssen von Hand
+nachgezogen werden, sonst läuft die Doku der Mechanik hinterher.
+
+> ⚠ **`--force` ist kein Update.** Es überschreibt auch Projektdaten:
+> `.budget-ledger` wird geleert (Kostenhistorie weg), `.ralph-state` auf `1`
+> zurückgesetzt (Kaskadenstand weg), das Beutebuch durch die leere Vorlage
+> ersetzt (**alle Funde weg**), dazu `CHANGELOG.md`, `plans/*.md` und
+> `team.config.sh` (Smoke-Test weg). Empirisch nachgestellt, siehe `BL-8`.
+> `--force` ist nur für eine kaputte **Erst**installation gedacht.
 
 **Voraussetzungen**: Zielpfad ist ein Git-Repository, `claude` im PATH,
 Auth eingerichtet (`bash ~/.claude/scripts/team-auth-setup.sh`).
@@ -59,7 +74,7 @@ Auth eingerichtet (`bash ~/.claude/scripts/team-auth-setup.sh`).
 | Test-Ordner | `tests/` | wo Reproducer hindürfen (bleibt **deinem** Testrunner) |
 | Plan-Ordner | `plans/` | Kaskaden, Beutebuch, Akten, Roadmap |
 | Smoke-Test-Befehl | *(leer)* | **der wichtigste Wert**, siehe unten |
-| Domänen | `produkt team` | Kostentrennung Produktarbeit ↔ Team-Infrastruktur |
+| Domänen | `produkt` | Arbeitsstränge **dieses** Projekts; eine reicht (`BL-9`) |
 | Architekt committet selbst? | `n` | sonst liefert er die Befehle zum Kopieren |
 
 Der **Smoke-Test** ist der eine Befehl, mit dem eine Rolle feststellt, dass das
@@ -152,6 +167,7 @@ Produktivcode bleiben, wie sie sind — nichts Stack-Fremdes landet darin.
 | `./team-status.sh` | Pipeline, Beutebuch, Kaskadenstand |
 | `./team-status.sh --budget` | Kontostand, API vs. Abo getrennt |
 | `./team-test.sh` | Regressionstests der Team-Infrastruktur (pytest) |
+| `bash <kit>/install.sh . --update` | Auf eine neue Kit-Version heben, ohne Projektdaten anzufassen |
 | `python3 team/tools/beutebuch.py list` | Alle Funde mit Status |
 
 **Exit-Codes**: `0` = durchgelaufen · `1` = echter Fehler · `3` = nichts zu tun ·

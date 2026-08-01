@@ -475,9 +475,19 @@ Operativer Vertrag (Bau-Details in **Anhang A.9**):
     der Löwenanteil auf das **erneute Vorlegen des Kontexts** entfällt, nicht auf
     den erzeugten Text — lange Sitzungen mit vielen Werkzeugaufrufen sind darum
     teurer, als ihr Ergebnis vermuten lässt.
-- **Ledger domänengetrennt (`BL-29`):** `--budget` weist die Kosten nach Domäne
-  getrennt aus; das Ledger-Schema ist rückwärtskompatibel um `domaene`/`rolle`
-  erweitert (Altzeilen bleiben „unzugeordnet").
+- **Ledger domänengetrennt (`BL-29`):** Das Ledger-Schema trägt je Zeile eine
+  `domaene`/`rolle` (Altzeilen bleiben „unzugeordnet").
+- **Eine Domäne ist der Normalfall (`BL-9`).** `--budget` zeigt die
+  Domänenaufstellung nur, wenn dieses Projekt **mehrere** Domänen führt. Die
+  frühere feste Trennung `produkt` ↔ `team` stammt aus dem Ursprungsprojekt, in
+  dem die Team-Infrastruktur **im** Projekt gebaut wurde. Seit es das Kit gibt,
+  gilt das nicht mehr: **Am T.E.A.M. wird hier nicht entwickelt.** Was am Team
+  auffällt, geht als Fund ins Kit-Repo zurück und wird dort verbucht — eine
+  „T.E.A.M."-Zeile im Kontostand dieses Projekts wäre strukturell `0.0000`.
+  Eine Kennzahl, die immer null zeigt, erzieht dazu, den ganzen Block zu
+  überlesen; deshalb ist sie weg. Mehrere Domänen nur für fachlich getrennte
+  Stränge **dieses** Projekts (z. B. `backend frontend`), einzutragen unter
+  `TEAM_DOMAENEN` in `team.config.sh`.
 
 **Kaskadenabschluss-Pflicht (✅ erprobt, website-maxron-de bis Kaskade 22):** Pro
 gebauter Kaskade sind **zwei** Dinge Pflicht — das **Abschluss-Doc**

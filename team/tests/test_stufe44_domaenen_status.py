@@ -15,6 +15,7 @@ Netz-/CLI-frei über `bash -c` + `subprocess` (Muster wie
 test_bl27_abo_key_startwarnung.py) gegen Fixture-Ledger/-Pläne im temporären
 Verzeichnis — rührt NIE die echte .budget-ledger/.ralph-plan an.
 """
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -103,18 +104,47 @@ def test_architekt_stand_andere_kaskade_zaehlt_nicht_als_echt(tmp_path):
     assert status == "geschätzt"
 
 
-def test_team_status_budget_zeigt_domaenen_und_architekt_status():
+def test_team_status_budget_laeuft_und_zeigt_architekt_status():
     # Regressionsschutz gegen das echte Repo: `--budget` muss fehlerfrei
-    # laufen und die neue domaenengetrennte Aufstellung + den
-    # Architekt-Status-Marker enthalten (Verifikation laut Plan, Stufe 44).
+    # laufen und den Architekt-Status-Marker enthalten (Stufe 44).
     result = subprocess.run(
         ["./team-status.sh", "--budget"],
         cwd=REPO_ROOT, capture_output=True, text=True,
     )
     assert result.returncode == 0, result.stderr
-    assert "Domänen (Ledger-Basis" in result.stdout
-    assert "📦"  # Starterkit: Domänenname ist projektdefiniert, nur das Symbol ist fest in result.stdout
-    assert "🔧 T.E.A.M." in result.stdout
-    assert "unzugeordnet" in result.stdout
     assert "Architekt (" in result.stdout
     assert "geschätzt" in result.stdout or "echt" in result.stdout
+
+
+def test_eine_domaene_zeigt_keinen_domaenenblock():
+    """BL-9: Bei genau einer Domaene wiederholt der Block nur die
+    Gesamtsumme — und zeigte zusaetzlich eine feste T.E.A.M.-Zeile, die in
+    einem Feldprojekt strukturell 0.0000 ist (am Team wird dort nicht
+    gearbeitet, Funde gehen ins Kit-Repo zurueck). Eine Zeile, die immer
+    null zeigt, erzieht dazu, den ganzen Block zu ueberlesen."""
+    umgebung = dict(os.environ, TEAM_DOMAENEN="produkt")
+    result = subprocess.run(
+        ["./team-status.sh", "--budget"],
+        cwd=REPO_ROOT, capture_output=True, text=True, env=umgebung,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "Domänen (Ledger-Basis" not in result.stdout
+    assert "🔧 T.E.A.M." not in result.stdout
+    # Der Kontostand selbst bleibt vollstaendig.
+    assert "Gesamt (Basis + laufend)" in result.stdout
+
+
+def test_mehrere_domaenen_zeigen_jede_einzeln():
+    """Projekte mit fachlich getrennten Straengen behalten die Aufstellung —
+    und zwar fuer JEDE konfigurierte Domaene, nicht nur die erste plus eine
+    fest verdrahtete 'team'-Zeile."""
+    umgebung = dict(os.environ, TEAM_DOMAENEN="backend frontend")
+    result = subprocess.run(
+        ["./team-status.sh", "--budget"],
+        cwd=REPO_ROOT, capture_output=True, text=True, env=umgebung,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "Domänen (Ledger-Basis" in result.stdout
+    assert "backend" in result.stdout
+    assert "frontend" in result.stdout
+    assert "unzugeordnet" in result.stdout
