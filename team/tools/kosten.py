@@ -438,10 +438,26 @@ def ledger_split(pfad=".budget-ledger", domaene=None, rolle=None, kaskade=None):
 # muss. BL-4 (ralph-Zeile fehlte ganz) und BL-5 (Altwert ueberschrieben)
 # haette beides genau so angeschlagen.
 
-# Quelle -> (Log-Ordner-Attribut, Ledger-Rolle). architekt fehlt hier
-# absichtlich: Diese Zeile ist eine gemessene Schaetzung aus dem Transkript,
-# ihr entspricht kein Rohlog, gegen das man sie halten koennte.
-LEDGER_ROHQUELLEN = (("ralph", "ralph_logs"), ("roles", "team_logs"))
+# Rollen OHNE Rohlog. Die architekt-Zeile ist eine gemessene Schaetzung aus
+# dem Sitzungstranskript, ihr entspricht keine Log-Datei. Sie darf deshalb in
+# KEINEN Rohlog-Topf wandern: Im Ursprungsprojekt traegt sie 275 USD und haette
+# jede echte Untergebuchung maskiert.
+LEDGER_OHNE_ROHLOG = ("architekt",)
+
+# Log-Ordner-Attribut -> die Ledger-Rollen, die daraus gespeist werden.
+# None bedeutet "alle uebrigen Rollen des Ledgers" (ausser denen anderer
+# Ordner und ausser LEDGER_OHNE_ROHLOG).
+#
+# BL-13: Hier stand eine 1:1-Abbildung roles <-> .team-logs. Die ist falsch,
+# sobald ein Projekt eine weitere Rolle SEPARAT bucht — und genau dafuer
+# existiert `akteur-abschluss --rolle <X>`. Real: redteam.sh, frank.sh,
+# axel.sh und vollautomatik.sh setzen ALLE LOG_DIR=".team-logs", waehrend das
+# Ursprungsprojekt Franks Out-of-Loop-Arbeit als eigene `frank`-Zeile bucht
+# (17,00 USD). P3 meldete dieses Geld als "archiviert, aber nie gebucht" —
+# eine strukturell unaufloesbare Warnung, denn nachbuchen kann man nichts, was
+# bereits gebucht IST. Die Rollenmenge wird deshalb aus dem Ledger abgeleitet
+# statt festverdrahtet.
+LEDGER_ROHQUELLEN = (("ralph_logs", ("ralph",)), ("team_logs", None))
 LEDGER_QUELLEN = ("ralph", "roles", "architekt")
 
 # Toleranz des Rohlog-Vergleichs: Jede Ledger-Zeile ist auf 4 Stellen
@@ -488,12 +504,16 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
        ueberschrieben hat (BL-5). Unarchivierte Logs waehrend einer OFFENEN
        Kaskade sind dagegen der Normalzustand und ergeben keinen Befund.
 
-    P3 Rohlog-Gegenprobe je Quelle -- ist die Summe der archivierten Rohlogs
-       GROESSER als die Summe der zugehoerigen Ledger-Zeilen? Dann ist
+    P3 Rohlog-Gegenprobe je Log-Ordner -- ist die Summe der archivierten
+       Rohlogs GROESSER als die Summe der zugehoerigen Ledger-Zeilen? Dann ist
        bezahlte Arbeit archiviert, aber nie (oder zu klein) gebucht worden.
        Nur diese Richtung ist ein Befund: Fehlt umgekehrt das Archiv
        (frischer Clone -- die Log-Ordner sind gitignoriert), ist das Ledger
        erwartungsgemaess groesser, und genau dafuer existiert es.
+       Ein Ordner kann MEHRERE Ledger-Rollen speisen (BL-13): .ralph-logs
+       gehoert Ralph allein, .team-logs dagegen jeder Rolle mit Rohlog --
+       redteam.sh, frank.sh, axel.sh und vollautomatik.sh protokollieren alle
+       dorthin. Welche Rollen gezaehlt wurden, nennt der Befund ausdruecklich.
     """
     befunde = []
     if not os.path.isfile(pfad):
@@ -524,12 +544,25 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
             continue    # geplant, aber nie gelaufen -- nichts zu erwarten
         fehlend = [q for q in LEDGER_QUELLEN if q not in vorhanden]
         if "ralph" in fehlend:
+            # BL-14: Nur bei NUMMERIERTEN Kaskaden ist die fehlende
+            # ralph-Zeile eine Warnung -- dort gilt "wo gesweept wurde, wurde
+            # auch gebaut". Benannte Kaskaden (`post-20`, `roles-post-k13`)
+            # sind per Konvention Out-of-Loop-Buchungen: eine Fixserie NACH
+            # dem Lauf, in der Ralph gar nicht gebaut hat. Dort ist das Fehlen
+            # korrekt, die Warnung dauerhaft unaufloesbar, und sie erscheint
+            # bei JEDEM --budget. Genau das erzieht zum Wegsehen, gegen das
+            # die zwei Schweregrade ueberhaupt gebaut wurden.
+            nummeriert = kaskade.isdigit()
             befunde.append(_befund(
-                "ralph-fehlt", "warnung",
+                "ralph-fehlt", "warnung" if nummeriert else "hinweis",
                 f"Kaskade {kaskade}: keine ralph-Zeile, obwohl eine "
-                f"roles-Zeile steht. Die Baukosten des Loops sind nicht "
-                f"gebucht (BL-4-Muster) -- nachtragen mit "
-                f"`./team-status.sh --rollen-abschluss {kaskade} <domaene>`."))
+                f"roles-Zeile steht. " + (
+                    f"Die Baukosten des Loops sind nicht gebucht "
+                    f"(BL-4-Muster) -- nachtragen mit `./team-status.sh "
+                    f"--rollen-abschluss {kaskade} <domaene>`."
+                    if nummeriert else
+                    "Benannte Kaskade -- bei einer Out-of-Loop-Fixserie hat "
+                    "Ralph nicht gebaut, dann ist das korrekt.")))
         for quelle in fehlend:
             if quelle == "ralph":
                 continue
@@ -557,19 +590,36 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
                 f"verliert den Altwert (BL-5)."))
 
     # --- P3 -----------------------------------------------------------------
-    for rolle, ordner_attr in LEDGER_ROHQUELLEN:
+    # BL-13: Die Rollenmenge je Ordner wird aus dem Ledger abgeleitet, nicht
+    # festverdrahtet. Fest zugeordnete Rollen (ralph) gehoeren ihrem Ordner,
+    # LEDGER_OHNE_ROHLOG (architekt) gehoert keinem, alles Uebrige faellt in
+    # den Rest-Topf (.team-logs) -- denn dorthin protokollieren redteam.sh,
+    # frank.sh, axel.sh und vollautomatik.sh gleichermassen.
+    vorhandene_rollen = {z["rolle"] for z in zeilen if z["rolle"]}
+    fest_zugeordnet = {r for _, rollen in LEDGER_ROHQUELLEN if rollen
+                       for r in rollen}
+    for ordner_attr, rollen in LEDGER_ROHQUELLEN:
+        if rollen is None:
+            rollen = tuple(sorted(vorhandene_rollen - fest_zugeordnet
+                                  - set(LEDGER_OHNE_ROHLOG)))
+        if not rollen:
+            continue
         archiv = os.path.join(ordner[ordner_attr], "archiv")
         if not os.path.isdir(archiv):
             continue
         roh = log_kosten([archiv])
-        gebucht = ledger_summe(pfad, rolle=rolle)
+        gebucht = sum(ledger_summe(pfad, rolle=r) for r in rollen)
         differenz = roh - gebucht
         toleranz = max(LEDGER_TOLERANZ_ABS, roh * LEDGER_TOLERANZ_REL)
         if differenz > toleranz:
+            # Der Befund nennt die gezaehlten Rollen ausdruecklich: Ein Mensch
+            # muss die Zahl nachrechnen koennen, und genau dieses Nachrechnen
+            # hat BL-1, BL-4 und BL-5 ueberhaupt erst gefunden.
+            benannt = "/".join(rollen)
             befunde.append(_befund(
-                f"{rolle}-untergebucht", "warnung",
-                f"Quelle '{rolle}': archivierte Rohlogs in {archiv} ergeben "
-                f"{roh:.4f} USD, die {rolle}-Zeilen im Ledger nur "
+                f"{rollen[0]}-untergebucht", "warnung",
+                f"Quelle '{benannt}': archivierte Rohlogs in {archiv} ergeben "
+                f"{roh:.4f} USD, die Ledger-Zeilen der Rolle(n) {benannt} nur "
                 f"{gebucht:.4f} USD -- {differenz:.4f} USD sind archiviert, "
                 f"aber nie gebucht. So sahen BL-4 (Zeile fehlte ganz) und "
                 f"BL-5 (Altwert ueberschrieben) im Feld aus."))

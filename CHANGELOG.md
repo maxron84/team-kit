@@ -2,6 +2,68 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.4.1] — 2026-08-01
+
+**Zwei Fehler in `ledger-pruefen`, gefunden beim ersten Einsatz auf einem
+fremden, gewachsenen Ledger.**
+
+Beim Rückspielen der Kit-Fixes in das Ursprungsprojekt `website-maxron-de` —
+den Ahnherrn des Kits, der das flache Vor-Kit-Layout trägt und deshalb **kein**
+`install.sh --update` annimmt — lief `ledger-pruefen` erstmals gegen 67
+gewachsene Ledger-Zeilen aus 22 Kaskaden. Es meldete drei Warnungen. **Keine
+davon war echt**, und keine war je auflösbar. Ein Werkzeug, das bei jedem Lauf
+rot ist, erzieht genau zu dem Wegsehen, gegen das seine zwei Schweregrade
+gebaut wurden (Skizze D, Frage 2).
+
+### Fixed
+
+- **Eine Rohquelle kann mehrere Ledger-Rollen speisen (`BL-13`).** `P3` bildete
+  Archivordner 1:1 auf **eine** Rolle ab (`roles ↔ .team-logs`). Das ist
+  falsch, sobald ein Projekt eine weitere Rolle **separat** bucht — und genau
+  dafür existiert `akteur-abschluss --rolle <X>`. Real schreiben
+  [`team/redteam.sh`](team/redteam.sh), [`entry/frank.sh`](entry/frank.sh),
+  [`entry/axel.sh`](entry/axel.sh) und
+  [`entry/vollautomatik.sh`](entry/vollautomatik.sh) **alle** nach
+  `.team-logs`, während der Ahnherr Franks Out-of-Loop-Arbeit als eigene
+  `frank`-Zeile bucht. `P3` meldete dieses Geld als „archiviert, aber nie
+  gebucht" — strukturell unauflösbar, denn nachbuchen kann man nichts, was
+  bereits gebucht **ist**.
+  **Neu:** Die Rollenmenge je Ordner wird aus dem Ledger **abgeleitet** statt
+  festverdrahtet. `.ralph-logs` gehört Ralph allein, `.team-logs` jeder
+  weiteren Rolle mit Rohlog. `architekt` bleibt ausdrücklich außen vor
+  (`LEDGER_OHNE_ROHLOG`): Diese Zeile ist eine gemessene Schätzung aus dem
+  Transkript, ihr entspricht keine Log-Datei — im Ahnherrn trägt sie 275 USD
+  und hätte jede echte Untergebuchung maskiert. Der Befund **nennt die
+  gezählten Rollen**, damit ein Mensch die Zahl nachrechnen kann; genau dieses
+  Nachrechnen hat `BL-1`, `BL-4` und `BL-5` überhaupt erst gefunden.
+- **Benannte Kaskaden sind Out-of-Loop-Buchungen (`BL-14`).** Die `P1`-Regel
+  „`roles` ohne `ralph` ⇒ Warnung" stimmt für **nummerierte** Kaskaden: Wo
+  gesweept wurde, wurde auch gebaut. Für benannte (`post-20`,
+  `roles-post-k13`) gilt sie nicht — das sind Fixserien **nach** dem Lauf, in
+  denen Ralph gar nicht gebaut hat. Die fehlende `ralph`-Zeile ist dort
+  korrekt, die Warnung dauerhaft unauflösbar, und sie erschien bei **jedem**
+  `--budget`. **Neu:** Warnung nur bei `kaskade.isdigit()`, sonst ein Hinweis,
+  der den Grund nennt.
+
+### Added
+
+- **6 neue Testfälle** in `test_bl13_ledger_pruefen.py`, darunter beide
+  Gegenrichtungen: Eine echte Untergebuchung muss trotz der erweiterten
+  Rollenmenge weiterhin anschlagen (mit der echten `BL-4`-Zahl 2,1621 USD),
+  und bei einer **nummerierten** Kaskade bleibt die fehlende `ralph`-Zeile
+  eine Warnung. Dazu ein Schutzwächter, dass die `architekt`-Zeile keine
+  Rohlogs deckt. **182 Testfälle** in 32 Dateien.
+
+### Bemerkt
+
+- **Der Rückkanal lief bisher nur in eine Richtung.** Feld → Kit war geregelt
+  (Skizze C), Kit → **Ahnherr** nicht. `BL-11` lag deshalb zwei Kaskaden im
+  Feld, bevor es ins Kit kam — und im Ursprungsprojekt lag derselbe Fehler bis
+  heute. Dort sind die drei fehlenden Fixes jetzt einzeln nachgezogen
+  (`BL-57`/`BL-58`/`BL-59` im dortigen Backlog); eine Migration auf das
+  Kit-Layout wäre 531 Pfadverweise in 61 Dateien und wurde bewusst **nicht**
+  gemacht (Strippenzieher-Entscheid 2026-08-01).
+
 ## [2.4.0] — 2026-08-01
 
 **Das Ledger prüft jetzt seine eigene Vollständigkeit** (Roadmap-Skizze D).

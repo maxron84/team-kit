@@ -291,3 +291,120 @@ def test_team_status_reicht_durch(tmp_path):
     )
     assert result.returncode == 4, result.stdout + result.stderr
     assert "keine ralph-Zeile" in result.stdout
+
+
+# --- BL-13: eine Rohquelle speist MEHRERE Ledger-Rollen ----------------------
+
+def test_frank_zeile_zaehlt_gegen_team_logs(tmp_path):
+    """BL-13 (Feldfund aus website-maxron-de, 2026-08-01).
+
+    redteam.sh, frank.sh, axel.sh UND vollautomatik.sh setzen alle
+    LOG_DIR=".team-logs" -- die Rohlogs dieses Ordners gehoeren also nicht nur
+    der Rolle `roles`. Sobald ein Projekt `akteur-abschluss --rolle frank`
+    nutzt (wofuer der Verb ausdruecklich existiert), buchte die alte
+    1:1-Abbildung roles<->.team-logs Franks Geld NICHT mit und meldete es als
+    "archiviert, aber nie gebucht". Im Ahnherrn real: 17,00 USD, und die
+    Warnung war strukturell unaufloesbar -- man kann nicht nachbuchen, was
+    bereits gebucht IST.
+    """
+    pfad = _ledger(tmp_path,
+                    _zeile("1", 1.0000, "ralph"),
+                    _zeile("1", 2.0000, "roles"),
+                    _zeile("post-1", 4.0000, "frank"))
+    ralph = tmp_path / ".ralph-logs"
+    team = tmp_path / ".team-logs"
+    _log(ralph / "archiv", "stufe-1.json", 1.0)
+    _log(team / "archiv", "harry-1.json", 2.0)
+    _log(team / "archiv", "frank-1.json", 4.0)
+    rc, out, _ = _run("--pfad", str(pfad),
+                      "--ralph-logs", str(ralph), "--team-logs", str(team))
+    assert "Quelle" not in out, out
+    assert rc == 0, out
+
+
+def test_untergebuchung_wird_trotz_mehrerer_rollen_erkannt(tmp_path):
+    """Gegenrichtung zu BL-13: Die Ausweitung darf die Pruefung nicht
+    entschaerfen. Fehlt echtes Geld, muss P3 weiterhin anschlagen -- hier mit
+    der echten BL-4-Zahl (2,1621 USD)."""
+    pfad = _ledger(tmp_path,
+                    _zeile("1", 1.0000, "ralph"),
+                    _zeile("1", 2.0000, "roles"),
+                    _zeile("post-1", 4.0000, "frank"))
+    ralph = tmp_path / ".ralph-logs"
+    team = tmp_path / ".team-logs"
+    _log(ralph / "archiv", "stufe-1.json", 1.0)
+    _log(team / "archiv", "harry-1.json", 2.0)
+    _log(team / "archiv", "frank-1.json", 4.0)
+    _log(team / "archiv", "marv-1.json", 2.1621)
+    rc, out, _ = _run("--pfad", str(pfad),
+                      "--ralph-logs", str(ralph), "--team-logs", str(team))
+    assert rc == 4, out
+    assert "Quelle" in out
+    assert "2.1621" in out, "die Differenz muss exakt die fehlende Zahl sein"
+
+
+def test_architekt_zeile_deckt_keine_rohlogs(tmp_path):
+    """Die architekt-Zeile ist eine gemessene Schaetzung aus dem
+    Sitzungstranskript -- ihr entspricht KEIN Rohlog. Wuerde sie in den
+    team_logs-Topf wandern, koennte sie eine echte Untergebuchung verdecken;
+    im Ahnherrn haette sie mit 275 USD jede Luecke maskiert."""
+    pfad = _ledger(tmp_path,
+                    _zeile("1", 1.0000, "ralph"),
+                    _zeile("1", 0.5000, "roles"),
+                    _zeile("1", 99.0000, "architekt"))
+    ralph = tmp_path / ".ralph-logs"
+    team = tmp_path / ".team-logs"
+    _log(ralph / "archiv", "stufe-1.json", 1.0)
+    _log(team / "archiv", "harry-1.json", 3.0)
+    rc, out, _ = _run("--pfad", str(pfad),
+                      "--ralph-logs", str(ralph), "--team-logs", str(team))
+    assert rc == 4, out
+    assert "Quelle" in out
+
+
+def test_befund_nennt_die_gezaehlten_rollen(tmp_path):
+    """Wenn der Topf mehrere Rollen umfasst, muss der Befund sagen WELCHE --
+    sonst kann ein Mensch die Zahl nicht nachrechnen, und genau das
+    Nachrechnen hat BL-1/BL-4/BL-5 ueberhaupt erst gefunden."""
+    pfad = _ledger(tmp_path,
+                    _zeile("1", 0.1000, "roles"),
+                    _zeile("post-1", 0.1000, "frank"),
+                    _zeile("1", 1.0000, "ralph"))
+    ralph = tmp_path / ".ralph-logs"
+    team = tmp_path / ".team-logs"
+    _log(ralph / "archiv", "stufe-1.json", 1.0)
+    _log(team / "archiv", "harry-1.json", 9.0)
+    rc, out, _ = _run("--pfad", str(pfad),
+                      "--ralph-logs", str(ralph), "--team-logs", str(team))
+    assert rc == 4, out
+    assert "frank" in out and "roles" in out
+
+
+# --- BL-14: benannte Kaskaden sind Out-of-Loop-Buchungen ---------------------
+
+def test_benannte_kaskade_ohne_ralph_ist_nur_hinweis(tmp_path):
+    """BL-14 (Feldfund aus website-maxron-de, 2026-08-01).
+
+    Die Regel "roles ohne ralph => Warnung" stimmt fuer NUMMERIERTE Kaskaden:
+    wo gesweept wurde, wurde auch gebaut. Benannte Kaskaden (`post-20`,
+    `roles-post-k13`) sind per Konvention Out-of-Loop-Buchungen -- eine
+    Fixserie nach dem Lauf, in der Ralph gar nicht gebaut hat. Dort ist die
+    fehlende ralph-Zeile korrekt, die Warnung dauerhaft unaufloesbar, und sie
+    erscheint bei JEDEM --budget. Genau das erzieht zum Wegsehen, gegen das
+    die zwei Schweregrade gebaut wurden.
+    """
+    pfad = _ledger(tmp_path, _zeile("roles-post-k13", 11.0758, "roles"))
+    rc, out, _ = _run("--pfad", str(pfad), *_leere_logs(tmp_path))
+    assert rc == 0, out
+    assert "[Hinweis]" in out
+    assert "[WARNUNG]" not in out
+
+
+def test_nummerierte_kaskade_ohne_ralph_bleibt_warnung(tmp_path):
+    """Gegenrichtung zu BL-14: Der BL-4-Fall selbst darf nicht entschaerft
+    werden -- bei einer nummerierten Kaskade bleibt es eine Warnung."""
+    pfad = _ledger(tmp_path, _zeile("7", 1.0969, "roles"))
+    rc, out, _ = _run("--pfad", str(pfad), *_leere_logs(tmp_path))
+    assert rc == 4, out
+    assert "[WARNUNG]" in out
+    assert "keine ralph-Zeile" in out
