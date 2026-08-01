@@ -4,7 +4,36 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **`--rollen-abschluss` löschte bei einem zweiten Aufruf still Geld aus dem
+  Ledger (`BL-5`).** Der gebuchte Wert entsteht aus den **noch nicht
+  archivierten** Logs, und ein Abschluss archiviert die gezählten Logs
+  anschließend. Aufeinanderfolgende Aufrufe sehen deshalb **disjunkte** Mengen —
+  wer nach dem Closeout noch eine Rolle laufen ließ (im Feld: Frank mit drei
+  Fixes) und erneut abschloss, bekam einen *kleineren* Wert, der den größeren
+  **ersetzte**. Real eingetreten: 1,0969 USD verschwanden hinter 2,4114 USD,
+  Sollwert wäre die Summe 3,5083 gewesen; die Korrektur ging nur von Hand.
+  Für disjunkte Mengen ist **Addieren** die richtige Verknüpfung — das
+  Ersetzen stammte aus `akteur_abschluss()`, wo der Aufrufer einen absoluten,
+  extern gemessenen Wert übergibt und Ersetzen deshalb korrekt ist.
+  **Neu:** Steht für die Kaskade bereits eine `roles`-Zeile, **bricht der
+  Aufruf ab** und nennt Alt-, Neu- und Summenwert; `--addieren` (Nachlauf) und
+  `--ersetzen` (Korrektur einer falschen Altzeile) sind die beiden
+  ausdrücklichen Wege. Automatisch addiert wird bewusst **nicht**: Ohne
+  `--archivieren` zählen zwei Aufrufe dieselben Logs, dann wäre Addieren eine
+  Doppelbuchung — die Entscheidung gehört dem Menschen, nicht der Heuristik.
+  Bei Abbruch wird **nicht archiviert**, die Logs bleiben also greifbar.
+  Der Normalfall (ein Closeout je Kaskade) läuft unverändert ohne jedes Flag.
+- `_ledger_zeile_setzen()` bekam dafür einen optionalen `merge_fn`-Haken, der
+  **innerhalb** des Ledger-Locks und **vor** jedem Schreibzugriff läuft.
+  `akteur_abschluss()` ist unberührt.
+
 ### Added
+- `team/tests/test_bl5_rollen_abschluss_bestand.py` — sieben Prüfungen, darunter
+  das **Feldszenario mit den echten Zahlen** (1,0969 → Frank-Nachlauf 2,4114 →
+  3,5083) inklusive Archivierung. Gegenprobe gefahren: Mit dem alten Verhalten
+  sind genau die beiden Kernprüfungen rot.
+- **145 Testfälle** gesamt (im installierten Projekt).
 - **`kit-test.sh` — das Kit prüft sich jetzt selbst (`BL-6`).** Bisher gab es
   dafür keinen Befehl: `pytest team/tests` schlägt im Kit-Repo mit **17 von 138**
   Tests fehl, weil die Tests die **installierte** Ablage voraussetzen

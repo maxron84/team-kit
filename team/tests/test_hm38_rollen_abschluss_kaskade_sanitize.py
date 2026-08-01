@@ -85,13 +85,17 @@ def test_newline_in_kaskade_erzeugt_keine_zweite_zeile(tmp_path):
 
 
 def test_idempotenz_greift_auf_saniertem_wert(tmp_path):
+    """Der zweite Aufruf muss die Zeile des ersten WIEDERFINDEN, obwohl der
+    Kaskadenwert erst saniert wird (16|X -> 16/X). --ersetzen seit BL-5:
+    ohne Modus bricht der Fund der Altzeile den Aufruf ab — was den Match
+    ebenfalls belegt, aber nicht mehr die Ein-Zeilen-Zusage pruefen wuerde."""
     ledger = _fixture_ledger(tmp_path)
     logs = _fixture_team_logs(tmp_path, abo_usd=1.0)
     _run("rollen-abschluss", "--kaskade", "16|X", "--domaene", "team",
          "--logs", str(logs), "--pfad", str(ledger))
     rc, out, err = _run("rollen-abschluss", "--kaskade", "16|X",
                          "--domaene", "team", "--logs", str(logs),
-                         "--pfad", str(ledger))
+                         "--pfad", str(ledger), "--ersetzen")
     assert rc == 0, err
     assert "ersetzt" in out
 

@@ -244,18 +244,29 @@ status_akteur_abschluss() {
 # BL-23/HM-17). team_logs_archivieren() bleibt fuer den .ralph-logs-Abschluss
 # unveraendert bestehen (dort kein vergleichbarer Race, da nur der
 # sequentielle Ralph-Loop unter Lock schreibt).
+#
+# BL-5: Steht fuer die Kaskade schon eine roles-Zeile, bricht der Aufruf ab,
+# statt sie zu ueberschreiben — die Fehlermeldung nennt Alt-, Neu- und
+# Summenwert. --addieren (Nachlauf: eine Rolle lief nach dem Abschluss noch)
+# und --ersetzen (Korrektur einer falschen Altzeile) werden als optionaler
+# vierter Parameter durchgereicht.
 status_rollen_abschluss() {
-    local kaskade="${1:-}" domaene="${2:-}" notiz="${3:-}"
+    local kaskade="${1:-}" domaene="${2:-}" notiz="${3:-}" modus="${4:-}"
     if [ -z "$kaskade" ] || [ -z "$domaene" ]; then
-        echo "Nutzung: $0 --rollen-abschluss <kaskade> <domaene> [\"<notiz>\"]" >&2
+        echo "Nutzung: $0 --rollen-abschluss <kaskade> <domaene> [\"<notiz>\"] [--addieren|--ersetzen]" >&2
         return 1
     fi
+    case "$modus" in
+        ""|--addieren|--ersetzen) ;;
+        *) echo "Unbekannter Modus '$modus' — erlaubt: --addieren, --ersetzen" >&2
+           return 1 ;;
+    esac
     if [ -n "$notiz" ]; then
         $TEAM_KOSTEN_TOOL rollen-abschluss --kaskade "$kaskade" \
-            --domaene "$domaene" --notiz "$notiz" --archivieren
+            --domaene "$domaene" --notiz "$notiz" --archivieren ${modus:+"$modus"}
     else
         $TEAM_KOSTEN_TOOL rollen-abschluss --kaskade "$kaskade" \
-            --domaene "$domaene" --archivieren
+            --domaene "$domaene" --archivieren ${modus:+"$modus"}
     fi
 }
 

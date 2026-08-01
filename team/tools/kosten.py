@@ -448,7 +448,8 @@ def _ledger_lock(pfad):
         os.close(fd)
 
 
-def _ledger_zeile_setzen(zeile_neu, match_fn, pfad=".budget-ledger"):
+def _ledger_zeile_setzen(zeile_neu, match_fn, pfad=".budget-ledger",
+                          merge_fn=None):
     """Gemeinsame atomare Schreiblogik fuer akteur_abschluss()/
     rollen_abschluss() (Stufe 54 — vermeidet zwei divergierende
     Atomizitaets-Implementierungen, HM-35/HM-36-Klasse). Haengt zeile_neu an
@@ -461,7 +462,17 @@ def _ledger_zeile_setzen(zeile_neu, match_fn, pfad=".budget-ledger"):
     "ersetzt alle Treffer"-Verhalten wuerde solche Zeilen kommentarlos
     verschlucken statt nur die eine gemeinte Buchung zu korrigieren. Schreibt
     sonst atomar per Temp-Datei + os.replace(). Gibt True zurueck, wenn eine
-    vorhandene Zeile ersetzt wurde, sonst False (neu angelegt)."""
+    vorhandene Zeile ersetzt wurde, sonst False (neu angelegt).
+
+    merge_fn (BL-5, optional): wird mit den Feldern der EINEN bestehenden
+    Treffer-Zeile aufgerufen und liefert die Zeile, die stattdessen
+    geschrieben wird -- so kann der Aufrufer den Altwert BERUECKSICHTIGEN
+    (addieren) oder den Vorgang ABBRECHEN (ValueError werfen), statt ihn
+    blind zu ueberschreiben. Der Aufruf passiert INNERHALB des Ledger-Locks
+    und VOR jedem Schreibzugriff: Wirft merge_fn, bleibt die Datei
+    unangetastet. Ohne merge_fn bleibt das Verhalten unveraendert
+    (Ersetzen) — akteur_abschluss() braucht genau das, weil dort ein
+    absoluter, extern gemessener USD-Wert uebergeben wird."""
     with _ledger_lock(pfad):
         bestehend = []
         if os.path.isfile(pfad):
@@ -486,6 +497,7 @@ def _ledger_zeile_setzen(zeile_neu, match_fn, pfad=".budget-ledger"):
 
         behalten = []
         ersetzt = False
+        zeile_final = zeile_neu
         for rohzeile in bestehend:
             stripped = rohzeile.strip()
             if not stripped or stripped.startswith("#"):
@@ -494,12 +506,16 @@ def _ledger_zeile_setzen(zeile_neu, match_fn, pfad=".budget-ledger"):
             felder = [f.strip() for f in stripped.split("|")]
             if match_fn(felder):
                 ersetzt = True
+                # BL-5: Vor JEDEM Schreibzugriff -- wirft merge_fn, bleibt
+                # die Datei unangetastet (Temp-Datei ist noch nicht angelegt).
+                if merge_fn is not None:
+                    zeile_final = merge_fn(felder)
                 continue
             behalten.append(rohzeile)
 
         if behalten and not behalten[-1].endswith("\n"):
             behalten[-1] += "\n"
-        behalten.append(zeile_neu)
+        behalten.append(zeile_final)
 
         ziel_verzeichnis = os.path.dirname(os.path.abspath(pfad)) or "."
         fd, tmp_pfad = tempfile.mkstemp(
@@ -572,7 +588,7 @@ def architekt_abschluss(usd, domaene, kaskade, notiz="", pfad=".budget-ledger"):
 
 
 def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
-                      pfad=".budget-ledger"):
+                      pfad=".budget-ledger", bestand="abbrechen"):
     """Kaskadenscharfe Rollenkosten (BL-17-Restpunkt/BL-29-"1b", Kaskade
     16/Stufe 54): haengt EINE rolle=roles-Ledger-Zeile fuer die
     .team-logs-Kosten (Harry/Marv/Frank/Axel) EINER Kaskade an. usd = abo +
@@ -580,12 +596,33 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     Strippenzieher-Entscheid: Kaskadenschaerfe schlaegt Abo/API-Schaerfe je
     Rollenzeile, der gemischte Fall ist erwartet und wird ehrlich als
     "abo/api" ausgewiesen (kein geratener Split). notiz wird um den exakten
-    Split ergaenzt, analog der bestehenden roles-total-Zeile. Ein zweiter
-    Aufruf fuer DIESELBE Kaskade ERSETZT die vorhandene rolle=roles-Zeile
-    dieser Kaskade, Zeilen anderer Rollen (ralph/architekt/…) bleiben
-    unangetastet. Wirft ValueError bei ungueltigen Eingaben, OHNE die Datei
-    anzufassen. Gibt True zurueck, wenn eine vorhandene Zeile ersetzt wurde,
-    sonst False (neu angelegt)."""
+    Split ergaenzt, analog der bestehenden roles-total-Zeile. Zeilen anderer
+    Rollen (ralph/architekt/…) bleiben immer unangetastet. Wirft ValueError
+    bei ungueltigen Eingaben, OHNE die Datei anzufassen. Gibt True zurueck,
+    wenn eine vorhandene Zeile angefasst wurde, sonst False (neu angelegt).
+
+    bestand (BL-5) — was passiert, wenn fuer DIESE Kaskade schon eine
+    roles-Zeile steht:
+
+      "abbrechen" (Default)  ValueError, Datei unangetastet. Die Meldung
+                             nennt Alt-, Neu- und Summenwert.
+      "addieren"             Neuer Wert wird auf den Altwert ADDIERT.
+      "ersetzen"             Altes Verhalten: Altwert wird ueberschrieben.
+
+    WARUM der Default nicht mehr "ersetzen" ist: Der uebergebene Wert wird
+    aus den NOCH NICHT ARCHIVIERTEN Logs gezaehlt. Weil ein Abschluss mit
+    --archivieren die gezaehlten Logs anschliessend wegraeumt, sieht jeder
+    weitere Aufruf eine DISJUNKTE Restmenge — ein Nachlauf (z. B. Frank
+    laeuft nach dem Closeout noch) ergibt also einen KLEINEREN Wert, der die
+    groessere Altbuchung ueberschrieben und geloescht hat. Real eingetreten
+    (Feld-Kaskade 1: 1,0969 wurde durch 2,4114 ersetzt, Differenz nur per
+    Hand rekonstruierbar). Fuer disjunkte Mengen ist ADDIEREN die richtige
+    Verknuepfung, nicht Ersetzen — Ersetzen war aus akteur_abschluss()
+    uebernommen, wo der Aufrufer einen absoluten, extern gemessenen Wert
+    liefert und Ersetzen deshalb korrekt ist. Der Default bricht trotzdem
+    lieber ab, statt automatisch zu addieren: Ohne --archivieren zaehlen
+    zwei Aufrufe DIESELBEN Logs, dann waere Addieren eine Doppelbuchung.
+    Die Entscheidung gehoert damit dem Menschen, nicht der Heuristik."""
     pruefe_domaene(domaene)
     if not math.isfinite(abo) or abo < 0:
         raise ValueError(f"abo muss eine endliche, nicht-negative Zahl sein, "
@@ -617,7 +654,58 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     def match_fn(felder):
         return len(felder) >= 7 and felder[1] == kaskade and felder[5] == "roles"
 
-    return _ledger_zeile_setzen(zeile_neu, match_fn, pfad)
+    if bestand not in ("abbrechen", "addieren", "ersetzen"):
+        raise ValueError(
+            f"bestand muss 'abbrechen', 'addieren' oder 'ersetzen' sein, "
+            f"nicht '{bestand}'")
+    if bestand == "ersetzen":
+        return _ledger_zeile_setzen(zeile_neu, match_fn, pfad)
+
+    def alt_usd(felder):
+        """USD-Feld der bestehenden Zeile. Nur Feld 2 wird gelesen — ein
+        maschinengeschriebener Zahlwert. Der abo/api-Split der Altzeile wird
+        BEWUSST NICHT aus der Notiz zurueckgeparst: Notizen werden real von
+        Hand korrigiert (Feld-Kaskade 1), ein Parser darauf waere die
+        naechste stille Fehlerquelle."""
+        try:
+            wert = float(felder[2])
+        except (IndexError, ValueError):
+            raise ValueError(
+                f"Die bestehende roles-Zeile der Kaskade {kaskade} hat kein "
+                f"lesbares USD-Feld ({felder[2] if len(felder) > 2 else '—'}). "
+                "Es wird NICHTS geschrieben — die Zeile von Hand pruefen.")
+        if not math.isfinite(wert) or wert < 0:
+            raise ValueError(
+                f"Die bestehende roles-Zeile der Kaskade {kaskade} traegt "
+                f"einen unplausiblen Wert ({wert}). Es wird NICHTS "
+                "geschrieben — die Zeile von Hand pruefen.")
+        return wert
+
+    def merge_fn(felder):
+        alt = alt_usd(felder)
+        if bestand == "abbrechen":
+            raise ValueError(
+                f"Fuer Kaskade {kaskade} steht bereits eine roles-Zeile ueber "
+                f"{alt:.4f} USD. Dieser Aufruf wuerde sie durch {usd:.4f} USD "
+                f"ERSETZEN und die Differenz verlieren. Es wird NICHTS "
+                f"geschrieben.\n"
+                f"  Nachlauf (weitere Rolle lief nach dem Abschluss): "
+                f"--addieren  -> {alt + usd:.4f} USD\n"
+                f"  Korrektur (die Altzeile war falsch):              "
+                f"--ersetzen  -> {usd:.4f} USD\n"
+                f"  Wurde seit der Altzeile NICHT archiviert, zaehlen beide "
+                f"Aufrufe dieselben Logs — dann ist --ersetzen richtig.")
+        summe = alt + usd
+        # auth der Summenzeile: nur wenn Alt- und Neuanteil dieselbe
+        # Auth-Art tragen, bleibt sie erhalten — sonst ehrlich "abo/api".
+        alt_auth = felder[3] if len(felder) > 3 else ""
+        auth_summe = auth if alt_auth == auth else "abo/api"
+        notiz_summe = (f"{notiz_voll} (addiert auf Bestand {alt:.4f} USD, "
+                       f"auth {alt_auth or '—'})")
+        return (f"{date.today().isoformat()} | {kaskade} | {summe:.4f} | "
+                f"{auth_summe} | {domaene} | roles | {notiz_summe}\n")
+
+    return _ledger_zeile_setzen(zeile_neu, match_fn, pfad, merge_fn=merge_fn)
 
 
 def _main(argv):
@@ -853,6 +941,7 @@ def _main(argv):
         pfad = ".budget-ledger"
         repo = "."
         archivieren = False
+        bestand = "abbrechen"   # BL-5: nie stillschweigend ueberschreiben
         i = 0
         while i < len(rest):
             if rest[i] == "--kaskade":
@@ -894,6 +983,12 @@ def _main(argv):
                 i += 2
             elif rest[i] == "--archivieren":
                 archivieren = True
+                i += 1
+            elif rest[i] == "--addieren":
+                bestand = "addieren"
+                i += 1
+            elif rest[i] == "--ersetzen":
+                bestand = "ersetzen"
                 i += 1
             else:
                 print(f"Fehler: unbekanntes Argument '{rest[i]}'", file=sys.stderr)
@@ -950,12 +1045,16 @@ def _main(argv):
                 file=sys.stderr,
             )
         try:
-            ersetzt = rollen_abschluss(kaskade, abo, api, domaene,
-                                        notiz=notiz, pfad=ledger_pfad)
+            angefasst = rollen_abschluss(kaskade, abo, api, domaene,
+                                          notiz=notiz, pfad=ledger_pfad,
+                                          bestand=bestand)
         except ValueError as exc:
             print(f"Fehler: {exc}", file=sys.stderr)
             return 1
-        aktion = "ersetzt" if ersetzt else "angelegt"
+        if not angefasst:
+            aktion = "angelegt"
+        else:
+            aktion = "addiert" if bestand == "addieren" else "ersetzt"
         archiv_hinweis = ""
         if archivieren:
             verschoben = _archiviere_dateien(geparst)
@@ -963,8 +1062,11 @@ def _main(argv):
             if nicht_geparst:
                 archiv_hinweis += (f", {len(nicht_geparst)} nicht-parsebare "
                                     f"Log(s) NICHT archiviert")
+        # Bei "addiert" ist abo+api der ZUGANG, nicht der neue Zeilenwert —
+        # das Vorzeichen macht den Unterschied sichtbar (BL-5).
+        betrag = f"{'+' if aktion == 'addiert' else ''}{abo + api:.4f}"
         print(f"Roles-Zeile Kaskade {kaskade} ({domaene}) {aktion}: "
-              f"{abo + api:.4f} USD (abo {abo:.4f} / api {api:.4f})"
+              f"{betrag} USD (abo {abo:.4f} / api {api:.4f})"
               f"{archiv_hinweis}")
         return 0
 

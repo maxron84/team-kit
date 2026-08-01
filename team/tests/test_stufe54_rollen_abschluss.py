@@ -5,7 +5,9 @@ BL-29-"1b", Kaskade 16/Stufe 54).
 `kosten.py rollen-abschluss` summiert ein .team-logs-Fixture-Verzeichnis
 abo/api-getrennt und haengt EINE rolle=roles-Zeile fuer die angegebene
 Kaskade an (usd=abo+api, auth je nach Split). Ein zweiter Aufruf fuer
-dieselbe Kaskade ERSETZT die vorhandene roles-Zeile; Zeilen anderer Rollen
+dieselbe Kaskade erzeugt KEINE zweite roles-Zeile, sondern fasst die
+bestehende an -- seit BL-5 nur noch auf ausdrueckliche Ansage
+(--ersetzen/--addieren), ohne Modus bricht er ab; Zeilen anderer Rollen
 derselben Kaskade bleiben unangetastet. Die Bash-Oberflaeche
 (team-status.sh --rollen-abschluss) archiviert .team-logs danach ueber
 team_logs_archivieren -- separat geprueft gegen ein Fixture-Verzeichnis
@@ -72,6 +74,9 @@ def test_gemischte_kosten_ergeben_eine_roles_zeile_mit_korrektem_split(tmp_path)
 
 
 def test_zweiter_aufruf_gleiche_kaskade_ersetzt(tmp_path):
+    """Zweiter Aufruf erzeugt KEINE zweite roles-Zeile, sondern fasst die
+    bestehende an. Seit BL-5 verlangt das ein ausdrueckliches --ersetzen —
+    ohne Modus bricht der Aufruf ab (siehe test_bl5_rollen_abschluss_bestand)."""
     ledger = _fixture_ledger(tmp_path)
     logs1 = _fixture_team_logs(tmp_path, name="logs1", abo_usd=1.0)
     logs2 = _fixture_team_logs(tmp_path, name="logs2", abo_usd=3.0, api_usd=2.0)
@@ -79,7 +84,7 @@ def test_zweiter_aufruf_gleiche_kaskade_ersetzt(tmp_path):
          "--logs", str(logs1), "--pfad", str(ledger))
     rc, out, err = _run("rollen-abschluss", "--kaskade", "16",
                          "--domaene", "team", "--logs", str(logs2),
-                         "--pfad", str(ledger))
+                         "--pfad", str(ledger), "--ersetzen")
     assert rc == 0, err
     assert "ersetzt" in out
 
