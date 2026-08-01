@@ -73,6 +73,35 @@ if [ "$UPDATE" -eq 1 ]; then
         exit 2
     fi
 
+    # BL-10: NIEMALS in einen laufenden Lauf hinein aktualisieren. Real
+    # passiert (2026-08-01, team-kit_project_platformer): Ein Update waehrend
+    # eines aktiven vollautomatik.sh-Laufs legte frische, uncommittete Dateien
+    # in team/ ab. Der naechste Read-Only-Lauf (Axel, Whitelist nur plans/)
+    # wertete sie als GUARD-VERLETZUNG, rollte sie chirurgisch zurueck und
+    # buchte seine Runde als Fehlschlag — obwohl er seine Ermittlungsakte
+    # geliefert hatte. Das war die dritte Stagnation in Folge und stoppte den
+    # Lauf. Der Guard hat richtig gehandelt; fehlen durfte nur diese Sperre.
+    if [ -e "$ZIEL/.team-loop.lock" ] && \
+       ! flock -n "$ZIEL/.team-loop.lock" true 2>/dev/null; then
+        rot "FEHLER: In $ZIEL laeuft gerade ein Team-Lauf (.team-loop.lock ist gehalten)."
+        echo "  Ein Update wuerde uncommittete Dateien in team/ ablegen. Der naechste"
+        echo "  Read-Only-Lauf (Harry/Marv/Axel) wertet die als Guard-Verletzung,"
+        echo "  raeumt sie weg und bucht seine Runde als Fehlschlag — im Feld hat das"
+        echo "  einen laufenden Lauf gestoppt (BL-10)."
+        echo "  Erst den Lauf beenden lassen, dann erneut aufrufen."
+        exit 2
+    fi
+
+    # Ein schmutziger Arbeitsbaum ist kein Abbruchgrund, aber die Warnung
+    # gehoert VOR das Update: Nach dem Update ist nicht mehr unterscheidbar,
+    # was von wem stammt.
+    if [ -n "$(git -C "$ZIEL" status --porcelain 2>/dev/null)" ]; then
+        gelb "  ! Der Arbeitsbaum ist nicht sauber. Das Update mischt seine Dateien"
+        gelb "    unter deine. Empfehlung: abbrechen (Strg+C), erst committen."
+        gelb "    Weiter in 5 s …"
+        sleep 5
+    fi
+
     # Projektwerte aus der INSTALLIERTEN Konfiguration lesen, nicht aus den
     # Defaults — sonst bekaemen die Rollen-Briefings die falschen Pfade und
     # damit eine falsche Guard-Grenze.
@@ -220,7 +249,13 @@ PY
     fi
 
     kopf "Update fertig"
-    echo "  Naechster Schritt: git -C $ZIEL diff  — und committen."
+    rot  "  JETZT COMMITTEN — vor dem naechsten Lauf, nicht danach."
+    echo "    git -C $ZIEL add -A && git -C $ZIEL commit -m \"chore: T.E.A.M. aktualisiert\""
+    echo
+    echo "  Warum das keine Formalie ist: Die neuen Dateien liegen uncommittet in"
+    echo "  team/. Der naechste Read-Only-Lauf (Harry/Marv/Axel) sieht sie ausserhalb"
+    echo "  seiner Whitelist, wertet sie als Guard-Verletzung und raeumt sie weg —"
+    echo "  das Update waere still wieder verschwunden (BL-10)."
     exit $FEHLER
 fi
 

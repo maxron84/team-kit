@@ -2,6 +2,26 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.3.1] — 2026-08-01
+
+**Sofortnachtrag zu 2.3.0, im Feld erzwungen.**
+
+### Fixed
+- **`install.sh --update` lief in einen aktiven Lauf hinein (`BL-10`).** Beim
+  ersten Einsatz von `--update` auf ein Feldprojekt lief dort noch
+  `vollautomatik.sh`. Das Update legte uncommittete Dateien in `team/` ab; der
+  unmittelbar folgende Axel-Lauf (read-only, Whitelist nur `plans/`) wertete
+  sie als **Guard-Verletzung**, rollte sie zurück und buchte seine Runde als
+  Fehlschlag — obwohl er seine Ermittlungsakte geliefert hatte. Dritte
+  Stagnation in Folge, **Lauf gestoppt**, Update spurlos weg.
+  Der Guard hat dabei genau das getan, wofür er gebaut ist, und die
+  Projektdaten blieben unversehrt. Gefehlt hat die Sperre im Installer:
+  `--update` prüft jetzt per `flock -n`, ob `.team-loop.lock` **gehalten** wird
+  (nicht bloß existiert), bricht dann mit Exit 2 ab, warnt zusätzlich vor einem
+  schmutzigen Arbeitsbaum und macht das anschließende Committen zur
+  ausdrücklichen Pflicht — sonst räumt der nächste Read-Only-Lauf das Update
+  weg.
+
 ## [2.3.0] — 2026-08-01
 
 **Die Kostenerfassung stimmt wieder, und das Kit prüft sich selbst.** Erntelauf
