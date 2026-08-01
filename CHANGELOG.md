@@ -2,6 +2,38 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.3.2] — 2026-08-01
+
+**Der erste echte `--update`-Einsatz hat zwei Löcher aufgedeckt — beide im
+Update selbst.**
+
+### Fixed
+- **`--update` löschte projekteigene Tests und nahm lokale Fixes still zurück
+  (`BL-12`).** Ein pauschales `rm team/tests/test_*.py` sollte umbenannte
+  Kit-Tests einer Altversion entfernen. Im Feld löschte es einen **vom Projekt
+  geschriebenen** Infrastruktur-Test, und im selben Lauf wurde
+  `team/tools/beutebuch.py` mit der älteren Kit-Fassung überschrieben — samt
+  einem lokalen Fix, der real 12,00 USD gekostet hatte. Die Annahme
+  „`team/tests/` gehört exklusiv dem Kit" ist falsch, sobald ein Projekt eine
+  Lücke im Team selbst schließt.
+  **Neu:** `--update` löscht **nichts** mehr. Tests, die das Kit nicht kennt,
+  bleiben liegen und werden gemeldet; jede ersetzte Infrastruktur-Datei, die
+  vorher von der Kit-Fassung abwich, wird mit `git diff`-Befehl ausgewiesen —
+  mit dem ausdrücklichen Hinweis, einen darin steckenden eigenen Fix erst ins
+  Kit zurückzuspielen und dann erneut zu updaten.
+
+### Added
+- **`BL-11` aus dem Feld zurückgeholt:** `DATEI_RE` in `beutebuch.py` erkennt
+  jetzt Pytest-Node-IDs (`datei.py::test_x[param]`) und extrahiert den reinen
+  Dateipfad. Vorher galt eine so referenzierte Datei still als „nicht
+  referenziert", der Substanz-Anker verwarf jeden Fix, der nur sie berührte,
+  und Frank lief in einen endlosen Rollback-Zyklus (real 12,00 USD an `HM-4`).
+  Fix und Reproducer stammen aus dem Feldprojekt und lagen dort **zwei
+  Kaskaden lang** — genau das Loch, das der Rückkanal schließen soll.
+- Drei weitere Zusicherungen in `kit-test.sh` Stufe 5 (projekteigener Test
+  überlebt, wird gemeldet, abweichende Infrastruktur wird gemeldet).
+- **160 Testfälle** in 31 Dateien.
+
 ## [2.3.1] — 2026-08-01
 
 **Sofortnachtrag zu 2.3.0, im Feld erzwungen.**

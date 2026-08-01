@@ -139,9 +139,20 @@ if [ "$UPDATE" -eq 1 ]; then
 
     FORCE=1   # innerhalb der Infrastruktur bewusst ueberschreiben
     GESCHRIEBEN=0; UEBERSPRUNGEN=0
+    ABWEICHEND=""
     kopiere() {
-        local quelle="$1" modus="${3:-644}" ziel="$ZIEL/$2"
+        local quelle="$1" rel="$2" modus="${3:-644}" ziel="$ZIEL/$2"
         mkdir -p "$(dirname "$ziel")"
+        # BL-12: Wich die installierte Fassung vom Kit ab, kann darin ein
+        # LOKALER Fix stecken, den noch niemand ans Kit zurueckgemeldet hat.
+        # Genau so ging im Feld ein 12-USD-Fix an beutebuch.py verloren.
+        # Briefings sind ausgenommen: Sie werden ohnehin neu gerendert und
+        # weichen durch die gefuellten Platzhalter immer ab.
+        case "$rel" in
+            team/prompts/*) ;;
+            *) [ -e "$ziel" ] && ! cmp -s "$quelle" "$ziel" \
+                   && ABWEICHEND="$ABWEICHEND $rel" ;;
+        esac
         cp "$quelle" "$ziel"; chmod "$modus" "$ziel"
         GESCHRIEBEN=$((GESCHRIEBEN + 1))
     }
@@ -180,13 +191,37 @@ PY
     kopiere "$KIT/team/redteam.sh" "team/redteam.sh" 755
     for f in "$KIT"/team/tools/*.py;   do kopiere "$f" "team/tools/$(basename "$f")" 755; done
     for f in "$KIT"/team/prompts/*.md; do kopiere "$f" "team/prompts/$(basename "$f")"; done
-    # Umbenannte/entfallene Testdateien einer Altversion wuerden sonst liegen
-    # bleiben und den Testlauf rot faerben. team/tests/ gehoert dem Kit —
-    # Reproducer des Projekts liegen in ${TEST_ORDNER}.
-    rm -f "$ZIEL"/team/tests/test_*.py
+    # BL-12: Hier stand einmal ein pauschales rm auf team/tests/test_*.py, um
+    # umbenannte Kit-Tests einer Altversion loszuwerden. Das hat im Feld einen
+    # projekteigenen Infrastruktur-Test geloescht — team/tests/ ist eben NICHT
+    # exklusiv Kit-Gebiet, sobald ein Projekt eine Luecke im Team selbst
+    # schliesst. Jetzt wird nichts geloescht; Unbekanntes wird gemeldet.
     for f in "$KIT"/team/tests/test_*.py; do kopiere "$f" "team/tests/$(basename "$f")"; done
+    FREMDE_TESTS=""
+    for f in "$ZIEL"/team/tests/test_*.py; do
+        [ -e "$f" ] || continue
+        [ -e "$KIT/team/tests/$(basename "$f")" ] || \
+            FREMDE_TESTS="$FREMDE_TESTS $(basename "$f")"
+    done
     for d in "$ZIEL"/team/prompts/*.md; do fuelle "team/prompts/$(basename "$d")"; done
     gruen "  ✓ $GESCHRIEBEN Infrastruktur-Dateien aktualisiert"
+
+    if [ -n "$ABWEICHEND" ]; then
+        kopf "Ersetzt, obwohl abweichend — bitte gegenlesen"
+        for f in $ABWEICHEND; do echo "  ! $f"; done
+        gelb "  Diese Dateien wichen von der Kit-Fassung ab. Meist ist das nur"
+        gelb "  eine aeltere Version — es kann aber ein LOKALER Fix sein, den"
+        gelb "  niemand ans Kit zurueckgemeldet hat. Im Feld ging so ein Fix"
+        gelb "  ueber 12,00 USD verloren (BL-12)."
+        gelb "  Pruefen mit:  git -C $ZIEL diff -- $ABWEICHEND"
+        gelb "  Steckt dort etwas Eigenes drin: ins Kit zurueckspielen, DANN erneut updaten."
+    fi
+    if [ -n "$FREMDE_TESTS" ]; then
+        kopf "Unbekannte Tests in team/tests (unangetastet gelassen)"
+        for f in $FREMDE_TESTS; do echo "  · $f"; done
+        echo "  Kennt das Kit nicht — entweder vom Projekt ergaenzt (dann ans Kit"
+        echo "  melden) oder Rest einer Altversion (dann loeschen)."
+    fi
 
     kopf "Unangetastet geblieben (Projektdaten)"
     for d in team.config.sh CLAUDE.md CHANGELOG.md .budget-ledger .ralph-state \

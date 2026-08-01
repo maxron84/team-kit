@@ -46,14 +46,20 @@ from pathlib import Path
 # Diese Datei liegt in team/tools/ — zwei Ebenen unter der Projektwurzel.
 # Ein .parent zu wenig ergab team/plans/beutebuch.md, also eine Datei, die es
 # nie gibt: das Werkzeug meldete dann still "keine Funde", und die komplette
-# Frank-/Axel-Fixphase lief an jedem uebergebenen Fund vorbei (BL-1, im Feld
-# erlebt am 2026-08-01 in team-kit_project_platformer, Kaskade 1).
+# Frank-/Axel-Fixphase lief an jedem übergebenen Fund vorbei (BL-1).
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 BEUTEBUCH = REPO_ROOT / "plans" / "beutebuch.md"
 ARCHIV = REPO_ROOT / "plans" / "beutebuch-archiv.md"
 HM_RE = re.compile(r"^###\s+(HM-\d+)")
 STATUS_RE = re.compile(r"^(-\s+\*\*Status\*\*:\s*)(.+?)\s*$")
-DATEI_RE = re.compile(r"`([A-Za-z0-9_./-]+\.[A-Za-z0-9]+)`")
+# Der optionale `::…`-Teil fängt Pytest-Node-IDs (`datei.py::test_x`,
+# `datei.py::test_x[param]`) und wird VERWORFEN — extrahiert wird nur der
+# Dateipfad davor. Ohne ihn scheiterte der Match komplett, weil ":" nicht in der
+# Zeichenklasse steht und der Regex Backticks an beiden Enden verlangt: eine so
+# referenzierte Datei galt still als "nicht referenziert", der Substanz-Anker
+# (team_diff_beruehrt_fund) verwarf jeden Fix, der nur sie berührte, und Frank
+# lief in einen endlosen Rollback-Zyklus (im Feld BL-6, real 12,00 USD an HM-4).
+DATEI_RE = re.compile(r"`([A-Za-z0-9_./-]+\.[A-Za-z0-9]+)(?:::[^`]*)?`")
 
 
 def _lies_zeilen(pfad):

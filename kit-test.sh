@@ -110,7 +110,13 @@ echo '### HM-1 — echter Fund' >> "$ZIEL/plans/beutebuch.md"
 echo '5' > "$ZIEL/.ralph-state"
 sed -i 's|^TEAM_SMOKE_TEST=.*|TEAM_SMOKE_TEST="${TEAM_SMOKE_TEST:-./smoke.sh}"|' \
     "$ZIEL/team.config.sh"
-touch "$ZIEL/team/tests/test_alttest_einer_altversion.py"
+# Ein Test, den das Kit nicht kennt — wie ihn ein Projekt schreibt, das eine
+# Luecke im Team selbst schliesst, bevor der Fund im Kit ankommt.
+printf 'def test_projekteigener_fund():\n    assert True\n' \
+    > "$ZIEL/team/tests/test_projekteigener_fund.py"
+# Eine lokal veraenderte Infrastruktur-Datei — der Fall, in dem ein noch nicht
+# zurueckgemeldeter Fix vom Update ueberschrieben wird.
+printf '\n# lokaler Fix, noch nicht ans Kit gemeldet\n' >> "$ZIEL/team/tools/beutebuch.py"
 
 if ! bash "$KIT/install.sh" "$ZIEL" --update > "$ZIEL/.update.log" 2>&1; then
     rot "  ✗ install.sh --update schlug fehl:"
@@ -132,8 +138,15 @@ pruefe "Kaskadenstand unangetastet" "$(cat "$ZIEL/.ralph-state")"             "5
 pruefe "Beutebuch-Fund erhalten"  "$(grep -c 'HM-1' "$ZIEL/plans/beutebuch.md")" "1"
 pruefe "Smoke-Test in der Config erhalten" \
        "$(grep -c 'smoke.sh' "$ZIEL/team.config.sh")" "1"
-pruefe "Alttest einer Altversion entfernt" \
-       "$([ -f "$ZIEL/team/tests/test_alttest_einer_altversion.py" ] && echo da || echo weg)" "weg"
+# BL-12: NICHT loeschen. Ein Testfile, das das Kit nicht kennt, kann ein
+# projekteigener Infrastruktur-Test sein — im Feld hat ein pauschales rm genau
+# so einen geloescht. Es bleibt liegen und wird gemeldet.
+pruefe "projekteigener Test in team/tests bleibt erhalten" \
+       "$([ -f "$ZIEL/team/tests/test_projekteigener_fund.py" ] && echo da || echo weg)" "da"
+pruefe "und wird als unbekannt gemeldet" \
+       "$(grep -c 'test_projekteigener_fund.py' "$ZIEL/.update.log")" "1"
+pruefe "lokal abweichende Infrastruktur wird gemeldet" \
+       "$(grep -c 'bitte gegenlesen' "$ZIEL/.update.log")" "1"
 pruefe "keine offenen Platzhalter in den Briefings" \
        "$(grep -rlE '\{\{[A-Z_]+\}\}' "$ZIEL/team/prompts/" | wc -l)" "0"
 [ "$UPDATE_FEHLER" -eq 0 ] || exit 1
