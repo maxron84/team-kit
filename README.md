@@ -11,7 +11,7 @@ bash install.sh ~/Source/mein-neues-projekt
 
 Ein Befehl, sieben Fragen, danach liegen 53 Dateien im Zielprojekt: der gehärtete
 Bau-Loop, das Read-Only Red Team, der Fixer, der Forensiker, die Kostenmechanik,
-die Bootstrap-Dateien und 25 Regressionstests.
+die Bootstrap-Dateien, die Bedienanleitung `TEAM.md` und 26 Regressionstests.
 
 ---
 
@@ -117,9 +117,9 @@ team/                   Team-Namensraum — landet als team/ im Zielprojekt
 ├── redteam.sh          Gemeinsame Sweep-Logik von Harry und Marv
 ├── tools/              kosten.py (952 Z), beutebuch.py (275 Z)
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-└── tests/              25 Testdateien, 127 Testfälle
+└── tests/              26 Testdateien, 132 Testfälle
 
-bootstrap/              CLAUDE.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
+bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
 install.sh              Der Installer
 doku/anhang-a.md        Bau-Anleitung und Betriebslehren
 ```
@@ -131,6 +131,7 @@ projekt/
 ├── vollautomatik.sh …  Entrypoints sichtbar oben — du tippst sie direkt
 ├── team.config.sh      die eine Konfigdatei
 ├── team/               Team-Infrastruktur (lib, tools, prompts, tests)
+├── TEAM.md             Bedienanleitung für DICH — lies sie zuerst
 ├── CLAUDE.md CHANGELOG.md plans/
 └── <dein-code>/        unberührt
 ```
@@ -158,11 +159,12 @@ Produktivcode bleiben, wie sie sind — nichts Stack-Fremdes landet darin.
   sind Python und liegen unter `team/tools/`. Das ist eine Abhängigkeit der
   **Team-Infrastruktur** — auf einer Ebene mit `git`, `flock` und der Agenten-CLI —
   nicht deines Projekts. Verifiziert in Go-, Rust- und PHP-Projektstrukturen.
-- **Nicht end-zu-end getestet.** Verifiziert sind: Installation, Syntax,
-  127 Regressionstests, Guard-Rollback, Idempotenz, Verhalten aller Rollen ohne
-  Arbeitsvorrat. **Nicht** verifiziert ist ein vollständiger scharfer
-  `vollautomatik.sh`-Lauf in einem neuen Projekt — der kostet echtes Geld und
-  braucht einen echten Plan.
+- **Scharf gelaufen (2026-08-01).** Ralph hat in einem Wegwerf-Projekt real
+  gebaut (Commit, Promise, State, Cap — 0,27 USD), Harry real gesweept (0,48 USD),
+  und der Read-Only-Guard hat nachweislich gegriffen: zwei `permission_denials`
+  im Log, Produktivcode unangetastet. Die volle Kette ist damit belegt.
+  **Noch nicht gelaufen**: eine komplette `vollautomatik.sh`-Kaskade über alle
+  vier Phasen inklusive Frank und Axel.
 - **Guard-Tests nur in Wegwerf-Repos.** Nie im echten Projekt.
 - **`--permission-mode default` ist undokumentiert.** Die beiden Read-Only-Rollen
   (Harry/Marv über `redteam.sh`, Axel) rufen die CLI damit auf. Der Wert wird von

@@ -2,6 +2,43 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.2.0] — 2026-08-01
+
+**Erster scharfer Lauf — das Kit ist verifiziert, nicht nur geprüft.**
+
+### Added
+- **`TEAM.md`** — der menschliche Einstiegspunkt, bisher die letzte Lücke.
+  Beim Abnahmegespräch fiel auf: Die teuerste Warnung des Kits („vor dem ersten
+  Guard-Lauf committen") stand **nur in der Terminal-Ausgabe des Installers** —
+  und die scrollt weg. Exakt der Fehler, den Planungsregel 5 für den
+  Abschlussbericht behebt. `TEAM.md` liegt jetzt im Projekt und im Git:
+  Guard-Warnung ganz oben, Rollenübersicht, Kaskaden-Ablauf, Befehlstabelle,
+  **Exit-Code-Tabelle** (42 ist kein Absturz), Ablageübersicht und eine
+  Fehlersuch-Tabelle.
+- Fünf Regressionstests dafür (`test_team_md_bedienanleitung.py`): TEAM.md
+  existiert, Guard-Warnung steht im Kopfbereich, Exit-Codes erklärt, Closeout
+  als Pflicht benannt, keine offenen Platzhalter. **132 Testfälle** gesamt.
+- Installer-Abschlussmeldung verweist zuerst auf `TEAM.md`, mit dem Hinweis,
+  dass die Terminal-Ausgabe wegscrollt und die Datei bleibt.
+
+### Verified — scharfer Erstlauf in einem Wegwerf-Projekt
+Erstmals mit **echten CLI-Aufrufen** statt Fixtures:
+- **Ralph**: Auth-Auflösung (abo) → realer Aufruf → Code gebaut → Smoke-Test
+  grün → genau ein `feat(stufe1)`-Commit → Promise erkannt → State auf 2 →
+  `RALPH_CAP` respektiert → sauberer Exit 0. **0,2728 USD.**
+- **Harry** (Red Team, read-only): realer Sweep über die Historie, Exit 0,
+  State auf HEAD gesetzt, **Produktivcode nachweislich unangetastet**.
+  **0,4751 USD.**
+- **Read-Only-Guard Linie 2 belegt**: Das Log enthält **zwei
+  `permission_denials`** — die `--allowedTools`-Allowlist hat zwei
+  Bash-Aufrufe von Harry real verweigert. Kein `is_error`.
+- **Kostenerfassung**: Ledger und `--budget` weisen 0,7479 USD als
+  Abo-Gegenwert aus, korrekt getrennt von real abgerechneten API-Kosten.
+
+Damit ist die Kette Konfiguration → Briefing → `team_claude` → Auth →
+Promise-Auswertung → Budget-Check → State-Fortschritt → Guard → Kostenlog
+**durchgängig unter echten Bedingungen belegt**.
+
 ## [2.1.0] — 2026-08-01
 
 Erstlauf-Anleitung in die Artefakte geschrieben. Sie existierte bisher nur als

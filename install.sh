@@ -179,6 +179,7 @@ gruen "  ✓ Entrypoints (Wurzel) + team/ (lib, tools, prompts, $(ls "$KIT"/team
 # ---------------------------------------------------------------- A.0 Bootstrap
 kopf "A.0 — Bootstrap-Dateien"
 kopiere "$KIT/bootstrap/CLAUDE.md.vorlage"    "CLAUDE.md"
+kopiere "$KIT/bootstrap/TEAM.md"               "TEAM.md"
 kopiere "$KIT/bootstrap/CHANGELOG.md"          "CHANGELOG.md"
 kopiere "$KIT/bootstrap/beutebuch.md"          "${PLAN_ORDNER}beutebuch.md"
 kopiere "$KIT/bootstrap/roadmap-skizzen.md"    "${PLAN_ORDNER}roadmap-skizzen.md"
@@ -192,7 +193,7 @@ gruen "  ✓ CLAUDE.md, CHANGELOG, Beutebuch (mit Vorlage-Block), Roadmap, Backl
 
 # Platzhalter füllen — auch in den Briefings: sie sind selbst Prompts und
 # nennen sonst die Pfade des Ursprungsprojekts (falsche Guard-Grenze!).
-for d in CLAUDE.md team.config.sh CHANGELOG.md \
+for d in CLAUDE.md TEAM.md team.config.sh CHANGELOG.md \
          "${PLAN_ORDNER}roadmap-skizzen.md" "${PLAN_ORDNER}backlog.md" \
          "${PLAN_ORDNER}beutebuch.md"; do
     fuelle "$d"
@@ -237,6 +238,10 @@ fi
 # ---------------------------------------------------------------- Abschluss
 kopf "Fertig — $GESCHRIEBEN Dateien geschrieben, $UEBERSPRUNGEN übersprungen"
 cat <<EOF
+
+>>> Alles Weitere steht in $ZIEL/TEAM.md <<<
+    Bedienung, Befehle, Exit-Codes und Fehlersuche — für dich, nicht für die KI.
+    Diese Terminal-Ausgabe scrollt weg; TEAM.md bleibt im Git.
 
 Nächste Schritte im Zielprojekt:
 
