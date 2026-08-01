@@ -164,6 +164,13 @@ Produktivcode bleiben, wie sie sind — nichts Stack-Fremdes landet darin.
   `vollautomatik.sh`-Lauf in einem neuen Projekt — der kostet echtes Geld und
   braucht einen echten Plan.
 - **Guard-Tests nur in Wegwerf-Repos.** Nie im echten Projekt.
+- **`--permission-mode default` ist undokumentiert.** Die beiden Read-Only-Rollen
+  (Harry/Marv über `redteam.sh`, Axel) rufen die CLI damit auf. Der Wert wird von
+  Claude Code 2.1.206 **akzeptiert**, taucht in `claude --help` aber nicht mehr in
+  der Auswahlliste auf (dort stehen `acceptEdits`, `auto`, `bypassPermissions`,
+  `manual`, `dontAsk`, `plan`). Falls eine künftige CLI ihn entfernt, schlagen
+  genau diese beiden Rollen fehl — dann den passenden Nachfolger einsetzen und
+  die Guard-Wirksamkeit erneut gegen die CLI verifizieren (Anhang A.5).
 - **Budget-Caps großzügig ansetzen.** Ein zu tiefer Pro-Fall-Cap wirft teure,
   aber plausible Fixes per Rollback weg und **vervielfacht** die Kosten
   (Feld-Lehre `HM-32`).
