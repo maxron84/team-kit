@@ -86,10 +86,21 @@ Vorsichtiger, Schritt für Schritt mit Halt bei dir:
 ./team-status.sh --architekt-abschluss <USD> <domaene> "Kaskade N geplant"
 ```
 
+Der erste Befehl schließt **beide** Kostenquellen des Laufs ab und schreibt
+dafür **zwei** Ledger-Zeilen: `roles` für Harry/Marv/Frank/Axel und `ralph`
+für die Baukosten. Die Rohlogs werden dabei archiviert, damit der Kontostand
+sie nicht ein zweites Mal zählt.
+
 **Warum das nicht optional ist:** Der Architekt läuft interaktiv, außerhalb der
 Kostenlogs. Ohne diesen Schritt bleibt seine Sitzung strukturell unerfasst — im
 Ursprungsprojekt waren das real rund 16 USD pro Session. Der Kostenabschluss
 gehört **nach** den Lauf, niemals in eine Loop-Stufe.
+
+**Wenn nach dem Closeout noch eine Rolle lief** (z. B. ein Frank-Fix), bricht ein
+zweiter `--rollen-abschluss` ab, statt die erste Buchung zu überschreiben, und
+nennt Alt-, Neu- und Summenwert. Den Nachlauf buchst du mit
+`--rollen-abschluss <N> <domaene> "" --addieren` dazu; `--ersetzen` gibt es für
+den Fall, dass die alte Zeile schlicht falsch war.
 
 Der Architekt schreibt außerdem ein `{{PLAN_ORDNER}}/kaskade-N-abschluss.md`.
 Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.

@@ -5,6 +5,23 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **Ralphs Baukosten landeten in keiner Ledger-Zeile (`BL-4`).**
+  `--rollen-abschluss` ledgerte per Definition nur `.team-logs`
+  (Harry/Marv/Frank/Axel). Für `.ralph-logs` gab es zwar den Bash-Helfer
+  `team_logs_archivieren()`, aber im **gesamten Kit keinen Aufrufer**. Der
+  Gesamtstand stimmte nur, solange `.ralph-logs/` liegen blieb — und der Ordner
+  steht per `gitignore.fragment` in `.gitignore`. Ein frischer Clone verlor
+  damit die **gesamte Bau-Kostenhistorie**, also genau das, wogegen das Ledger
+  gebaut wurde (im Feld: 2,1621 von 9,4204 USD).
+  **Neu:** `kosten.py ralph-abschluss` — derselbe Mechanismus mit `.ralph-logs`
+  als Quelle und `rolle=ralph` als Zielzeile. `./team-status.sh
+  --rollen-abschluss` ruft **beide** Verben auf: **eine** Bedienhandlung,
+  **zwei** getrennte Ledger-Zeilen. Bewusst keine Sammelzeile — die Trennung
+  Bau ↔ Sweep/Fix ist die Kennzahl, an der im Feld überhaupt auffiel, dass
+  Ralph fehlte. Bricht ein Verb ab, wird das andere trotzdem versucht.
+  Der Fehler war zur Hälfte ein Dokumentationsfehler: Die Closeout-Pflicht in
+  `CLAUDE.md.vorlage`, `TEAM.md` und dem Architekten-Briefing nannte Ralph
+  nirgends. Alle drei Stellen sind nachgezogen.
 - **`--rollen-abschluss` löschte bei einem zweiten Aufruf still Geld aus dem
   Ledger (`BL-5`).** Der gebuchte Wert entsteht aus den **noch nicht
   archivierten** Logs, und ein Abschluss archiviert die gezählten Logs
@@ -27,13 +44,22 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - `_ledger_zeile_setzen()` bekam dafür einen optionalen `merge_fn`-Haken, der
   **innerhalb** des Ledger-Locks und **vor** jedem Schreibzugriff läuft.
   `akteur_abschluss()` ist unberührt.
+- **`README.md`, Abschnitt „Grenzen", war überholt (`BL-7`).** Frank ist
+  inzwischen scharf gelaufen (drei Fixes im Feld), Axel weiterhin nicht — und
+  die Fixphase einer `vollautomatik.sh` hat noch nie in **einem** Durchlauf
+  durchgetragen. Präzisiert statt gestrichen. Zahlen (Dateien, Tests,
+  Zeilenumfänge) auf den Ist-Stand gebracht.
 
 ### Added
+- `team/tests/test_bl4_ralph_abschluss.py` — vier Prüfungen, darunter die
+  entscheidende über die Bedienoberfläche: **ein** `--rollen-abschluss` muss
+  **beide** Zeilen erzeugen und beide Log-Ordner rotieren. Gegenprobe gefahren:
+  Mit dem alten Ein-Verb-Aufruf ist genau dieser Test rot.
 - `team/tests/test_bl5_rollen_abschluss_bestand.py` — sieben Prüfungen, darunter
   das **Feldszenario mit den echten Zahlen** (1,0969 → Frank-Nachlauf 2,4114 →
   3,5083) inklusive Archivierung. Gegenprobe gefahren: Mit dem alten Verhalten
   sind genau die beiden Kernprüfungen rot.
-- **145 Testfälle** gesamt (im installierten Projekt).
+- **149 Testfälle** in 30 Dateien (im installierten Projekt).
 - **`kit-test.sh` — das Kit prüft sich jetzt selbst (`BL-6`).** Bisher gab es
   dafür keinen Befehl: `pytest team/tests` schlägt im Kit-Repo mit **17 von 138**
   Tests fehl, weil die Tests die **installierte** Ablage voraussetzen
@@ -49,6 +75,8 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   durchgereicht (Gegenprobe gefahren: erzwungener Fehlschlag ergibt Exit 5),
   `--behalten` lässt das Wegwerf-Repo zur Fehlersuche stehen. Ruft keine
   Agenten-CLI auf und kostet daher nichts.
+
+## [2.2.1] — 2026-08-01
 
 **Die Fixphase war in jeder Installation tot.** Erster Fund aus einem
 Feldprojekt zurück ins Kit (`team-kit_project_platformer`, Kaskade 1).

@@ -261,13 +261,28 @@ status_rollen_abschluss() {
         *) echo "Unbekannter Modus '$modus' — erlaubt: --addieren, --ersetzen" >&2
            return 1 ;;
     esac
-    if [ -n "$notiz" ]; then
-        $TEAM_KOSTEN_TOOL rollen-abschluss --kaskade "$kaskade" \
-            --domaene "$domaene" --notiz "$notiz" --archivieren ${modus:+"$modus"}
-    else
-        $TEAM_KOSTEN_TOOL rollen-abschluss --kaskade "$kaskade" \
-            --domaene "$domaene" --archivieren ${modus:+"$modus"}
-    fi
+
+    # BL-4: BEIDE Kostenquellen einer Kaskade abschliessen — .team-logs
+    # (Harry/Marv/Frank/Axel -> rolle=roles) UND .ralph-logs (Bau -> rolle=
+    # ralph). Zwei getrennte Ledger-Zeilen, EINE Bedienhandlung: Ralphs
+    # Baukosten fielen im Feld nur deshalb aus dem committeten Ledger, weil
+    # sie einen zweiten, nirgends vorgeschriebenen Befehl gebraucht haetten.
+    # Beide Verben laufen unabhaengig: Bricht einer ab (z. B. BL-5-Bestand),
+    # wird der andere trotzdem versucht und der Fehler am Ende gemeldet.
+    local rc=0 einzel_rc verb
+    for verb in rollen-abschluss ralph-abschluss; do
+        einzel_rc=0
+        if [ -n "$notiz" ]; then
+            $TEAM_KOSTEN_TOOL "$verb" --kaskade "$kaskade" \
+                --domaene "$domaene" --notiz "$notiz" --archivieren \
+                ${modus:+"$modus"} || einzel_rc=$?
+        else
+            $TEAM_KOSTEN_TOOL "$verb" --kaskade "$kaskade" \
+                --domaene "$domaene" --archivieren ${modus:+"$modus"} || einzel_rc=$?
+        fi
+        [ "$einzel_rc" -eq 0 ] || rc="$einzel_rc"
+    done
+    return "$rc"
 }
 
 # status_beutebuch_archivieren: reicht auf beutebuch.py archiviere durch

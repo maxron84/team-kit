@@ -124,11 +124,14 @@ Nutzung:
                                         auth="abo"/"api"/"abo/api" je nach
                                         Split; Kaskadenschaerfe schlaegt
                                         Abo/API-Schaerfe je Rollenzeile,
-                                        Strippenzieher-Entscheid). Ein
-                                        zweiter Aufruf fuer dieselbe Kaskade
-                                        ERSETZT die vorhandene roles-Zeile
-                                        dieser Kaskade, Zeilen anderer Rollen
-                                        (ralph/architekt/…) bleiben
+                                        Strippenzieher-Entscheid). Steht fuer
+                                        die Kaskade schon eine roles-Zeile,
+                                        BRICHT der Aufruf AB und nennt Alt-,
+                                        Neu- und Summenwert (BL-5) —
+                                        --addieren bucht den Nachlauf dazu,
+                                        --ersetzen korrigiert eine falsche
+                                        Altzeile. Zeilen anderer Rollen
+                                        (ralph/architekt/…) bleiben immer
                                         unangetastet. Mit --archivieren
                                         verschiebt rollen-abschluss NACH
                                         erfolgreicher Ledgerzeile EXAKT die
@@ -143,6 +146,30 @@ Nutzung:
                                         (--rollen-abschluss) setzt das Flag.
                                         Nur manueller Kaskaden-Abschluss,
                                         laeuft NICHT in vollautomatik.sh.
+    kosten.py ralph-abschluss  … (Argumente wie rollen-abschluss)
+                                        BL-4: identischer Mechanismus fuer
+                                        Ralphs BAUKOSTEN — Quelle .ralph-logs
+                                        statt .team-logs, Zielzeile
+                                        rolle=ralph statt roles. Bis dahin
+                                        landeten Ralphs Kosten in KEINER
+                                        Ledger-Zeile: --rollen-abschluss
+                                        ledgert per Definition nur .team-logs,
+                                        und der Bash-Helfer
+                                        team_logs_archivieren() hatte im
+                                        ganzen Kit keinen Aufrufer. Weil
+                                        .ralph-logs/ per .gitignore nicht ins
+                                        Git geht, verlor ein frischer Clone
+                                        die gesamte Bau-Kostenhistorie —
+                                        genau das, wogegen die Ledger gebaut
+                                        wurde (im Feld: 2,1621 von 9,4204
+                                        USD). Bewusst ein eigener Verb mit
+                                        eigener Zeile statt einer Sammelzeile:
+                                        Die Trennung Bau <-> Sweep/Fix ist die
+                                        Kennzahl, an der das Fehlen ueberhaupt
+                                        auffiel. Die EINE Bedienhandlung
+                                        stellt team-status.sh
+                                        --rollen-abschluss her, das beide
+                                        Verben nacheinander aufruft.
 """
 import contextlib
 import fcntl
@@ -588,7 +615,8 @@ def architekt_abschluss(usd, domaene, kaskade, notiz="", pfad=".budget-ledger"):
 
 
 def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
-                      pfad=".budget-ledger", bestand="abbrechen"):
+                      pfad=".budget-ledger", bestand="abbrechen",
+                      rolle="roles"):
     """Kaskadenscharfe Rollenkosten (BL-17-Restpunkt/BL-29-"1b", Kaskade
     16/Stufe 54): haengt EINE rolle=roles-Ledger-Zeile fuer die
     .team-logs-Kosten (Harry/Marv/Frank/Axel) EINER Kaskade an. usd = abo +
@@ -601,8 +629,14 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     bei ungueltigen Eingaben, OHNE die Datei anzufassen. Gibt True zurueck,
     wenn eine vorhandene Zeile angefasst wurde, sonst False (neu angelegt).
 
+    rolle (BL-4): Zielrolle der Zeile. "roles" (Default) fuer die
+    .team-logs-Kosten von Harry/Marv/Frank/Axel, "ralph" fuer die
+    .ralph-logs-Baukosten. Bewusst ZWEI Zeilen statt einer gemeinsamen:
+    Die Trennung Bau <-> Sweep/Fix ist die Kennzahl, an der im Feld
+    ueberhaupt auffiel, dass Ralph fehlte.
+
     bestand (BL-5) — was passiert, wenn fuer DIESE Kaskade schon eine
-    roles-Zeile steht:
+    Zeile dieser Rolle steht:
 
       "abbrechen" (Default)  ValueError, Datei unangetastet. Die Meldung
                              nennt Alt-, Neu- und Summenwert.
@@ -648,11 +682,14 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     split_hinweis = f"abo {abo:.4f} / api {api:.4f}"
     notiz_voll = f"{notiz_sauber} — {split_hinweis}" if notiz_sauber \
         else split_hinweis
+    rolle = _sanitize_pipe_feld(rolle)
+    if not rolle:
+        raise ValueError("rolle darf nicht leer sein")
     zeile_neu = (f"{date.today().isoformat()} | {kaskade} | {usd:.4f} | "
-                 f"{auth} | {domaene} | roles | {notiz_voll}\n")
+                 f"{auth} | {domaene} | {rolle} | {notiz_voll}\n")
 
     def match_fn(felder):
-        return len(felder) >= 7 and felder[1] == kaskade and felder[5] == "roles"
+        return len(felder) >= 7 and felder[1] == kaskade and felder[5] == rolle
 
     if bestand not in ("abbrechen", "addieren", "ersetzen"):
         raise ValueError(
@@ -671,12 +708,12 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
             wert = float(felder[2])
         except (IndexError, ValueError):
             raise ValueError(
-                f"Die bestehende roles-Zeile der Kaskade {kaskade} hat kein "
+                f"Die bestehende {rolle}-Zeile der Kaskade {kaskade} hat kein "
                 f"lesbares USD-Feld ({felder[2] if len(felder) > 2 else '—'}). "
                 "Es wird NICHTS geschrieben — die Zeile von Hand pruefen.")
         if not math.isfinite(wert) or wert < 0:
             raise ValueError(
-                f"Die bestehende roles-Zeile der Kaskade {kaskade} traegt "
+                f"Die bestehende {rolle}-Zeile der Kaskade {kaskade} traegt "
                 f"einen unplausiblen Wert ({wert}). Es wird NICHTS "
                 "geschrieben — die Zeile von Hand pruefen.")
         return wert
@@ -685,7 +722,7 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
         alt = alt_usd(felder)
         if bestand == "abbrechen":
             raise ValueError(
-                f"Fuer Kaskade {kaskade} steht bereits eine roles-Zeile ueber "
+                f"Fuer Kaskade {kaskade} steht bereits eine {rolle}-Zeile ueber "
                 f"{alt:.4f} USD. Dieser Aufruf wuerde sie durch {usd:.4f} USD "
                 f"ERSETZEN und die Differenz verlieren. Es wird NICHTS "
                 f"geschrieben.\n"
@@ -933,7 +970,17 @@ def _main(argv):
               f"{aktion}: {usd:.4f} USD")
         return 0
 
-    if befehl == "rollen-abschluss":
+    # BL-4: ralph-abschluss ist derselbe Mechanismus mit anderer Quelle und
+    # anderer Zielzeile — .ralph-logs statt .team-logs, rolle=ralph statt
+    # roles. Bewusst ein eigener Verb statt einer Erweiterung von
+    # rollen-abschluss: zwei getrennte Ledger-Zeilen halten die Trennung
+    # Bau <-> Sweep/Fix, an der im Feld ueberhaupt auffiel, dass Ralph fehlte.
+    # Die EINE Bedienhandlung stellt team-status.sh --rollen-abschluss her,
+    # das beide Verben nacheinander aufruft.
+    if befehl in ("rollen-abschluss", "ralph-abschluss"):
+        ist_ralph = befehl == "ralph-abschluss"
+        rolle_ziel = "ralph" if ist_ralph else "roles"
+        logs_default = ".ralph-logs" if ist_ralph else ".team-logs"
         kaskade = None
         domaene = None
         notiz = ""
@@ -1000,7 +1047,7 @@ def _main(argv):
         if kaskade is None:
             kaskade = kaskade_aus_plan(repo)
         if not logs:
-            logs = [".team-logs"]
+            logs = [logs_default]
 
         ledger_pfad = pfad if os.path.isabs(pfad) or repo == "." \
             else os.path.join(repo, pfad)
@@ -1038,8 +1085,8 @@ def _main(argv):
                 "Warnung: keine Log-Dateien in "
                 f"{', '.join(logs)} gefunden -- es wird 0.0000 USD gebucht. "
                 "Pruefe VOR dem Buchen, ob diese Kaskade wirklich keine "
-                "Team-Kosten hatte oder ob die Logs bereits archiviert "
-                "wurden (siehe .team-logs/archiv/)"
+                "Kosten hatte oder ob die Logs bereits archiviert "
+                f"wurden (siehe {logs_default}/archiv/)"
                 + (" -- Archiv enthaelt bereits Dateien!" if archiv_belegt else "")
                 + ".",
                 file=sys.stderr,
@@ -1047,7 +1094,7 @@ def _main(argv):
         try:
             angefasst = rollen_abschluss(kaskade, abo, api, domaene,
                                           notiz=notiz, pfad=ledger_pfad,
-                                          bestand=bestand)
+                                          bestand=bestand, rolle=rolle_ziel)
         except ValueError as exc:
             print(f"Fehler: {exc}", file=sys.stderr)
             return 1
@@ -1065,7 +1112,8 @@ def _main(argv):
         # Bei "addiert" ist abo+api der ZUGANG, nicht der neue Zeilenwert —
         # das Vorzeichen macht den Unterschied sichtbar (BL-5).
         betrag = f"{'+' if aktion == 'addiert' else ''}{abo + api:.4f}"
-        print(f"Roles-Zeile Kaskade {kaskade} ({domaene}) {aktion}: "
+        print(f"{rolle_ziel.capitalize()}-Zeile Kaskade {kaskade} "
+              f"({domaene}) {aktion}: "
               f"{betrag} USD (abo {abo:.4f} / api {api:.4f})"
               f"{archiv_hinweis}")
         return 0

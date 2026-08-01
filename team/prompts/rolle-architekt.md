@@ -59,6 +59,14 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    `./team-status.sh --rollen-abschluss <N> <domaene>` und meine eigene Sitzung
    per `./team-status.sh --architekt-abschluss <USD> <domaene> "<notiz>"`.
    Ohne diesen Schritt sind meine Kosten strukturell unerfasst.
+   Der erste Befehl bucht **beide** Laufquellen als zwei Zeilen (`roles` für
+   Harry/Marv/Frank/Axel, `ralph` für die Baukosten) und archiviert beide
+   Log-Ordner. Lief nach dem Closeout noch eine Rolle, **bricht** ein zweiter
+   Aufruf ab, statt die Erstbuchung zu überschreiben — den Nachlauf hänge ich
+   mit `--addieren` an, `--ersetzen` ist nur für eine falsche Altzeile.
+   **Ich prüfe den Abschluss gegen `./team-status.sh --budget`**, statt ihn zu
+   glauben: Ein Bericht, der seine Kennzahl aus derselben Quelle zieht, würde
+   einen Fehler bestätigen statt ihn zu zeigen (Feld-Lehre `BL-1`).
    **Woher `<USD>` kommt:** Im Abo gibt es keinen Konsolenwert. Ich **messe** ihn
    aus dem Sitzungstranskript der CLI (Antworten über die Nachrichten-ID
    deduplizieren, Preismodell an einem headless-Lauf mit bekanntem Konsolenwert

@@ -796,6 +796,15 @@ team_kontostand_gesamt() {
 # Absicherungsidee hinter der Ledger (siehe Stufe 18,
 # plans/ralph-kaskade-6-budget-governance.md) — bislang fehlte nur der
 # Vollzug.
+#
+# BL-4/2026-08-01: Der regulaere Weg laeuft NICHT mehr hierueber. Sowohl die
+# .team-logs als auch die .ralph-logs werden vom jeweiligen kosten.py-Verb
+# (rollen-abschluss / ralph-abschluss) INTERN archiviert — im selben Prozess
+# und auf demselben Snapshot, mit dem gezaehlt wurde (HM-39/AX-4-Fix; ein
+# Zwei-Schritt-Ablauf aus Zaehlen hier und Archivieren dort war genau der
+# Race). Diese Funktion bleibt als manuelles Werkzeug fuer Sonderfaelle
+# bestehen — wer sie aufruft, archiviert OHNE zu ledgern und muss die
+# passende Ledger-Zeile selbst verantworten.
 team_logs_archivieren() {
     local dir="$1" archiv
     [ -d "$dir" ] || return 0

@@ -9,9 +9,9 @@ bash install.sh ~/Source/mein-neues-projekt
 
 *(Kurzform von überall: `bash ~/.claude/scripts/team-init.sh <zielpfad>`)*
 
-Ein Befehl, sieben Fragen, danach liegen 55 Dateien im Zielprojekt: der gehärtete
+Ein Befehl, sieben Fragen, danach liegen 59 Dateien im Zielprojekt: der gehärtete
 Bau-Loop, das Read-Only Red Team, der Fixer, der Forensiker, die Kostenmechanik,
-die Bootstrap-Dateien, die Bedienanleitung `TEAM.md` und 26 Regressionstests.
+die Bootstrap-Dateien, die Bedienanleitung `TEAM.md` und 30 Regressionstests.
 
 ---
 
@@ -113,14 +113,18 @@ entry/                  Entrypoints — landen in der Wurzel des Zielprojekts
 └── team.config.sh      ALLE Projektwerte an einer Stelle
 
 team/                   Team-Namensraum — landet als team/ im Zielprojekt
-├── lib.sh              821 Z — Auth, Guard, Budget, 429-Mechanik, Kosten
+├── lib.sh              871 Z — Auth, Guard, Budget, 429-Mechanik, Kosten
 ├── redteam.sh          Gemeinsame Sweep-Logik von Harry und Marv
-├── tools/              kosten.py (952 Z), beutebuch.py (275 Z)
+├── tools/              kosten.py (1126 Z), beutebuch.py (280 Z)
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-└── tests/              26 Testdateien, 132 Testfälle
+└── tests/              30 Testdateien, 149 Testfälle
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
 install.sh              Der Installer
+kit-test.sh             Selbstverifikation: installiert in ein Wegwerf-Repo
+                        und fährt dort die Tests — DAS Gate vor jedem Release
+plans/                  Roadmap und Backlog DES KITS (nicht die Vorlagen —
+                        die liegen in bootstrap/ und werden installiert)
 doku/anhang-a.md        Bau-Anleitung und Betriebslehren
 ```
 
@@ -159,12 +163,21 @@ Produktivcode bleiben, wie sie sind — nichts Stack-Fremdes landet darin.
   sind Python und liegen unter `team/tools/`. Das ist eine Abhängigkeit der
   **Team-Infrastruktur** — auf einer Ebene mit `git`, `flock` und der Agenten-CLI —
   nicht deines Projekts. Verifiziert in Go-, Rust- und PHP-Projektstrukturen.
-- **Scharf gelaufen (2026-08-01).** Ralph hat in einem Wegwerf-Projekt real
-  gebaut (Commit, Promise, State, Cap — 0,27 USD), Harry real gesweept (0,48 USD),
-  und der Read-Only-Guard hat nachweislich gegriffen: zwei `permission_denials`
-  im Log, Produktivcode unangetastet. Die volle Kette ist damit belegt.
-  **Noch nicht gelaufen**: eine komplette `vollautomatik.sh`-Kaskade über alle
-  vier Phasen inklusive Frank und Axel.
+- **Im Feld gelaufen (2026-08-01).** Im Projekt `team-kit_project_platformer`
+  ist eine vollständige Kaskade 1 durchgefahren: Ralph baute drei Stufen
+  (je ~0,72 USD), Harry und Marv sweepten und fanden `HM-1`…`HM-3`, Frank fixte
+  alle drei, und der Read-Only-Guard griff nachweislich. Gesamtaufwand der
+  Kaskade: 9,42 USD, vollständig geledgert.
+  **Der Lauf deckte drei Kit-Fehler auf**, die im Kit selbst behoben sind:
+  eine tote Fixphase (`BL-1`, 2.2.1) sowie zwei Löcher in der Kostenerfassung
+  (`BL-4`, `BL-5`, siehe `[Unreleased]`).
+  **Noch nicht gelaufen**: Axel (Forensiker) und eine `vollautomatik.sh`-Kaskade,
+  die alle vier Phasen in **einem** Durchlauf schafft — die Fixphase des ersten
+  Laufs starb an `BL-1`, Frank lief danach über `halbautomatik.sh`.
+- **Selbstverifikation**: `./kit-test.sh` installiert das Kit in ein
+  Wegwerf-Repo und fährt dort die 149 Tests. `pytest team/tests` **im Kit-Repo**
+  schlägt dagegen erwartungsgemäß fehl — die Tests setzen die installierte
+  Ablage voraus (Entrypoints in der Wurzel statt unter `entry/`).
 - **Guard-Tests nur in Wegwerf-Repos.** Nie im echten Projekt.
 - **`--permission-mode default` ist undokumentiert.** Die beiden Read-Only-Rollen
   (Harry/Marv über `redteam.sh`, Axel) rufen die CLI damit auf. Der Wert wird von

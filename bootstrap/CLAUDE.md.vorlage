@@ -485,6 +485,21 @@ gebauter Kaskade sind **zwei** Dinge Pflicht — das **Abschluss-Doc**
 (`--rollen-abschluss`, `--akteur-abschluss`), beides **nach** dem Lauf im
 Architekten-Closeout, **nie** in einer Loop-Stufe (siehe A.7, Lehre 8).
 
+> **`BL-4` — warum `--rollen-abschluss` beide Zeilen schreibt:** Der Befehl
+> ledgerte ursprünglich nur `.team-logs` (Harry/Marv/Frank/Axel). Ralphs
+> Baukosten aus `.ralph-logs` landeten in **keiner** Zeile — sie standen nur
+> im Live-Kontostand, und dieser Ordner ist `.gitignore`t. Ein frischer Clone
+> verlor damit die gesamte Bau-Kostenhistorie (im Feld: 2,1621 von 9,4204 USD).
+> Seit dem Fix bucht **ein** Aufruf beide Quellen als **zwei** getrennte Zeilen
+> (`roles` und `ralph`) und archiviert beide Log-Ordner. Die Trennung
+> Bau ↔ Sweep/Fix bleibt damit lesbar — an genau dieser Kennzahl fiel im Feld
+> überhaupt auf, dass Ralph fehlte.
+>
+> **`BL-5` — ein zweiter Abschluss überschreibt nicht mehr.** Lief nach dem
+> Closeout noch eine Rolle, bricht der erneute Aufruf ab und nennt Alt-, Neu-
+> und Summenwert; `--addieren` bucht den Nachlauf dazu, `--ersetzen` korrigiert
+> eine falsche Altzeile.
+
 > **Feld-Lehre gegen die naheliegende Alternative:** Eine fortgeschriebene
 > Kosten-Prosaseite (`wiki/kosten.md` o. Ä.) als Abschlusspflicht **trägt nicht**
 > — im Feld blieb genau diese Seite bei Kaskade 17 stehen, während die Kaskaden
