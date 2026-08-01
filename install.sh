@@ -253,7 +253,11 @@ Nächste Schritte im Zielprojekt:
      Er härtet eine Skizze aus ${PLAN_ORDNER}roadmap-skizzen.md zu
      ${PLAN_ORDNER}ralph-kaskade-1-….md aus (mit RALPH_CAP= und
      BUDGET_EMPFEHLUNG_USD=) und gibt die Scharfschalt-Sequenz aus.
-  6. Lauf starten:      cd $ZIEL && ./vollautomatik.sh
+  6. Lauf starten:      cd $ZIEL && TEAM_BUDGET_USD=15 ./vollautomatik.sh
+     ^ Deckel für DIESEN Lauf. Für einen kurzen Erstlauf sind 15 USD ein
+       vernünftiger Start. Lieber nachziehen als zu tief ansetzen: ein zu
+       tiefer Deckel wirft bezahlte Arbeit per Rollback weg und vervielfacht
+       die Kosten, statt zu sparen (Feld-Lehre HM-32).
   7. NACH dem Lauf — Closeout, sonst sind die Kosten blind:
        ./team-status.sh --rollen-abschluss <N> <domaene>
        ./team-status.sh --architekt-abschluss <USD> <domaene> "Kaskade N geplant"
@@ -263,7 +267,11 @@ EOF
 if [ -z "$SMOKE_TEST" ]; then
     echo
     gelb "Hinweis: Kein Smoke-Test konfiguriert. Die Rollen laufen, aber ohne"
-    gelb "Verifikationsschritt — sie melden das in jedem Prompt. Setze ihn in"
-    gelb "team.config.sh, sobald es einen gibt."
+    gelb "Verifikationsschritt — sie melden das in jedem Prompt."
+    gelb ""
+    gelb "In ${PLAN_ORDNER}roadmap-skizzen.md liegt dafür bereits 'Skizze 1:"
+    gelb "Verifikationsfähigkeit herstellen'. Der Architekt härtet sie als erste"
+    gelb "Kaskade aus — sein Briefing kennt die Vorrangregel. Danach den Befehl"
+    gelb "in team.config.sh bei TEAM_SMOKE_TEST eintragen."
 fi
 exit $FEHLER

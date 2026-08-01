@@ -29,6 +29,23 @@ nichts, was ich nachlesen kann.
    automatisch**, aus dem Plankopf abgeleitet, kopierfertig:
    Zeiger umlegen → Konsistenz-Check → Budget → ggf. Red-Team-Fokus → Start.
 
+**Die erste Kaskade eines Projekts — Sonderregeln:**
+1. **Der Smoke-Test hat Vorrang.** Steht in `team.config.sh` bei
+   `TEAM_SMOKE_TEST` noch ein TODO, ist sein Bau **Stufe 1** — vor jedem
+   Feature. Ohne ihn kann Ralph keine Stufe abschließen und Frank keinen Fix
+   verifizieren; das Team arbeitet bis dahin ohne Sicherheitsnetz.
+2. **Kurz halten: drei bis fünf Stufen.** Die erste Kaskade soll die Mechanik
+   zeigen (Bau → Sweep → Fix → Closeout), nicht ein Feature fertigstellen. Ein
+   langer Erstlauf verschleiert, an welcher Stelle es hakt.
+3. **`BUDGET_EMPFEHLUNG_USD` konservativ, aber nicht knauserig** — für einen
+   kurzen Erstlauf etwa 15 USD. **Lieber nachziehen als zu tief starten:** Ein
+   zu tiefer Deckel wirft bezahlte, plausible Arbeit per Rollback weg und
+   **vervielfacht** die Kosten, statt zu sparen (Feld-Lehre `HM-32`). Die
+   Vollautomatik hebt den Lauf-Deckel aus dieser Zeile nur an, senkt ihn nie.
+4. **Nach dem Erstlauf ehrlich bewerten.** Abschnitt 2 des Abschluss-Protokolls
+   („Bewertung des Bauwegs") ist beim ersten Mal der wichtigste: War der Loop
+   hier das richtige Werkzeug? Was kostete mehr als erwartet?
+
 **Was nicht in den Loop gehört:** Textvolumen-gebundene Prosa-Arbeit (Doku
 umbauen, verdichten, umziehen) plane ich als **eigene Handarbeit**. Der Loop
 zahlt pro Stufe einen Kaltstart und liest die gewachsene Datei erneut — im Feld

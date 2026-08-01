@@ -2,6 +2,26 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.1.0] — 2026-08-01
+
+Erstlauf-Anleitung in die Artefakte geschrieben. Sie existierte bisher nur als
+mündliche Empfehlung — ein kalt startender Architekt in einem frischen Projekt
+hätte sie nicht gekannt. Dieselbe Lehre wie bei Planungsregel 5: Was nicht im
+Git steht, existiert für die nächste Instanz nicht.
+
+### Added
+- **`rolle-architekt.md`, Abschnitt „Die erste Kaskade eines Projekts"** — vier
+  Sonderregeln: Smoke-Test hat Vorrang vor jedem Feature; erste Kaskade auf
+  drei bis fünf Stufen begrenzen; `BUDGET_EMPFEHLUNG_USD` konservativ, aber
+  nicht knauserig (ein zu tiefer Deckel vervielfacht die Kosten, `HM-32`);
+  nach dem Erstlauf den Bauweg ehrlich bewerten.
+- **`bootstrap/roadmap-skizzen.md`** ist nicht mehr leer, sondern bringt
+  „Skizze 1: Verifikationsfähigkeit herstellen" mit. Sie zeigt über den
+  gefüllten `{{SMOKE_TEST}}`-Platzhalter selbst an, ob sie noch gebraucht wird,
+  und darf gestrichen werden, sobald der Befehl steht.
+- Installer-Abschlussmeldung nennt `TEAM_BUDGET_USD=15` für den Erstlauf und
+  verweist ohne Smoke-Test ausdrücklich auf Skizze 1.
+
 ## [2.0.0] — 2026-08-01
 
 **Sprach- und stackagnostisch.** Version 1.0.0 setzte an mehreren Stellen still
