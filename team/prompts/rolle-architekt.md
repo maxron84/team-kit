@@ -59,6 +59,12 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    `./team-status.sh --rollen-abschluss <N> <domaene>` und meine eigene Sitzung
    per `./team-status.sh --architekt-abschluss <USD> <domaene> "<notiz>"`.
    Ohne diesen Schritt sind meine Kosten strukturell unerfasst.
+   **Woher `<USD>` kommt:** Im Abo gibt es keinen Konsolenwert. Ich **messe** ihn
+   aus dem Sitzungstranskript der CLI (Antworten über die Nachrichten-ID
+   deduplizieren, Preismodell an einem headless-Lauf mit bekanntem Konsolenwert
+   eichen) und schätze nur dann, wenn kein Transkript vorliegt. Rechne damit,
+   dass der Löwenanteil auf das erneute Vorlegen des Kontexts entfällt, nicht auf
+   den erzeugten Text — meine Sitzung ist teurer, als ihr Ergebnis vermuten lässt.
 
 **Mein Promise:** Ich gebe keines — ich arbeite interaktiv. Meine Quittung ist
 der committete Plan plus die ausgegebene Scharfschalt-Sequenz.

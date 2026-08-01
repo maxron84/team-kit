@@ -9,7 +9,7 @@ bash install.sh ~/Source/mein-neues-projekt
 
 *(Kurzform von überall: `bash ~/.claude/scripts/team-init.sh <zielpfad>`)*
 
-Ein Befehl, sieben Fragen, danach liegen 53 Dateien im Zielprojekt: der gehärtete
+Ein Befehl, sieben Fragen, danach liegen 55 Dateien im Zielprojekt: der gehärtete
 Bau-Loop, das Read-Only Red Team, der Fixer, der Forensiker, die Kostenmechanik,
 die Bootstrap-Dateien, die Bedienanleitung `TEAM.md` und 26 Regressionstests.
 

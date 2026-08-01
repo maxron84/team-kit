@@ -460,10 +460,21 @@ Operativer Vertrag (Bau-Details in **Anhang A.9**):
   - **Im API-Betrieb:** Der Strippenzieher liest den realen Verbrauch aus der
     Anbieter-Konsole ab und trägt ihn ein.
   - **Im Abo-Betrieb (Regelfall, seit alle Rollen Abo-first laufen):** Es gibt
-    **keinen** Konsolenwert — im Abo wird nichts abgerechnet. Persistiert wird
-    stattdessen die **A2-Schätzung als Abo-Gegenwert** (`… <rolle> abo <USD> …`).
-    Das ist die belastbarste Zahl, die das Abo zulässt; sie **nie** stillschweigend
-    als abgerechneten Betrag ausgeben.
+    **keinen** Konsolenwert — im Abo wird nichts abgerechnet. Zwei Wege, in
+    dieser Reihenfolge:
+    1. **Messen** (vorzuziehen): Das Sitzungstranskript der Agenten-CLI enthält
+       die echten Token-Zahlen. Zwei Fallen: Antworten über die **Nachrichten-ID
+       deduplizieren** (eine Antwort erzeugt mehrere Zeilen mit derselben
+       Verbrauchsangabe) und das **Preismodell an einem headless-Lauf mit
+       bekanntem Konsolenwert eichen** (der Cache-Write-Preis hängt an der
+       Cache-Laufzeit). So geeicht ist der Restfehler klein genug, um die Zahl
+       ohne Vorbehalt zu buchen.
+    2. **A2-Schätzung** als Notbehelf, wenn kein Transkript vorliegt.
+    Beides wird als **Abo-Gegenwert** persistiert (`… <rolle> abo <USD> …`) und
+    **nie** stillschweigend als abgerechneter Betrag ausgegeben. Erwarte, dass
+    der Löwenanteil auf das **erneute Vorlegen des Kontexts** entfällt, nicht auf
+    den erzeugten Text — lange Sitzungen mit vielen Werkzeugaufrufen sind darum
+    teurer, als ihr Ergebnis vermuten lässt.
 - **Ledger domänengetrennt (`BL-29`):** `--budget` weist die Kosten nach Domäne
   getrennt aus; das Ledger-Schema ist rückwärtskompatibel um `domaene`/`rolle`
   erweitert (Altzeilen bleiben „unzugeordnet").
