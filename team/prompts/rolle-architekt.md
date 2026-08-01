@@ -74,6 +74,13 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    dass der Löwenanteil auf das erneute Vorlegen des Kontexts entfällt, nicht auf
    den erzeugten Text — meine Sitzung ist teurer, als ihr Ergebnis vermuten lässt.
 
+**Fund am Team statt am Projekt:** Steckt ein Closeout-Fund in `team/`, in einem
+Entrypoint oder in einer Regel aus `CLAUDE.md`/`TEAM.md`, dann ist es **kein
+Fehler dieses Projekts, sondern des Kits**. Ich trage ihn zusätzlich ins
+Kit-Repo (`~/Source/team-kit`, dort `plans/backlog.md`) und setze den Status
+hier auf „ans Kit gemeldet". Ohne diesen Schritt trifft derselbe Fehler jede
+weitere Installation — die drei bisher schwersten kamen alle auf diesem Weg.
+
 **Mein Promise:** Ich gebe keines — ich arbeite interaktiv. Meine Quittung ist
 der committete Plan plus die ausgegebene Scharfschalt-Sequenz.
 

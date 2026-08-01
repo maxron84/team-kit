@@ -16,95 +16,88 @@ Fehler auf, die kein Kit-Test finden konnte.
 
 ---
 
-## Skizze A: Das Kit kann sich selbst nicht prüfen
+## ~~Skizze A: Das Kit kann sich selbst nicht prüfen~~ — gebaut 2026-08-01
 
-- **Ziel**: Ein Befehl im Kit-Repo sagt verlässlich, ob das Kit heil ist.
-- **Stand**: Es gibt keinen. `python3 -m pytest team/tests` im Kit-Repo ergibt
-  **17 Fehlschläge von 138** — sämtlich aus derselben Ursache: Die Tests setzen
-  die **installierte** Ablage voraus (`team-status.sh`, `ralph.sh`, `axel.sh`,
-  `vollautomatik.sh`, `CLAUDE.md`, `team.config.sh` **in der Wurzel**), während
-  sie im Kit unter `entry/` bzw. `bootstrap/` liegen. Kein Testfall ist rot,
-  weil etwas kaputt wäre.
-- **Bezug**: Das ist die Ursache hinter der Ursache von `BL-1`. Das Kit hat
-  heute **genau einen** verlässlichen Prüfweg: in ein Wegwerf-Projekt
-  installieren und dort `./team-test.sh` laufen lassen — von Hand, ohne
-  Zwang, und für 2.0.0–2.2.0 offenkundig nicht getan. Ein Fix, der im Kit
-  committet wird, ist bis zur nächsten Feldinstallation ungeprüft.
-- **Umfang**: So klein wie möglich. Ein Skript im Kit-Repo, das in ein
-  temporäres Git-Repo installiert (`install.sh --nicht-interaktiv`), dort
-  `./team-test.sh` fährt und dessen Exit-Code durchreicht. Kein zweiter
-  Testbaum, keine Duplikate — die 138 Tests bleiben, wo sie sind, und werden
-  dort ausgeführt, wo sie gelten: in der Installation.
-- **Offene Fragen**:
-  - Bleibt es beim „installiere und prüfe" — oder sollen die Tests zusätzlich
-    layout-agnostisch werden (Entrypoint-Pfad aus einer Variablen)? Ersteres
-    prüft mehr (den Installer gleich mit), Letzteres läuft schneller.
-  - Gehört der Lauf zusätzlich in eine Git-Hook/CI, oder reicht die Disziplin
-    „vor jedem Release"?
-  - Der Guard-Test darf laut `README.md` nur in Wegwerf-Repos laufen — ein
-    `mktemp -d`-Repo ist genau das, aber die Regel sollte im Skript stehen.
+Als `kit-test.sh` umgesetzt (Architekt-Ausnahme, Backlog `BL-6`). Der Strang
+lief **nicht** über eine Kaskade: Es war ein Skript und ein Gegenbeweis, keine
+mehrstufige Arbeit.
+
+**Was entschieden wurde:** „Installieren und dort prüfen" statt
+layout-agnostischer Tests — das prüft den Installer gleich mit und lässt die
+149 Tests dort laufen, wo sie gelten. Die 17 Fehlschläge von
+`pytest team/tests` **im Kit-Repo** bleiben bestehen und sind **erwartet**.
+
+**Offen geblieben:** Ob der Lauf zusätzlich in einen Git-Hook gehört, oder ob
+die Regel „vor jedem Release" reicht. Bisher reicht sie — es gibt genau einen
+Menschen im Prozess.
 
 ---
 
-## Skizze B: Die Kostenerfassung ist strukturell unvollständig
+## ~~Skizze B: Die Kostenerfassung ist strukturell unvollständig~~ — gebaut 2026-08-01
 
-- **Ziel**: Nach einem Closeout stehen **alle** Kosten einer Kaskade im
-  committeten Ledger — und ein zweiter Abschluss kann nichts stillschweigend
-  vernichten.
-- **Stand**: Zwei bestätigte Kit-Fehler, beide im Feld real eingetreten und dort
-  nur **von Hand** repariert (`BL-4`, `BL-5` — Details im
-  [Backlog](backlog.md)). Kurz:
-  - **`BL-4`**: Ralphs Baukosten landen **nie** im Ledger. `--rollen-abschluss`
-    ledgert ausschließlich `.team-logs`; für `.ralph-logs` existiert
-    `team_logs_archivieren()` ([team/lib.sh:799](../team/lib.sh#L799)) — von
-    **keinem** Skript aufgerufen. Der Gesamtstand stimmt heute nur, solange
-    `.ralph-logs` liegen bleibt, und dieser Ordner ist `.gitignore`t. Ein
-    frischer Clone verliert die gesamte Bau-Kostenhistorie — also genau das,
-    wogegen das Ledger gebaut wurde. Im Feld: 2,1621 USD von 9,4204 USD.
-  - **`BL-5`**: `rollen_abschluss()` **ersetzt** die `roles`-Zeile derselben
-    Kaskade ([team/tools/kosten.py:574](../team/tools/kosten.py#L574)),
-    gezählt werden aber nur die **noch nicht archivierten** Logs. Weil der
-    erste Aufruf archiviert hat, schreibt ein Nachlauf *weniger* und löscht den
-    alten Wert. Im Feld reproduziert: 1,0969 wurde durch 2,4114 ersetzt.
-- **Bezug**: Beide Fehler treffen **jede** Installation, nicht nur das
-  Feldprojekt. Sie sind leise: Der gedruckte Abschlussbericht bestätigt sie,
-  weil er aus derselben Quelle liest — dasselbe Muster wie bei `BL-1`.
-- **Umfang**: Werkzeug **und** Regel. Ein Fix nur im Code reicht bei `BL-4`
-  nicht: Solange die Kaskadenabschluss-Pflicht in `bootstrap/CLAUDE.md.vorlage`,
-  `bootstrap/TEAM.md` und `team/prompts/rolle-architekt.md` nur
-  `--rollen-abschluss` und `--akteur-abschluss` nennt, trägt niemand Ralph nach.
-- **Offene Fragen**:
-  - **`BL-4`**: eigener `--ralph-abschluss`, oder soll `--rollen-abschluss`
-    Ralph gleich mit erledigen? Letzteres ist ein Befehl weniger im Closeout,
-    vermischt aber zwei Rollen in einer Zeile und verliert die Trennung
-    Bau ↔ Sweep/Fix, die das Ledger heute sauber führt. **Strippenzieher-
-    Entscheid nötig.**
-  - **`BL-5`**: Das Ersetzen ist **kein Versehen** — es ist laut Docstring
-    gewollt, damit ein abgebrochener Abschluss wiederholbar bleibt. Der
-    gefährliche Fall ist nur „ersetzen, **nachdem** archiviert wurde".
-    Drei Wege: (a) addieren statt ersetzen, (b) abbrechen mit Hinweis, wenn
-    schon eine Zeile steht, (c) erkennen, ob seit der bestehenden Zeile
-    archiviert wurde, und nur dann abbrechen. (c) ist am genauesten und am
-    teuersten. **Entscheid nötig, bevor gehärtet wird.**
-  - Braucht es einen Ledger-Konsistenzcheck (`--ledger-pruefen`), der solche
-    Lücken meldet, statt sie erst im nächsten Closeout auffallen zu lassen?
+`BL-4` und `BL-5` behoben (Architekt-Ausnahme nach Franks Dreisatz), je mit
+Regressionstest und gefahrener Gegenprobe.
+
+**Die beiden Entscheide, die offen waren:**
+
+1. **`BL-4`** — *eigener Verb oder Erweiterung?* Beides: `kosten.py
+   ralph-abschluss` als eigener Verb mit eigener `ralph`-Ledgerzeile, aber
+   `./team-status.sh --rollen-abschluss` ruft beide Verben. **Eine**
+   Bedienhandlung, **zwei** Zeilen. Eine Sammelzeile hätte die Trennung
+   Bau ↔ Sweep/Fix gekostet — und genau an dieser Kennzahl fiel im Feld
+   überhaupt auf, dass Ralph fehlte.
+2. **`BL-5`** — *addieren, abbrechen oder erkennen?* Abbrechen als Default,
+   `--addieren` und `--ersetzen` als ausdrückliche Wege. Begründung: Der Wert
+   entsteht aus **disjunkten** Log-Mengen (jeder Abschluss archiviert, was er
+   zählte), dafür ist Addieren die richtige Verknüpfung. Automatisch addiert
+   wird trotzdem nicht — **ohne** `--archivieren` zählen zwei Aufrufe dieselben
+   Logs, dann wäre Addieren eine Doppelbuchung. Die Unterscheidung gehört dem
+   Menschen, nicht einer Heuristik.
+
+**Offen geblieben:** Ein Ledger-Konsistenzcheck (`--ledger-pruefen`), der
+Lücken meldet, statt sie erst im nächsten Closeout auffallen zu lassen. Wäre
+das Werkzeug gewesen, das `BL-4` gefunden hätte, statt eines aufmerksamen
+Menschen beim Abgleich zweier Dokumente. **Nächster Kandidat für eine echte
+Kaskade** — siehe Skizze D.
 
 ---
 
-## Skizze C: Der Rückkanal Feld → Kit ist Handarbeit
+## ~~Skizze C: Der Rückkanal Feld → Kit ist Handarbeit~~ — geregelt 2026-08-01
 
-- **Ziel**: Ein Fund, der im Feld als Kit-Fehler erkannt wird, geht nicht
-  verloren, wenn niemand daran denkt.
-- **Stand**: `BL-2` (die Rückmeldung von `BL-1`) hat funktioniert, weil sie im
-  Feld-Backlog stand und jemand sie gelesen hat. `BL-4` und `BL-5` sind
-  **beide** ausdrücklich als Kit-Fehler markiert („Fix gehört ins Kit") und
-  lagen bis heute trotzdem nur im Feldprojekt — im Kit existierte bis zu dieser
-  Sitzung weder ein Backlog noch eine Roadmap.
-- **Umfang**: Klein und prosalastig. Eine feste Stelle im Kit (dieses
-  `plans/backlog.md`), ein Satz in der Vorlage, der Feld-Architekten sagt, wohin
-  Kit-Funde gehen, und ggf. eine Statuszeile „ans Kit gemeldet: ja/nein".
-- **Bezug**: Ohne den Kanal skaliert das Kit nicht über zwei Feldprojekte
-  hinaus — die teuersten Funde entstehen definitionsgemäß dort, nicht hier.
-- **Offene Fragen**: Reicht die Konvention, oder braucht es Werkzeug? **Nach
-  der Architekten-Feldlehre gehört diese Skizze nicht in den Loop** — reine
-  Prosa-Arbeit, kostet dort etwa das Doppelte einer Code-Stufe.
+Bewusst **als Konvention, nicht als Werkzeug** gelöst: Das Kit hat jetzt ein
+eigenes `plans/backlog.md`, und drei Stellen sagen, wohin ein Kit-Fund gehört —
+die Backlog-Vorlage `bootstrap/backlog.md`, das Architekten-Briefing und der
+Statuswert „ans Kit gemeldet".
+
+**Warum kein Werkzeug:** Bei einem Menschen und zwei Repos wäre jede
+Automatisierung teurer als das Problem. Das ändert sich ab dem dritten
+Feldprojekt — dann neu bewerten.
+
+---
+
+## Skizze D: Das Ledger prüft seine eigene Vollständigkeit nicht
+
+- **Ziel**: Ein Befehl sagt, ob für eine abgeschlossene Kaskade **alles**
+  gebucht ist — statt dass es beim Lesen zweier Dokumente auffällt.
+- **Stand**: Es gibt nichts dergleichen. `BL-4` (Ralph fehlte komplett) und
+  `BL-5` (Altwert überschrieben) sind **beide** nicht durch ein Werkzeug
+  aufgefallen, sondern dadurch, dass jemand den gedruckten Bericht gegen das
+  Ledger hielt. `BL-1` genauso. Das ist dreimal dasselbe Muster: **Ein Bericht,
+  der seine Kennzahl aus derselben Quelle zieht, bestätigt einen Fehler, statt
+  ihn zu zeigen.**
+- **Umfang**: Ein `--ledger-pruefen`, das je Kaskade prüft, was da sein müsste:
+  Liegt für jede Kaskade mit archivierten Logs auch eine Zeile je Quelle vor
+  (`ralph`, `roles`, `architekt`)? Steht in einem Log-Ordner etwas
+  Unarchiviertes, obwohl die Kaskade als abgeschlossen gilt? Ist eine Zeile
+  auffällig kleiner als die Summe ihrer archivierten Rohlogs?
+- **Bezug**: Die Kostenmechanik ist die einzige Stelle im Kit, deren Fehler
+  **still** sind — Code-Fehler zeigt der Smoke-Test, Kostenfehler zeigt
+  niemand. Alle drei bisherigen Kit-Fehler waren von dieser Art.
+- **Offene Fragen**:
+  - Woher weiß das Werkzeug, dass eine Kaskade „abgeschlossen" ist? Aus dem
+    Archiv-Ordner, aus `.ralph-state`, oder aus einer Abschlusszeile?
+  - Warnung oder Exit ungleich 0? Ein hartes Gate im Closeout wäre wirksamer,
+    riskiert aber, dass eine Kaskade mit legitim fehlender Zeile blockiert.
+  - Lohnt eine **Kaskade** (Ralph baut) oder ist es wieder Handarbeit? Anders
+    als A–C ist das echte Werkzeugarbeit mit Testbedarf — der erste Strang des
+    Kits, der in den Loop gehören könnte.
