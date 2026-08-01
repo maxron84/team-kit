@@ -3,10 +3,13 @@
 Ein vollständiges KI-Rollenteam auf Knopfdruck in ein neues Software-Projekt.
 
 ```bash
-bash ~/.claude/scripts/team-init.sh ~/Source/mein-neues-projekt
+cd ~/Source/team-kit
+bash install.sh ~/Source/mein-neues-projekt
 ```
 
-Ein Befehl, fünf Fragen, danach liegen 51 Dateien im Zielprojekt: der gehärtete
+*(Kurzform von überall: `bash ~/.claude/scripts/team-init.sh <zielpfad>`)*
+
+Ein Befehl, sieben Fragen, danach liegen 53 Dateien im Zielprojekt: der gehärtete
 Bau-Loop, das Read-Only Red Team, der Fixer, der Forensiker, die Kostenmechanik,
 die Bootstrap-Dateien und 25 Regressionstests.
 
@@ -47,15 +50,17 @@ bash install.sh <zielpfad> [--nicht-interaktiv] [--force]
 **Voraussetzungen**: Zielpfad ist ein Git-Repository, `claude` im PATH,
 Auth eingerichtet (`bash ~/.claude/scripts/team-auth-setup.sh`).
 
-**Die fünf Fragen:**
+**Die sieben Fragen:**
 
 | Frage | Default | Bedeutung |
 |---|---|---|
 | Projektname | Ordnername | erscheint in Berichten und Ledger |
 | Produktivcode-Ordner | `src/` | **tabu** für Harry, Marv, Axel |
-| Test-Ordner | `tests/` | Reproducer und Regressionstests |
+| Test-Ordner | `tests/` | wo Reproducer hindürfen (bleibt **deinem** Testrunner) |
 | Plan-Ordner | `plans/` | Kaskaden, Beutebuch, Akten, Roadmap |
 | Smoke-Test-Befehl | *(leer)* | **der wichtigste Wert**, siehe unten |
+| Domänen | `produkt team` | Kostentrennung Produktarbeit ↔ Team-Infrastruktur |
+| Architekt committet selbst? | `n` | sonst liefert er die Befehle zum Kopieren |
 
 Der **Smoke-Test** ist der eine Befehl, mit dem eine Rolle feststellt, dass das
 Projekt heil ist. Ralph schließt keine Stufe ohne ihn ab, Frank verifiziert keinen
@@ -76,12 +81,19 @@ $EDITOR CLAUDE.md               # TODO-Stellen füllen
 # 2. Committen — VOR dem ersten Guard-Lauf!
 git add -A && git commit -m "chore: T.E.A.M. eingerichtet"
 
-# 3. Erste Kaskade planen (Claude-Sitzung, Rolle "Der Architekt")
-#    Skizze in plans/roadmap-skizzen.md aushärten
+# 3. Team-Tests (prüft NUR die Infrastruktur, nicht dein Projekt)
+./team-test.sh
 
-# 4. Scharfschalten und starten
+# 4. Erste Kaskade planen — Claude-Sitzung im Projektordner, Opus:
+#    "Du bist unser Architekt, lies team/prompts/rolle-architekt.md."
+
+# 5. Scharfschalten und starten
 echo plans/ralph-kaskade-1-….md > .ralph-plan
 ./vollautomatik.sh
+
+# 6. NACH dem Lauf — Closeout, sonst sind die Kosten blind
+./team-status.sh --rollen-abschluss 1 produkt
+./team-status.sh --architekt-abschluss <USD> produkt "Kaskade 1 geplant"
 ```
 
 > **Warum vor dem ersten Lauf committen?** Der Read-Only-Guard betrachtet
@@ -92,27 +104,39 @@ echo plans/ralph-kaskade-1-….md > .ralph-plan
 ## Aufbau des Kits
 
 ```
-kern/                   Was ins Zielprojekt wandert
-├── team-lib.sh         821 Z — Auth, Guard, Budget, 429-Mechanik, Kosten
-├── team.config.sh      Alle Projektwerte an EINER Stelle
-├── ralph.sh            Bau-Loop
-├── frank.sh            Fixer (Event-Loop am Beutebuch)
-├── axel.sh             Forensiker (starkes Modell, ein Fall pro Aufruf)
-├── harry.sh marv.sh    Red Team (dünn, sourcen redteam.sh)
-├── redteam.sh          Gemeinsame Sweep-Logik + Guard
+entry/                  Entrypoints — landen in der Wurzel des Zielprojekts
 ├── vollautomatik.sh    Orchestrator: Ralph → Red Team → Frank → Axel
 ├── halbautomatik.sh    Schrittweise, mit Halt beim Menschen
 ├── team-status.sh      Kontostand, Pipeline, Beutebuch-Übersicht
-└── scripts/
-    ├── kosten.py       952 Z — Ledger, Splits, Akteur-Abschluss
-    └── beutebuch.py    Zustandsmaschine der Funde
+├── team-test.sh        Regressionstests der Team-Infrastruktur
+├── ralph.sh frank.sh axel.sh harry.sh marv.sh
+└── team.config.sh      ALLE Projektwerte an einer Stelle
 
-prompts/                Rollen-Briefings (~20 Z je Rolle)
+team/                   Team-Namensraum — landet als team/ im Zielprojekt
+├── lib.sh              821 Z — Auth, Guard, Budget, 429-Mechanik, Kosten
+├── redteam.sh          Gemeinsame Sweep-Logik von Harry und Marv
+├── tools/              kosten.py (952 Z), beutebuch.py (275 Z)
+├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
+└── tests/              25 Testdateien, 127 Testfälle
+
 bootstrap/              CLAUDE.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
-tests/                  25 Regressionstests der Team-Infrastruktur
 install.sh              Der Installer
 doku/anhang-a.md        Bau-Anleitung und Betriebslehren
 ```
+
+### Im Zielprojekt
+
+```
+projekt/
+├── vollautomatik.sh …  Entrypoints sichtbar oben — du tippst sie direkt
+├── team.config.sh      die eine Konfigdatei
+├── team/               Team-Infrastruktur (lib, tools, prompts, tests)
+├── CLAUDE.md CHANGELOG.md plans/
+└── <dein-code>/        unberührt
+```
+
+**Das Kit fasst deine Ordner nicht an.** `tests/`, `scripts/` und dein
+Produktivcode bleiben, wie sie sind — nichts Stack-Fremdes landet darin.
 
 ## Betrieb
 
@@ -122,13 +146,18 @@ doku/anhang-a.md        Bau-Anleitung und Betriebslehren
 | `./halbautomatik.sh <rolle>` | Einzelnen Schritt, Entscheidung beim Menschen |
 | `./team-status.sh` | Pipeline, Beutebuch, Kaskadenstand |
 | `./team-status.sh --budget` | Kontostand, API vs. Abo getrennt |
-| `python3 scripts/beutebuch.py list` | Alle Funde mit Status |
+| `./team-test.sh` | Regressionstests der Team-Infrastruktur (pytest) |
+| `python3 team/tools/beutebuch.py list` | Alle Funde mit Status |
 
 **Exit-Codes**: `0` = durchgelaufen · `1` = echter Fehler · `3` = nichts zu tun ·
 `42` = Session-Limit, Lauf pausiert (kein Fehler, kein Datenverlust).
 
 ## Grenzen
 
+- **Sprach- und stackagnostisch, aber python3 wird gebraucht.** Die Team-Werkzeuge
+  sind Python und liegen unter `team/tools/`. Das ist eine Abhängigkeit der
+  **Team-Infrastruktur** — auf einer Ebene mit `git`, `flock` und der Agenten-CLI —
+  nicht deines Projekts. Verifiziert in Go-, Rust- und PHP-Projektstrukturen.
 - **Nicht end-zu-end getestet.** Verifiziert sind: Installation, Syntax,
   127 Regressionstests, Guard-Rollback, Idempotenz, Verhalten aller Rollen ohne
   Arbeitsvorrat. **Nicht** verifiziert ist ein vollständiger scharfer

@@ -1,5 +1,7 @@
 
 # --- T.E.A.M.-Loop-Laufzeitartefakte (T.E.A.M.-Starterkit) -------------------
+# Bewusst auf den team/-Namensraum und die Zustandsdateien begrenzt — das Kit
+# bringt KEINE stack-spezifischen Einträge in dein Projekt.
 .ralph-logs/
 .team-logs/
 .team-loop.lock
@@ -11,6 +13,6 @@
 .budget-ledger.lock
 backups/
 
-# Python-Laufzeitartefakte
-.pytest_cache/
-__pycache__/
+# Laufzeitartefakte der Team-Werkzeuge (Python) — NUR unter team/.
+team/**/__pycache__/
+team/**/.pytest_cache/

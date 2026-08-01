@@ -51,9 +51,9 @@ Senior-Entwicklers** (des **Strippenzieher**). Jede Instanz sollte wissen,
 
 | Rolle | Wer/Was | Aufgabe | Kern-Prinzip |
 |-------|---------|---------|--------------|
-| **Ralph** | Der headless Bau-Loop ([`ralph.sh`](ralph.sh)) | Arbeitet den **aktiven Plan** Stufe für Stufe ab, ein Commit pro Stufe (`feat(stufeN): …`). | Nimmt **keine** Features aus späteren Stufen vorweg. Liest vor jeder Stufe den `[Unreleased]`-Block und baut dort gelistete Fixes **nicht erneut**. ✅ erprobt |
-| **Der Architekt** | Planungs-Instanz (interaktiv, Architect-Mode) | **Plant Kaskaden**, schreibt Plan-Dokumente unter [`{{PLAN_ORDNER}}`]({{PLAN_ORDNER}}), pflegt Roadmap/Backlog, setzt Caps. Trifft die Struktur-Entscheidungen, die Ralph ausführt. **Committet je nach Projekt-Entscheid** entweder Plan-/Doku-Änderungen selbständig (`docs(plan): …`) **oder liefert die fertigen Commit-Befehle zum Kopieren** — der Strippenzieher führt sie dann händisch aus (so im Feldprojekt website-maxron-de, Entscheid 2026-07-11). | Spec ist Wahrheit vor Annahmen. **Pflicht vor jedem Entwurf:** `[Unreleased]` + `Frank-Fix`-Zeilen abgleichen. **Modell stark (`opus`); Auth Abo-first** (Feldprojekt website-maxron-de, Entscheid 2026-07-13 — die frühere „Architekt immer API"-Regel ist aufgehoben). Kosten daher **Abo-Gegenwert**, erfasst per Live-Schätzung statt Konsolenwert (siehe `## Kostenkontrolle`). Greift **normalerweise nicht** selbst in Produktivcode ein. ✅ erprobt |
-| **Frank der Fixer** | Spontane Out-of-Loop-Bugfixes | Behebt **akut auffallende** Bugs/UX-Reibungen **außerhalb** des Loops, ohne auf die nächste Kaskade zu warten. | Jeder Fix folgt dem **Dreisatz** (Commit `fix(uat): …` → CHANGELOG → Backlog). Der **Normalweg** für Ad-hoc-Fixes. ✅ erprobt |
+| **Ralph** | Der headless Bau-Loop ([`ralph.sh`](ralph.sh)) | Arbeitet den **aktiven Plan** Stufe für Stufe ab, ein Commit pro Stufe (`{{FEAT_PRAEFIX}}(stufeN): …`). | Nimmt **keine** Features aus späteren Stufen vorweg. Liest vor jeder Stufe den `[Unreleased]`-Block und baut dort gelistete Fixes **nicht erneut**. ✅ erprobt |
+| **Der Architekt** | Planungs-Instanz (interaktiv, Architect-Mode) | **Plant Kaskaden**, schreibt Plan-Dokumente unter [`{{PLAN_ORDNER}}`]({{PLAN_ORDNER}}), pflegt Roadmap/Backlog, setzt Caps. Trifft die Struktur-Entscheidungen, die Ralph ausführt. **Commit-Regel dieses Projekts:** {{COMMIT_ENTSCHEID}} | Spec ist Wahrheit vor Annahmen. **Pflicht vor jedem Entwurf:** `[Unreleased]` + `Frank-Fix`-Zeilen abgleichen. **Modell stark (`opus`); Auth Abo-first** (Feldprojekt website-maxron-de, Entscheid 2026-07-13 — die frühere „Architekt immer API"-Regel ist aufgehoben). Kosten daher **Abo-Gegenwert**, erfasst per Live-Schätzung statt Konsolenwert (siehe `## Kostenkontrolle`). Greift **normalerweise nicht** selbst in Produktivcode ein. ✅ erprobt |
+| **Frank der Fixer** | Spontane Out-of-Loop-Bugfixes | Behebt **akut auffallende** Bugs/UX-Reibungen **außerhalb** des Loops, ohne auf die nächste Kaskade zu warten. | Jeder Fix folgt dem **Dreisatz** (Commit `{{FIX_PRAEFIX}}: …` → CHANGELOG → Backlog). Der **Normalweg** für Ad-hoc-Fixes. ✅ erprobt |
 | **Harry** | Read-Only Red Team — **Security/Pentest** | Versucht die App **bewusst auszuhebeln**: Auth/PINs/Tokens umgehen, Angriffsfläche der Netz-Schnittstellen, Pfad-/Injection-Tricks, Datenlecks in Logs/Exports. | **Rührt keinen Produktivcode an.** Nur lesen, angreifen, dokumentieren — dann Übergabe an Frank. ✅ erprobt (manuell) |
 | **Marv** | Read-Only Red Team — **Chaos/Regression** | Wirft der App Steine in den Weg: kaputte/riesige/leere Inputs (Fuzzing), Race-Conditions, korrupte Dateien, Migrations-Edge-Cases, „DAU klickt dreimal". | **Rührt keinen Produktivcode an.** Nur lesen, brechen, dokumentieren — dann Übergabe an Frank. ✅ erprobt (manuell) |
 | **Axel** | Read-Only **Forensiker** — stärkstes Modell, **auf Abruf** | Knackt **besonders schwierige** Fälle, an denen Frank scheitert: tiefe Root-Cause-Analyse von Heisenbugs, Race-Conditions, subtiler Datenkorruption, verschachtelten Sicherheitslücken. Liefert eine **Ermittlungsakte** (Ursache + Fix-Plan). | **Rührt keinen Produktivcode an.** Läuft **nie im Dauer-Loop** (teuer). **Modell immer stark** (`opus`, analog zum Architekten) — **auch im Abomodus**; **Auth** dagegen wie die Loop-Rollen **Abo-first mit API-Fallback** (Modell und Auth sind zwei getrennte Achsen, siehe Axel-Sektion). Übergibt den Fix-Plan zurück an Frank. ✅ erprobt (manuell) |
@@ -69,8 +69,8 @@ Senior-Entwicklers** (des **Strippenzieher**). Jede Instanz sollte wissen,
 Damit weder Ralph noch der Architekt dasselbe Problem doppelt behandeln, gilt für
 jeden spontanen Fix:
 
-1. **Code-Fix committen** mit klarem Präfix, z. B. `fix(uat): …`.
-2. **CHANGELOG-Eintrag** unter [`CHANGELOG.md`](CHANGELOG.md) →
+1. **Code-Fix committen** mit klarem Präfix, z. B. `{{FIX_PRAEFIX}}: …`.
+2. **CHANGELOG-Eintrag** unter [`{{CHANGELOG}}`]({{CHANGELOG}}) →
    `## [Unreleased] — Fixes …` anlegen (Was + Warum). Dieser Block ist die
    **Single Source of Truth** für alle Out-of-Loop-Fixes.
 3. **Backlog pflegen** (falls ein Finding berührt ist): Status in
@@ -94,7 +94,7 @@ Problem **nicht erneut**.
 
 **Der Beutezug-Dreisatz** (jeder Einbruch endet so):
 
-1. **Fund ins Beutebuch** [`{{PLAN_ORDNER}}/beutebuch.md`]({{PLAN_ORDNER}}/beutebuch.md) eintragen:
+1. **Fund ins Beutebuch** [`{{BEUTEBUCH}}`]({{BEUTEBUCH}}) eintragen:
    `HM-<Nr>`, Angreifer (Harry/Marv), Schweregrad (kritisch/hoch/mittel/klein),
    **Reproschritte**, Erwartung vs. Realität.
 2. **Optional: Reproducer-Test** unter [`{{TEST_ORDNER}}`]({{TEST_ORDNER}}) anlegen
@@ -444,7 +444,7 @@ Konsequenz:
 website-maxron-de 2026-07-12):** **Interaktiv** (außerhalb `team_claude`)
 arbeitende Rollen — **Der Architekt** und **Frank-im-Abo** — schreiben **keine**
 `total_cost_usd`-JSONs und fallen sonst durch die automatische Kostenerfassung
-(die nur `.{{rolle}}-logs/` liest). Realer Auslöser: eine einzelne
+(die nur `.<rolle>-logs/` liest). Realer Auslöser: eine einzelne
 Architekten-Session kostete laut Konsole **~16 USD** — strukturell unerfasst.
 Operativer Vertrag (Bau-Details in **Anhang A.9**):
 
@@ -488,13 +488,29 @@ Architekten-Closeout, **nie** in einer Loop-Stufe (siehe A.7, Lehre 8).
 
 ## Anhang A — Loop-Infrastruktur
 
-Die Team-Skripte wurden mit dem **T.E.A.M.-Starterkit** installiert. Alle
-projektspezifischen Werte stehen in [`team.config.sh`](team.config.sh) — das ist
-der einzige Ort, an dem sie geändert werden.
+Installiert mit dem **T.E.A.M.-Starterkit**. Ablage:
 
-- **Bau-Anleitung und Betriebslehren**: `doku/anhang-a.md` im Kit-Repo
-- **Baugeschichte dieses Projekts**: `wiki/team-historie.md` (anlegen, sobald
-  die erste Infrastruktur-Änderung ansteht)
+```
+./vollautomatik.sh ./halbautomatik.sh ./team-status.sh ./team-test.sh
+./ralph.sh ./frank.sh ./axel.sh ./harry.sh ./marv.sh    Entrypoints
+./team.config.sh                                        ALLE Projektwerte
+team/lib.sh  team/redteam.sh                            Bibliothek
+team/tools/  kosten.py beutebuch.py                     Werkzeuge (Python)
+team/prompts/rolle-*.md                                 Rollen-Briefings
+team/tests/                                             Team-Regressionstests
+```
+
+**Der `team/`-Ordner gehört der Infrastruktur, nicht dem Projekt.** Deine eigenen
+Ordner (`{{TEST_ORDNER}}`, `{{PRODUKTIVCODE}}`, `scripts/` …) bleiben unberührt;
+das Kit legt dort nichts ab. `python3` ist damit eine Abhängigkeit der
+**Team-Infrastruktur** — auf einer Ebene mit `git`, `flock` und der Agenten-CLI —
+nicht deines Projekts.
+
+- **Team-Tests laufen getrennt**: `./team-test.sh` (pytest). Der Testbefehl
+  deines Projekts bleibt `{{SMOKE_TEST}}`.
+- **Bau-Anleitung und Betriebslehren**: `doku/anhang-a.md` im Kit-Repo.
+- **Baugeschichte dieses Projekts**: `wiki/team-historie.md` anlegen, sobald die
+  erste Infrastruktur-Änderung ansteht.
 
 Diese Datei bleibt **Regelquelle**: geltende Regeln hierher, Herleitung und
 Historie ins Projekt-Wiki (siehe „Doku-Hygiene").

@@ -81,7 +81,7 @@ frage() {  # frage <variable> <text> <default>
     printf -v "$var" '%s' "${eingabe:-$vorgabe}"
 }
 
-kopf "Aufnahme-Interview — fünf Werte, alles Weitere per Feld-Default"
+kopf "Aufnahme-Interview — sieben Werte, alles Weitere per Feld-Default"
 frage PROJEKT        "Projektname"                    "$(basename "$ZIEL")"
 frage PRODUKTIVCODE  "Produktivcode-Ordner (tabu für Red Team)" "src/"
 frage TEST_ORDNER    "Test-Ordner"                    "tests/"
@@ -92,12 +92,25 @@ if [ "$INTERAKTIV" -eq 1 ]; then
 fi
 frage SMOKE_TEST     "Smoke-Test-Befehl"              ""
 frage TECH_STACK     "Tech-Stack (eine Zeile)"        "TODO: in CLAUDE.md nachtragen"
+if [ "$INTERAKTIV" -eq 1 ]; then
+    echo "  Domänen trennen im Kostenledger die Produktarbeit von der Arbeit an der"
+    echo "  Team-Infrastruktur. Erster Wert = Produkt, zweiter = Team. Frei wählbar."
+fi
+frage DOMAENEN       "Domänen (Leerliste)"            "produkt team"
+if [ "$INTERAKTIV" -eq 1 ]; then
+    echo "  Darf der Architekt selbst committen, oder liefert er dir die Befehle?"
+fi
+frage COMMIT_MODUS   "Architekt committet selbst? (j/n)" "n"
 
 PRODUKTIVCODE="${PRODUKTIVCODE%/}/"
 TEST_ORDNER="${TEST_ORDNER%/}/"
 PLAN_ORDNER="${PLAN_ORDNER%/}/"
 DEPLOY="TODO: in CLAUDE.md nachtragen"
 DEPLOY_AUSNAHMEN="keine"
+case "${COMMIT_MODUS,,}" in
+    j|ja|y|yes) COMMIT_ENTSCHEID="Ich committe Plan-/Doku-Änderungen selbst (docs(plan): …)." ;;
+    *)          COMMIT_ENTSCHEID="Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Strippenzieher führt sie aus." ;;
+esac
 
 # ---------------------------------------------------------------- Kopieren
 kopf "A.2 — Dateien installieren"
@@ -128,38 +141,40 @@ fuelle() {
     local datei="$ZIEL/$1"
     [ -f "$datei" ] || return 0
     python3 - "$datei" "$PROJEKT" "$PRODUKTIVCODE" "$TEST_ORDNER" "$PLAN_ORDNER" \
-                       "$SMOKE_TEST" "$TECH_STACK" "$DEPLOY" "$DEPLOY_AUSNAHMEN" <<'PY'
+                       "$SMOKE_TEST" "$TECH_STACK" "$DEPLOY" "$DEPLOY_AUSNAHMEN" \
+                       "$DOMAENEN" "$COMMIT_ENTSCHEID" <<'PY'
 import sys, pathlib
-d, projekt, prod, test, plan, smoke, stack, deploy, ausn = sys.argv[1:10]
+(d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
+ domaenen, commit) = sys.argv[1:12]
 p = pathlib.Path(d); t = p.read_text(encoding="utf-8")
 for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{TEST_ORDNER}}", test), ("{{PLAN_ORDNER}}", plan.rstrip("/")),
+             ("{{BEUTEBUCH}}", plan.rstrip("/") + "/beutebuch.md"),
+             ("{{CHANGELOG}}", "CHANGELOG.md"),
+             ("{{FIX_PRAEFIX}}", "fix(uat)"), ("{{FEAT_PRAEFIX}}", "feat"),
              ("{{SMOKE_TEST}}", smoke or "TODO: noch keiner — Stufe 1 der ersten Kaskade"),
              ("{{TECH_STACK}}", stack), ("{{DEPLOY}}", deploy),
-             ("{{DEPLOY_AUSNAHMEN}}", ausn)]:
+             ("{{DEPLOY_AUSNAHMEN}}", ausn), ("{{DOMAENEN}}", domaenen),
+             ("{{COMMIT_ENTSCHEID}}", commit)]:
     t = t.replace(a, b)
 p.write_text(t, encoding="utf-8")
 PY
 }
 
-# Kern-Skripte in die Repo-Wurzel (Ablage-Konvention: Entrypoints sichtbar oben)
-for f in team-lib.sh team.config.sh ralph.sh frank.sh axel.sh harry.sh marv.sh \
-         redteam.sh vollautomatik.sh halbautomatik.sh team-status.sh; do
-    kopiere "$KIT/kern/$f" "$f" 755
+# Entrypoints in die Repo-Wurzel — der Strippenzieher tippt sie direkt
+# (Ablage-Konvention aus dem Feld: Einstiegspunkte sichtbar oben).
+for f in "$KIT"/entry/*.sh; do
+    kopiere "$f" "$(basename "$f")" 755
 done
-# Werkzeuge in scripts/
-for f in kosten.py beutebuch.py; do
-    kopiere "$KIT/kern/scripts/$f" "scripts/$f" 755
-done
-# Rollen-Briefings
-for f in "$KIT"/prompts/rolle-*.md; do
-    kopiere "$f" "prompts/$(basename "$f")"
-done
-# Team-Regressionstests
-for f in "$KIT"/tests/test_*.py; do
-    kopiere "$f" "${TEST_ORDNER}$(basename "$f")"
-done
-gruen "  ✓ Kern, Werkzeuge, Briefings, $(ls "$KIT"/tests/test_*.py | wc -l) Regressionstests"
+# Alles Aufgerufene in den team/-Namensraum. Damit berührt das Kit die
+# Konventionen des Projekts nicht: tests/ und scripts/ bleiben dem Projekt,
+# und kein stack-fremder Code landet in deinen Ordnern.
+kopiere "$KIT/team/lib.sh"     "team/lib.sh"     755
+kopiere "$KIT/team/redteam.sh" "team/redteam.sh" 755
+for f in "$KIT"/team/tools/*.py;      do kopiere "$f" "team/tools/$(basename "$f")" 755; done
+for f in "$KIT"/team/prompts/*.md;    do kopiere "$f" "team/prompts/$(basename "$f")"; done
+for f in "$KIT"/team/tests/test_*.py; do kopiere "$f" "team/tests/$(basename "$f")"; done
+gruen "  ✓ Entrypoints (Wurzel) + team/ (lib, tools, prompts, $(ls "$KIT"/team/tests/test_*.py | wc -l) Tests)"
 
 # ---------------------------------------------------------------- A.0 Bootstrap
 kopf "A.0 — Bootstrap-Dateien"
@@ -175,10 +190,15 @@ schreibe ".ralph-state" "1
 mkdir -p "$ZIEL/${TEST_ORDNER}"
 gruen "  ✓ CLAUDE.md, CHANGELOG, Beutebuch (mit Vorlage-Block), Roadmap, Backlog, Ledger, State"
 
-# Platzhalter füllen
+# Platzhalter füllen — auch in den Briefings: sie sind selbst Prompts und
+# nennen sonst die Pfade des Ursprungsprojekts (falsche Guard-Grenze!).
 for d in CLAUDE.md team.config.sh CHANGELOG.md \
-         "${PLAN_ORDNER}roadmap-skizzen.md" "${PLAN_ORDNER}backlog.md"; do
+         "${PLAN_ORDNER}roadmap-skizzen.md" "${PLAN_ORDNER}backlog.md" \
+         "${PLAN_ORDNER}beutebuch.md"; do
     fuelle "$d"
+done
+for d in "$ZIEL"/team/prompts/*.md; do
+    fuelle "team/prompts/$(basename "$d")"
 done
 
 # ---------------------------------------------------------------- .gitignore
@@ -197,14 +217,14 @@ for f in "$ZIEL"/*.sh; do
 done
 [ "$FEHLER" -eq 0 ] && gruen "  ✓ Alle Shell-Skripte syntaktisch korrekt"
 
-if python3 -m py_compile "$ZIEL"/scripts/*.py 2>/dev/null; then
+if python3 -m py_compile "$ZIEL"/team/tools/*.py 2>/dev/null; then
     gruen "  ✓ Python-Werkzeuge kompilieren"
 else
     rot "  ✗ Python-Werkzeuge fehlerhaft"; FEHLER=1
 fi
 
 if command -v pytest >/dev/null 2>&1; then
-    if (cd "$ZIEL" && pytest -q "${TEST_ORDNER}" >/tmp/team-init-pytest.log 2>&1); then
+    if (cd "$ZIEL" && pytest -q team/tests >/tmp/team-init-pytest.log 2>&1); then
         gruen "  ✓ Regressionstests grün ($(grep -oE '[0-9]+ passed' /tmp/team-init-pytest.log | head -1))"
     else
         gelb "  ! Regressionstests nicht vollständig grün — Log: /tmp/team-init-pytest.log"
@@ -225,11 +245,20 @@ Nächste Schritte im Zielprojekt:
   3. Alles committen:   git -C $ZIEL add -A && git -C $ZIEL commit -m "chore: T.E.A.M. eingerichtet"
      ^ WICHTIG: vor dem ersten Guard-Lauf committen. Ein Read-Only-Guard
        betrachtet uncommittete Dateien als Verletzung und räumt sie weg.
-  4. Erste Kaskade planen (Claude-Sitzung im Projekt, Rolle "Der Architekt"):
-     Skizze in ${PLAN_ORDNER}roadmap-skizzen.md aushärten zu
-     ${PLAN_ORDNER}ralph-kaskade-1-….md mit RALPH_CAP= und BUDGET_EMPFEHLUNG_USD=
-  5. Scharfschalten:    echo ${PLAN_ORDNER}ralph-kaskade-1-….md > $ZIEL/.ralph-plan
+  4. Team-Tests:        cd $ZIEL && ./team-test.sh
+     (pytest, prüft NUR die Team-Infrastruktur — dein Projekt-Testbefehl
+      bleibt davon unberührt)
+  5. Erste Kaskade planen — Claude-Sitzung im Projektordner, Opus:
+       "Du bist unser Architekt, lies team/prompts/rolle-architekt.md."
+     Er härtet eine Skizze aus ${PLAN_ORDNER}roadmap-skizzen.md zu
+     ${PLAN_ORDNER}ralph-kaskade-1-….md aus (mit RALPH_CAP= und
+     BUDGET_EMPFEHLUNG_USD=) und gibt die Scharfschalt-Sequenz aus.
   6. Lauf starten:      cd $ZIEL && ./vollautomatik.sh
+  7. NACH dem Lauf — Closeout, sonst sind die Kosten blind:
+       ./team-status.sh --rollen-abschluss <N> <domaene>
+       ./team-status.sh --architekt-abschluss <USD> <domaene> "Kaskade N geplant"
+     Der Architekt läuft interaktiv, außerhalb der Kostenlogs — ohne diesen
+     Schritt bleibt seine Sitzung strukturell unerfasst (im Feld ~16 USD).
 EOF
 if [ -z "$SMOKE_TEST" ]; then
     echo

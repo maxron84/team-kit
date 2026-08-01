@@ -2,6 +2,57 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.0.0] — 2026-08-01
+
+**Sprach- und stackagnostisch.** Version 1.0.0 setzte an mehreren Stellen still
+den Stack des Ursprungsprojekts voraus. Diese Fassung trennt Team-Infrastruktur
+und Projekt sauber — verifiziert in Go-, Rust- und PHP-Projektstrukturen.
+
+### Changed — Breaking
+- **Neues Layout.** Entrypoints bleiben in der Repo-Wurzel (`./vollautomatik.sh`
+  usw. — die Feld-Ablagekonvention), alles Aufgerufene liegt jetzt unter
+  `team/`: `team/lib.sh`, `team/redteam.sh`, `team/tools/`, `team/prompts/`,
+  `team/tests/`. **Das Kit legt nichts mehr in `scripts/` oder im Test-Ordner
+  des Projekts ab** — diese Ordner gehören dem Projekt.
+- **Domänen sind projektdefiniert.** `kosten.py` erzwang die Werte `website`
+  und `team` an drei Stellen; in einem fremden Projekt war damit keine
+  sinnvolle Kostentrennung möglich. Jetzt konfigurierbar über `TEAM_DOMAENEN`
+  in `team.config.sh` (Default `produkt team`). **Der Lesepfad validiert nicht
+  mehr**: historische Ledger-Zeilen mit heute unbekannten Domänen bleiben
+  filterbar; validiert wird nur beim Schreiben.
+- **Interview auf sieben Fragen**: Domänen und Commit-Regel des Architekten
+  kommen dazu. Letztere stand in der `CLAUDE.md` bisher als offenes
+  Entweder-oder.
+
+### Fixed
+- **Die Rollen-Briefings waren nicht parametrisiert.** Sie wurden in 1.0.0
+  wörtlich übernommen und nannten deshalb `site/**` als Guard-Grenze und
+  `python3 scripts/smoke_test.py` als Smoke-Test — in einem fremden Projekt
+  bekamen Harry, Marv und Axel damit die **falsche Grenze** genannt und Ralph
+  einen Befehl, den es nicht gibt. Die Briefings sind Prompts und werden jetzt
+  wie alles andere beim Installieren gefüllt.
+- `install.sh` prüfte im Selbsttest noch `scripts/*.py` und meldete deshalb
+  immer „Python-Werkzeuge fehlerhaft" (Exit 1 trotz erfolgreicher Installation).
+- `.gitignore`-Fragment brachte `__pycache__/` und `.pytest_cache/` global mit;
+  jetzt auf `team/**` eingegrenzt.
+
+### Added
+- **`team/prompts/rolle-architekt.md`** — das sechste Briefing fehlte, weil der
+  Architekt interaktiv läuft und `team_briefing` nie braucht. Für den Trigger
+  „Du bist unser Architekt" gab es damit nichts Kompaktes: jetzt Auftrag,
+  Grenze, Planungs-Dreisatz, Closeout-Pflicht und Commit-Regel auf einer Seite.
+- **`team-test.sh`** — führt die Team-Regressionstests getrennt vom Testlauf
+  des Projekts aus. Dein Testbefehl bleibt `TEAM_SMOKE_TEST`.
+- Abschlussmeldung des Installers nennt jetzt den **Kostenabschluss nach dem
+  Lauf** — ohne ihn bleiben die Architekt-Kosten strukturell unerfasst.
+
+### Tests
+- 25 Testdateien, **127 Testfälle**, grün in allen drei geprüften Stacks.
+- Angepasst für den generischen Einsatz: Fixtures auf das `team/`-Layout,
+  Domänen-Literale durch den konfigurierten Wert ersetzt, Guard-Grenze im
+  Briefing-Test aus `team.config.sh` gelesen statt fest erwartet, Lesepfad-Test
+  auf den neuen Vertrag umgestellt.
+
 ## [1.0.0] — 2026-08-01
 
 Erste Fassung. Der Code stammt aus `website-maxron-de` (22 Kaskaden scharf
