@@ -110,6 +110,22 @@ nennt Alt-, Neu- und Summenwert. Den Nachlauf buchst du mit
 `--rollen-abschluss <N> <domaene> "" --addieren` dazu; `--ersetzen` gibt es für
 den Fall, dass die alte Zeile schlicht falsch war.
 
+**Prüfen statt glauben:**
+
+```bash
+./team-status.sh --ledger-pruefen
+```
+
+Sagt dir, ob für jede Kaskade alles gebucht ist: fehlt eine Zeile je Quelle
+(`ralph`/`roles`/`architekt`), liegen unarchivierte Logs herum, obwohl die
+Kaskade schon abgeschlossen ist, und — die eigentliche Probe — **ergeben die
+archivierten Rohlogs mehr, als im Ledger steht?** Diese letzte Frage stellt die
+Gegenkennzahl aus einer **anderen** Quelle als das Ledger selbst. Genau daran
+hakte es dreimal: Die schwersten Kostenfehler des Kits (`BL-1`, `BL-4`, `BL-5`)
+sind alle **nicht** durch ein Werkzeug aufgefallen, sondern dadurch, dass ein
+Mensch den Bericht neben das Ledger hielt. Exit `4` heißt Warnbefunde, `0`
+sauber. Warnungen laufen bei jedem `--budget` ungefragt mit.
+
 Der Architekt schreibt außerdem ein `{{PLAN_ORDNER}}/kaskade-N-abschluss.md`.
 Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 

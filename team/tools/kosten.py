@@ -411,6 +411,171 @@ def ledger_split(pfad=".budget-ledger", domaene=None, rolle=None, kaskade=None):
     return abo, api, gemischt
 
 
+# --- Ledger-Konsistenz (Roadmap-Skizze D) ------------------------------------
+# WARUM es das gibt: Die Kostenmechanik ist die einzige Stelle im Kit, deren
+# Fehler STILL sind. Einen Code-Fehler zeigt der Smoke-Test; eine fehlende
+# Ledger-Zeile zeigt niemand. BL-1, BL-4 und BL-5 sind alle drei NICHT durch
+# ein Werkzeug aufgefallen, sondern dadurch, dass ein Mensch den gedruckten
+# Bericht neben das Ledger hielt -- dreimal dasselbe Muster: Ein Bericht, der
+# seine Kennzahl aus derselben Quelle zieht wie das, was er pruefen soll,
+# bestaetigt einen Fehler, statt ihn zu zeigen. Er zieht seine Gegenkennzahl
+# deshalb aus einer ANDEREN Quelle als das Ledger: aus den archivierten
+# Rohlogs.
+#
+# WAS ES BEWUSST NICHT TUT -- und warum: Die Skizze sah den Vergleich "Zeile
+# gegen ihre archivierten Rohlogs" JE KASKADE vor. Das ist mit der heutigen
+# Ablage nicht ehrlich beantwortbar: Die Log-Dateinamen tragen keine
+# Kaskadennummer (stufe-<n>-<ts>.json, harry-<ts>.json,
+# frank-<HM>-v<n>-<ts>.json), und das Archiv ist EIN flacher Ordner je Quelle.
+# Eine Zuordnung liesse sich nur ueber mtime-Fenster raten -- und geraten wird
+# in der Kostenmechanik nichts. Ein Archiv je Kaskade (archiv/kaskade-<n>/)
+# waere der saubere Weg, haette aber lauf_kosten() in vollautomatik.sh
+# gebrochen: Das globbt .ralph-logs/archiv NICHT-rekursiv und misst den
+# Pro-Lauf-Deckel damit auch gegen Geld, das eine Abschluss-Stufe INNERHALB
+# des Laufs schon weggeraeumt hat (BL-55). Der Rohlog-Vergleich laeuft
+# deshalb je QUELLE statt je Kaskade -- Archivordner und Ledger-Rolle
+# entsprechen einander eindeutig, ohne dass irgendetwas zugeordnet werden
+# muss. BL-4 (ralph-Zeile fehlte ganz) und BL-5 (Altwert ueberschrieben)
+# haette beides genau so angeschlagen.
+
+# Quelle -> (Log-Ordner-Attribut, Ledger-Rolle). architekt fehlt hier
+# absichtlich: Diese Zeile ist eine gemessene Schaetzung aus dem Transkript,
+# ihr entspricht kein Rohlog, gegen das man sie halten koennte.
+LEDGER_ROHQUELLEN = (("ralph", "ralph_logs"), ("roles", "team_logs"))
+LEDGER_QUELLEN = ("ralph", "roles", "architekt")
+
+# Toleranz des Rohlog-Vergleichs: Jede Ledger-Zeile ist auf 4 Stellen
+# gerundet, ueber viele Kaskaden summiert sich das. Absolut 0.01 USD plus 1 %
+# haelt Rundung und von Hand auf glatte Werte nachgetragene Altzeilen
+# draussen, ohne einen echten Verlust zu verstecken (im Feld: 2.1621 USD).
+LEDGER_TOLERANZ_ABS = 0.01
+LEDGER_TOLERANZ_REL = 0.01
+
+
+def _kaskade_key(kaskade):
+    """Sortierschluessel: numerische Kaskaden numerisch (sonst steht 10 vor 2),
+    benannte danach alphabetisch -- kaskade_aus_plan() laesst beides zu."""
+    return (0, int(kaskade), "") if kaskade.isdigit() else (1, 0, kaskade)
+
+
+def _befund(code, schwere, text):
+    return {"code": code, "schwere": schwere, "text": text}
+
+
+def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
+                    team_logs=".team-logs", aktuelle_kaskade=None):
+    """Prueft das Ledger auf Vollstaendigkeit und liefert eine Liste von
+    Befunden (Dicts mit code/schwere/text). schwere ist "warnung" (sehr
+    wahrscheinlich verlorenes Geld -- der Aufrufer sollte Exit != 0 setzen)
+    oder "hinweis" (kann legitim sein, wird nur gezeigt).
+
+    Drei Pruefungen:
+
+    P1 Vollstaendigkeit je Kaskade -- traegt jede Kaskade eine Zeile je
+       Quelle (ralph/roles/architekt)? Eine Kaskade MIT roles-, aber OHNE
+       ralph-Zeile ist der BL-4-Fall und damit eine Warnung: Gebaut wurde
+       immer, wenn gesweept wurde. Umgekehrt ist eine fehlende roles- oder
+       architekt-Zeile nur ein Hinweis -- ein Lauf ohne Red Team und eine
+       Kaskade, in der der Architekt nichts abzurechnen hatte, sind moeglich.
+       Kaskaden mit AUSSCHLIESSLICH einer architekt-Zeile bleiben ganz
+       aussen vor: Das ist eine geplante, noch nicht gelaufene Kaskade.
+       Altzeilen im 5-Feld-Schema (rolle=None, BL-29) haben keine Quelle und
+       werden nicht bewertet, sondern gezaehlt gemeldet.
+
+    P2 Abgeschlossen, aber unarchiviert -- liegen in .ralph-logs/.team-logs
+       noch *.json, obwohl die aktuelle Kaskade bereits gebucht ist? Genau
+       die Lage, in der ein zweiter --rollen-abschluss den Altwert
+       ueberschrieben hat (BL-5). Unarchivierte Logs waehrend einer OFFENEN
+       Kaskade sind dagegen der Normalzustand und ergeben keinen Befund.
+
+    P3 Rohlog-Gegenprobe je Quelle -- ist die Summe der archivierten Rohlogs
+       GROESSER als die Summe der zugehoerigen Ledger-Zeilen? Dann ist
+       bezahlte Arbeit archiviert, aber nie (oder zu klein) gebucht worden.
+       Nur diese Richtung ist ein Befund: Fehlt umgekehrt das Archiv
+       (frischer Clone -- die Log-Ordner sind gitignoriert), ist das Ledger
+       erwartungsgemaess groesser, und genau dafuer existiert es.
+    """
+    befunde = []
+    if not os.path.isfile(pfad):
+        return [_befund("kein-ledger", "hinweis",
+                         f"Kein Ledger unter '{pfad}' -- es wurde noch nie "
+                         f"ein Abschluss gebucht.")]
+
+    zeilen = list(ledger_zeilen(pfad))
+    ordner = {"ralph_logs": ralph_logs, "team_logs": team_logs}
+
+    # --- P1 -----------------------------------------------------------------
+    je_kaskade = {}
+    ohne_quelle = 0
+    for zeile in zeilen:
+        if zeile["rolle"] is None:
+            ohne_quelle += 1
+            continue
+        je_kaskade.setdefault(zeile["kaskade"], set()).add(zeile["rolle"])
+    if ohne_quelle:
+        befunde.append(_befund(
+            "altzeilen", "hinweis",
+            f"{ohne_quelle} Ledger-Zeile(n) im alten 5-Feld-Schema ohne "
+            f"Domaene/Rolle -- sie zaehlen als 'unzugeordnet' und koennen "
+            f"nicht auf Vollstaendigkeit geprueft werden (BL-29)."))
+    for kaskade in sorted(je_kaskade, key=_kaskade_key):
+        vorhanden = je_kaskade[kaskade]
+        if not vorhanden & {"ralph", "roles"}:
+            continue    # geplant, aber nie gelaufen -- nichts zu erwarten
+        fehlend = [q for q in LEDGER_QUELLEN if q not in vorhanden]
+        if "ralph" in fehlend:
+            befunde.append(_befund(
+                "ralph-fehlt", "warnung",
+                f"Kaskade {kaskade}: keine ralph-Zeile, obwohl eine "
+                f"roles-Zeile steht. Die Baukosten des Loops sind nicht "
+                f"gebucht (BL-4-Muster) -- nachtragen mit "
+                f"`./team-status.sh --rollen-abschluss {kaskade} <domaene>`."))
+        for quelle in fehlend:
+            if quelle == "ralph":
+                continue
+            befunde.append(_befund(
+                f"{quelle}-fehlt", "hinweis",
+                f"Kaskade {kaskade}: keine {quelle}-Zeile. Legitim, wenn "
+                + ("kein Red Team lief" if quelle == "roles" else
+                    "der Architekt fuer diese Kaskade nichts abzurechnen "
+                    "hatte") + " -- sonst fehlt der Abschluss."))
+
+    # --- P2 -----------------------------------------------------------------
+    if aktuelle_kaskade is not None and aktuelle_kaskade in je_kaskade:
+        offen = team_log_dateien([ralph_logs, team_logs])
+        if offen:
+            befunde.append(_befund(
+                "unarchiviert", "warnung",
+                f"Kaskade {aktuelle_kaskade} ist bereits gebucht "
+                f"({len(je_kaskade[aktuelle_kaskade])} Zeile(n)), aber es "
+                f"liegen {len(offen)} unarchivierte Log(s) in "
+                f"{ralph_logs}/{team_logs}. Entweder lief danach noch eine "
+                f"Rolle (dann `--rollen-abschluss ... --addieren`), oder der "
+                f"Abschluss lief ohne --archivieren (dann zaehlt dieselbe "
+                f"Arbeit doppelt). Nicht einfach erneut abschliessen: Der "
+                f"Default ueberschreibt nicht, aber ein --ersetzen hier "
+                f"verliert den Altwert (BL-5)."))
+
+    # --- P3 -----------------------------------------------------------------
+    for rolle, ordner_attr in LEDGER_ROHQUELLEN:
+        archiv = os.path.join(ordner[ordner_attr], "archiv")
+        if not os.path.isdir(archiv):
+            continue
+        roh = log_kosten([archiv])
+        gebucht = ledger_summe(pfad, rolle=rolle)
+        differenz = roh - gebucht
+        toleranz = max(LEDGER_TOLERANZ_ABS, roh * LEDGER_TOLERANZ_REL)
+        if differenz > toleranz:
+            befunde.append(_befund(
+                f"{rolle}-untergebucht", "warnung",
+                f"Quelle '{rolle}': archivierte Rohlogs in {archiv} ergeben "
+                f"{roh:.4f} USD, die {rolle}-Zeilen im Ledger nur "
+                f"{gebucht:.4f} USD -- {differenz:.4f} USD sind archiviert, "
+                f"aber nie gebucht. So sahen BL-4 (Zeile fehlte ganz) und "
+                f"BL-5 (Altwert ueberschrieben) im Feld aus."))
+    return befunde
+
+
 def git_churn(seit, pfade, repo="."):
     """Zeilen-Churn (hinzugefuegt + geloescht) aus `git diff --numstat seit..
     HEAD -- pfade...` im Verzeichnis repo. Binaerdateien (numstat liefert "-"
@@ -752,7 +917,8 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
 
 def _main(argv):
     if not argv:
-        print("Nutzung: kosten.py summe [--split] DIR... | ledger [PFAD]",
+        print("Nutzung: kosten.py summe [--split] DIR... | ledger [PFAD] | "
+              "ledger-pruefen [--pfad P] [--kaskade N]",
               file=sys.stderr)
         return 1
 
@@ -841,6 +1007,77 @@ def _main(argv):
         else:
             print(f"{ledger_summe(pfad or '.budget-ledger', domaene=domaene, rolle=rolle, kaskade=kaskade):.4f}")
         return 0
+
+    # Skizze D: Konsistenzpruefung. Exit 4 (nicht 1) bei Warnbefunden --
+    # 1 bleibt dem Bedienfehler vorbehalten, damit ein Aufrufer "Werkzeug
+    # falsch benutzt" von "Ledger unvollstaendig" unterscheiden kann. Bewusst
+    # KEIN hartes Gate im Closeout: Eine Kaskade mit legitim fehlender Zeile
+    # duerfte sonst nicht abschliessen, und ein Gate, das man regelmaessig
+    # umgehen muss, wird umgangen. Der Befund laeuft stattdessen bei jedem
+    # --budget ungefragt mit.
+    if befehl == "ledger-pruefen":
+        pfad = ".budget-ledger"
+        repo = "."
+        ralph_logs = ".ralph-logs"
+        team_logs = ".team-logs"
+        kaskade = None
+        i = 0
+        while i < len(rest):
+            if rest[i] == "--pfad":
+                if i + 1 >= len(rest):
+                    print("Fehler: --pfad braucht einen Wert", file=sys.stderr)
+                    return 1
+                pfad = rest[i + 1]
+                i += 2
+            elif rest[i] == "--repo":
+                if i + 1 >= len(rest):
+                    print("Fehler: --repo braucht einen Pfad", file=sys.stderr)
+                    return 1
+                repo = rest[i + 1]
+                i += 2
+            elif rest[i] == "--ralph-logs":
+                if i + 1 >= len(rest):
+                    print("Fehler: --ralph-logs braucht einen Pfad",
+                          file=sys.stderr)
+                    return 1
+                ralph_logs = rest[i + 1]
+                i += 2
+            elif rest[i] == "--team-logs":
+                if i + 1 >= len(rest):
+                    print("Fehler: --team-logs braucht einen Pfad",
+                          file=sys.stderr)
+                    return 1
+                team_logs = rest[i + 1]
+                i += 2
+            elif rest[i] == "--kaskade":
+                if i + 1 >= len(rest):
+                    print("Fehler: --kaskade braucht einen Wert",
+                          file=sys.stderr)
+                    return 1
+                kaskade = rest[i + 1]
+                i += 2
+            else:
+                print(f"Fehler: unbekanntes Argument '{rest[i]}'",
+                      file=sys.stderr)
+                return 1
+
+        ledger_pfad = pfad if os.path.isabs(pfad) or repo == "." \
+            else os.path.join(repo, pfad)
+        if kaskade is None:
+            kaskade = kaskade_aus_plan(repo)
+        befunde = ledger_pruefen(ledger_pfad, ralph_logs=ralph_logs,
+                                  team_logs=team_logs,
+                                  aktuelle_kaskade=kaskade)
+        warnungen = [b for b in befunde if b["schwere"] == "warnung"]
+        if not befunde:
+            print("Ledger konsistent: keine Befunde.")
+            return 0
+        for b in befunde:
+            marke = "WARNUNG" if b["schwere"] == "warnung" else "Hinweis"
+            print(f"[{marke}] {b['text']}")
+        print(f"-- {len(warnungen)} Warnung(en), "
+              f"{len(befunde) - len(warnungen)} Hinweis(e).")
+        return 4 if warnungen else 0
 
     if befehl == "architekt-schaetzung":
         seit = None

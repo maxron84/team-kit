@@ -75,29 +75,49 @@ Feldprojekt — dann neu bewerten.
 
 ---
 
-## Skizze D: Das Ledger prüft seine eigene Vollständigkeit nicht
+## ~~Skizze D: Das Ledger prüft seine eigene Vollständigkeit nicht~~ — gebaut 2026-08-01
 
-- **Ziel**: Ein Befehl sagt, ob für eine abgeschlossene Kaskade **alles**
-  gebucht ist — statt dass es beim Lesen zweier Dokumente auffällt.
-- **Stand**: Es gibt nichts dergleichen. `BL-4` (Ralph fehlte komplett) und
-  `BL-5` (Altwert überschrieben) sind **beide** nicht durch ein Werkzeug
-  aufgefallen, sondern dadurch, dass jemand den gedruckten Bericht gegen das
-  Ledger hielt. `BL-1` genauso. Das ist dreimal dasselbe Muster: **Ein Bericht,
-  der seine Kennzahl aus derselben Quelle zieht, bestätigt einen Fehler, statt
-  ihn zu zeigen.**
-- **Umfang**: Ein `--ledger-pruefen`, das je Kaskade prüft, was da sein müsste:
-  Liegt für jede Kaskade mit archivierten Logs auch eine Zeile je Quelle vor
-  (`ralph`, `roles`, `architekt`)? Steht in einem Log-Ordner etwas
-  Unarchiviertes, obwohl die Kaskade als abgeschlossen gilt? Ist eine Zeile
-  auffällig kleiner als die Summe ihrer archivierten Rohlogs?
-- **Bezug**: Die Kostenmechanik ist die einzige Stelle im Kit, deren Fehler
-  **still** sind — Code-Fehler zeigt der Smoke-Test, Kostenfehler zeigt
-  niemand. Alle drei bisherigen Kit-Fehler waren von dieser Art.
-- **Offene Fragen**:
-  - Woher weiß das Werkzeug, dass eine Kaskade „abgeschlossen" ist? Aus dem
-    Archiv-Ordner, aus `.ralph-state`, oder aus einer Abschlusszeile?
-  - Warnung oder Exit ungleich 0? Ein hartes Gate im Closeout wäre wirksamer,
-    riskiert aber, dass eine Kaskade mit legitim fehlender Zeile blockiert.
-  - Lohnt eine **Kaskade** (Ralph baut) oder ist es wieder Handarbeit? Anders
-    als A–C ist das echte Werkzeugarbeit mit Testbedarf — der erste Strang des
-    Kits, der in den Loop gehören könnte.
+Als `kosten.py ledger-pruefen` / `./team-status.sh --ledger-pruefen` umgesetzt
+(Architekten-Handarbeit nach Franks Dreisatz, Release 2.4.0). Der Strang lief
+**nicht** über eine Kaskade — im Kit-Repo ist kein Team installiert, Ralph kann
+hier nichts bauen (Strippenzieher-Entscheid 2026-08-01: bleibt so).
+
+**Die drei offenen Fragen, beantwortet:**
+
+1. *Woher weiß das Werkzeug, dass eine Kaskade abgeschlossen ist?* Aus dem
+   **Ledger**, nicht aus `.ralph-state`. Eine Kaskade gilt als abgeschlossen,
+   sobald sie eine `ralph`- oder `roles`-Zeile trägt. `.ralph-state` ist ein
+   Bauzeiger und wird von `--force` zurückgesetzt; der Archiv-Ordner — der
+   ursprüngliche Kandidat — schied an einer harten Randbedingung aus, siehe
+   unten.
+2. *Warnung oder Exit ≠ 0?* **Beides, getrennt.** Exit `4` bei Warnbefunden
+   (`1` bleibt dem Bedienfehler), aber **kein** hartes Gate im Closeout: Eine
+   Kaskade mit legitim fehlender Zeile dürfte sonst nicht abschließen, und ein
+   Gate, das man regelmäßig umgehen muss, wird umgangen. Stattdessen läuft die
+   Prüfung bei jedem `--budget` ungefragt mit — sichtbar, aber nicht blockend.
+   Zwei Schweregrade: `warnung` (sehr wahrscheinlich verlorenes Geld) und
+   `hinweis` (kann legitim sein). Ein Werkzeug, das bei jedem Lauf rot ist,
+   erzieht zum Wegsehen.
+3. *Kaskade oder Handarbeit?* Handarbeit — siehe oben.
+
+**Die Randbedingung, die der Entwurf nicht kannte — und was sie geändert hat:**
+Die Skizze wollte je Kaskade prüfen, ob eine Zeile kleiner ist als *ihre*
+archivierten Rohlogs. Das ist mit der heutigen Ablage **nicht ehrlich
+beantwortbar**: Log-Dateinamen tragen keine Kaskadennummer
+(`stufe-<n>-<ts>.json`, `harry-<ts>.json`), und das Archiv ist **ein** flacher
+Ordner je Quelle. Zuordnen ließe sich nur über mtime-Fenster — also raten, und
+in der Kostenmechanik wird nicht geraten. Ein Archiv je Kaskade
+(`archiv/kaskade-<n>/`) wäre der saubere Weg gewesen, hätte aber `lauf_kosten()`
+in `vollautomatik.sh` gebrochen: Das globbt `.ralph-logs/archiv`
+**nicht-rekursiv** und misst den Pro-Lauf-Deckel damit auch gegen Geld, das
+eine Abschluss-Stufe *innerhalb* des Laufs schon weggeräumt hat (`BL-55`).
+**Entscheid:** Der Rohlog-Vergleich läuft je **Quelle** statt je Kaskade —
+Archivordner und Ledger-Rolle entsprechen einander eindeutig, ohne jede
+Zuordnung. `BL-4` und `BL-5` hätte er beide gefunden; beide sind mit ihren
+echten Feldzahlen als Regressionstest hinterlegt.
+
+**Offen geblieben:** Ein Archiv je Kaskade bliebe die genauere Lösung und würde
+den Vergleich kaskadenscharf machen. Der Preis ist eine Änderung an der
+Pro-Lauf-Durchsetzung (`lauf_kosten` müsste rekursiv globben, ohne `BL-55`
+wieder aufzureißen) — das ist echte Werkzeugarbeit mit Testbedarf und wäre der
+nächste Kandidat, **falls** je ein Team im Kit-Repo läuft.

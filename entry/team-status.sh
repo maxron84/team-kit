@@ -31,6 +31,15 @@
 #                                       schritt). Nur manueller Kaskaden-
 #                                       Abschluss, laeuft NICHT automatisch in
 #                                       vollautomatik.sh.
+#          ./team-status.sh --ledger-pruefen [--kaskade N]
+#                                       Konsistenzpruefung des Ledgers
+#                                       (Skizze D): fehlende Zeile je Quelle,
+#                                       unarchivierte Logs bei bereits
+#                                       gebuchter Kaskade, und die Gegenprobe
+#                                       gegen die archivierten Rohlogs.
+#                                       Exit 4 = Warnbefunde, 0 = sauber oder
+#                                       nur Hinweise. Laeuft bei --budget
+#                                       ungefragt mit (dort nur Anzeige).
 #          ./team-status.sh --beutebuch-archivieren [--dry-run]
 #                                       Verschiebt erledigte/ueberholte Funde
 #                                       (Kaskade 22/Stufe 91) wortgleich nach
@@ -204,6 +213,23 @@ print('  Hinweis: Pro-Lauf-Deckel gilt gegen die Kosten EINES Laufs,')
 print('           nicht gegen den kumulierten Gesamt-Kontostand oben.')
 " "$empfehlung"
     fi
+
+    # Skizze D: Der Kontostand prüft ungefragt seine eigene Vollständigkeit
+    # mit — und zwar gegen die archivierten Rohlogs, also gegen eine ANDERE
+    # Quelle als die Zahlen darüber. Genau das fehlte bei BL-1/BL-4/BL-5:
+    # Alle drei Berichte zogen ihre Kennzahl aus derselben Quelle wie der
+    # Fehler und bestätigten ihn deshalb, statt ihn zu zeigen. Bewusst nur
+    # ANZEIGE: `--budget` bleibt exit 0, auch wenn Befunde vorliegen. Das
+    # Detail liefert `--ledger-pruefen` (exit 4).
+    local _befunde
+    _befunde="$($TEAM_KOSTEN_TOOL ledger-pruefen 2>/dev/null || true)"
+    case "$_befunde" in
+        *WARNUNG*)
+            echo "  ──────── Ledger-Konsistenz ────────"
+            printf %s "$_befunde" | grep '^\[WARNUNG\]' | sed 's/^/    /'
+            echo "    → Details: ./team-status.sh --ledger-pruefen"
+            ;;
+    esac
     echo "════════════════════════════════════════════════════════"
 }
 
@@ -299,6 +325,12 @@ status_rollen_abschluss() {
     return "$rc"
 }
 
+# status_ledger_pruefen: reicht auf kosten.py ledger-pruefen durch (Skizze D).
+# Exit 4 = Warnbefunde, 0 = sauber oder nur Hinweise, 1 = Bedienfehler.
+status_ledger_pruefen() {
+    $TEAM_KOSTEN_TOOL ledger-pruefen "$@"
+}
+
 # status_beutebuch_archivieren: reicht auf beutebuch.py archiviere durch
 # (Kaskade 22/Stufe 91). Bewusst NICHT in vollautomatik.sh verdrahtet
 # (Strippenzieher-Entscheid, plans/ralph-kaskade-22-doku-konsolidierung.md) —
@@ -319,6 +351,9 @@ elif [ "${1:-}" = "--akteur-abschluss" ]; then
 elif [ "${1:-}" = "--rollen-abschluss" ]; then
     shift
     status_rollen_abschluss "$@"
+elif [ "${1:-}" = "--ledger-pruefen" ]; then
+    shift
+    status_ledger_pruefen "$@"
 elif [ "${1:-}" = "--beutebuch-archivieren" ]; then
     shift
     status_beutebuch_archivieren "$@"

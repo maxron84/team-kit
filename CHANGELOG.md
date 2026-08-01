@@ -2,6 +2,52 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.4.0] — 2026-08-01
+
+**Das Ledger prüft jetzt seine eigene Vollständigkeit** (Roadmap-Skizze D).
+
+### Added
+- **`./team-status.sh --ledger-pruefen` / `kosten.py ledger-pruefen`.** Drei
+  Prüfungen: (1) trägt jede gelaufene Kaskade eine Zeile je Quelle —
+  `ralph`/`roles`/`architekt`? (2) liegen unarchivierte Logs herum, obwohl die
+  Kaskade schon gebucht ist? (3) **ergeben die archivierten Rohlogs mehr, als
+  im Ledger steht?**
+  Nur die dritte Frage zieht ihre Kennzahl aus einer **anderen** Quelle als das
+  Geprüfte — und genau das fehlte bisher: `BL-1`, `BL-4` und `BL-5` sind alle
+  drei **nicht** durch ein Werkzeug aufgefallen, sondern dadurch, dass ein
+  Mensch den gedruckten Bericht neben das Ledger hielt. Dreimal dasselbe
+  Muster: Ein Bericht, der seine Kennzahl aus derselben Quelle zieht wie der
+  Fehler, bestätigt ihn, statt ihn zu zeigen.
+  Exit `4` bei Warnbefunden (`1` bleibt dem Bedienfehler vorbehalten), zwei
+  Schweregrade (`warnung` = sehr wahrscheinlich verlorenes Geld, `hinweis` =
+  kann legitim sein). Bewusst **kein** hartes Gate im Closeout: Eine Kaskade
+  mit legitim fehlender Zeile könnte sonst nicht abschließen, und ein Gate,
+  das man regelmäßig umgeht, ist wirkungslos. Stattdessen laufen die Warnungen
+  bei jedem `--budget` ungefragt mit.
+- **16 neue Testfälle** (`test_bl13_ledger_pruefen.py`), darunter `BL-4` und
+  `BL-5` mit ihren **echten Feldzahlen** (2,1621 USD nie gebucht bzw. 1,0969
+  USD überschrieben) — beide schlagen an. Gegenprobe für alle drei Prüfungen
+  einzeln gefahren. **176 Testfälle** in 32 Dateien.
+
+### Entschieden
+- **Der Rohlog-Vergleich läuft je Quelle, nicht je Kaskade.** Die Skizze wollte
+  Zeile gegen *ihre* Rohlogs halten; das ist mit der heutigen Ablage nicht
+  ehrlich beantwortbar, weil Log-Dateinamen keine Kaskadennummer tragen
+  (`stufe-<n>-<ts>.json`, `harry-<ts>.json`) und das Archiv **ein** flacher
+  Ordner je Quelle ist. Zuordnen ließe sich nur über mtime-Fenster — in der
+  Kostenmechanik wird nicht geraten. Ein Archiv je Kaskade
+  (`archiv/kaskade-<n>/`) wäre sauberer gewesen, hätte aber `lauf_kosten()` in
+  `vollautomatik.sh` gebrochen, das `.ralph-logs/archiv` **nicht-rekursiv**
+  globbt und den Pro-Lauf-Deckel auch gegen bereits weggeräumtes Geld misst
+  (`BL-55`). Archivordner ↔ Ledger-Rolle entsprechen einander dagegen
+  eindeutig — der Vergleich braucht damit **keine** Zuordnung und hätte `BL-4`
+  wie `BL-5` trotzdem gefunden.
+
+### Changed
+- Closeout-Regel in `CLAUDE.md.vorlage`, `TEAM.md` und dem Architekten-Briefing
+  nachgezogen: Der Abschluss wird **geprüft, nicht geglaubt**; ein stehender
+  Warnbefund gehört samt Begründung ins Abschluss-Doc.
+
 ## [2.3.2] — 2026-08-01
 
 **Der erste echte `--update`-Einsatz hat zwei Löcher aufgedeckt — beide im

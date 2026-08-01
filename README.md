@@ -9,9 +9,9 @@ bash install.sh ~/Source/mein-neues-projekt
 
 *(Kurzform von überall: `bash ~/.claude/scripts/team-init.sh <zielpfad>`)*
 
-Ein Befehl, sieben Fragen, danach liegen 59 Dateien im Zielprojekt: der gehärtete
+Ein Befehl, sieben Fragen, danach liegen 61 Dateien im Zielprojekt: der gehärtete
 Bau-Loop, das Read-Only Red Team, der Fixer, der Forensiker, die Kostenmechanik,
-die Bootstrap-Dateien, die Bedienanleitung `TEAM.md` und 31 Regressionstests.
+die Bootstrap-Dateien, die Bedienanleitung `TEAM.md` und 32 Regressionstests.
 
 ---
 
@@ -130,9 +130,9 @@ entry/                  Entrypoints — landen in der Wurzel des Zielprojekts
 team/                   Team-Namensraum — landet als team/ im Zielprojekt
 ├── lib.sh              871 Z — Auth, Guard, Budget, 429-Mechanik, Kosten
 ├── redteam.sh          Gemeinsame Sweep-Logik von Harry und Marv
-├── tools/              kosten.py (1126 Z), beutebuch.py (280 Z)
+├── tools/              kosten.py (1381 Z), beutebuch.py (286 Z)
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-└── tests/              31 Testdateien, 160 Testfälle
+└── tests/              32 Testdateien, 176 Testfälle
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
 install.sh              Der Installer
@@ -166,6 +166,7 @@ Produktivcode bleiben, wie sie sind — nichts Stack-Fremdes landet darin.
 | `./halbautomatik.sh <rolle>` | Einzelnen Schritt, Entscheidung beim Menschen |
 | `./team-status.sh` | Pipeline, Beutebuch, Kaskadenstand |
 | `./team-status.sh --budget` | Kontostand, API vs. Abo getrennt |
+| `./team-status.sh --ledger-pruefen` | Ist für jede Kaskade alles gebucht? Gegenprobe gegen die archivierten Rohlogs (Exit `4` = Warnbefunde) |
 | `./team-test.sh` | Regressionstests der Team-Infrastruktur (pytest) |
 | `bash <kit>/install.sh . --update` | Auf eine neue Kit-Version heben, ohne Projektdaten anzufassen |
 | `python3 team/tools/beutebuch.py list` | Alle Funde mit Status |
@@ -191,7 +192,7 @@ Produktivcode bleiben, wie sie sind — nichts Stack-Fremdes landet darin.
   die alle vier Phasen in **einem** Durchlauf schafft — die Fixphase des ersten
   Laufs starb an `BL-1`, Frank lief danach über `halbautomatik.sh`.
 - **Selbstverifikation**: `./kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 160 Tests. `pytest team/tests` **im Kit-Repo**
+  Wegwerf-Repo und fährt dort die 176 Tests. `pytest team/tests` **im Kit-Repo**
   schlägt dagegen erwartungsgemäß fehl — die Tests setzen die installierte
   Ablage voraus (Entrypoints in der Wurzel statt unter `entry/`).
 - **Guard-Tests nur in Wegwerf-Repos.** Nie im echten Projekt.

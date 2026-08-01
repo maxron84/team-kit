@@ -64,9 +64,14 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    Log-Ordner. Lief nach dem Closeout noch eine Rolle, **bricht** ein zweiter
    Aufruf ab, statt die Erstbuchung zu überschreiben — den Nachlauf hänge ich
    mit `--addieren` an, `--ersetzen` ist nur für eine falsche Altzeile.
-   **Ich prüfe den Abschluss gegen `./team-status.sh --budget`**, statt ihn zu
-   glauben: Ein Bericht, der seine Kennzahl aus derselben Quelle zieht, würde
-   einen Fehler bestätigen statt ihn zu zeigen (Feld-Lehre `BL-1`).
+   **Ich prüfe den Abschluss, statt ihn zu glauben** — mit
+   `./team-status.sh --ledger-pruefen` (Exit `4` = Warnbefunde) und im
+   Zweifel gegen `--budget`: Ein Bericht, der seine Kennzahl aus derselben
+   Quelle zieht wie das Geprüfte, würde einen Fehler bestätigen statt ihn zu
+   zeigen (Feld-Lehre `BL-1`). `--ledger-pruefen` hält deshalb die
+   archivierten Rohlogs gegen das Ledger — eine **andere** Quelle. Bleibt ein
+   Warnbefund stehen, gehört er samt Begründung ins Abschluss-Doc; ich
+   schließe keine Kaskade mit einem unerklärten Befund ab.
    **Woher `<USD>` kommt:** Im Abo gibt es keinen Konsolenwert. Ich **messe** ihn
    aus dem Sitzungstranskript der CLI (Antworten über die Nachrichten-ID
    deduplizieren, Preismodell an einem headless-Lauf mit bekanntem Konsolenwert

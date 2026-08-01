@@ -510,6 +510,18 @@ Architekten-Closeout, **nie** in einer Loop-Stufe (siehe A.7, Lehre 8).
 > und Summenwert; `--addieren` bucht den Nachlauf dazu, `--ersetzen` korrigiert
 > eine falsche Altzeile.
 
+> **Skizze D — der Abschluss wird geprüft, nicht geglaubt.** `--ledger-pruefen`
+> beantwortet nach dem Closeout drei Fragen: Fehlt einer Kaskade eine Zeile je
+> Quelle? Liegen unarchivierte Logs herum, obwohl sie schon gebucht ist? Und
+> **ergeben die archivierten Rohlogs mehr, als das Ledger ausweist?** Nur die
+> letzte Frage zieht ihre Kennzahl aus einer **anderen** Quelle als das
+> Geprüfte — und genau das fehlte bei `BL-1`, `BL-4` und `BL-5`, die alle drei
+> ein Mensch beim Vergleich zweier Dokumente fand, nicht ein Werkzeug. Exit `4`
+> bei Warnbefunden; bewusst **kein** hartes Gate im Closeout, weil eine Kaskade
+> mit legitim fehlender Zeile sonst nicht abschließen könnte und ein Gate, das
+> man regelmäßig umgeht, wirkungslos ist. Stattdessen läuft die Prüfung bei
+> jedem `--budget` ungefragt mit.
+
 > **Feld-Lehre gegen die naheliegende Alternative:** Eine fortgeschriebene
 > Kosten-Prosaseite (`wiki/kosten.md` o. Ä.) als Abschlusspflicht **trägt nicht**
 > — im Feld blieb genau diese Seite bei Kaskade 17 stehen, während die Kaskaden
