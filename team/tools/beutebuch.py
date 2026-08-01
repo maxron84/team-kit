@@ -43,7 +43,12 @@ import re
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+# Diese Datei liegt in team/tools/ — zwei Ebenen unter der Projektwurzel.
+# Ein .parent zu wenig ergab team/plans/beutebuch.md, also eine Datei, die es
+# nie gibt: das Werkzeug meldete dann still "keine Funde", und die komplette
+# Frank-/Axel-Fixphase lief an jedem uebergebenen Fund vorbei (BL-1, im Feld
+# erlebt am 2026-08-01 in team-kit_project_platformer, Kaskade 1).
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 BEUTEBUCH = REPO_ROOT / "plans" / "beutebuch.md"
 ARCHIV = REPO_ROOT / "plans" / "beutebuch-archiv.md"
 HM_RE = re.compile(r"^###\s+(HM-\d+)")

@@ -2,6 +2,44 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.2.1] — 2026-08-01
+
+**Die Fixphase war in jeder Installation tot.** Erster Fund aus einem
+Feldprojekt zurück ins Kit (`team-kit_project_platformer`, Kaskade 1).
+
+### Fixed
+- **`team/tools/beutebuch.py` löste die Projektwurzel eine Ebene zu hoch auf.**
+  Die Datei liegt in `team/tools/`, also zwei Ebenen unter der Wurzel;
+  `parent.parent` ergab `team/` und damit den Pfad `team/plans/beutebuch.md` —
+  eine Datei, die es nie gibt. Weil `_lies_zeilen()` für eine fehlende Datei
+  eine leere Liste liefert **statt zu scheitern**, meldete das Werkzeug ruhig
+  „keine Funde": `first` gab Exit 1 zurück, `frank.sh` schloss daraus „nichts
+  zu tun", und `vollautomatik.sh` beendete die Fixphase in Runde 1 — mit drei
+  offenen Funden im Buch. Der gedruckte Abschlussbericht bestätigte den Fehler
+  („keine Funde"), weil er dieselbe kaputte Quelle liest.
+  **Betroffen war jede mit 2.0.0–2.2.0 installierte Instanz**: Red Team schreibt
+  Funde, Frank sieht sie nie, niemand bemerkt es — der Lauf endet grün.
+
+### Added
+- `team/tests/test_bl1_beutebuch_repo_root.py` — drei Prüfungen: Default-Pfade
+  zeigen auf die Wurzel, ein aus fremdem Arbeitsverzeichnis gestarteter
+  `list`-Aufruf gegen ein Miniatur-Projekt findet den Fund, und im
+  installierten Projekt trifft der Default eine existierende Datei
+  (übersprungen im Kit-Repo, das kein `plans/` hat).
+- `team/tests/test_bl3_werkzeug_default_pfade.py` — schließt die **Ursache**,
+  dass der Fehler durch 132 grüne Tests rutschte: Sämtliche Werkzeug-Tests
+  arbeiteten mit `--pfad` auf Fixtures, der Default-Pfad war ungeprüft.
+  Prüft jetzt zusätzlich, dass **jeder Entrypoint ins Skriptverzeichnis
+  wechselt** — die bislang nirgends festgehaltene Invariante, auf der die
+  arbeitsverzeichnis-relativen Pfade von `kosten.py` ruhen.
+- **138 Testfälle** gesamt (im installierten Projekt).
+
+### Audit
+- `kosten.py` hat den Fehler **nicht**: es leitet keine Pfade aus `__file__` ab,
+  sondern hält sie arbeitsverzeichnis-relativ (`.budget-ledger`). Korrekt —
+  aber nur, solange die `cd`-Invariante gilt, die jetzt getestet wird. Wer die
+  Pfade dort „vereinheitlicht", muss beide Tests bewusst mitziehen.
+
 ## [2.2.0] — 2026-08-01
 
 **Erster scharfer Lauf — das Kit ist verifiziert, nicht nur geprüft.**
