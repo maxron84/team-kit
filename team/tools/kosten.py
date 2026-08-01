@@ -739,8 +739,13 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
         auth_summe = auth if alt_auth == auth else "abo/api"
         notiz_summe = (f"{notiz_voll} (addiert auf Bestand {alt:.4f} USD, "
                        f"auth {alt_auth or '—'})")
+        # rolle NICHT hart verdrahten: Ein --addieren auf die ralph-Zeile
+        # haette sie sonst in eine zweite roles-Zeile verwandelt und die
+        # Baukosten damit erneut unsichtbar gemacht — genau der BL-4-Fehler,
+        # nur eine Ebene tiefer. Beim manuellen Durchlauf aufgefallen,
+        # nicht von den Tests (die pruefen je Rolle nur einen Modus).
         return (f"{date.today().isoformat()} | {kaskade} | {summe:.4f} | "
-                f"{auth_summe} | {domaene} | roles | {notiz_summe}\n")
+                f"{auth_summe} | {domaene} | {rolle} | {notiz_summe}\n")
 
     return _ledger_zeile_setzen(zeile_neu, match_fn, pfad, merge_fn=merge_fn)
 
@@ -1077,6 +1082,19 @@ def _main(argv):
         # rekursiv und sieht archiv/ daher nie. Ohne diese Warnung wurde
         # genau das bei Kaskade 17 real gebucht und war nur per Zufall aus
         # einem Abschluss-Doc rekonstruierbar (siehe Beutebuch HM-43).
+        # Nichts zu addieren ist ein No-Op, keine Buchung: Beim Nachlauf einer
+        # EINZELNEN Rolle ist die jeweils andere Quelle regulaer leer (Frank
+        # laeuft nach, Ralph nicht). Ohne diesen Zweig schrieb --addieren dort
+        # "+0.0000" und ueberschrieb dabei Datum und Notiz der bestehenden
+        # Zeile mit dem Text des fremden Nachlaufs — plus einer Warnung, die
+        # in genau diesem Fall in die Irre fuehrt. Beim manuellen Durchlauf
+        # aufgefallen. Nur im addieren-Modus: Ohne bestehende Zeile ist die
+        # 0.0000-Buchung samt HM-43-Warnung weiterhin richtig.
+        if bestand == "addieren" and not files and abo == 0.0 and api == 0.0:
+            print(f"{rolle_ziel.capitalize()}-Zeile Kaskade {kaskade} "
+                  f"({domaene}) unveraendert: nichts hinzuzufuegen "
+                  f"(keine neuen Logs in {', '.join(logs)}).")
+            return 0
         if not files and abo == 0.0 and api == 0.0:
             archiv_belegt = any(
                 glob.glob(os.path.join(d, "archiv", "*.json")) for d in logs

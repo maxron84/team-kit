@@ -117,7 +117,7 @@ team/                   Team-Namensraum — landet als team/ im Zielprojekt
 ├── redteam.sh          Gemeinsame Sweep-Logik von Harry und Marv
 ├── tools/              kosten.py (1126 Z), beutebuch.py (280 Z)
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-└── tests/              30 Testdateien, 149 Testfälle
+└── tests/              30 Testdateien, 151 Testfälle
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
 install.sh              Der Installer
@@ -175,7 +175,7 @@ Produktivcode bleiben, wie sie sind — nichts Stack-Fremdes landet darin.
   die alle vier Phasen in **einem** Durchlauf schafft — die Fixphase des ersten
   Laufs starb an `BL-1`, Frank lief danach über `halbautomatik.sh`.
 - **Selbstverifikation**: `./kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 149 Tests. `pytest team/tests` **im Kit-Repo**
+  Wegwerf-Repo und fährt dort die 151 Tests. `pytest team/tests` **im Kit-Repo**
   schlägt dagegen erwartungsgemäß fehl — die Tests setzen die installierte
   Ablage voraus (Entrypoints in der Wurzel statt unter `entry/`).
 - **Guard-Tests nur in Wegwerf-Repos.** Nie im echten Projekt.

@@ -44,6 +44,18 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - `_ledger_zeile_setzen()` bekam dafür einen optionalen `merge_fn`-Haken, der
   **innerhalb** des Ledger-Locks und **vor** jedem Schreibzugriff läuft.
   `akteur_abschluss()` ist unberührt.
+- **Zwei Fehler im obigen Fix selbst**, gefunden bei einem manuellen
+  Durchlauf gegen eine echte Installation — **nicht** von den 149 Tests:
+  (1) `merge_fn` schrieb die Rolle hart als `roles`; ein `--addieren` auf die
+  `ralph`-Zeile hätte sie in eine zweite `roles`-Zeile verwandelt und die
+  Baukosten erneut unsichtbar gemacht — der `BL-4`-Fehler eine Ebene tiefer,
+  erzeugt vom `BL-5`-Fix. (2) Beim Nachlauf **einer** Rolle ist die andere
+  Quelle regulär leer; `--addieren` buchte dort `+0,0000` und überschrieb dabei
+  Datum und Notiz der bestehenden Zeile mit dem Text des fremden Nachlaufs.
+  Beides behoben und mit je einem Regressionstest belegt.
+  **Lehre:** Die Tests prüften je Rolle nur einen Modus — die Kreuzkombination
+  (andere Rolle × anderer Modus) blieb blind. Ein einziger Durchlauf durch die
+  echte Bedienoberfläche fand, was 149 grüne Tests nicht fanden.
 - **`README.md`, Abschnitt „Grenzen", war überholt (`BL-7`).** Frank ist
   inzwischen scharf gelaufen (drei Fixes im Feld), Axel weiterhin nicht — und
   die Fixphase einer `vollautomatik.sh` hat noch nie in **einem** Durchlauf
@@ -59,7 +71,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   das **Feldszenario mit den echten Zahlen** (1,0969 → Frank-Nachlauf 2,4114 →
   3,5083) inklusive Archivierung. Gegenprobe gefahren: Mit dem alten Verhalten
   sind genau die beiden Kernprüfungen rot.
-- **149 Testfälle** in 30 Dateien (im installierten Projekt).
+- **151 Testfälle** in 30 Dateien (im installierten Projekt).
 - **`kit-test.sh` — das Kit prüft sich jetzt selbst (`BL-6`).** Bisher gab es
   dafür keinen Befehl: `pytest team/tests` schlägt im Kit-Repo mit **17 von 138**
   Tests fehl, weil die Tests die **installierte** Ablage voraussetzen

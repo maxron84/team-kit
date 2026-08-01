@@ -116,6 +116,51 @@ def test_bl5_schutz_gilt_auch_fuer_die_ralph_zeile(tmp_path):
     assert "ralph-Zeile" in err
 
 
+def test_addieren_behaelt_die_rolle_der_zeile(tmp_path):
+    """Beim manuellen Durchlauf aufgefallen: merge_fn schrieb die Rolle hart
+    als "roles" — ein --addieren verwandelte Ralphs Zeile in eine ZWEITE
+    roles-Zeile und machte die Baukosten wieder unsichtbar. Also der
+    BL-4-Fehler eine Ebene tiefer, erzeugt vom BL-5-Fix."""
+    ledger = _fixture_ledger(tmp_path)
+    logs = _log_schreiben(tmp_path / "ralph-logs", "stufe-1.json", 2.0)
+    _run("ralph-abschluss", "--kaskade", "1", "--domaene", "produkt",
+         "--logs", str(logs), "--pfad", str(ledger), "--archivieren")
+
+    _log_schreiben(logs, "stufe-2.json", 0.5)
+    rc, out, err = _run("ralph-abschluss", "--kaskade", "1",
+                         "--domaene", "produkt", "--logs", str(logs),
+                         "--pfad", str(ledger), "--archivieren", "--addieren")
+
+    assert rc == 0, err
+    assert len(_zeilen(ledger, "ralph")) == 1
+    assert _zeilen(ledger, "ralph")[0]["usd"] == pytest.approx(2.5)
+    assert _zeilen(ledger, "roles") == [], \
+        "Die ralph-Zeile darf beim Addieren nicht zur roles-Zeile werden"
+
+
+def test_addieren_ohne_neue_logs_laesst_die_zeile_in_ruhe(tmp_path):
+    """Beim Nachlauf EINER Rolle ist die andere Quelle regulaer leer. Dann
+    darf --addieren die bestehende Zeile nicht mit "+0.0000" anfassen und
+    dabei Datum und Notiz des fremden Nachlaufs hineinschreiben."""
+    ledger = _fixture_ledger(tmp_path)
+    logs = _log_schreiben(tmp_path / "ralph-logs", "stufe-1.json", 2.1621)
+    _run("ralph-abschluss", "--kaskade", "1", "--domaene", "produkt",
+         "--logs", str(logs), "--pfad", str(ledger), "--archivieren",
+         "--notiz", "Bau")
+    vorher = ledger.read_text()
+
+    rc, out, err = _run("ralph-abschluss", "--kaskade", "1",
+                         "--domaene", "produkt", "--logs", str(logs),
+                         "--pfad", str(ledger), "--archivieren",
+                         "--addieren", "--notiz", "Frank-Nachlauf")
+
+    assert rc == 0, err
+    assert ledger.read_text() == vorher, \
+        "Ohne neue Logs darf die Zeile byte-identisch bleiben"
+    assert "unveraendert" in out
+    assert "Frank-Nachlauf" not in ledger.read_text()
+
+
 @pytest.mark.skipif(not TEAM_STATUS.is_file(),
                     reason="team-status.sh liegt nur in der Installation in "
                            "der Wurzel (im Kit-Repo unter entry/)")
