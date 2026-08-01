@@ -2,7 +2,24 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
-## [2.2.1] — 2026-08-01
+## [Unreleased]
+
+### Added
+- **`kit-test.sh` — das Kit prüft sich jetzt selbst (`BL-6`).** Bisher gab es
+  dafür keinen Befehl: `pytest team/tests` schlägt im Kit-Repo mit **17 von 138**
+  Tests fehl, weil die Tests die **installierte** Ablage voraussetzen
+  (Entrypoints in der Wurzel statt unter `entry/`). Kein einziger dieser
+  Fehlschläge war ein echter Fund — aber sie machten den einzigen vorhandenen
+  Testlauf unbrauchbar, und damit war jeder im Kit committete Fix bis zur
+  nächsten Feldinstallation ungeprüft. **Genau so ging `BL-1` durch drei
+  Releases.**
+  `./kit-test.sh` installiert das Kit nicht-interaktiv in ein frisches
+  `mktemp`-Git-Repo, sucht ungefüllte `{{PLATZHALTER}}`, committet wie in
+  `TEAM.md` vorgeschrieben und fährt dort `./team-test.sh` — die Tests laufen
+  also dort, wo sie gelten. Der Installer wird dabei mitgeprüft. Exit-Code wird
+  durchgereicht (Gegenprobe gefahren: erzwungener Fehlschlag ergibt Exit 5),
+  `--behalten` lässt das Wegwerf-Repo zur Fehlersuche stehen. Ruft keine
+  Agenten-CLI auf und kostet daher nichts.
 
 **Die Fixphase war in jeder Installation tot.** Erster Fund aus einem
 Feldprojekt zurück ins Kit (`team-kit_project_platformer`, Kaskade 1).
