@@ -23,6 +23,24 @@ abschließen.
 > kritischste Wert: Er steht in Ralphs Dreisatz („muss grün sein, bevor die
 > Stufe fertig ist") und im Briefing jeder bauenden Rolle.
 
+> **Die Verifikationskette darf sich den Erfolg nicht selbst einrichten.**
+> Jeder Befehl, den die Doku einem Menschen nennt, muss in der Verifikation
+> **buchstabengetreu** vorkommen: gleiche Argumente, gleiche Umgebung, kein
+> zusätzliches `PYTHONPATH`, kein stilles `cd`, kein Pfad-Zusatz, den der
+> Anwender nicht hat. Kurz gesagt:
+> **Der Smoke-Test darf keine Umgebung setzen, die die Doku nicht nennt** —
+> sonst prüft er eine Welt, die es nur auf diesem Rechner gibt.
+>
+> **Warum das eine eigene Regel ist:** Im Feld war der dokumentierte
+> Startbefehl kaputt, während der Smoke-Test **grün** meldete — er setzte still
+> ein `PYTHONPATH`, das der Anwender nie hat. Fünf Red-Team-Funde derselben
+> Kaskade hatten exakt diese Bauart („Pfad existiert, wird aber nie wirklich
+> ausgeführt"), und **keiner** der Sweeps hat diesen gefunden: Harry und Marv
+> lesen den Code, die Lücke klafft aber zwischen **Doku und Testaufruf**.
+> Gefunden hat es der Strippenzieher, als er das Produkt zum ersten Mal selbst
+> startete. Wer eine Krücke in die Verifikation einbaut, damit sie grün wird,
+> hat die Verifikation abgeschafft, nicht das Problem gelöst.
+
 ---
 
 ## Das Team (Rollen)

@@ -145,6 +145,14 @@ Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 `./team-test.sh` prüft **nicht** dein Projekt. Dein Testbefehl ist:
 `{{SMOKE_TEST}}`
 
+> **Regel: Der Smoke-Test darf keine Umgebung setzen, die die Doku nicht nennt.**
+> Jeder Befehl, den deine Doku einem Menschen nennt, muss in der Verifikation
+> buchstabengetreu vorkommen — gleiche Argumente, gleiche Umgebung, kein
+> zusätzliches `PYTHONPATH`, kein stilles `cd`. Sonst passiert, was im Feld
+> passiert ist: Der dokumentierte Startbefehl war kaputt, der Smoke-Test meldete
+> grün, und gefunden hat es niemand aus dem Team — sondern der Mensch, als er
+> das Produkt zum ersten Mal selbst startete.
+
 ---
 
 ## Exit-Codes — was sie bedeuten

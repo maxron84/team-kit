@@ -2,6 +2,87 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.4.3] — 2026-08-02
+
+**Der Guard urteilte ohne Ausgangszustand — und die einzige Verifikation, die
+zwischen Doku und Testaufruf schaut, gab es nicht.**
+
+Zwei Entscheide des Strippenziehers, beide gebaut. `BL-16` war der letzte
+offene Feld-K2-Befund; `BL-17` kam aus demselben Feld nach.
+
+### Fixed
+
+- **Der Read-Only-Guard schrieb jede schmutzige Datei der laufenden Rolle zu
+  (`BL-16`, Ebene 1).** [`team_guard_verify`](team/lib.sh) bildete die
+  Verletzerliste aus `git diff --name-only` **plus** `git status --porcelain`
+  und hatte **keinen Ausgangszustand**: Sie wusste nicht, was beim Rollenstart
+  bereits schmutzig war. Jeder fremde Schreiber — eine parallele Sitzung, eine
+  Handänderung, ein abgebrochenes Werkzeug — wurde der Rolle angelastet **und**
+  hart zurückgesetzt. Der eigene Kommentar der Funktion („schützt parallele/
+  legitime uncommittete Arbeit") galt nur gegenüber dem blanko `reset --hard`,
+  das sie ablöste; das chirurgische `git checkout -- <pfad>` zerstört fremde
+  Arbeit genauso, nur gezielter.
+  **Neu:** `team_guard_begin` hält `TEAM_GUARD_VORHER`, einen Schnappschuss mit
+  **Blob-Hashes**. Der Hash ist der Punkt: Ein reiner Pfadabgleich wäre ein
+  Freibrief für jede Rolle, die eine ohnehin schmutzige Datei zusätzlich
+  verändert. Unverändert ⇒ fremd, kein Rollback, keine Zuschreibung.
+  Verändert ⇒ ihre Sache. Bei nicht sauberem Baum warnt `team_guard_begin`
+  laut und nennt die Pfade — **warnen statt abbrechen**, weil uncommittete
+  Arbeit der Normalfall ist und ein harter Abbruch legitime Läufe erschlüge.
+- **Eine Guard-Verletzung kassiert den Übergriff, nicht die Arbeit (`BL-16`,
+  Ebene 2).** Bisher übersetzten [`entry/axel.sh`](entry/axel.sh) und
+  [`team/redteam.sh`](team/redteam.sh) jeden Übergriff sofort in `RC=1`. Damit
+  zählte im Feld eine **fertige, korrekte** Ermittlung als „Aufruf
+  fehlgeschlagen" → Stagnationszähler → Lauf gestoppt.
+  **Neu:** `team_guard_urteil <rolle> <übergriff> <ergebnis>`. Liegt das
+  Ergebnis der Rolle vor — bei Axel Akte **und** Statuswechsel, bei Harry/Marv
+  die Sweep-Quittung —, zählt die Runde. Der Grenzübertritt ist zu diesem
+  Zeitpunkt bereits chirurgisch zurückgerollt und laut gemeldet; ein
+  zusätzlicher Fehlschlag bestraft nur noch das Falsche. Fehlt das Ergebnis,
+  bleibt es beim Fehlschlag.
+- **Die Guard-Meldung trennt die beiden Fälle jetzt sprachlich.** „**DIESE
+  ROLLE** hat die folgenden Pfade geändert" vs. „**NICHT angelastet** (beim
+  Rollenstart bereits geändert, seither unverändert)". Im Feld wurde der
+  Übergriff zunächst der falschen Rolle zugeschrieben, weil die Pfadliste im
+  Log neben ihrem Namen stand — belegt war das nirgends.
+
+### Added
+
+- **Die Verifikationskette darf sich den Erfolg nicht selbst einrichten
+  (`BL-17`).** Regel in [`bootstrap/CLAUDE.md.vorlage`](bootstrap/CLAUDE.md.vorlage)
+  und [`bootstrap/TEAM.md`](bootstrap/TEAM.md): Jeder Befehl, den die Doku
+  einem Menschen nennt, muss in der Verifikation **buchstabengetreu**
+  vorkommen — gleiche Argumente, gleiche Umgebung, kein zusätzliches
+  `PYTHONPATH`, kein stilles `cd`. Dazu ein **fester Sweep-Schwerpunkt** „Doku
+  gegen Verifikation diffen" in den Briefings von Harry und Marv.
+  **Warum beides:** Im Feld war der dokumentierte Startbefehl kaputt, während
+  der Smoke-Test grün meldete. Fünf Red-Team-Funde derselben Kaskade hatten
+  exakt diese Bauart, und **keiner** der Sweeps hat diesen gefunden — die
+  Lücke klafft zwischen Doku und Testaufruf, nicht im Code, und ist beim
+  Codelesen unsichtbar. Gefunden hat sie der Mensch beim ersten eigenen Start.
+  Ein maschineller Diff wurde **verworfen** (stackagnostisch schwer, hohe
+  Falschmelderate zu erwarten) — er kommt, wenn ein zweiter Fall dieser Bauart
+  auftritt.
+- **`test_bl16_guard_zuschreibung.py`** (13 Fälle, gegen ein Wegwerf-Repo und
+  mit `set -euo pipefail` wie im Ernstfall) und
+  **`test_bl17_doku_gegen_verifikation.py`**. Beide Gegenrichtungen von
+  `BL-16` eigens abgesichert: Eine vorab schmutzige Datei, die die Rolle
+  **doch** anfasst, bleibt eine Verletzung, und bei sauberem Start urteilt der
+  Guard unverändert scharf. Gegenprobe gefahren — mit ausgeschalteter
+  Zuschreibung fallen genau zwei Zusicherungen. **214 Testfälle** in 35
+  Dateien.
+- **Zuschreibungs-Lektion in [`doku/anhang-a.md`](doku/anhang-a.md) A.4**, neben
+  der Rollback- und der Staging-Lektion. Die drei zusammen sind die Geschichte
+  dieses Guards.
+
+### Bemerkt
+
+- **`BL-17` fand seinen eigenen Fund.** Der Regressionstest schlug beim ersten
+  Lauf an: Die Regelphrase stand in der Vorlage über einen Zeilenumbruch
+  zerrissen und war damit als zusammenhängende Aussage nicht auffindbar. Genau
+  die Sorte Formfehler, die eine Regel unwirksam macht, ohne dass jemand sie
+  bemerkt — dasselbe Muster wie die fehlenden Backticks in `BL-15`.
+
 ## [2.4.2] — 2026-08-02
 
 **Die ausgelieferte Beutebuch-Vorlage lehrte genau die Falle, die `BL-11` im

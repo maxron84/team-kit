@@ -373,27 +373,114 @@ team_briefing() {
 }
 
 # --- Read-Only-Guard (Linie 3 — deterministisch, CHIRURGISCH) -------------------
-# team_guard_begin: merkt sich HEAD als Rollback-Punkt.
+# team_guard_begin: merkt sich HEAD als Rollback-Punkt UND den Ausgangszustand
+#   des Arbeitsbaums (BL-16).
 # team_guard_verify <rolle> <whitelist-regex>:
 #   Ermittelt geänderte Pfade (committet seit Start + Arbeitsverzeichnis), die
 #   NICHT auf die Whitelist passen. Bei Verletzung wird NUR jeder einzelne
 #   Verletzer-Pfad zurückgesetzt — niemals blanko `git reset --hard`/`clean -fd`.
-#   Das schützt parallele/legitime uncommittete Arbeit an anderer Stelle.
 #   (Lektion 2026-07-10: ein blindes reset+clean löschte einmal die gesamte
 #   uncommittete Team-Infrastruktur. Nie wieder.)
+#
+# WARUM ES DEN SCHNAPPSCHUSS GIBT (BL-16, Feld K2 2026-08-01)
+#   Der Guard hatte KEINEN Ausgangszustand: Er las nur "welche Pfade sind jetzt
+#   schmutzig" und schrieb jeden davon der laufenden Rolle zu. Jeder fremde
+#   Schreiber — eine parallele Sitzung, eine Handänderung, ein abgebrochenes
+#   Werkzeug — wurde damit angelastet UND hart zurückgesetzt. Der Kommentar
+#   "schützt parallele/legitime uncommittete Arbeit" galt nur gegenüber dem
+#   blanko `reset --hard`, das dieser Guard ablöste; das chirurgische
+#   `git checkout -- <pfad>` zerstört fremde Arbeit genauso, nur gezielter.
+#   Real eingetreten: Axels korrekte Ermittlung zählte als Fehlschlag (dritte
+#   Stagnation → Lauf gestoppt), und die zurückgerollten Pfade waren die
+#   unbeteiligte Arbeit einer parallel laufenden Sitzung.
+#   Der Schnappschuss hält BLOB-HASHES, nicht nur Pfade: Ein reiner Pfadabgleich
+#   würde eine Rolle freisprechen, die eine ohnehin schon schmutzige Datei
+#   zusätzlich verändert. Unverändert ⇒ fremd. Verändert ⇒ ihre Sache.
+team_guard_schnappschuss() {
+    # Je schmutzigem Pfad eine Zeile "<blob-hash> <pfad>". Was sich nicht als
+    # Datei lesen lässt (Löschung, Umbenennung, untracked Verzeichnis) bekommt
+    # "-" und gilt nur dann als fremd, wenn es das auch bleibt.
+    local pfad
+    git status --porcelain 2>/dev/null | cut -c4- | while IFS= read -r pfad; do
+        [ -z "$pfad" ] && continue
+        if [ -f "$pfad" ]; then
+            printf '%s %s\n' "$(git hash-object -- "$pfad" 2>/dev/null || echo -)" "$pfad"
+        else
+            printf '%s %s\n' "-" "$pfad"
+        fi
+    done
+}
+
 team_guard_begin() {
     TEAM_GUARD_HASH="$(git rev-parse HEAD)"
+    TEAM_GUARD_VORHER="$(team_guard_schnappschuss)"
+    if [ -n "$TEAM_GUARD_VORHER" ]; then
+        # Laut warnen, statt still weiterzulaufen: Der Lauf soll gar nicht erst
+        # blind starten, und der Mensch am Terminal soll wissen, dass hier zwei
+        # Schreiber unterwegs sein könnten.
+        echo "[guard] WARNUNG: Der Arbeitsbaum ist beim Rollenstart NICHT sauber:" >&2
+        printf '%s\n' "$TEAM_GUARD_VORHER" | sed 's/^[^ ]* /  /' >&2
+        echo "[guard] Diese Pfade werden der Rolle nicht angelastet, solange sie unverändert bleiben." >&2
+        echo "[guard] Zwei schreibende Instanzen auf einem Arbeitsbaum sind trotzdem unzulässig — bitte committen." >&2
+    fi
+}
+
+# Pfade aus dem Schnappschuss, die sich seit dem Rollenstart NICHT verändert
+# haben. Sie gehören nicht dieser Rolle.
+team_guard_fremdpfade() {
+    local eintrag hash pfad jetzt
+    [ -z "${TEAM_GUARD_VORHER:-}" ] && return 0
+    printf '%s\n' "$TEAM_GUARD_VORHER" | while IFS= read -r eintrag; do
+        [ -z "$eintrag" ] && continue
+        hash="${eintrag%% *}"
+        pfad="${eintrag#* }"
+        if [ -f "$pfad" ]; then
+            jetzt="$(git hash-object -- "$pfad" 2>/dev/null || echo -)"
+        else
+            jetzt="-"
+        fi
+        if [ "$jetzt" = "$hash" ]; then
+            printf '%s\n' "$pfad"
+        fi
+    done
+    return 0
 }
 
 team_guard_verify() {
-    local rolle="$1" whitelist="$2" verletzungen pfad
-    verletzungen="$( { git diff --name-only "$TEAM_GUARD_HASH" HEAD 2>/dev/null;
-                       git status --porcelain | cut -c4-; } | sort -u \
-                     | grep -Ev "$whitelist" || true)"
-    [ -z "$verletzungen" ] && return 0
+    local rolle="$1" whitelist="$2" roh fremd nicht_angelastet verletzungen pfad
+    roh="$( { git diff --name-only "$TEAM_GUARD_HASH" HEAD 2>/dev/null;
+              git status --porcelain | cut -c4-; } | sort -u \
+            | grep -Ev "$whitelist" || true)"
+    [ -z "$roh" ] && return 0
 
-    echo "[$rolle] GUARD-VERLETZUNG — chirurgischer Rollback der folgenden Pfade:" >&2
+    fremd="$(team_guard_fremdpfade)"
+    if [ -n "$fremd" ]; then
+        nicht_angelastet="$(printf '%s\n' "$roh" \
+                            | grep -Fxf <(printf '%s\n' "$fremd") || true)"
+        verletzungen="$(printf '%s\n' "$roh" \
+                        | grep -Fxvf <(printf '%s\n' "$fremd") || true)"
+    else
+        nicht_angelastet=""
+        verletzungen="$roh"
+    fi
+
+    if [ -z "$verletzungen" ]; then
+        # Der Verdacht löst sich auf. Genau dieser Fall wurde im Feld einer
+        # Rolle angelastet, die ihn nicht verursacht hatte.
+        echo "[$rolle] Guard: Pfade außerhalb der Whitelist geändert, aber ALLE waren beim Rollenstart bereits geändert und sind es unverändert — nicht dieser Rolle zugeschrieben, kein Rollback:" >&2
+        printf '%s\n' "$nicht_angelastet" | sed 's/^/  /' >&2
+        return 0
+    fi
+
+    # Die Meldung trennt die beiden Fälle ausdrücklich sprachlich. Im Feld wurde
+    # der Übergriff zunächst der falschen Rolle zugeschrieben, weil die Pfadliste
+    # im Log neben ihrem Namen stand — belegt war das nirgends.
+    echo "[$rolle] GUARD-VERLETZUNG — DIESE ROLLE hat die folgenden Pfade geändert (chirurgischer Rollback):" >&2
     printf '%s\n' "$verletzungen" >&2
+    if [ -n "$nicht_angelastet" ]; then
+        echo "[$rolle] NICHT angelastet (beim Rollenstart bereits geändert, seither unverändert):" >&2
+        printf '%s\n' "$nicht_angelastet" | sed 's/^/  /' >&2
+    fi
     while IFS= read -r pfad; do
         [ -z "$pfad" ] && continue
         if git cat-file -e "$TEAM_GUARD_HASH:$pfad" 2>/dev/null; then
@@ -405,6 +492,27 @@ team_guard_verify() {
             rm -f -- "$pfad"
         fi
     done <<< "$verletzungen"
+    return 1
+}
+
+# team_guard_urteil <rolle> <uebergriff 0|1> <ergebnis-liegt-vor 0|1>
+#   Exit 0 = die Runde zählt · 1 = der Aufruf gilt als gescheitert.
+#
+# BL-16 Ebene 2 (Strippenzieher-Entscheid 2026-08-02): Ein Guard-Übergriff
+# kassiert den ÜBERGRIFF, nicht die Arbeit. Liegt das eigentliche Ergebnis der
+# Rolle vor, ist die Leistung erbracht — der Grenzübertritt ist bereits
+# chirurgisch zurückgerollt und laut gemeldet, und ein zusätzlicher Fehlschlag
+# bestraft nur noch das Falsche: Er speist den Stagnationszähler und stoppt den
+# Lauf. Genau so ging im Feld ein fertiger, korrekter Ermittlungsbericht als
+# "Aufruf fehlgeschlagen" durch. Fehlt das Ergebnis, bleibt es beim Fehlschlag.
+team_guard_urteil() {
+    local rolle="$1" uebergriff="$2" ergebnis="$3"
+    [ "$uebergriff" -eq 0 ] && return 0
+    if [ "$ergebnis" -eq 1 ]; then
+        echo "[$rolle] Guard-Übergriff kassiert, Ergebnis zählt — die Arbeit ist geleistet, zurückgerollt wurde nur der Grenzübertritt." >&2
+        return 0
+    fi
+    echo "[$rolle] Guard-Übergriff UND kein vollständiges Ergebnis — Aufruf gilt als gescheitert." >&2
     return 1
 }
 

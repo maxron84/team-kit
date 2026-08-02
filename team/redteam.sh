@@ -79,9 +79,12 @@ team_claude "$ROLLE" "$TEAM_MODEL_LOOP" "$OUT" "$PROMPT" \
 # JEDEM Pfad — auch 42-Pause und generischer Fehler (HM-18): team_claude ist
 # kein atomarer Vorgang, Teil-Session-Seiteneffekte können bereits VOR einem
 # Abbruch im Arbeitsverzeichnis liegen und müssen auch dann zurückgesetzt werden.
+# BL-16 Ebene 2: Der Übergriff wird hier NICHT mehr sofort in einen Fehlschlag
+# übersetzt — das Urteil fällt unten, wenn die Sweep-Quittung geprüft ist.
+# Zurückgerollt und gemeldet hat team_guard_verify bereits.
+GUARD_UEBERGRIFF=0
 if ! team_guard_verify "$ROLLE" "$WHITELIST"; then
-    echo "[$ROLLE] GUARD-VERLETZUNG — Verletzer-Pfade zurückgesetzt." >&2
-    [ "$RC" -eq 0 ] && RC=1
+    GUARD_UEBERGRIFF=1
 fi
 
 if [ "$RC" -eq 42 ]; then
@@ -113,11 +116,12 @@ fi
 
 if ! team_promise_in "$TEAM_LAST_OUT" "REDTEAM_SWEEP_COMPLETE"; then
     # Defensiv (Stufe 23, BL-16): Der Aufruf ist an dieser Stelle garantiert
-    # NICHT is_error (team_claude hätte sonst schon oben abgebrochen) und der
-    # Guard hat bereits bestätigt, dass nur tests/|plans/ berührt wurden. Fehlt
-    # trotzdem das Promise, zählt ein sauberer NEUER Beutebuch-Eintrag als
-    # erfolgreicher Sweep — der Dreisatz (Fund im Beutebuch) ist die eigentliche
-    # Quittung, das Promise nur eine (hier fehlende) Zusatzbestätigung.
+    # NICHT is_error (team_claude hätte sonst schon oben abgebrochen), und ein
+    # etwaiger Übergriff ausserhalb tests/|plans/ ist bereits zurückgerollt
+    # (über sein Urteil entscheidet team_guard_urteil unten). Fehlt trotzdem das
+    # Promise, zählt ein sauberer NEUER Beutebuch-Eintrag als erfolgreicher
+    # Sweep — der Dreisatz (Fund im Beutebuch) ist die eigentliche Quittung, das
+    # Promise nur eine (hier fehlende) Zusatzbestätigung.
     NEUER_FUND=0
     [ -n "$(git status --porcelain -- "$TEAM_BEUTEBUCH")" ] && NEUER_FUND=1
     [ "$($TEAM_BEUTEBUCH_TOOL next-id)" != "$NEXT_ID" ] && NEUER_FUND=1
@@ -127,6 +131,13 @@ if ! team_promise_in "$TEAM_LAST_OUT" "REDTEAM_SWEEP_COMPLETE"; then
         exit 1
     fi
     echo "[$ROLLE] WARNUNG: Sweep ohne Promise, aber sauberer Fund übergeben — als Erfolg gewertet; Prompt-Härtung siehe Stufe 23. Log: $TEAM_LAST_OUT" >&2
+fi
+
+# BL-16 Ebene 2: Das Ergebnis des Sweeps ist die Quittung — Promise oder (oben
+# ersatzweise anerkannt) ein sauberer neuer Fund. Wer hier ankommt, hat sie
+# geliefert; ein Guard-Übergriff kassiert dann den Übergriff, nicht den Sweep.
+if ! team_guard_urteil "$ROLLE" "$GUARD_UEBERGRIFF" 1; then
+    exit 1
 fi
 
 # Whitelist-Änderungen deterministisch committen (der Angreifer selbst darf nicht).

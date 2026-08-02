@@ -67,9 +67,12 @@ team_claude axel "$TEAM_MODEL_STRONG" "$OUT" "$PROMPT" \
 # JEDEM Pfad — auch 42-Pause und generischer Fehler (HM-18/HM-23): team_claude
 # ist kein atomarer Vorgang, Teil-Session-Seiteneffekte können bereits VOR
 # einem Abbruch im Arbeitsverzeichnis liegen und müssen auch dann zurückgesetzt werden.
+# BL-16 Ebene 2: Der Übergriff wird hier NICHT mehr sofort in einen Fehlschlag
+# übersetzt — das Urteil fällt unten, wenn feststeht, ob die Ermittlung geliefert
+# wurde. Zurückgerollt und gemeldet hat team_guard_verify bereits.
+GUARD_UEBERGRIFF=0
 if ! team_guard_verify axel "$WHITELIST"; then
-    echo "[axel] GUARD-VERLETZUNG — Verletzer-Pfade zurückgesetzt." >&2
-    [ "$RC" -eq 0 ] && RC=1
+    GUARD_UEBERGRIFF=1
 fi
 
 if [ "$RC" -eq 42 ]; then
@@ -103,6 +106,20 @@ fi
 
 if ! team_promise_in "$TEAM_LAST_OUT" "AXEL_CASE_COMPLETE"; then
     echo "[axel] Kein Akten-Promise — Log prüfen: $TEAM_LAST_OUT" >&2
+    exit 1
+fi
+
+# BL-16 Ebene 2: Das Ergebnis der Rolle ist die Akte UND der Statuswechsel.
+# Liegen beide vor, zählt die Runde auch dann, wenn der Guard einen Übergriff
+# kassieren musste — die Ermittlung ist geleistet.
+AKTE="${TEAM_ERMITTLUNGSAKTEN}/AX-${AX_NR}.md"
+STATUS_JETZT="$($TEAM_BEUTEBUCH_TOOL list | awk -F'\t' -v h="$HM" '$1==h{print $2}')"
+ERGEBNIS=0
+if [ -f "$AKTE" ] && [ "$STATUS_JETZT" = "Fix-Plan liegt vor" ]; then
+    ERGEBNIS=1
+fi
+if ! team_guard_urteil axel "$GUARD_UEBERGRIFF" "$ERGEBNIS"; then
+    echo "[axel] Akte vorhanden: $([ -f "$AKTE" ] && echo ja || echo nein) · Status $HM: ${STATUS_JETZT:-unbekannt}" >&2
     exit 1
 fi
 
