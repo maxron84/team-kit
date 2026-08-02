@@ -2,6 +2,64 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.4.4] — 2026-08-02
+
+**Zwei Kennzahlen, die im Closeout das Falsche behaupteten.**
+
+Beide aus dem Feld (`team-kit_project_platformer`, Architekt-Closeout K3),
+beide gefunden beim Nachrechnen des Endstands — nicht von einem Werkzeug.
+Kein Rechenfehler: Das Ledger war jedes Mal korrekt, falsch war, was die
+Anzeige über die Zahlen **sagte**.
+
+### Fixed
+
+- **`--budget` behauptete „nicht im Gesamt enthalten" — auch dann, wenn die
+  Architekten-Zeile sehr wohl enthalten war (`BL-18`).**
+  [`entry/team-status.sh`](entry/team-status.sh) druckte den Zusatz
+  **unbedingt**, obwohl `team_architekt_stand` zwei Modi hat: Im Modus
+  `geschätzt` stammt der Wert aus der A2-Churn-Schätzung und steht in **keiner**
+  Ledger-Zeile — der Zusatz stimmt. Im Modus `echt` stammt er aus einer
+  **Ledger-Zeile** der laufenden Kaskade, und die summiert
+  `team_kontostand_gesamt` mit — der Zusatz ist dann falsch. Der Modus schaltet
+  ausgerechnet **beim Kaskaden-Abschluss** um, also genau in dem Moment, in dem
+  die Zahl abgelesen und weitergegeben wird. Im Feld: Anzeige „Architekt (echt,
+  nicht im Gesamt enthalten): 9.7000" bei „Gesamt: 71.5706" — der beim Wort
+  genommene Kontostand wäre **81,27 statt 71,57 USD** gewesen, 13 % zu viel.
+  **Neu:** Der Zusatz hängt am Modus (`echt` ⇒ „im Gesamt enthalten"), und die
+  Beschriftung nennt den Bezugsrahmen: `Architekt K3 (echt, im Gesamt
+  enthalten)`. Denn der Wert gilt für **eine** Kaskade, während jede andere
+  Zeile des Blocks lebenslang kumuliert — ohne Rahmen las man 9,70 als
+  Lebenssumme des Architekten (real: 37,30). Die Nummer liefert die neue
+  `team_architekt_kaskade`; `team_architekt_stand` behält seinen
+  Zwei-Felder-Vertrag, an dem `team-status.sh` und drei Testdateien hängen.
+- **`--rollen-abschluss` schrieb eine Notiz wortgleich in zwei Zeilen mit
+  verschiedener Bedeutung (`BL-19`).** Seit `BL-4` ruft die eine
+  Bedienhandlung zwei Verben mit demselben `--notiz` auf: `rollen-abschluss`
+  bucht `.team-logs`, `ralph-abschluss` bucht `.ralph-logs`. Ein Text kann aber
+  höchstens eine der beiden Zeilen beschreiben — im Feld trug Ralphs Zeile über
+  **vier Baustufen** die Notiz „Harry/Marv-Sweeps + Frank HM-6". Das Ledger ist
+  die maschinelle Wahrheit für ein kalt startendes Architekt-Ich, und dieses
+  Feld ist die **einzige** Prosa-Spur je Zeile. Ein Rückfall obendrein: Genau
+  diese Beschwerde stand schon in Feld-`BL-5`, der `BL-4`-Fix hat sie
+  strukturell wieder eingebaut.
+  **Neu:** [`kosten.py`](team/tools/kosten.py) setzt den Vorspann selbst, aus
+  der Zielrolle — `Rollen: …` / `Bau: …`, für projekteigene Rollen deren Name.
+  Kein zweiter Bedienparameter: Die Bedienung bleibt einhändig, und ein
+  optionales `--notiz-ralph` wäre dieselbe Falle wie das „optional" in `BL-15`
+  gewesen — was man setzen *kann*, setzt im Closeout niemand.
+
+### Changed
+
+- Die `Gesamt`-Zeile in `--budget` heißt zur Abgrenzung von der
+  kaskadenscharfen Architekt-Zeile jetzt „(Basis + laufend), lebenslang".
+- Leseregeln zu beiden Kennzahlen in [`bootstrap/TEAM.md`](bootstrap/TEAM.md)
+  und im Architekten-Briefing; Bau-Details als Lehren in
+  [`doku/anhang-a.md`](doku/anhang-a.md) A.9. Dabei fiel dort eine seit `BL-5`
+  veraltete Aussage auf („ein zweiter Aufruf **ersetzt** die Zeile" — er bricht
+  seither ab) und wurde mitkorrigiert.
+- Zwei neue Regressionstests (`test_bl18_…`, `test_bl19_…`), beide mit
+  gefahrener Gegenprobe. Die Installation fährt jetzt **226** Tests.
+
 ## [2.4.3] — 2026-08-02
 
 **Der Guard urteilte ohne Ausgangszustand — und die einzige Verifikation, die

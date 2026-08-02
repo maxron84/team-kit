@@ -89,7 +89,9 @@ Vorsichtiger, Schritt für Schritt mit Halt bei dir:
 Der erste Befehl schließt **beide** Kostenquellen des Laufs ab und schreibt
 dafür **zwei** Ledger-Zeilen: `roles` für Harry/Marv/Frank/Axel und `ralph`
 für die Baukosten. Die Rohlogs werden dabei archiviert, damit der Kontostand
-sie nicht ein zweites Mal zählt.
+sie nicht ein zweites Mal zählt. Deine Notiz landet in **beiden** Zeilen, jede
+mit ihrem eigenen Vorspann (`Rollen: …` bzw. `Bau: …`) — so sagt jede Zeile aus
+sich heraus, welche Kosten sie trägt, auch wenn dein Text nur zur anderen passt.
 
 **Warum das nicht optional ist:** Der Architekt läuft interaktiv, außerhalb der
 Kostenlogs. Ohne diesen Schritt bleibt seine Sitzung strukturell unerfasst — im
@@ -125,6 +127,14 @@ hakte es dreimal: Die schwersten Kostenfehler des Kits (`BL-1`, `BL-4`, `BL-5`)
 sind alle **nicht** durch ein Werkzeug aufgefallen, sondern dadurch, dass ein
 Mensch den Bericht neben das Ledger hielt. Exit `4` heißt Warnbefunde, `0`
 sauber. Warnungen laufen bei jedem `--budget` ungefragt mit.
+
+**Die Architekt-Zeile in `--budget` liest du an ihrer Beschriftung**, nicht aus
+dem Gedächtnis: Sie gilt für **eine** Kaskade (`Architekt K3 …`), während jede
+andere Zeile des Blocks lebenslang kumuliert, und sie sagt selbst, ob sie im
+`Gesamt` schon steckt. `geschätzt` heißt „nicht im Gesamt enthalten" (der Wert
+ist eine Live-Schätzung, keine Ledger-Zeile) — sobald du sie per
+`--architekt-abschluss` gebucht hast, springt sie auf `echt, im Gesamt
+enthalten` und darf **nicht** noch einmal draufgerechnet werden.
 
 Der Architekt schreibt außerdem ein `{{PLAN_ORDNER}}/kaskade-N-abschluss.md`.
 Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.

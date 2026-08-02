@@ -460,6 +460,16 @@ LEDGER_OHNE_ROHLOG = ("architekt",)
 LEDGER_ROHQUELLEN = (("ralph_logs", ("ralph",)), ("team_logs", None))
 LEDGER_QUELLEN = ("ralph", "roles", "architekt")
 
+# BL-19: Vorspann der Notiz je Zielrolle von `rollen-abschluss`. EIN
+# Bedienaufruf (team-status.sh --rollen-abschluss) schreibt zwei Zeilen mit
+# demselben Notiztext; der Vorspann sagt, WELCHE Kosten die jeweilige Zeile
+# traegt, auch wenn der Text nur zur anderen passt. Unbekannte Rollen
+# bekommen ihren eigenen Namen als Vorspann — die Zuordnung fehlt nie.
+ROLLEN_VORSPANN = {
+    "roles": "Rollen",   # .team-logs: Harry/Marv/Frank/Axel (Sweeps + Fixe)
+    "ralph": "Bau",      # .ralph-logs: Ralphs Baustufen
+}
+
 # Toleranz des Rohlog-Vergleichs: Jede Ledger-Zeile ist auf 4 Stellen
 # gerundet, ueber viele Kaskaden summiert sich das. Absolut 0.01 USD plus 1 %
 # haelt Rundung und von Hand auf glatte Werte nachgetragene Altzeilen
@@ -839,7 +849,8 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     Strippenzieher-Entscheid: Kaskadenschaerfe schlaegt Abo/API-Schaerfe je
     Rollenzeile, der gemischte Fall ist erwartet und wird ehrlich als
     "abo/api" ausgewiesen (kein geratener Split). notiz wird um den exakten
-    Split ergaenzt, analog der bestehenden roles-total-Zeile. Zeilen anderer
+    Split ergaenzt und traegt voran den Rollenbezug ("Rollen: …" / "Bau: …",
+    BL-19), analog der bestehenden roles-total-Zeile. Zeilen anderer
     Rollen (ralph/architekt/…) bleiben immer unangetastet. Wirft ValueError
     bei ungueltigen Eingaben, OHNE die Datei anzufassen. Gibt True zurueck,
     wenn eine vorhandene Zeile angefasst wurde, sonst False (neu angelegt).
@@ -893,13 +904,28 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     else:
         auth = "abo/api"
 
-    notiz_sauber = _sanitize_pipe_feld(notiz)
-    split_hinweis = f"abo {abo:.4f} / api {api:.4f}"
-    notiz_voll = f"{notiz_sauber} — {split_hinweis}" if notiz_sauber \
-        else split_hinweis
     rolle = _sanitize_pipe_feld(rolle)
     if not rolle:
         raise ValueError("rolle darf nicht leer sein")
+
+    notiz_sauber = _sanitize_pipe_feld(notiz)
+    split_hinweis = f"abo {abo:.4f} / api {api:.4f}"
+    # BL-19: Vorspann JE ZIELROLLE. team-status.sh --rollen-abschluss ruft
+    # dieses Verb zweimal mit DEMSELBEN Notiztext auf (roles + ralph, BL-4) —
+    # ein Text kann aber hoechstens eine der beiden Zeilen beschreiben. Im
+    # Feld trug Ralphs Zeile ueber vier Baustufen deshalb die Notiz
+    # "Harry/Marv-Sweeps + Frank HM-6". Das ist keine Kosmetik: Die Ledger ist
+    # die maschinelle Wahrheit fuer ein kalt startendes Architekt-Ich, und
+    # dieses Feld ist die einzige Prosa-Spur je Zeile. Ein Rueckfall obendrein
+    # — genau diese Beschwerde stand schon in Feld-BL-5, der BL-4-Fix hat sie
+    # strukturell wieder eingebaut.
+    # Strippenzieher-Entscheid 2026-08-02: der Vorspann entsteht HIER, aus der
+    # Zielrolle, nicht aus einem zweiten Bedienparameter — die Bedienung
+    # bleibt einhaendig (ein Notiztext), und auch ein direkter kosten.py-
+    # Aufruf bekommt die Zuordnung, ohne sie mitschreiben zu muessen.
+    vorspann = ROLLEN_VORSPANN.get(rolle, rolle.capitalize())
+    notiz_voll = f"{vorspann}: {notiz_sauber} — {split_hinweis}" \
+        if notiz_sauber else f"{vorspann} — {split_hinweis}"
     zeile_neu = (f"{date.today().isoformat()} | {kaskade} | {usd:.4f} | "
                  f"{auth} | {domaene} | {rolle} | {notiz_voll}\n")
 

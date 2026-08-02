@@ -112,7 +112,9 @@ def test_team_status_budget_laeuft_und_zeigt_architekt_status():
         cwd=REPO_ROOT, capture_output=True, text=True,
     )
     assert result.returncode == 0, result.stderr
-    assert "Architekt (" in result.stdout
+    # BL-18: Die Beschriftung traegt seither ggf. die Kaskade ("Architekt K3
+    # (echt, …)") — der Marker wird deshalb ohne die Klammer geprueft.
+    assert "Architekt" in result.stdout
     assert "geschätzt" in result.stdout or "echt" in result.stdout
 
 

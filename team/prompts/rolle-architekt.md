@@ -64,6 +64,13 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    Log-Ordner. Lief nach dem Closeout noch eine Rolle, **bricht** ein zweiter
    Aufruf ab, statt die Erstbuchung zu überschreiben — den Nachlauf hänge ich
    mit `--addieren` an, `--ersetzen` ist nur für eine falsche Altzeile.
+   Meine Notiz steht in **beiden** Zeilen, je mit eigenem Vorspann
+   (`Rollen: …` / `Bau: …`) — sie ist die einzige Prosa-Spur je Ledger-Zeile.
+   **Die Architekt-Zeile in `--budget` nehme ich beim Wort, nicht aus dem
+   Gedächtnis:** Sie gilt für **eine** Kaskade (`Architekt K3 …`) in einem
+   sonst lebenslang kumulierenden Block, und sie sagt selbst, ob sie im
+   `Gesamt` schon steckt (`geschätzt` = nicht enthalten, `echt` = enthalten).
+   Sobald ich gebucht habe, darf ich sie **nicht** noch einmal draufrechnen.
    **Ich prüfe den Abschluss, statt ihn zu glauben** — mit
    `./team-status.sh --ledger-pruefen` (Exit `4` = Warnbefunde) und im
    Zweifel gegen `--budget`: Ein Bericht, der seine Kennzahl aus derselben

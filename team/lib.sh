@@ -797,6 +797,24 @@ team_akteur_abschluss() {
     fi
 }
 
+# team_architekt_kaskade [plan-datei]: Nummer der AKTIVEN Kaskade, aus dem
+# Namen der Plan-Datei gelesen ("plans/ralph-kaskade-13-…" -> "13"). Leer,
+# wenn keine Nummer erkennbar ist (frisches Projekt, benannte Kaskade,
+# fehlende .ralph-plan) — der Aufrufer entscheidet dann selbst, ob er ohne
+# Kaskadenbezug weitermacht.
+#
+# BL-18: Herausgeloest aus team_architekt_stand, weil die ANZEIGE die Nummer
+# braucht, ohne dass die Zwei-Felder-Schnittstelle "USD<TAB>status" um ein
+# drittes Feld wachsen muss (die haengt an mehreren Tests und an
+# team-status.sh gleichzeitig). Eine Quelle fuer das Muster statt zwei.
+team_architekt_kaskade() {
+    local plan_datei="${1:-$(team_plan_datei)}"
+    # head -1 haelt den RC auch bei leerem grep-Ergebnis auf 0 — unter set -e
+    # darf ein Projekt ohne erkennbare Kaskade den Aufrufer nicht wegreissen.
+    printf '%s' "$plan_datei" \
+        | grep -oE 'ralph-kaskade-[0-9]+' | grep -oE '[0-9]+' | head -1
+}
+
 # team_architekt_stand [ledger-pfad] [plan-datei]: liefert "USD<TAB>status"
 # fuer die Architekt-Kosten der AKTIVEN Kaskade — BL-28-Hybrid A2->A1
 # (Kaskade 13/Stufe 44): Hat der Strippenzieher fuer diese Kaskade bereits
@@ -813,7 +831,7 @@ team_akteur_abschluss() {
 team_architekt_stand() {
     local ledger_pfad="${1:-.budget-ledger}" plan_datei="${2:-$(team_plan_datei)}"
     local kaskade anzahl echt
-    kaskade="$(printf '%s' "$plan_datei" | grep -oE 'ralph-kaskade-[0-9]+' | grep -oE '[0-9]+' | head -1)"
+    kaskade="$(team_architekt_kaskade "$plan_datei")"
     if [ -n "$kaskade" ]; then
         anzahl="$($TEAM_KOSTEN_TOOL ledger "$ledger_pfad" --rolle architekt --kaskade "$kaskade" --anzahl 2>/dev/null)"
         if [ -n "$anzahl" ] && [ "$anzahl" -gt 0 ] 2>/dev/null; then

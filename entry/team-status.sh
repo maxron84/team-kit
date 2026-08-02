@@ -126,7 +126,8 @@ status_einmal() {
 # Log-Ordnern ist die Ausgabe exakt die Ledger-Basissumme.
 status_budget() {
     local abo api gesamt empfehlung
-    local architekt_usd architekt_status
+    local architekt_usd architekt_status architekt_kaskade
+    local architekt_bezug architekt_label
     local ledger_gesamt ledger_unzugeordnet
     local _domaenen_liste _domaenen_anzahl _summe_domaenen _d _wert
     local ledger_abo ledger_api ledger_gemischt api_gesamt abo_gesamt
@@ -134,6 +135,27 @@ status_budget() {
     IFS=$'\t' read -r ledger_abo ledger_api ledger_gemischt <<<"$(team_ledger_split)"
     gesamt="$(team_kontostand_gesamt)"
     IFS=$'\t' read -r architekt_usd architekt_status <<<"$(team_architekt_stand)"
+    architekt_kaskade="$(team_architekt_kaskade)"
+
+    # BL-18 (Feld platformer, Closeout K3): Der Zusatz "nicht im Gesamt
+    # enthalten" stand hier UNBEDINGT — er gilt aber nur für den Modus
+    # "geschätzt". Im Modus "echt" stammt der Wert aus einer Ledger-Zeile
+    # DIESER Kaskade, und die summiert team_kontostand_gesamt mit. Der Modus
+    # schaltet ausgerechnet beim Kaskaden-Abschluss um, also genau dann, wenn
+    # die Zahl abgelesen und weitergegeben wird: Im Feld hätte der beim Wort
+    # genommene Kontostand 81.27 statt 71.57 USD ergeben, 13 % zu viel, weil
+    # der Architekt ein zweites Mal addiert worden wäre.
+    #
+    # Zweiter Teil desselben Befunds: Der Wert ist KASKADENSCHARF (echt = die
+    # Zeile dieser Kaskade, geschätzt = Churn seit dem letzten Ledger-Commit),
+    # während jede andere Zeile dieses Blocks lebenslang kumuliert. Die
+    # Beschriftung nennt den Bezugsrahmen deshalb ausdrücklich ("K3"), sonst
+    # liest man 9.70 als Lebenszeit-Summe des Architekten (real: 37.30).
+    case "$architekt_status" in
+        echt) architekt_bezug="im Gesamt enthalten" ;;
+        *)    architekt_bezug="nicht im Gesamt enthalten" ;;
+    esac
+    architekt_label="Architekt ${architekt_kaskade:+K${architekt_kaskade} }($architekt_status, $architekt_bezug)"
 
     # Ledger-Anteil (auth-Spalte, BL-17-Restpunkt/BL-29-"1b", Stufe 53) zu den
     # Live-Logs addieren, damit die beiden Kopfzeilen nach einer Archivierung
@@ -159,8 +181,8 @@ print(f'{a + b:.4f}')
     printf "  real via API abgerechnet           : %s USD\n" "$api_gesamt"
     printf "  Abo-Gegenwert (nicht abgerechnet)  : %s USD\n" "$abo_gesamt"
     printf "  gemischt (Ledger, nicht aufteilbar): %s USD\n" "$ledger_gemischt"
-    printf "  Architekt (%s, nicht im Gesamt enthalten): %s USD\n" "$architekt_status" "$architekt_usd"
-    printf "  Gesamt (Basis + laufend)           : %s USD\n" "$gesamt"
+    printf "  %-35s: %s USD\n" "$architekt_label" "$architekt_usd"
+    printf "  Gesamt (Basis + laufend), lebenslang: %s USD\n" "$gesamt"
 
     # Domänengetrennte Ledger-Aufstellung (BL-29, Kaskade 13/Stufe 44). Nur
     # die committete .budget-ledger trägt bislang eine Domäne je Zeile (ab
