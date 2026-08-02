@@ -53,6 +53,43 @@ source ./team/lib.sh
 
 RALPH_CAP_VALUE="$(team_ralph_cap)"
 
+# status_architekt_zeile: "beschriftung<TAB>USD" der Architekt-Kennzahl —
+# EINE Quelle für BEIDE Ansichten (Momentaufnahme und --budget).
+#
+# BL-18 (Feld platformer, Closeout K3): Der Zusatz "nicht im Gesamt enthalten"
+# stand in --budget UNBEDINGT — er gilt aber nur für den Modus "geschätzt".
+# Im Modus "echt" stammt der Wert aus einer Ledger-Zeile DIESER Kaskade, und
+# die summiert team_kontostand_gesamt mit. Der Modus schaltet ausgerechnet
+# beim Kaskaden-Abschluss um, also genau dann, wenn die Zahl abgelesen und
+# weitergegeben wird: Im Feld hätte der beim Wort genommene Kontostand 81.27
+# statt 71.57 USD ergeben, 13 % zu viel, weil der Architekt ein zweites Mal
+# addiert worden wäre.
+#
+# Zweiter Teil desselben Befunds: Der Wert ist KASKADENSCHARF (echt = die
+# Zeile dieser Kaskade, geschätzt = Churn seit dem letzten Ledger-Commit),
+# während die Zeilen daneben lebenslang kumulieren. Die Beschriftung nennt den
+# Bezugsrahmen deshalb ausdrücklich ("K3"), sonst liest man 9.70 als
+# Lebenszeit-Summe des Architekten (real: 37.30).
+#
+# WARUM eine gemeinsame Funktion: Die Momentaufnahme zeigte bis BL-18 die
+# reine A2-Schätzung ("Architekt (geschätzt, A2)") direkt über
+# "Gesamt-Kontostand (inkl. Ledger)" — nach dem Buchen also eine Schätzung
+# neben der Summe, die die echte Zeile bereits enthält, mit derselben
+# Einladung zum Doppeladdieren. Zwei Ansichten derselben Kennzahl dürfen
+# nicht auseinanderlaufen; deshalb bauen beide dieselbe Beschriftung aus
+# derselben Quelle.
+status_architekt_zeile() {
+    local usd status kaskade bezug
+    IFS=$'\t' read -r usd status <<<"$(team_architekt_stand)"
+    kaskade="$(team_architekt_kaskade)"
+    case "$status" in
+        echt) bezug="im Gesamt enthalten" ;;
+        *)    bezug="nicht im Gesamt enthalten" ;;
+    esac
+    printf '%s\t%s\n' "Architekt ${kaskade:+K${kaskade} }($status, $bezug)" \
+        "$usd"
+}
+
 status_einmal() {
     echo "════════════════════════════════════════════════════════"
     echo "  T.E.A.M.-Status — $(date '+%Y-%m-%d %H:%M:%S')"
@@ -95,14 +132,17 @@ status_einmal() {
     # (team_kontostand_gesamt, inkl. .budget-ledger-Basis) — dieselbe Zahl wie
     # `--budget`, damit nie zwei widersprüchliche „Gesamt"-Werte entstehen.
     echo "  ──────── Kosten (lebenslang kumuliert) ────────"
-    local k_ralph k_team k_gesamt k_architekt
+    local k_ralph k_team k_gesamt k_architekt k_architekt_label
     k_ralph="$(team_kosten_summe .ralph-logs)"
     k_team="$(team_kosten_summe .team-logs)"
     k_gesamt="$(team_kontostand_gesamt)"
-    k_architekt="$(team_architekt_schaetzung)"
+    # BL-18: dieselbe Beschriftung wie in --budget, aus derselben Quelle —
+    # hier stand vorher die reine A2-Schätzung ("geschätzt, A2"), die nach
+    # dem Buchen neben einer Summe steht, welche die echte Zeile schon enthält.
+    IFS=$'\t' read -r k_architekt_label k_architekt <<<"$(status_architekt_zeile)"
     printf "    Ralph-Logs (Bau, o. Archiv)   : %9s USD\n" "$k_ralph"
     printf "    Team-Logs (Fixe, o. Archiv)   : %9s USD\n" "$k_team"
-    printf "    Architekt (geschätzt, A2)     : %9s USD\n" "$k_architekt"
+    printf "    %-30s: %9s USD\n" "$k_architekt_label" "$k_architekt"
     printf "    Gesamt-Kontostand (inkl. Ledger): %9s USD\n" "$k_gesamt"
 
     # Letzte Aktivität
@@ -126,36 +166,16 @@ status_einmal() {
 # Log-Ordnern ist die Ausgabe exakt die Ledger-Basissumme.
 status_budget() {
     local abo api gesamt empfehlung
-    local architekt_usd architekt_status architekt_kaskade
-    local architekt_bezug architekt_label
+    local architekt_usd architekt_label
     local ledger_gesamt ledger_unzugeordnet
     local _domaenen_liste _domaenen_anzahl _summe_domaenen _d _wert
     local ledger_abo ledger_api ledger_gemischt api_gesamt abo_gesamt
     IFS=$'\t' read -r abo api <<<"$(team_kosten_split .ralph-logs .team-logs)"
     IFS=$'\t' read -r ledger_abo ledger_api ledger_gemischt <<<"$(team_ledger_split)"
     gesamt="$(team_kontostand_gesamt)"
-    IFS=$'\t' read -r architekt_usd architekt_status <<<"$(team_architekt_stand)"
-    architekt_kaskade="$(team_architekt_kaskade)"
-
-    # BL-18 (Feld platformer, Closeout K3): Der Zusatz "nicht im Gesamt
-    # enthalten" stand hier UNBEDINGT — er gilt aber nur für den Modus
-    # "geschätzt". Im Modus "echt" stammt der Wert aus einer Ledger-Zeile
-    # DIESER Kaskade, und die summiert team_kontostand_gesamt mit. Der Modus
-    # schaltet ausgerechnet beim Kaskaden-Abschluss um, also genau dann, wenn
-    # die Zahl abgelesen und weitergegeben wird: Im Feld hätte der beim Wort
-    # genommene Kontostand 81.27 statt 71.57 USD ergeben, 13 % zu viel, weil
-    # der Architekt ein zweites Mal addiert worden wäre.
-    #
-    # Zweiter Teil desselben Befunds: Der Wert ist KASKADENSCHARF (echt = die
-    # Zeile dieser Kaskade, geschätzt = Churn seit dem letzten Ledger-Commit),
-    # während jede andere Zeile dieses Blocks lebenslang kumuliert. Die
-    # Beschriftung nennt den Bezugsrahmen deshalb ausdrücklich ("K3"), sonst
-    # liest man 9.70 als Lebenszeit-Summe des Architekten (real: 37.30).
-    case "$architekt_status" in
-        echt) architekt_bezug="im Gesamt enthalten" ;;
-        *)    architekt_bezug="nicht im Gesamt enthalten" ;;
-    esac
-    architekt_label="Architekt ${architekt_kaskade:+K${architekt_kaskade} }($architekt_status, $architekt_bezug)"
+    # BL-18: Beschriftung und Wert aus status_architekt_zeile — dieselbe
+    # Quelle wie in der Momentaufnahme (Begründung dort).
+    IFS=$'\t' read -r architekt_label architekt_usd <<<"$(status_architekt_zeile)"
 
     # Ledger-Anteil (auth-Spalte, BL-17-Restpunkt/BL-29-"1b", Stufe 53) zu den
     # Live-Logs addieren, damit die beiden Kopfzeilen nach einer Archivierung

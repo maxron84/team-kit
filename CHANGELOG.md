@@ -32,6 +32,15 @@ Anzeige über die Zahlen **sagte**.
   Lebenssumme des Architekten (real: 37,30). Die Nummer liefert die neue
   `team_architekt_kaskade`; `team_architekt_stand` behält seinen
   Zwei-Felder-Vertrag, an dem `team-status.sh` und drei Testdateien hängen.
+- **Dieselbe Einladung zum Doppeladdieren stand im zweiten Block (`BL-18`,
+  Nachzug).** Die Momentaufnahme (`./team-status.sh` ohne Argument) zeigte die
+  reine A2-Schätzung — „Architekt (geschätzt, A2)" — direkt über
+  „Gesamt-Kontostand (inkl. Ledger)". Nach dem Buchen stand dort also eine
+  **Schätzung** neben einer Summe, welche die **echte** Zeile bereits enthält,
+  und die Beschriftung war modusblind. **Neu:** Beide Ansichten bauen ihre
+  Beschriftung aus **einer** Quelle (`status_architekt_zeile`); zwei Anzeigen
+  derselben Kennzahl können nicht mehr auseinanderlaufen. Ein eigener Testfall
+  hält genau das fest.
 - **`--rollen-abschluss` schrieb eine Notiz wortgleich in zwei Zeilen mit
   verschiedener Bedeutung (`BL-19`).** Seit `BL-4` ruft die eine
   Bedienhandlung zwei Verben mit demselben `--notiz` auf: `rollen-abschluss`
@@ -58,7 +67,7 @@ Anzeige über die Zahlen **sagte**.
   veraltete Aussage auf („ein zweiter Aufruf **ersetzt** die Zeile" — er bricht
   seither ab) und wurde mitkorrigiert.
 - Zwei neue Regressionstests (`test_bl18_…`, `test_bl19_…`), beide mit
-  gefahrener Gegenprobe. Die Installation fährt jetzt **226** Tests.
+  gefahrener Gegenprobe. Die Installation fährt jetzt **228** Tests.
 
 ## [2.4.3] — 2026-08-02
 

@@ -95,14 +95,24 @@ def _repo(tmp_path, ledger_inhalt):
     return repo
 
 
-def _budget(repo):
+def _status(repo, *argumente):
     ergebnis = subprocess.run(
-        ["bash", str(repo / "team-status.sh"), "--budget"],
+        ["bash", str(repo / "team-status.sh"), *argumente],
         capture_output=True, text=True, cwd=str(repo),
         env={"HOME": str(Path.home()), "PATH": "/usr/local/bin:/usr/bin:/bin"},
     )
     assert ergebnis.returncode == 0, ergebnis.stderr
     return ergebnis.stdout
+
+
+def _budget(repo):
+    return _status(repo, "--budget")
+
+
+def _momentaufnahme(repo):
+    """Die zweite Ansicht derselben Kennzahl (`./team-status.sh` ohne Argument),
+    Block "Kosten (lebenslang kumuliert)"."""
+    return _status(repo)
 
 
 def _zeile_mit(ausgabe, marker):
@@ -113,6 +123,12 @@ def _zeile_mit(ausgabe, marker):
 
 def _betrag(zeile):
     return float(re.search(r":\s*([0-9.]+)\s*USD", zeile).group(1))
+
+
+def _label(zeile):
+    """Beschriftung ohne Einrückung und Spaltenauffüllung — die beiden
+    Ansichten setzen den Betrag verschieden breit."""
+    return re.search(r"(Architekt.*?\))", zeile).group(1)
 
 
 pytestmark = pytest.mark.skipif(
@@ -179,6 +195,37 @@ def test_beschriftung_nennt_den_bezugsrahmen(tmp_path):
     assert _betrag(_zeile_mit(ausgabe, "Architekt")) == pytest.approx(9.7000)
     assert kosten.ledger_summe(ledger, rolle="architekt") == \
         pytest.approx(29.7000)
+
+
+def test_momentaufnahme_zeigt_dieselbe_kennzahl_wie_budget(tmp_path):
+    """Nachzug zu BL-18: Die Momentaufnahme zeigte die reine A2-Schaetzung
+    ("Architekt (geschätzt, A2)") direkt ueber "Gesamt-Kontostand (inkl.
+    Ledger)" — nach dem Buchen also eine Schaetzung neben einer Summe, welche
+    die ECHTE Zeile bereits enthaelt: dieselbe Einladung zum Doppeladdieren,
+    nur im anderen Block. Zwei Ansichten derselben Kennzahl duerfen nicht
+    auseinanderlaufen."""
+    repo = _repo(tmp_path, LEDGER_ECHT)
+    zeile = _zeile_mit(_momentaufnahme(repo), "Architekt")
+
+    assert "echt" in zeile
+    assert "K3" in zeile
+    assert "nicht im Gesamt enthalten" not in zeile
+    assert "im Gesamt enthalten" in zeile
+    assert _betrag(zeile) == pytest.approx(9.7000)
+    assert "geschätzt, A2" not in zeile, (
+        "die alte, modusblinde Beschriftung darf nicht ueberleben")
+
+
+def test_beide_ansichten_beschriften_die_kennzahl_wortgleich(tmp_path):
+    """Der eigentliche Schutz: EINE Quelle fuer beide Ansichten. Divergenz
+    zwischen zwei Anzeigen derselben Zahl war der Befund."""
+    for nr, ledger_inhalt in enumerate((LEDGER_ECHT, LEDGER_GESCHAETZT)):
+        repo = _repo(tmp_path / f"fall{nr}", ledger_inhalt)
+        aus_budget = _zeile_mit(_budget(repo), "Architekt")
+        aus_status = _zeile_mit(_momentaufnahme(repo), "Architekt")
+        assert _label(aus_budget) == _label(aus_status), \
+            f"Beschriftung laeuft auseinander:\n  {aus_budget}\n  {aus_status}"
+        assert _betrag(aus_budget) == pytest.approx(_betrag(aus_status))
 
 
 def _bash(skript, cwd):
