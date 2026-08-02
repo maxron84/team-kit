@@ -17,11 +17,30 @@ Jeder Fund des Read-Only Red Teams landet hier (Beutezug-Dreisatz, siehe
   1. …
 - **Erwartung**: …
 - **Realität**: …
-- **Reproducer-Test**: {{TEST_ORDNER}}test_hm<nr>_<stichwort> (optional)
+- **Reproducer-Test**: `{{TEST_ORDNER}}test_hm<nr>_<stichwort>.py`
 ```
 
 > Diesen Vorlage-Block **nicht löschen**. Harry und Marv richten ihre Funde
 > daran aus; ohne ihn divergieren die Formate ab dem zweiten Sweep und die
 > Zustandsmaschine findet die Status-Zeilen nicht mehr.
+
+> **Die `Reproducer-Test`-Zeile ist Pflicht — und der Pfad gehört in Backticks.**
+> Zwei Regeln, die zusammen gelten müssen, sonst wirkt keine von beiden:
+>
+> 1. **Immer ausfüllen**, auch wenn die Datei **noch nicht existiert**. Der
+>    Eintrag ist keine Quittung über getane Arbeit, sondern eine
+>    **Reservierung**: Er sagt Frank, wie seine Testdatei heißen soll.
+> 2. **Immer in Backticks.** Der Substanz-Anker `team_diff_beruehrt_fund`
+>    besteht nur, wenn Franks Diff eine im Fund-Block **backtick-referenzierte**
+>    Datei berührt; `DATEI_RE` liest ausschließlich Backtick-Pfade. Ein Pfad
+>    ohne Backticks ist für den Anker unsichtbar.
+>
+> **Warum das keine Formalie ist:** Eine neue Testdatei ist per Definition nie
+> vorab referenziert. Ohne diese Zeile wird Franks regelkonform benannter Fix
+> systematisch **zurückgerollt** — bei grünem Smoke-Test und gültigem Promise,
+> also ohne jedes Fehlersignal. Im Feld kostete genau das an einem einzigen Fund
+> 9 Frank-Versuche, 3 Axel-Akten und 12,00 USD, ohne dass eine Zeile Code
+> überlebte. Beim nächsten Fund stand die Zeile — der Fix ging in **einem**
+> Versuch durch.
 
 ## Funde

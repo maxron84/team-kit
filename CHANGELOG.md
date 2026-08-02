@@ -2,6 +2,81 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.4.2] — 2026-08-02
+
+**Die ausgelieferte Beutebuch-Vorlage lehrte genau die Falle, die `BL-11` im
+Regex behoben hatte.**
+
+`BL-11` (Release 2.3.x) hat `DATEI_RE` beigebracht, per Pytest-Node-ID
+referenzierte Dateien zu lesen. Das war die **halbe** Reparatur: Der Extraktor
+*konnte* den Pfad seither lesen — die Vorlage erzeugte nur nie einen. Sie nannte
+ihn **ohne Backticks** und als **„optional"**, an fünf Stellen in vier Dateien,
+in **jeder** frischen Installation. Aus dem Feld zurückgespielt (dort `BL-7`,
+`team-kit_project_platformer`), wo derselbe Defekt an einem einzigen Fund
+12,00 USD verbrannt hat: 9 Frank-Versuche, 3 Axel-Akten, keine Zeile Code
+überlebt — bei grünem Smoke-Test und gültigem Promise, also ohne jedes
+Fehlersignal.
+
+### Fixed
+
+- **Die `Reproducer-Test`-Zeile ist Pflichtfeld, der Pfad steht in Backticks
+  (`BL-15`).** Zwei voneinander unabhängige Defekte, von denen **keiner allein
+  wirkt**: (1) „optional" ⇒ Harry und Marv lassen das Feld leer, Franks neue,
+  regelkonform nach der Fund-Nummer benannte Testdatei ist im Fund-Block nie
+  referenziert, und `team_diff_beruehrt_fund` rollt jeden regelkonformen Fix
+  zurück. (2) Ohne Backticks ⇒ selbst ein *ausgefülltes* Feld bleibt unsichtbar,
+  weil `DATEI_RE` ausschließlich Backtick-Pfade liest. Die Prompt-Pflicht allein
+  hätte also **nichts** bewirkt.
+  **Neu:** Die Zeile wird **immer** gesetzt — auch wenn die Datei noch nicht
+  existiert. Sie ist keine Quittung über getane Arbeit, sondern eine
+  **Reservierung** des Dateinamens für Frank. Geändert in
+  [`bootstrap/beutebuch.md`](bootstrap/beutebuch.md) (Vorlage + Begründungs­block),
+  [`bootstrap/CLAUDE.md.vorlage`](bootstrap/CLAUDE.md.vorlage) (Beutezug-Dreisatz
+  Schritt 2 + Fund-Format), [`team/prompts/rolle-harry.md`](team/prompts/rolle-harry.md),
+  [`team/prompts/rolle-marv.md`](team/prompts/rolle-marv.md).
+- **Der Guard bleibt unangetastet scharf.** Gewählt wurde die Prompt-Pflicht,
+  nicht die Guard-Lockerung (Strippenzieher-Entscheid im Feld, 2026-08-02).
+  Begründung aus dem Feld: Beim Folgefund setzte Frank die Zeile **von sich
+  aus** — dem Muster des vorigen Fundblocks folgend — und kam in **einem**
+  Versuch durch. Das Muster trägt, sobald es sichtbar ist; es braucht nur eine
+  verbindliche Regel statt Nachahmung.
+- **Sechste Stelle, im Feld nicht sichtbar:** `CLAUDE.md.vorlage` schrieb den
+  Pfad als `{{TEST_ORDNER}}/…`. Der Platzhalter trägt seinen Schrägstrich
+  bereits, das expandierte also zu `tests//…`. Im Feld stand dort die schon
+  substituierte Fassung, weshalb der Fund von dort nur fünf Stellen nennen
+  konnte.
+
+### Added
+
+- **`test_bl15_reproducer_zeile_ankertauglich.py`** — der Regressionstest, den
+  der Feldbefund ausdrücklich empfohlen hat und der diesen Fund verhindert
+  hätte: Er nimmt die **wirklich ausgelieferte** Zeile aus allen vier Quellen,
+  füllt sie so aus, wie die Vorlage es ansagt, und lässt `DATEI_RE` darauf los.
+  Er läuft in beiden Ablagen — im Kit gegen `bootstrap/`, im installierten
+  Projekt gegen die substituierten Zieldateien — und prüft zusätzlich, dass die
+  Zeile überhaupt noch existiert und nicht wieder als „optional" markiert ist.
+  Gegenprobe gefahren: Mit der alten Zeile schlagen genau zwei Zusicherungen
+  fehl. **197 Testfälle** in 33 Dateien.
+
+### Bemerkt
+
+- **`install.sh` kompiliert die Tests, die es ausliefert.** Der Installer fährt
+  zum Abschluss `pytest` gegen die frische Installation und legt dabei
+  `.pyc`-Dateien an. `kit-test.sh` Stufe 3 durchsucht danach **alles** im
+  Zielbaum nach übrig gebliebenen Installer-Platzhaltern — auch den Bytecode.
+  Eine Testdatei, die einen Platzhalter als String-Literal führt, meldet sich
+  damit selbst als Fund. Zusammensetzen hilft nicht: CPython faltet konstante
+  Konkatenation beim Kompilieren. Der neue Test ersetzt Platzhalter deshalb
+  über ein Muster, nicht über ein Literal.
+- **`BL-17` neu im Backlog**, aus dem Feld nachgetragen (dort `BL-10`): *Die
+  Verifikationskette darf sich den Erfolg nicht selbst einrichten.* Der
+  dokumentierte Startbefehl war kaputt, während der Smoke-Test grün meldete —
+  weil Smoke-Test und `pytest.ini` still ein `PYTHONPATH` dazusetzten, das es
+  beim Anwender nie gibt. **Fünf** Red-Team-Funde derselben Kaskade hatten
+  exakt diese Bauart, und **keiner** der Sweeps hat diesen gefunden: Harry und
+  Marv lesen den Code, die Lücke klafft aber zwischen **Doku und Testaufruf**.
+  Braucht einen Entscheid, in welcher Form die Regel greift.
+
 ## [2.4.1] — 2026-08-01
 
 **Zwei Fehler in `ledger-pruefen`, gefunden beim ersten Einsatz auf einem
