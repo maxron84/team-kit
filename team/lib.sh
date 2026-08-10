@@ -21,7 +21,21 @@ fi
 # der Schritt AUSDRÜCKLICH als offener Punkt benannt, statt still zu
 # verschwinden — sonst merkt niemand, dass das Sicherheitsnetz fehlt.
 if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
-    SMOKE_ZEILE="Smoke-Test ausführen: ${TEAM_SMOKE_TEST} — muss grün sein."
+    # Der Nachsatz ist eine Notbremse gegen einen teuren Fehlermodus, nicht
+    # Ausschmückung (BL-41, Feld platformer K27/K28): Eine bauende Rolle
+    # startete den Smoke-Test als HINTERGRUND-Task und wartete danach auf eine
+    # Benachrichtigung, die in einer headless-Sitzung nie eintrifft. Der Lauf
+    # endet mit subtype=success und is_error=false — er SIEHT AUS WIE EIN
+    # ERFOLG —, gibt aber kein Promise und committet nicht. Dreimal passiert,
+    # zusammen 13,25 USD, jedes Mal für Arbeit, die bereits fertig und grün
+    # war. Der Satz steht hier statt in den Rollen-Briefings, weil er hier
+    # JEDE bauende Rolle trifft statt nur eine. Die Begründung gehört in den
+    # Prompt, damit die Regel nicht als willkürlich gelesen wird.
+    SMOKE_ZEILE="Smoke-Test ausführen: ${TEAM_SMOKE_TEST} — muss grün sein.
+   Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe. Starte ihn
+   NIEMALS als Hintergrund-Task und plane keinen Wakeup darauf: Diese Sitzung
+   ist headless, es kommt keine Benachrichtigung, und du wartest bis zum
+   Zeitlimit auf ein Ereignis, das nicht eintreten kann."
     SMOKE_SUFFIX=" Smoke-Test grün: ${TEAM_SMOKE_TEST}."
 else
     SMOKE_ZEILE="(Kein Smoke-Test konfiguriert — Schritt entfällt. Das Team arbeitet ohne Sicherheitsnetz; TEAM_SMOKE_TEST in team.config.sh nachtragen.)"
