@@ -7,10 +7,11 @@
 #
 # WARUM ES DIESES SKRIPT GIBT
 #
-# Die 138 Regressionstests unter team/tests/ setzen die INSTALLIERTE Ablage
-# voraus: Entrypoints in der Repo-Wurzel, CLAUDE.md und team.config.sh mit
-# gefüllten Platzhaltern. Im Kit-Repo liegen sie unter entry/ und bootstrap/ —
-# `pytest team/tests` schlägt hier deshalb mit 17 Fehlern fehl, ohne dass
+# Die Regressionstests unter team/tests/ (Stand 2.5.0: 267 Fälle in 44 Dateien)
+# setzen die INSTALLIERTE Ablage voraus: Entrypoints in der Repo-Wurzel,
+# CLAUDE.md und team.config.sh mit gefüllten Platzhaltern. Im Kit-Repo liegen
+# sie unter entry/ und bootstrap/ — `pytest team/tests` schlägt hier deshalb
+# fehl (Stand 2.5.0: 19 Fehler, 240 grün, 8 übersprungen), ohne dass
 # irgendetwas kaputt wäre. Ergebnis: Ein im Kit committeter Fix war bis zur
 # nächsten Feldinstallation ungeprüft. Genau so ging BL-1 (tote Fixphase) durch
 # drei Releases.

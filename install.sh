@@ -338,7 +338,7 @@ frage() {  # frage <variable> <text> <default>
     printf -v "$var" '%s' "${eingabe:-$vorgabe}"
 }
 
-kopf "Aufnahme-Interview — sieben Werte, alles Weitere per Feld-Default"
+kopf "Aufnahme-Interview — acht Werte, alles Weitere per Feld-Default"
 frage PROJEKT        "Projektname"                    "$(basename "$ZIEL")"
 frage PRODUKTIVCODE  "Produktivcode-Ordner (tabu für Red Team)" "src/"
 frage TEST_ORDNER    "Test-Ordner"                    "tests/"
