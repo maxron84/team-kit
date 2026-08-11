@@ -55,6 +55,16 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
 1. `{{PLAN_ORDNER}}/kaskade-N-abschluss.md` schreiben — sieben Abschnitte:
    Ist-Stand · Bewertung des Bauwegs · Funde des Red Teams · Closeout-Funde ·
    echte Lauf-Kosten · Release-Strategie · offene operative Schritte.
+   In **Abschnitt 4** beantworte ich zusätzlich eine feste Pflichtfrage:
+   **Welche offenen Punkte hat dieser Lauf *nebenbei* eingelöst — und wer
+   zitiert sie?** Erledigte Einträge abzutragen genügt nicht: Skizzen und
+   Kandidatenlisten begründen ihre offenen Fragen mit Backlog-Nummern und
+   veralten still, sobald der zitierte Eintrag erledigt ist. Auffallen tut das
+   erst beim Vorlegen der Kandidaten — also nachdem ich eine Option formuliert
+   habe, die es nicht mehr gibt. Nebenbei eingelöst wird der Regelfall, nicht
+   die Ausnahme; der Bauplan der Kaskade nennt so etwas nirgends. Verweise auf
+   den Backlog eines **anderen** Projekts schreibe ich als `Kit-BL-<N>`, damit
+   der doppelt belegte Nummernraum nicht in die falsche Datei führt.
 2. **Kostenabschluss** — erst **jetzt**, niemals in einer Loop-Stufe:
    `./team-status.sh --rollen-abschluss <N> <domaene>` und meine eigene Sitzung
    per `./team-status.sh --architekt-abschluss <USD> <domaene> "<notiz>"`.

@@ -173,9 +173,17 @@ Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 | `1` | **echter Fehler** | Log lesen, Ursache beheben |
 | `3` | nichts zu tun | normal, kein Fehler |
 | `42` | **Session-Limit** — Lauf pausiert | **kein Fehler.** Kein Datenverlust, State steht. Später erneut starten. |
+| `43` | **Stufe fertig, Quittung fehlt** | **Nicht neu bauen.** Erst prüfen: hat die Rolle committet, ist der Smoke-Test grün? Wenn ja: von Hand quittieren (`echo <nächste Stufe> > .ralph-state`) und weiterlaufen lassen. |
 
 `42` ist die häufigste Verwechslung: Das ist kein Absturz, sondern eine saubere
 Pause. Nichts ist verloren, der Lauf setzt beim nächsten Start fort.
+
+`43` ist die zweite: Die Rolle hat ihre Sitzung beendet, ohne zu quittieren —
+meist, weil sie auf einen Hintergrund-Task wartete, den es in einer
+headless-Sitzung nicht gibt. Das Log meldet trotzdem Erfolg. **Die Arbeit ist
+in diesem Fall meistens fertig**; ein Neustart wirft sie weg und zahlt sie noch
+einmal (im Feld viermal passiert, zusammen 19,47 USD). Die Meldung des Loops
+nennt die zwei Prüfungen, die vorher zu machen sind.
 
 ---
 

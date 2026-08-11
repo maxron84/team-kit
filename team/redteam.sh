@@ -62,6 +62,13 @@ Block an (nächste freie Nummer beginnt bei $NEXT_ID):
 - **Erwartung**: …
 - **Realität**: …
 
+Was in ${TEAM_TEST_ORDNER} liegen bleibt, braucht einen Namen und einen Fund
+(BL-47): Ein Hilfs-/Sondenskript ohne zugehörigen Fund LÖSCHST du wieder,
+bevor du fertig meldest — oder du benennst es als Reproducer nach seinem Fund
+(test_hm<Nr>_<stichwort>). Eine namenlose Datei im Test-Ordner wird nie wieder
+gelesen, ist von keinem Fundblock referenziert und fällt trotzdem unter die
+Zusicherungen des Projekts.
+
 Findest du NICHTS, ändere keine Datei.
 Beende IMMER mit exakt: <promise>REDTEAM_SWEEP_COMPLETE</promise> — AUCH WENN
 du einen Fund ins Beutebuch geschrieben hast; das Promise ist die
@@ -140,13 +147,39 @@ if ! team_guard_urteil "$ROLLE" "$GUARD_UEBERGRIFF" 1; then
     exit 1
 fi
 
+# BL-47 (Feld K29, 2026-08-10): Das ERGEBNIS zählen, nicht die Absicht
+# behaupten. Ein Marv-Sweep über 9 Minuten und 3,14 USD committete eine einzige
+# Sondendatei und keine Beutebuch-Zeile — Commit-Botschaft trotzdem „neue
+# Funde/Reproducer", Protokollzeile „Funde committet. Übergabe an Frank."
+# Damit ist „geprüft, nichts gefunden" von „nie fertig geworden" nicht mehr zu
+# unterscheiden: Beides kostet gleich viel und sieht identisch aus. Die Zahl
+# liegt vor — NEXT_ID vor dem Sweep gegen next-id danach —, sie wurde nur nie
+# ausgewertet. Bei einer read-only-Rolle gibt es weder State-Wechsel noch
+# Produktivdiff, an dem der Unterschied sonst auffiele.
+NEXT_ID_NACHHER="$($TEAM_BEUTEBUCH_TOOL next-id)"
+NEUE_FUNDE=$(( ${NEXT_ID_NACHHER#HM-} - ${NEXT_ID#HM-} ))
+[ "$NEUE_FUNDE" -lt 0 ] && NEUE_FUNDE=0
+if [ "$NEUE_FUNDE" -eq 1 ]; then
+    FUND_TEXT="1 neuer Fund"
+elif [ "$NEUE_FUNDE" -gt 1 ]; then
+    FUND_TEXT="$NEUE_FUNDE neue Funde"
+else
+    FUND_TEXT="keine neuen Funde"
+fi
+
 # Whitelist-Änderungen deterministisch committen (der Angreifer selbst darf nicht).
 echo "$HEAD_HASH" > "$STATE_FILE"
 if [ -n "$(git status --porcelain -- "$TEAM_BEUTEBUCH" "$TEAM_TEST_ORDNER")" ]; then
     git add "$TEAM_BEUTEBUCH" "$TEAM_TEST_ORDNER"
-    git commit -q -m "docs(beute): ${ROLLE^}-Sweep über $RANGE_DESC — neue Funde/Reproducer" || true
-    echo "[$ROLLE] Funde committet ($TEAM_LAST_COST USD). Übergabe an Frank."
+    git commit -q -m "docs(beute): ${ROLLE^}-Sweep über $RANGE_DESC — $FUND_TEXT" || true
+    if [ "$NEUE_FUNDE" -eq 0 ]; then
+        # Der benannte Fall: geprüft, nichts gefunden — committet sind nur
+        # Testdateien. Nicht "Funde committet", das war die Lüge im Feld.
+        echo "[$ROLLE] Geprüft, KEINE neuen Funde ($TEAM_LAST_COST USD) — committet sind nur ${TEAM_TEST_ORDNER}-Dateien. Keine Übergabe an Frank."
+    else
+        echo "[$ROLLE] $FUND_TEXT committet ($TEAM_LAST_COST USD). Übergabe an Frank."
+    fi
 else
-    echo "[$ROLLE] Keine Funde ($TEAM_LAST_COST USD). Sauber."
+    echo "[$ROLLE] Geprüft, keine neuen Funde ($TEAM_LAST_COST USD). Sauber, nichts zu committen."
 fi
 exit 0

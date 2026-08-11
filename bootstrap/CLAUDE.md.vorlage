@@ -221,6 +221,17 @@ wird so ausgehärtet; alles Fernere bleibt Skizze.
 > Kaskade: 1,85 USD/Stufe) — die teuerste Prosa-Stufe lag bereits **über der
 > 80-%-Warnschwelle** des Pro-Stufe-Caps. Details siehe Anhang A.7, Lehre 7.
 
+> **Zentrale Werte gehören gegengeprobt, nicht gegrept (✅ Feld-Lehre, 2026-08-11).**
+> Ändert eine Stufe einen **zentralen Wert** (Konstante, Default, Schwellwert,
+> Balancing-Zahl), verlangt ihre **Verifikation** ausdrücklich die Gegenprobe:
+> Wert probeweise auf **zwei fremde Werte** (höher/niedriger), Suite laufen
+> lassen, danach **nachweislich zurücksetzen**. Grund: Eine Kopplung, die
+> *arithmetisch* ist, steht per Textsuche nicht auffindbar im Test — weder der
+> Name der Konstante noch ihr alter Wert kommen dort vor. Im Feld fand `grep`
+> **fünf** Stellen, das Verstellen **sieben**; die zwei zusätzlichen wären beim
+> nächsten Tweak an unerklärlicher Stelle rot geworden. Die Probe kostet einen
+> Suitenlauf und beweist genau das, was die Umstellung behauptet.
+
 **3. Nummerierung erst bei der Aushärtung.** Der Start richtet sich nach dem
 **aktuellen** Stand in [`.ralph-state`](.ralph-state) — es entstehen keine
 „fernen" fixen Nummern, die verschoben werden müssten.
@@ -287,10 +298,32 @@ Team-Infrastruktur> — Deploy/SemVer ja/nein.
 ## 2. Bewertung des Bauwegs War der Loop hier das richtige Werkzeug?
 ## 3. Funde des Red Teams   Fund-Nummern + Status
 ## 4. Closeout-Funde        Was erst beim Lesen des Berichts auffiel
+##                          PFLICHTZEILE: Welche offenen Punkte hat dieser Lauf
+##                          NEBENBEI eingelöst — und wer zitiert sie?
 ## 5. Echte Lauf-Kosten     Gedruckte Zahl vs. Ledger-Basis + Restlogs
 ## 6. Release-Strategie     SemVer-Bump, Deploy-Bedarf
 ## 7. Offene operative Schritte
 ```
+
+**Die Pflichtzeile in Abschnitt 4 ist die Gegenrichtung zum Abtragen (✅
+Feld-Lehre, 2026-08-11).** Erledigte Backlog-Einträge abzutragen funktioniert;
+**nichts** pflegt dagegen die Stellen, die den Backlog **zitieren**. Die
+Kandidaten-/Skizzenliste, aus der die nächste Kaskade gewählt wird, begründet
+ihre offenen Fragen mit Backlog-Nummern und veraltet still in dem Moment, in
+dem der zitierte Eintrag erledigt wird. Der Fehler schlägt an der teuersten
+Stelle zu: **beim Vorlegen der Kandidaten**, also nachdem der Architekt eine
+Option formuliert hat, die es nicht mehr gibt. Im Feld stand eine Skizze drei
+Kaskaden lang auf einer Prämisse, die der zitierte Eintrag selbst widerlegte —
+der Auslöser, auf den sie wartete, war längst gebaut. **Nebenbei ist der
+Regelfall, nicht die Ausnahme:** Eingelöst hat ihn eine Stufe aus einem ganz
+anderen Strang, und der Bauplan der Kaskade nennt so etwas nirgends.
+
+**Schreibweise fremder Backlog-Nummern.** Verweist eine Zeile auf den Backlog
+eines **anderen** Projekts (typisch: eine Meldung zurück ans Kit), wird sie als
+`Kit-BL-<N>` geschrieben, nie als blankes `BL-<N>`. Der Nummernraum ist sonst
+doppelt belegt — dieselbe Nummer bedeutet hier und dort etwas anderes, und wer
+(als Mensch oder Werkzeug) einen Verweis nachschlägt, landet im falschen
+Dokument.
 
 Abschnitt **2** ist der, den man am ehesten weglässt und am meisten braucht: Die
 Prosa-Lehre (A.7, Lehre 7) entstand genau hier, aus dem Vergleich der Kosten je
@@ -398,6 +431,18 @@ klar benannte dritte Klasse — sie weicht Guard/Read-Only-Regeln **nicht** auf.
   ausgewertet wird. `vollautomatik.sh` erkennt Exit 42 in **allen** Phasen und
   beendet mit „⏸ Session-Limit erreicht — Lauf pausiert, bitte später erneut
   starten. Kein Fehler, kein Datenverlust." statt der „ECHTER Fehler"-Meldung.
+- **C) Vierte Fehlerklasse: Sitzung beendet, Auftrag unquittiert (Exit 43).**
+  Eine bauende Rolle kann einen Hintergrund-Task/Monitor/Wakeup starten und
+  darauf „warten" — headless kommt diese Benachrichtigung **nie**. Die Sitzung
+  endet, und das Log trägt `subtype: success`, `is_error: false`: Für jede
+  Fehlerprüfung ist das ein **sauberer Erfolg**, nur das Promise fehlt. Fehlt
+  das Promise, während das Log sich selbst für erfolgreich erklärt, meldet der
+  Loop das **benannt** und endet mit **Exit 43** statt mit „ECHTER Fehler".
+  **Die Arbeit ist in diesem Fall meistens fertig** — erst prüfen (committet?
+  Smoke-Test grün?), dann von Hand quittieren und `.ralph-state` weiterschalten;
+  ein Neubau wirft bezahlte Arbeit weg. Vorbeugend gilt für **jede** bauende
+  Rolle: Der Smoke-Test läuft im **Vordergrund**, nie als Hintergrund-Task und
+  nie mit einem Wakeup darauf.
 - **Auslauf-Bremse gegen Leerlaufkosten (`TEAM_FIX_MAX_STAGNATION`, `BL-25`).**
   Die Frank↔Axel-Fixphase vergleicht pro Runde einen Beutebuch-Snapshot
   vorher/nachher; bleibt **weder** ein Frank-Fix **noch** eine neue Axel-Akte

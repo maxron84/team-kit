@@ -260,14 +260,69 @@ def _datei_kosten(datei):
     gehoert auf die Ebene der einzelnen Datei, nicht erst auf die fertige
     Summe (dort wird sie in rollen_abschluss()/akteur_abschluss() geprueft,
     aber die ungeprueften Aufrufer team_kosten_summe/-split/-seit sehen sie
-    nie)."""
+    nie).
+    BL-46: Ein ERSATZZETTEL (team_versuch == "verworfen", geschrieben von
+    team_versuch_sichern in lib.sh, wenn ein Aufruf ein 0-Byte-Log
+    hinterlaesst) traegt total_cost_usd = null. Er zaehlt NICHT als 0.0 mit --
+    genau diese stille Null war der Fund: 47 Minuten Laufzeit fielen aus
+    jeder Summe heraus und die Stufe erschien als die billigste der Kaskade,
+    obwohl sie als teuerste angesetzt war. ok=False heisst hier "Kosten
+    unbekannt", nicht "kaputt"; wer beides unterscheiden muss, fragt
+    _ist_verworfener_versuch()."""
     try:
-        kosten = json.load(open(datei)).get("total_cost_usd", 0) or 0
+        data = json.load(open(datei))
+        if isinstance(data, dict) and data.get("team_versuch") == "verworfen":
+            return 0.0, False
+        kosten = data.get("total_cost_usd", 0)
+        if kosten is None:
+            return 0.0, False
+        kosten = kosten or 0
         if not math.isfinite(kosten) or kosten < 0:
             return 0.0, False
         return kosten, True
     except Exception:
         return 0.0, False
+
+
+def _ist_verworfener_versuch(datei):
+    """True, wenn die Datei ein Ersatzzettel ueber einen verworfenen Versuch
+    ist (BL-46). Der Zettel ist KEIN Kostenbeleg -- er haelt fest, dass ein
+    bezahlter Anlauf stattfand, dessen Kosten niemand kennt."""
+    try:
+        data = json.load(open(datei))
+    except Exception:
+        return False
+    return isinstance(data, dict) and data.get("team_versuch") == "verworfen"
+
+
+def verworfene_versuche(dirs=None, files=None, since=None):
+    """Liste (datei, dauer_s) der Ersatzzettel unter dirs bzw. in files.
+    dauer_s ist None, wenn der Zettel keine Dauer traegt -- geschaetzt wird
+    NICHTS, sichtbar gemacht schon (BL-46)."""
+    kandidaten = files if files is not None \
+        else team_log_dateien(dirs or [], since=since)
+    treffer = []
+    for datei in kandidaten:
+        if not _ist_verworfener_versuch(datei):
+            continue
+        try:
+            dauer = json.load(open(datei)).get("team_dauer_s")
+        except Exception:
+            dauer = None
+        treffer.append((datei, dauer))
+    return treffer
+
+
+def verworfen_hinweis(treffer):
+    """Einzeiler ueber verworfene Versuche -- oder None, wenn es keine gibt."""
+    if not treffer:
+        return None
+    dauern = [d for _, d in treffer if isinstance(d, (int, float))]
+    zeit = f", zusammen {sum(dauern) // 60} min" if dauern else ""
+    return (f"Hinweis: {len(treffer)} verworfener Versuch(e){zeit}, Kosten "
+            f"UNBEKANNT -- nicht in dieser Summe enthalten und bewusst nicht "
+            f"geschaetzt (BL-46): "
+            + ", ".join(os.path.basename(f) for f, _ in treffer))
 
 
 def log_kosten(dirs, split=False, since=None, files=None, return_geparst=False):
@@ -585,7 +640,31 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
 
     # --- P2 -----------------------------------------------------------------
     if aktuelle_kaskade is not None and aktuelle_kaskade in je_kaskade:
-        offen = team_log_dateien([ralph_logs, team_logs])
+        alle_offen = team_log_dateien([ralph_logs, team_logs])
+        # BL-46: Ein unarchiviertes Log, das gar kein Kostenbeleg IST
+        # (Ersatzzettel ueber einen verworfenen Versuch, oder eine kaputte
+        # Datei), begruendet keinen Verdacht auf verlorenes Geld. Im Feld
+        # meldete P2 danach DAUERHAFT falschen Alarm und schlug zwei Ursachen
+        # vor, von denen keine zutraf -- samt der Abhilfe `--ersetzen`, die
+        # nach BL-5 den Altwert vernichtet. Ein Waechter, der beim ersten
+        # Befolgen Geld kostet und sich nie abstellen laesst, erzieht zum
+        # Wegsehen (dieselbe Falle wie BL-14). Deshalb getrennt bewerten.
+        rest_offen = [f for f in alle_offen if _ist_verworfener_versuch(f)
+                      or not _datei_kosten(f)[1]]
+        offen = [f for f in alle_offen if f not in rest_offen]
+        if rest_offen:
+            verworfen = [f for f in rest_offen if _ist_verworfener_versuch(f)]
+            befunde.append(_befund(
+                "unarchiviert-ohne-beleg", "hinweis",
+                f"{len(rest_offen)} unarchivierte(s) Log(s) in "
+                f"{ralph_logs}/{team_logs} sind KEIN Kostenbeleg "
+                f"({len(verworfen)} verworfene(r) Versuch(e), "
+                f"{len(rest_offen) - len(verworfen)} nicht lesbar) -- kein "
+                f"Hinweis auf verlorenes Geld, kein Grund fuer einen zweiten "
+                f"Abschluss. Ein Ersatzzettel wird beim naechsten "
+                f"`--rollen-abschluss --archivieren` mit weggeraeumt; eine "
+                f"nicht lesbare Datei bleibt liegen und gehoert von Hand "
+                f"angesehen (BL-46)."))
         if offen:
             befunde.append(_befund(
                 "unarchiviert", "warnung",
@@ -1026,6 +1105,15 @@ def _main(argv):
             print(f"{abo:.4f}\t{api:.4f}")
         else:
             print(f"{log_kosten(rest, since=since):.4f}")
+        # BL-46: Dies ist der STILLE Pfad -- Live-Kontostand, --budget und die
+        # Pro-Lauf-/Pro-Stufe-Deckel lesen hier. Ein verworfener Versuch trug
+        # bisher 0.0000 bei und war von "hat nichts gekostet" nicht zu
+        # unterscheiden. Die Zahl auf stdout bleibt unveraendert (Aufrufer
+        # parsen sie); der Hinweis geht nach stderr, damit die Luecke sichtbar
+        # ist, ohne einen einzigen Aufrufer zu brechen.
+        hinweis = verworfen_hinweis(verworfene_versuche(rest, since=since))
+        if hinweis:
+            print(hinweis, file=sys.stderr)
         return 0
 
     if befehl == "ledger":
@@ -1383,11 +1471,32 @@ def _main(argv):
         # bezahlter Aufruf bzw. ein manipulierter Wert) bleibt liegen statt
         # spurlos im Archiv zu verschwinden.
         nicht_geparst = [f for f in files if f not in geparst]
-        for datei in nicht_geparst:
+        # BL-46: Ein Ersatzzettel ueber einen verworfenen Versuch ist gerade
+        # KEIN Kostenbeleg -- er kann nicht doppelt zaehlen, und liegen zu
+        # bleiben hilft ihm nicht: Im Feld hat genau das den Dauer-Fehlalarm
+        # von ledger-pruefen erzeugt, ohne dass es einen dokumentierten Weg
+        # heraus gab. Er wird deshalb MIT archiviert und dabei benannt. Nur
+        # wirklich unlesbare Dateien bleiben liegen (dort koennte echtes,
+        # bezahltes Geld drinstehen) -- und die Meldung nennt jetzt den Weg
+        # heraus, statt den Menschen mit der Datei allein zu lassen.
+        verworfen_liste = [f for f in nicht_geparst
+                           if _ist_verworfener_versuch(f)]
+        kaputt = [f for f in nicht_geparst if f not in verworfen_liste]
+        for datei, dauer in verworfene_versuche(files=verworfen_liste):
+            zeit = f"{dauer} s" if isinstance(dauer, (int, float)) else "unbekannter Dauer"
+            print(f"Hinweis: '{datei}' ist ein verworfener Versuch ({zeit}, "
+                  f"Kosten UNBEKANNT) -- er fehlt in dieser Summe und wird "
+                  f"nicht geschaetzt. Der Betrag dieser Kaskade ist damit "
+                  f"nachweislich UNVOLLSTAENDIG (BL-46).", file=sys.stderr)
+        for datei in kaputt:
             print(f"Warnung: '{datei}' konnte nicht als JSON gelesen werden "
                   f"oder enthaelt ein unplausibles total_cost_usd (negativ "
                   f"oder nicht-endlich) -- die Datei fehlt in dieser Summe "
-                  f"und bleibt UNARCHIVIERT liegen", file=sys.stderr)
+                  f"und bleibt UNARCHIVIERT liegen. Weg heraus: Inhalt "
+                  f"ansehen; steht ein echter Betrag darin, ihn mit "
+                  f"`akteur-abschluss` nachbuchen, sonst die Datei von Hand "
+                  f"nach {os.path.join(os.path.dirname(datei) or '.', 'archiv')}/ "
+                  f"verschieben", file=sys.stderr)
         # HM-43: files leer + abo==api==0 ist von "diese Kaskade hatte
         # wirklich keine Team-Kosten" nicht zu unterscheiden, wenn .team-logs
         # bereits archiviert wurde (z. B. durch einen frueheren
@@ -1435,10 +1544,13 @@ def _main(argv):
             aktion = "addiert" if bestand == "addieren" else "ersetzt"
         archiv_hinweis = ""
         if archivieren:
-            verschoben = _archiviere_dateien(geparst)
+            verschoben = _archiviere_dateien(geparst + verworfen_liste)
             archiv_hinweis = f", {len(verschoben)} Log(s) archiviert"
-            if nicht_geparst:
-                archiv_hinweis += (f", {len(nicht_geparst)} nicht-parsebare "
+            if verworfen_liste:
+                archiv_hinweis += (f" (davon {len(verworfen_liste)} verworfene"
+                                    f"(r) Versuch(e) ohne Kostenbeleg)")
+            if kaputt:
+                archiv_hinweis += (f", {len(kaputt)} nicht-parsebare "
                                     f"Log(s) NICHT archiviert")
         # Bei "addiert" ist abo+api der ZUGANG, nicht der neue Zeilenwert —
         # das Vorzeichen macht den Unterschied sichtbar (BL-5).

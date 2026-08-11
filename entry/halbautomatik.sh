@@ -64,6 +64,9 @@ deute_exit() {  # $1=schritt $2=rc — menschliche Einordnung
     case "$2" in
         0) echo "  → $1 hat gearbeitet (Exit 0)." ;;
         3) echo "  → $1: nichts zu tun (Exit 3)." ;;
+        # BL-41: kein Fehler im gewohnten Sinn — die Arbeit ist meist fertig,
+        # nur unquittiert. Die Rolle hat den Prüfweg bereits gedruckt.
+        43) echo "  → $1: Stufe fertig, Quittung fehlt (Exit 43, BL-41) — NICHT neu bauen, erst die oben genannten zwei Prüfungen fahren." ;;
         *) echo "  → $1 endete mit Fehler (Exit $2) — Logs prüfen (.team-logs/, .ralph-logs/)." ;;
     esac
 }

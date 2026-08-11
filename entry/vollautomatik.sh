@@ -22,6 +22,8 @@
 #                            Laufs (A), nicht den lebenslangen Kontostand (BL-18).
 #          TEAM_MODEL_LOOP / TEAM_MODEL_STRONG / AUTH_MODE  (siehe team-lib.sh)
 # Exit:    0 = Lauf durch · 1 = echter Fehler (Mensch gefragt; inkl. Stagnation)
+#          43 = Stufe fertig, Quittung fehlt (BL-41, durchgereicht von ralph.sh):
+#               kein Neubau — prüfen und von Hand quittieren
 #          42 = Session-Limit — Lauf pausiert (kein Fehler, kein
 #               Datenverlust, State steht; siehe Kaskade 9/Stufe 31,
 #               CLAUDE.md „Loop-Mechanik & Auth") — greift in Phase 4 jetzt auch
@@ -114,6 +116,15 @@ log "=== PHASE 1: Ralph (Bau der Kaskade) ==="
 if [ "$rc" -eq 42 ]; then
     log "⏸ Session-Limit erreicht — Lauf pausiert (Ralph). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."
     exit 42
+fi
+if [ "$rc" -eq 43 ]; then
+    # BL-41: Eigener Ausgang neben 0/1/42 — Ralphs Meldung nennt bereits den
+    # Prüfweg. Hier NICHT als "Fehler" protokollieren: Der Lauf stoppt, aber
+    # die bezahlte Arbeit ist mit hoher Wahrscheinlichkeit fertig, und ein
+    # generisches "endete mit Fehler" hat im Feld viermal zum Neubau statt zum
+    # Nachsehen geführt (19,47 USD).
+    log "⚠ Stufe fertig, Quittung fehlt (BL-41) — Lauf gestoppt. NICHT neu bauen, bevor die von Ralph genannten zwei Prüfungen gelaufen sind."
+    exit 43
 fi
 if [ "$rc" -ne 0 ]; then
     log "Ralph endete mit Fehler ($rc) — Vollautomatik stoppt, Mensch gefragt."

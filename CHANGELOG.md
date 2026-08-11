@@ -2,6 +2,123 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.5.0] — 2026-08-11
+
+**Sechs Feldbefunde aus `team-kit_project_platformer` (K29–K33), abgearbeitet.**
+
+Der rote Faden: **Ein Vorgang, der Geld gekostet hat, muss eine Spur
+hinterlassen, die man von „nichts passiert" unterscheiden kann.** Fünf der
+sechs Einträge sind Varianten davon — ein Erfolgslog ohne Auftrag, ein
+Kostenlog ohne Inhalt, ein Sweep ohne Fund, eine Warnung ohne zutreffende
+Ursache, ein abgetragener Backlog-Punkt ohne Nachzug in den Zitaten.
+
+### Added
+
+- **Vierte Fehlerklasse wird erkannt und benannt: „Stufe fertig, Quittung
+  fehlt" (`BL-41`, zweite Hälfte).** Neben Erfolg, echtem Fehler und
+  Session-Limit gibt es einen vierten Ausgang: Die Rolle startet einen
+  Hintergrund-Task/Monitor/Wakeup und wartet auf eine Benachrichtigung, die es
+  headless nicht gibt. Das Log trägt dann `subtype: success`, `is_error:
+  false` — **es sieht aus wie ein Erfolg** —, nur das Promise fehlt. Vier
+  Vorfälle im Feld, **19,47 USD**, jedes Mal für Arbeit, die fertig und grün
+  war. Die bisherige Meldung („KEIN Promise — Log prüfen") schickte den
+  Menschen in ein Log, das Erfolg meldet, und von dort in den **Plan** statt in
+  den Fehlermodus; dreimal folgte darauf ein Neubau, der die bezahlte Arbeit
+  wegwarf.
+  **Neu:** `team_result_meldet_erfolg` + `team_quittung_fehlt_melden` in
+  [`team/lib.sh`](team/lib.sh); [`ralph.sh`](entry/ralph.sh) endet in diesem
+  Fall mit dem eigenen **Exit 43** und druckt den Prüfweg (committet? Suite
+  grün? dann von Hand quittieren), [`vollautomatik.sh`](entry/vollautomatik.sh)
+  und [`halbautomatik.sh`](entry/halbautomatik.sh) reichen ihn als eigenen
+  Ausgang durch — nicht als „Fehler". **Geprüft wird die Struktur, nicht der
+  Wortlaut:** Die drei Feldvorfälle formulierten es dreimal anders („background
+  pytest run and monitor", „fallback check / wakeup", „set up a monitor to catch
+  its completion"), und die vierte Variante schreibt jemand morgen. Die
+  Vordergrund-Auflage in `SMOKE_ZEILE` (2.4.x) bleibt als **Prävention** — sie
+  hat in K33 nicht gehalten, obwohl sie wortgleich installiert war: Ein Satz aus
+  dem ersten Turn konkurriert nach 65 Turns mit dem gesamten seither gewachsenen
+  Kontext. Prävention per Prompt skaliert **gegenläufig zur Stufenlänge**.
+- **Verworfene Versuche bekommen einen Ersatzzettel (`BL-46`).** Scheitert ein
+  Aufruf so, dass das Log unlesbar bleibt (im Feld: **0 Byte nach 47 Minuten**),
+  schreibt `team_claude` an seine Stelle einen Zettel mit dem, was belegbar ist:
+  `total_cost_usd: null`, `team_versuch: "verworfen"`, gemessene Dauer.
+  **Nicht geschätzt — sichtbar gemacht.**
+
+### Fixed
+
+- **`kosten.py summe` zählte ein unlesbares Log still als 0.0000 (`BL-46`).**
+  Das ist der Pfad, den Live-Kontostand, `--budget` und die Pro-Lauf-/
+  Pro-Stufe-Deckel benutzen: Der Abo-Gegenwert von 47 Minuten fiel aus **jedem**
+  Kostenabschluss, der Deckel bekam auf diese Hälfte keinen Griff, und die Stufe
+  erschien als die **billigste** der Kaskade, obwohl sie als teuerste angesetzt
+  war. **Neu:** Die Zahl auf stdout bleibt unverändert (Aufrufer parsen sie), der
+  Hinweis geht nach stderr — „N verworfener Versuch(e), zusammen 47 min, Kosten
+  UNBEKANNT".
+- **`ledger-pruefen` schlug wegen desselben Logs dauerhaft falschen Alarm
+  (`BL-46`).** P2 meldete die Kaskade als verdächtig, nannte zwei Ursachen, von
+  denen keine zutraf, und empfahl als Abhilfe `--ersetzen` — eine Handlung, die
+  nach `BL-5` den Altwert vernichtet. Der Wächter empfahl also, Geld zu
+  verlieren, und es gab **keinen dokumentierten Weg**, den Rest loszuwerden.
+  **Neu:** Unarchivierte Logs **ohne Kostenbeleg** (Ersatzzettel oder kaputt)
+  sind ein Hinweis statt einer Warnung und nennen den Weg heraus; der
+  `BL-5`-Fall (echtes unarchiviertes Log) bleibt unverändert eine Warnung.
+  `--rollen-abschluss` archiviert Ersatzzettel **mit** (sie können nicht doppelt
+  zählen) und sagt beim Buchen, dass der Betrag nachweislich unvollständig ist;
+  eine wirklich unlesbare Datei bleibt liegen — mit genanntem Ausweg.
+- **Ein Sweep ohne Fund war von einem abgebrochenen Sweep nicht zu
+  unterscheiden (`BL-47`).** Im Feld: Marv, 9 Minuten, **3,1418 USD**, eine
+  einzige committete Datei (ein Sondenskript), null Beutebuch-Zeilen — und
+  trotzdem Commit-Botschaft „neue Funde/Reproducer" plus Protokollzeile „Funde
+  committet. Übergabe an Frank." Inhaltlich war das Nichtfinden richtig; der
+  Fund ist die **Ununterscheidbarkeit**: Eine read-only-Rolle hat weder
+  Statuswechsel noch Produktivdiff, an dem sie sonst auffiele. **Neu:**
+  [`redteam.sh`](team/redteam.sh) zählt die **wirklichen** neuen Funde
+  (`next-id` vorher gegen nachher — die Zahl lag längst vor) und schreibt sie in
+  Commit-Botschaft **und** Protokoll: „1 neuer Fund" / „keine neuen Funde",
+  „Geprüft, KEINE neuen Funde … Keine Übergabe an Frank." Dazu im Sweep-Auftrag
+  die fehlende Pflicht: Ein Wegwerf-Skript wird **gelöscht** oder als
+  `HM-<Nr>`-Reproducer **benannt** — was in `tests/` bleibt, braucht einen Namen
+  und einen Fund.
+- **Die Abo-Key-Startwarnung zeigte nach einem API-Fallback auf die falsche
+  Ursache (`BL-48`).** Sie empfahl, den Key „aus `.bashrc`" zu nehmen — dort lag
+  keiner. Gesetzt hatte ihn der API-Fallback der **vorigen Stufe** im selben
+  Prozessbaum. Weil die Warnung nur **einmal pro Prozessbaum** feuert,
+  verbrauchte der Fehlalarm zusätzlich genau das Fenster, das dem echten Fall
+  zusteht (dort real ~13,8 USD Leerlauf über API). **Neu:**
+  `team_resolve_auth_mode` markiert einen **selbst geladenen** Key
+  (`TEAM_KEY_AUS_FALLBACK`); die Meldung sagt dann, was wirklich passiert ist,
+  und **verbraucht das Warnfenster nicht**.
+
+### Changed
+
+- **Zentrale Werte werden gegengeprobt, nicht gegrept (`BL-49`).** Neue Regel in
+  den bauenden Briefings (Ralph, Frank) und in der Aushärtungs-Checkliste: Wer
+  eine Konstante/einen Default/einen Schwellwert ändert, fährt sie probeweise
+  gegen **zwei fremde Werte** (höher/niedriger), lässt die Suite laufen und
+  setzt den Wert **nachweislich zurück**. Grund: Eine *arithmetische* Kopplung
+  ist per Textsuche unauffindbar — im Feld fand `grep` nach Name und altem Wert
+  **fünf** Stellen, das Verstellen **sieben**; die zwei zusätzlichen wären beim
+  nächsten Tweak an unerklärlicher Stelle rot geworden.
+- **Der Closeout pflegt jetzt auch die Gegenrichtung (`BL-50`, Stufe 1).**
+  Erledigte Backlog-Einträge abzutragen funktionierte; **nichts** pflegte die
+  Stellen, die den Backlog **zitieren** — Skizzen und Kandidatenlisten
+  begründen ihre offenen Fragen mit Backlog-Nummern und veralten still. Der
+  Fehler schlägt beim **Vorlegen der Kandidaten** zu, also nachdem eine Option
+  formuliert wurde, die es nicht mehr gibt (im Feld: drei Kaskaden lang eine
+  Prämisse, die der zitierte Eintrag selbst widerlegte). **Neu:** Pflichtzeile in
+  Abschnitt 4 der Abschluss-Gliederung *(„Welche offenen Punkte hat dieser Lauf
+  **nebenbei** eingelöst, und wer zitiert sie?")* — in der Gliederung selbst, nicht
+  nur in der Prosa daneben —, dazu die Schreibweise `Kit-BL-<N>` für fremde
+  Backlog-Nummern. **Offen bleibt Stufe 2**, der maschinelle Lint: Roh gemessen
+  lag seine Trefferquote bei ~40 % (sechs von zehn Markierungen waren legitime
+  Rückblicke); roh ausgeliefert wäre er die Falle aus `BL-14` — eine Warnung, die
+  bei jedem Aufruf erscheint und zum Wegsehen erzieht.
+- **Sechs neue Testdateien, 267 statt 232 Testfälle.** Jeder Eintrag mit
+  Gegenprobe: Mit zurückgerollten Quellen fallen **25** der neuen Zusicherungen,
+  keine bestehende. `BL-41`, `BL-47` und der Abschlusspfad von `BL-46` werden
+  über die **wirkliche Bedienoberfläche** geprüft (`ralph.sh`/`harry.sh` gegen
+  ein Wegwerf-Repo mit gestubbter CLI), nicht nur auf Bibliotheksebene.
+
 ## [2.4.4] — 2026-08-02
 
 **Zwei Kennzahlen, die im Closeout das Falsche behaupteten.**

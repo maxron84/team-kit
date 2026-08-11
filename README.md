@@ -128,11 +128,11 @@ entry/                  Entrypoints — landen in der Wurzel des Zielprojekts
 └── team.config.sh      ALLE Projektwerte an einer Stelle
 
 team/                   Team-Namensraum — landet als team/ im Zielprojekt
-├── lib.sh              871 Z — Auth, Guard, Budget, 429-Mechanik, Kosten
+├── lib.sh             1159 Z — Auth, Guard, Budget, 429-Mechanik, Kosten
 ├── redteam.sh          Gemeinsame Sweep-Logik von Harry und Marv
-├── tools/              kosten.py (1381 Z), beutebuch.py (286 Z)
+├── tools/              kosten.py (1569 Z), beutebuch.py (286 Z)
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-└── tests/              35 Testdateien, 214 Testfälle
+└── tests/              44 Testdateien, 267 Testfälle
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
 install.sh              Der Installer
@@ -192,7 +192,7 @@ Produktivcode bleiben, wie sie sind — nichts Stack-Fremdes landet darin.
   die alle vier Phasen in **einem** Durchlauf schafft — die Fixphase des ersten
   Laufs starb an `BL-1`, Frank lief danach über `halbautomatik.sh`.
 - **Selbstverifikation**: `./kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 214 Tests. `pytest team/tests` **im Kit-Repo**
+  Wegwerf-Repo und fährt dort die 267 Tests. `pytest team/tests` **im Kit-Repo**
   schlägt dagegen erwartungsgemäß fehl — die Tests setzen die installierte
   Ablage voraus (Entrypoints in der Wurzel statt unter `entry/`).
 - **Guard-Tests nur in Wegwerf-Repos.** Nie im echten Projekt.

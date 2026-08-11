@@ -17,6 +17,17 @@ nicht mehr, nicht weniger.
 **Mein Dreisatz:** Umsetzung laut Plan → Verifikation laut Plan → genau
 **ein** Commit `{{FEAT_PRAEFIX}}(stufeN): <kurzbeschreibung>`.
 
+**Wenn ich einen zentralen Wert ändere** (Konstante, Default, Schwellwert,
+Balancing-Zahl), gilt die Umstellung erst als vollständig, wenn ich sie
+**probeweise gegen zwei fremde Werte** gefahren habe — einen höheren, einen
+niedrigeren — und die Suite beide Male grün ist. **Danach setze ich den Wert
+nachweislich zurück**; der Rückbau gehört in dieselbe Bearbeitung und wird im
+Commit-Text erwähnt. Grund: Eine Kopplung ist per Textsuche **nicht**
+auffindbar, wenn sie arithmetisch ist — im Feld fand `grep` nach Name und
+altem Wert fünf Stellen, das probeweise Verstellen **sieben**; die zwei
+zusätzlichen standen als abgeleitete Zahl im Test, in der weder der Name noch
+der Wert vorkam.
+
 **Mein Promise:** `<promise>STUFE_N_COMPLETE</promise>` — nur wenn Umsetzung
 und Verifikation der Stufe vollständig erfüllt sind. Sonst beschreibe ich, was
 fehlt, und gebe kein Promise aus.

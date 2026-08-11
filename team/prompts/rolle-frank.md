@@ -14,6 +14,15 @@ ohne Dreisatz zählt nicht als erledigt.
 2. CHANGELOG-Eintrag unter `[Unreleased]` → `### Fixes` anlegen (Was + Warum).
 3. Backlog/Beutebuch pflegen: Status auf `erledigt (Frank-Fix, <commit>)`.
 
+**Wenn mein Fix einen zentralen Wert ändert** (Konstante, Default,
+Schwellwert, Balancing-Zahl), gilt er erst als vollständig, wenn ich den Wert
+**probeweise gegen zwei fremde Werte** gefahren habe — einen höheren, einen
+niedrigeren — und die Suite beide Male grün ist. **Danach setze ich den Wert
+nachweislich zurück**; der Rückbau gehört in dieselbe Bearbeitung und wird im
+Commit-Text erwähnt. Grund: Eine Kopplung ist per Textsuche **nicht**
+auffindbar, wenn sie arithmetisch ist — im Feld fand `grep` nach Name und
+altem Wert fünf Stellen, das probeweise Verstellen **sieben**.
+
 **Mein Promise:** `<promise>FRANK_FIX_COMPLETE</promise>` — nur wenn alle drei
 Schritte des Dreisatzes erfüllt sind. Sonst beschreibe ich das Hindernis und
 gebe kein Promise aus.

@@ -124,6 +124,25 @@ team_auth_mode_effektiv() {
 team_warnung_abo_key() {
     if [ -n "${ANTHROPIC_API_KEY:-}" ] \
         && [ "${TEAM_ABO_KEY_WARNUNG:-1}" != "0" ] \
+        && [ "${TEAM_ABO_KEY_WARNUNG_GEZEIGT:-0}" != "1" ] \
+        && [ "${TEAM_KEY_AUS_FALLBACK:-0}" = "1" ]; then
+        # BL-48 (Feld K29/136): Der Key stammt NICHT aus der Umgebung des
+        # Menschen, sondern aus einem API-Fallback derselben Prozesskette —
+        # team_resolve_auth_mode hat ihn selbst exportiert und dort bleibt er
+        # für die Folgestufe stehen. Die .bashrc-Empfehlung unten zeigt dann
+        # auf eine Datei, in der nichts steht, und beschreibt eine Ursache, die
+        # nicht vorlag; im Feld wurde real per /proc/<pid>/environ nachgesehen.
+        # Deshalb: eigener Satz, der sagt was wirklich passiert ist — und
+        # KEIN TEAM_ABO_KEY_WARNUNG_GEZEIGT. Das eine Warnfenster pro
+        # Prozessbaum gehört dem echten Fall (Key aus .bashrc, ~13,8 USD
+        # Leerlauf über API), nicht diesem Fehlalarm.
+        echo "Hinweis: ANTHROPIC_API_KEY liegt in der Prozess-Umgebung, gesetzt vom API-Fallback" >&2
+        echo "  eines vorigen Aufrufs (nicht aus .bashrc). Er wird für diesen Abo-Aufruf" >&2
+        echo "  unmittelbar entfernt — kein Handlungsbedarf (BL-48)." >&2
+        return 0
+    fi
+    if [ -n "${ANTHROPIC_API_KEY:-}" ] \
+        && [ "${TEAM_ABO_KEY_WARNUNG:-1}" != "0" ] \
         && [ "${TEAM_ABO_KEY_WARNUNG_GEZEIGT:-0}" != "1" ]; then
         echo "WARNUNG: AUTH_MODE=abo, aber ANTHROPIC_API_KEY liegt in der Prozess-Umgebung —" >&2
         echo "  die Claude-CLI kann dann den (teuren) API-Weg dem Abo vorziehen." >&2
@@ -146,6 +165,11 @@ team_resolve_auth_mode() {
                 if [ -r "$keyfile" ]; then
                     ANTHROPIC_API_KEY="$(head -n1 "$keyfile" | tr -d '[:space:]')"
                     export ANTHROPIC_API_KEY
+                    # BL-48: Merken, dass DIESE Kette den Key gesetzt hat. Ein
+                    # späterer Abo-Aufruf im selben Prozessbaum erbt ihn und
+                    # bekäme sonst die .bashrc-Warnung für eine Ursache, die
+                    # nie vorlag (siehe team_warnung_abo_key).
+                    export TEAM_KEY_AUS_FALLBACK=1
                 else
                     echo "FEHLER: AUTH_MODE=api, aber weder ANTHROPIC_API_KEY gesetzt noch $keyfile lesbar." >&2
                     return 1
@@ -237,6 +261,59 @@ team_429_sleep() {
     sleep "$sekunden"
 }
 
+# team_versuch_sichern <rolle> <json-datei> <dauer-sekunden>
+# BL-46 (Feld K29/135, 2026-08-10): Ein gescheiterter Abo-Anlauf hinterließ ein
+# Log von 0 Byte — nach 47 Minuten Laufzeit. Eine Quittung über null ist von
+# „hat nichts gekostet" nicht zu unterscheiden: `kosten.py summe` addierte
+# stillschweigend 0.0000, der Pro-Stufe-Deckel bekam auf diese Hälfte keinen
+# Griff, und die Stufe erschien in der Kostentabelle als die BILLIGSTE der
+# Kaskade, obwohl sie als teuerste angesetzt war. Wer diese Tabelle später als
+# Vergleichsband liest, schreibt eine Zahl fort, die eine halbe Stufe beschreibt.
+#
+# Deshalb: Ist das Versuchslog nicht als JSON lesbar, tritt an seine Stelle ein
+# ERSATZZETTEL mit dem, was belegbar ist — Dauer und die ausdrückliche Aussage
+# „Kosten unbekannt". NICHT geschätzt: Der Zettel behauptet keine Zahl, er macht
+# die Lücke sichtbar. `is_error` bleibt gesetzt, damit der bestehende
+# Fehlerpfad (API-Fallback) unverändert greift — vorher war die unlesbare Datei
+# über team_result_is_error genau das, und das soll sie bleiben.
+# Rückgabe 0, wenn ein Zettel geschrieben wurde (Aufrufer meldet es).
+team_versuch_sichern() {
+    local rolle="$1" out="$2" dauer="$3"
+    python3 - "$out" "$dauer" <<'PY'
+import json, sys
+pfad, dauer = sys.argv[1], sys.argv[2]
+try:
+    with open(pfad) as fh:
+        json.load(fh)
+    sys.exit(1)          # brauchbares Log — nichts zu tun
+except Exception:
+    pass
+try:
+    sekunden = int(float(dauer))
+except (TypeError, ValueError):
+    sekunden = None
+json.dump({"is_error": True, "result": "", "total_cost_usd": None,
+           "team_versuch": "verworfen", "team_dauer_s": sekunden},
+          open(pfad, "w"))
+sys.exit(0)
+PY
+}
+
+# team_versuch_melden <rolle> <json-datei> <start-epoch>
+# Bequemer Aufrufer von team_versuch_sichern: rechnet die Dauer selbst aus und
+# sagt laut, dass hier ein bezahlter Anlauf ohne Quittung liegt. Die Meldung ist
+# der eigentliche Zweck — im Feld fiel die 0-Byte-Datei nur auf, weil ein Mensch
+# den Ordner ansah (BL-46).
+team_versuch_melden() {
+    local rolle="$1" out="$2" t0="$3" dauer
+    dauer=$(( $(date +%s) - t0 ))
+    if team_versuch_sichern "$rolle" "$out" "$dauer"; then
+        echo "[$rolle] VERWORFENER VERSUCH: '$out' war nach ${dauer}s nicht als JSON lesbar (0 Byte/abgeschnitten)." >&2
+        echo "  Ersatzzettel geschrieben — die Dauer ist belegt, die Kosten sind UNBEKANNT und werden" >&2
+        echo "  in keiner Summe geschätzt. Der Aufruf gilt weiter als Fehler (API-Fallback greift)." >&2
+    fi
+}
+
 team_claude() {
     local rolle="$1" modell="$2" out="$3" prompt="$4"
     shift 4
@@ -257,11 +334,13 @@ PY
     AUTH_MODE="$TEAM_AUTH_USER"
     team_resolve_auth_mode abo || return 1
 
-    local fehler=0 cli_exit=0
+    local fehler=0 cli_exit=0 t0=0
     # Alle Logs DIESES Aufrufs — auch die gescheiterten Vorversuche. TEAM_LAST_COST
     # ist die Summe darueber, nicht nur der letzte Versuch (BL-55).
     local -a versuch_logs=()
+    t0="$(date +%s)"
     claude -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
+    team_versuch_melden "$rolle" "$out" "$t0"
     versuch_logs+=("$out")
     if team_bewerte_ergebnis "$rolle" "$out" "$cli_exit"; then fehler=0; else fehler=1; fi
 
@@ -285,7 +364,9 @@ PY
         team_resolve_auth_mode || return 1
         out="${out%.json}-api-fallback.json"
         cli_exit=0
+        t0="$(date +%s)"
         ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" claude -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
+        team_versuch_melden "$rolle" "$out" "$t0"
         versuch_logs+=("$out")
         if team_bewerte_ergebnis "$rolle" "$out" "$cli_exit"; then fehler=0; else fehler=1; fi
     fi
@@ -313,6 +394,7 @@ PY
 
             out="${out%.json}-429-retry${versuch}.json"
             cli_exit=0
+            t0="$(date +%s)"
             # Wie beim API-Fallback oben: Key explizit voranstellen, falls der
             # aktuelle AUTH_MODE api ist (sonst greift die CLI ggf. die Abo-Session).
             if [ "$AUTH_MODE" = "api" ]; then
@@ -320,6 +402,7 @@ PY
             else
                 claude -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
             fi
+            team_versuch_melden "$rolle" "$out" "$t0"
             versuch_logs+=("$out")
             if team_bewerte_ergebnis "$rolle" "$out" "$cli_exit"; then fehler=0; else fehler=1; fi
 
@@ -367,6 +450,71 @@ except Exception:
 result = data.get("result", "") or ""
 sys.exit(0 if f"<promise>{sys.argv[2]}</promise>" in result else 1)
 ' "$1" "$2"
+}
+
+# --- Vierte Fehlerklasse: Sitzung beendet, Auftrag unquittiert (BL-41) --------
+# Neben Erfolg, echtem Fehler und Session-Limit gibt es einen vierten Ausgang:
+# Die Rolle beendet ihre Antwort freiwillig, ohne den Auftrag zu quittieren —
+# typischerweise, weil sie einen Hintergrund-Task/Monitor/Wakeup gestartet hat
+# und auf eine Benachrichtigung wartet, die in einer headless-Sitzung nie
+# eintrifft. Das Ergebnis-JSON trägt dann `subtype: "success"`, `is_error:
+# false`, `stop_reason: end_turn` — für team_result_is_error ein sauberer
+# Erfolg. Nur das fehlende Promise verrät den Fall, und die bisherige Meldung
+# ("KEIN Promise — Log prüfen") schickte den Menschen ins Log, das Erfolg meldet,
+# und von dort in den PLAN statt in den Fehlermodus.
+#
+# Vier Vorfälle im Feld (K27/125, K28/131, K28/133, K33/154), zusammen
+# 19,47 USD — jedes Mal für Arbeit, die fertig und grün war. Der Neustart wirft
+# sie weg; von Hand quittieren rettet sie (im Feld belegt, Commit 458f660).
+#
+# WARUM NICHT AUF VOKABELN GEPRÜFT WIRD: Die drei Vorfälle formulierten es
+# dreimal anders ("background pytest run and monitor", "fallback check /
+# wakeup", "set up a monitor to catch its completion") — die vierte Variante
+# schreibt jemand morgen. Geprüft wird deshalb die STRUKTUR: kein Promise, aber
+# das Log erklärt sich selbst für erfolgreich.
+#
+# Abgrenzung zur Prävention (SMOKE_ZEILE, oben): Die Auflage steht am
+# Prompt-Anfang, der Vorfall passiert nach 65 Turns — Prävention per Prompt
+# skaliert gegenläufig zur Stufenlänge. Sie senkt die Wahrscheinlichkeit; DIESE
+# Erkennung fängt den Rest.
+
+# team_result_meldet_erfolg <json-datei>
+# Rückgabe 0, wenn das Log sich selbst für erfolgreich erklärt (lesbar,
+# is_error falsch und subtype "success" — beides muss zutreffen, sonst wäre
+# jedes lesbare Log ohne is_error-Feld schon ein "Erfolg").
+team_result_meldet_erfolg() {
+    python3 -c '
+import json, sys
+try:
+    data = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(1)
+if data.get("is_error"):
+    sys.exit(1)
+sys.exit(0 if data.get("subtype") == "success" else 1)
+' "$1"
+}
+
+# team_quittung_fehlt_melden <rolle> <json-datei> <was-fehlt> <weiterweg…>
+# Druckt die BENANNTE Meldung für den Fall oben. Der Aufrufer ruft sie NUR,
+# wenn die Quittung fehlt; ob der Fall vorliegt, entscheidet diese Funktion.
+# Rückgabe 0 = benannter Fall erkannt und gemeldet, 1 = gewöhnlicher Fehlschlag
+# (der Aufrufer meldet dann wie bisher).
+team_quittung_fehlt_melden() {
+    local rolle="$1" out="$2" was="$3"; shift 3
+    team_result_meldet_erfolg "$out" || return 1
+    echo "[$rolle] STUFE FERTIG, QUITTUNG FEHLT (BL-41) — $was" >&2
+    echo "  Das Log meldet sich selbst als Erfolg (subtype=success, is_error=false), gibt aber" >&2
+    echo "  keine Quittung. Das ist der benannte vierte Ausgang: Die Sitzung hat sich beendet," >&2
+    echo "  meist im Warten auf einen Hintergrund-Task/Monitor/Wakeup, den es headless nicht gibt." >&2
+    echo "  Die Arbeit ist in diesem Fall meist FERTIG — viermal im Feld, 19,47 USD. Prüfe in" >&2
+    echo "  dieser Reihenfolge, BEVOR du neu startest (ein Neulauf wirft die bezahlte Arbeit weg):" >&2
+    local schritt
+    for schritt in "$@"; do
+        echo "    - $schritt" >&2
+    done
+    echo "  Log: $out" >&2
+    return 0
 }
 
 # --- Rollen-Briefings (Stufe 90) ----------------------------------------------

@@ -12,6 +12,9 @@
 # Exit:     0 = Kaskade fertig/Cap erreicht · 1 = Fehler
 #           42 = Session-Limit — Stufe pausiert (kein Fehler, State steht),
 #                siehe team_claude()/CLAUDE.md „Loop-Mechanik & Auth"
+#           43 = Stufe fertig, Quittung fehlt (BL-41): Das Log meldet Erfolg,
+#                das Promise fehlt. Arbeit meist FERTIG — nicht neu bauen,
+#                sondern prüfen und von Hand quittieren (Meldung nennt den Weg)
 set -euo pipefail
 cd "$(dirname "$0")"
 # shellcheck source=team/lib.sh
@@ -107,6 +110,17 @@ Regeln:
         echo "$NEXT" > "$STATE_FILE"
         echo "Ralph: Promise erhalten — Stufe $STUFE abgeschlossen, weiter mit $NEXT."
     else
+        # BL-41: Erst prüfen, ob der BENANNTE vierte Ausgang vorliegt (Sitzung
+        # beendet, Log meldet Erfolg, Quittung fehlt) — sonst führt die
+        # generische Meldung den Menschen in den Plan statt in den Fehlermodus.
+        if team_quittung_fehlt_melden ralph "$TEAM_LAST_OUT" \
+            "Stufe $STUFE hat kein <promise>STUFE_${STUFE}_COMPLETE</promise> gegeben." \
+            "git log -1 && git status — hat Ralph committet?" \
+            "${TEAM_SMOKE_TEST:-(kein Smoke-Test konfiguriert)} — ist der Baum grün?" \
+            "Beides ja: von Hand quittieren — \`echo $((STUFE + 1)) > $STATE_FILE\`, dann erneut starten." \
+            "Sonst: Stufe $STUFE regulär neu bauen."; then
+            exit 43
+        fi
         echo "Ralph: KEIN Promise für Stufe $STUFE — Loop stoppt. Log prüfen: $TEAM_LAST_OUT" >&2
         exit 1
     fi
