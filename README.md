@@ -1,17 +1,23 @@
 # T.E.A.M.-Starterkit
 
-Ein vollständiges KI-Rollenteam auf Knopfdruck in ein neues Software-Projekt.
+Ein vollständiges KI-Rollenteam auf Knopfdruck in ein Software-Projekt —
+frisch angelegt **oder seit Jahren gewachsen**.
 
 ```bash
 cd ~/Source/team-kit
-bash install.sh ~/Source/mein-neues-projekt
+bash install.sh ~/Source/mein-projekt
 ```
 
 *(Kurzform von überall: `bash ~/.claude/scripts/team-init.sh <zielpfad>`)*
 
-Ein Befehl, sieben Fragen, danach liegen 61 Dateien im Zielprojekt: der gehärtete
-Bau-Loop, das Read-Only Red Team, der Fixer, der Forensiker, die Kostenmechanik,
-die Bootstrap-Dateien, die Bedienanleitung `TEAM.md` und 32 Regressionstests.
+Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 73 Dateien im
+Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
+Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
+`TEAM.md` und 267 Regressionstests.
+
+**Stand: Version 2.5.0** (2026-08-11). Für ein Bestandsprojekt gibt es zwei
+Einstellungen, die anders gesetzt werden müssen als im Default — siehe
+[In ein bestehendes Projekt](#in-ein-bestehendes-projekt).
 
 ---
 
@@ -39,6 +45,12 @@ scharf gelaufen ist (2026-07-10 bis 2026-08-01): reale Red-Team-Funde `HM-1`…`
 Frank-Fixes, wirksamer Read-Only-Guard. Er wurde **nicht neu geschrieben**, sondern
 übernommen und parametrisiert — die teuer gelernten Details bleiben erhalten.
 
+Seither läuft das Kit im Feldprojekt `team-kit_project_platformer`: **33 Kaskaden,
+157 Stufen, 93 Red-Team-Funde `HM-1`…`HM-93`, 49 `vollautomatik.sh`-Läufe,
+rund 1265 USD Abo-Gegenwert — vollständig geledgert** (Stand 2026-08-11). Aus
+diesem Betrieb kommen die Backlog-Einträge `BL-1`…`BL-50`; was davon behoben ist,
+steht im [CHANGELOG](CHANGELOG.md), der Rest in [plans/backlog.md](plans/backlog.md).
+
 Die konzeptionelle Grundlage steht im [LLM-Wiki](../llm-wiki/wiki/vorlagen/claude-md-ki-team.md).
 
 ## Installation
@@ -65,15 +77,16 @@ nachgezogen werden, sonst läuft die Doku der Mechanik hinterher.
 **Voraussetzungen**: Zielpfad ist ein Git-Repository, `claude` im PATH,
 Auth eingerichtet (`bash ~/.claude/scripts/team-auth-setup.sh`).
 
-**Die sieben Fragen:**
+**Das Aufnahme-Interview:**
 
 | Frage | Default | Bedeutung |
 |---|---|---|
 | Projektname | Ordnername | erscheint in Berichten und Ledger |
-| Produktivcode-Ordner | `src/` | **tabu** für Harry, Marv, Axel |
+| Produktivcode-Ordner | `src/` | **tabu** für Harry, Marv, Axel — und zugleich der **Prüfumfang** des Sweeps (`BL-52`) |
 | Test-Ordner | `tests/` | wo Reproducer hindürfen (bleibt **deinem** Testrunner) |
-| Plan-Ordner | `plans/` | Kaskaden, Beutebuch, Akten, Roadmap |
+| Plan-Ordner | `plans/` | Kaskaden, Beutebuch, Akten, Roadmap — **Schreibzone** der Read-Only-Rollen (`BL-51`) |
 | Smoke-Test-Befehl | *(leer)* | **der wichtigste Wert**, siehe unten |
+| Tech-Stack | *TODO-Zeile* | eine Zeile für `CLAUDE.md`, reine Doku |
 | Domänen | `produkt` | Arbeitsstränge **dieses** Projekts; eine reicht (`BL-9`) |
 | Architekt committet selbst? | `n` | sonst liefert er die Befehle zum Kopieren |
 
@@ -116,6 +129,42 @@ echo plans/ralph-kaskade-1-….md > .ralph-plan
 > Im Ursprungsprojekt hat das einmal die gesamte frisch gebaute Team-Infrastruktur
 > gelöscht. Seitdem ist der Rollback chirurgisch — aber die Regel bleibt.
 
+## In ein bestehendes Projekt
+
+**Das T.E.A.M. kann sich in eine gewachsene Codebasis einarbeiten** — es braucht
+kein leeres Repo. Die Rollen lesen den Bestand, der Architekt plant gegen ihn,
+und das Kit legt sich **neben** deinen Code: eigene Entrypoints, ein `team/`-
+Namensraum, `TEAM.md`. Deine Ordner werden nicht angefasst, dein Testrunner
+bleibt deiner, der Smoke-Test ist im Bestandsprojekt meist schon vorhanden —
+genau das Feld, das im leeren Projekt zuerst fehlt.
+
+> **Belegstand.** Nachgewiesen ist bisher die **Analyse**, nicht der scharfe
+> Lauf: Am fremden Bestandsprojekt `Project-Family-ERP` (Python/tkinter,
+> Einstiegspunkt in der Wurzel, `src/`, `bin/`, gewachsene `tests/`, belegtes
+> `plans/`) hat eine Architekten-Sitzung 2026-08-11 **nur gelesen, nicht
+> installiert** und dabei die beiden Stellen gefunden, an denen die Defaults
+> nur für ein Neuprojekt taugen (`BL-51`, `BL-52`). Beide sind **offen**; bis
+> ein Bestandslauf sie im Feld bestätigt hat, sind sie hier von Hand zu
+> umgehen.
+
+**Zwei Werte anders setzen als im Default:**
+
+| Falle | Warum sie nur im Bestand greift | Was du tust |
+|---|---|---|
+| **Plan-Ordner** (`BL-51`) | Die Guard-Whitelist ist **positiv**: Harry, Marv und Axel dürfen im Plan-Ordner schreiben und löschen. Zeigt er auf ein bereits belegtes `plans/` oder `docs/`, bekommen die drei ausdrücklich als Read-Only geführten Rollen stillschweigend Schreibrecht auf Bestandsdokumente — **der Guard schlägt dort nie an**. Der Installer prüft nicht, ob der Ordner leer ist. | Einen **eigenen, leeren** Ordner angeben, z. B. `team-plans/`. |
+| **Prüfumfang** (`BL-52`) | Der Sweep-Auftrag zeigt auf `TEAM_PRODUKTIVCODE` — **einen einzelnen Ordner**. Im Bestand liegen Einstiegspunkt (`main.py`), Build- und Deploy-Skripte regelmäßig daneben und werden nie angegriffen. Ein Sweep, der `src/` sauber meldet, sieht dann aus wie ein sauberes Projekt. Das ist **keine** Guard-Lücke (außerhalb der Whitelist bleibt jede Änderung eine Verletzung), sondern eine Prüfumfangs-Lücke. | Den Code außerhalb im **Fokus-String** der Kaskade benennen, bis `TEAM_PRODUKTIVCODE` eine Leerliste akzeptiert. |
+
+**Erste Kaskade im Bestand:** den Fokus auf die **Naht** zwischen Neuem und
+Gewachsenem legen, nicht auf die neue Mechanik. Feld-Gegenprobe aus zwei
+aufeinanderfolgenden Kaskaden (`BL-43`): Der Naht-Fokus brachte fünf Funde,
+allesamt Wechselwirkungen; die Vorkaskade mit Fokus auf die neue Mechanik fand
+dieselbe Fundklasse **nicht** — sie fiel erst dem Menschen in der Abnahme auf
+und kostete vier Fixes außerhalb des Loops.
+
+**Der Rest ist wie im Neuprojekt** — mit einer Betonung: Vor dem ersten
+Guard-Lauf committen ist im Bestand keine Formalie, sondern der Unterschied
+zwischen „uncommittete Team-Dateien" und „der Guard räumt sie weg".
+
 ## Aufbau des Kits
 
 ```
@@ -156,7 +205,10 @@ projekt/
 ```
 
 **Das Kit fasst deine Ordner nicht an.** `tests/`, `scripts/` und dein
-Produktivcode bleiben, wie sie sind — nichts Stack-Fremdes landet darin.
+Produktivcode bleiben, wie sie sind — nichts Stack-Fremdes landet darin. Die
+**eine** Ausnahme, und sie ist gewollt: In Test- und Plan-Ordner *dürfen* die
+Rollen schreiben (Reproducer, Kaskadenakten). Im Bestandsprojekt ist das der
+Grund für den eigenen Plan-Ordner — siehe `BL-51` oben.
 
 ## Betrieb
 
@@ -172,7 +224,13 @@ Produktivcode bleiben, wie sie sind — nichts Stack-Fremdes landet darin.
 | `python3 team/tools/beutebuch.py list` | Alle Funde mit Status |
 
 **Exit-Codes**: `0` = durchgelaufen · `1` = echter Fehler · `3` = nichts zu tun ·
-`42` = Session-Limit, Lauf pausiert (kein Fehler, kein Datenverlust).
+`42` = Session-Limit, Lauf pausiert (kein Fehler, kein Datenverlust) ·
+`43` = **Stufe fertig, Quittung fehlt** (`BL-41`, seit 2.5.0): Die Rolle hat
+gearbeitet und das Log meldet Erfolg, aber das Promise fehlt — meist, weil sie
+auf einen Hintergrund-Task wartete, den es headless nicht gibt. **Nicht neu
+bauen.** Erst prüfen: committet? Suite grün? Dann von Hand quittieren. Im Feld
+kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
+(zusammen 19,47 USD).
 
 ## Grenzen
 
@@ -180,17 +238,17 @@ Produktivcode bleiben, wie sie sind — nichts Stack-Fremdes landet darin.
   sind Python und liegen unter `team/tools/`. Das ist eine Abhängigkeit der
   **Team-Infrastruktur** — auf einer Ebene mit `git`, `flock` und der Agenten-CLI —
   nicht deines Projekts. Verifiziert in Go-, Rust- und PHP-Projektstrukturen.
-- **Im Feld gelaufen (2026-08-01).** Im Projekt `team-kit_project_platformer`
-  ist eine vollständige Kaskade 1 durchgefahren: Ralph baute drei Stufen
-  (je ~0,72 USD), Harry und Marv sweepten und fanden `HM-1`…`HM-3`, Frank fixte
-  alle drei, und der Read-Only-Guard griff nachweislich. Gesamtaufwand der
-  Kaskade: 9,42 USD, vollständig geledgert.
-  **Der Lauf deckte drei Kit-Fehler auf**, die im Kit selbst behoben sind:
-  eine tote Fixphase (`BL-1`, 2.2.1) sowie zwei Löcher in der Kostenerfassung
-  (`BL-4`, `BL-5`, behoben in 2.3.0).
-  **Noch nicht gelaufen**: Axel (Forensiker) und eine `vollautomatik.sh`-Kaskade,
-  die alle vier Phasen in **einem** Durchlauf schafft — die Fixphase des ersten
-  Laufs starb an `BL-1`, Frank lief danach über `halbautomatik.sh`.
+- **Im Feld gelaufen, aber an einem Projekttyp.** Die 33 Kaskaden stammen aus
+  **einem** Feldprojekt (Python/pygame, von null aufgebaut). Jeder Lauf hat
+  Kit-Fehler zutage gefördert — `BL-1`…`BL-50`, von der toten Fixphase über
+  zwei Löcher in der Kostenerfassung bis zur vierten Fehlerklasse „Stufe
+  fertig, Quittung fehlt". Die Erwartung ist nicht, dass das aufhört; die
+  Mechanik dafür ist der Rückkanal Feld → Kit.
+- **Bestandsprojekte sind analysiert, nicht gefahren.** Siehe
+  [In ein bestehendes Projekt](#in-ein-bestehendes-projekt): `BL-51` und
+  `BL-52` sind offen, die Umgehung steht dort.
+- **Noch nie gelaufen: Axel.** Der Forensiker hat in 33 Kaskaden keine einzige
+  Ledgerzeile — sein Pfad ist getestet, aber nicht im Feld belegt.
 - **Selbstverifikation**: `./kit-test.sh` installiert das Kit in ein
   Wegwerf-Repo und fährt dort die 267 Tests. `pytest team/tests` **im Kit-Repo**
   schlägt dagegen erwartungsgemäß fehl — die Tests setzen die installierte
