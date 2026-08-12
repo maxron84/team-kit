@@ -32,6 +32,23 @@ INVENTAR = WURZEL / "doku" / "regel-inventar.md"
 
 KLASSEN = ("NORM", "HERLEITUNG", "HISTORIE")
 
+# Traeger = die Datei, die eine Aussage AUSLIEFERT. Solange alles in der
+# Regeldatei stand, war die Spalte ueberfluessig; mit dem Dreischnitt (BL-56)
+# wandern Regeln in die Rollen-Briefings, und ohne Traeger-Spalte ginge jede
+# verschobene NORM rot — der Gurt wuerde den Umbau blockieren, statt ihn
+# sichtbar zu machen. Die Spalte macht den Wechsel zu dem, was A.10 verlangt:
+# einer BENANNT nachgezogenen Inventarzeile.
+TRAEGER = {
+    "Regeldatei": REGELDATEI,
+    "TEAM.md": WURZEL / "bootstrap" / "TEAM.md",
+    "rolle-architekt": WURZEL / "team" / "prompts" / "rolle-architekt.md",
+    "rolle-ralph": WURZEL / "team" / "prompts" / "rolle-ralph.md",
+    "rolle-harry": WURZEL / "team" / "prompts" / "rolle-harry.md",
+    "rolle-marv": WURZEL / "team" / "prompts" / "rolle-marv.md",
+    "rolle-frank": WURZEL / "team" / "prompts" / "rolle-frank.md",
+    "rolle-axel": WURZEL / "team" / "prompts" / "rolle-axel.md",
+}
+
 
 def normalisiere(text):
     """Vergleichsform für Zitate.
@@ -68,19 +85,20 @@ def abschnitte_der_regeldatei(text):
 
 
 def lies_inventar(text):
-    """Tabellenzeilen `| Abschnitt | Klasse | Zitat |` einlesen."""
+    """Tabellenzeilen `| Abschnitt | Klasse | Träger | Zitat |` einlesen."""
     eintraege = []
     for nr, zeile in enumerate(text.splitlines(), 1):
         if not zeile.startswith("|"):
             continue
         felder = [f.strip() for f in zeile.strip().strip("|").split("|")]
-        if len(felder) != 3:
+        if len(felder) != 4:
             continue
-        abschnitt, klasse, zitat = felder
+        abschnitt, klasse, traeger, zitat = felder
         if klasse not in KLASSEN:
             continue  # Kopf- und Trennzeilen
         eintraege.append({"zeile": nr, "abschnitt": abschnitt,
-                          "klasse": klasse, "zitat": zitat})
+                          "klasse": klasse, "traeger": traeger,
+                          "zitat": zitat})
     return eintraege
 
 
@@ -95,7 +113,6 @@ def main():
     regeltext = REGELDATEI.read_text(encoding="utf-8")
     inventartext = INVENTAR.read_text(encoding="utf-8")
 
-    regel_norm = normalisiere(regeltext)
     eintraege = lies_inventar(inventartext)
     if not eintraege:
         print("✗ Inventar enthält keine auswertbaren Zeilen", file=sys.stderr)
@@ -103,12 +120,28 @@ def main():
 
     fehler = []
 
-    # 1. Jedes NORM-Zitat muss wörtlich in der Regeldatei stehen.
+    # Träger einmal einlesen und normalisiert vorhalten.
+    inhalt = {}
+    for name, pfad in TRAEGER.items():
+        if pfad.is_file():
+            inhalt[name] = normalisiere(pfad.read_text(encoding="utf-8"))
+
+    # 1. Jedes NORM-Zitat muss wörtlich in SEINEM Träger stehen.
     normen = [e for e in eintraege if e["klasse"] == "NORM"]
     for e in normen:
-        if normalisiere(e["zitat"]) not in regel_norm:
+        traeger = e["traeger"]
+        if traeger not in TRAEGER:
             fehler.append(
-                f"NORM-Zitat steht nicht mehr in der Regeldatei "
+                f"unbekannter Träger „{traeger}\" (Inventar Z. {e['zeile']}) — "
+                f"erlaubt: {', '.join(sorted(TRAEGER))}")
+            continue
+        if traeger not in inhalt:
+            fehler.append(f"Träger-Datei fehlt: "
+                          f"{TRAEGER[traeger].relative_to(WURZEL)}")
+            continue
+        if normalisiere(e["zitat"]) not in inhalt[traeger]:
+            fehler.append(
+                f"NORM-Zitat steht nicht (mehr) in „{traeger}\" "
                 f"(Inventar Z. {e['zeile']}, Abschnitt „{e['abschnitt']}\"):\n"
                 f"      {e['zitat'][:120]}")
 
