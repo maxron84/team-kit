@@ -18,7 +18,7 @@ Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
 `TEAM.md` und 280 Regressionstests.
 
-**Stand: Version 2.6.0** (2026-08-12). Zieht das Team in eine gewachsene
+**Stand: Version 2.7.0** (2026-08-12). Zieht das Team in eine gewachsene
 Codebasis ein, fragt und warnt der Installer von sich aus — siehe
 [In ein bestehendes Projekt](#in-ein-bestehendes-projekt).
 

@@ -4,6 +4,11 @@ Dieses Projekt wird von einem **Team aus KI-Rollen** vorangetrieben, das du als
 *Strippenzieher* steuerst. Diese Datei ist für **dich**, den Menschen.
 Die Regeln für die KI-Rollen stehen in [`CLAUDE.md`](CLAUDE.md).
 
+**Neu hier?** Erst die Warnung direkt darunter — sie ist die teuerste des
+Kits. Dann [Worum es überhaupt geht](#worum-es-überhaupt-geht) und das
+[Glossar](#glossar--die-begriffe-in-einem-satz); danach ergibt der Rest sich
+von selbst.
+
 ---
 
 ## ⚠️ Zuerst: committen
@@ -22,6 +27,63 @@ Team-Infrastruktur gelöscht, weil sie noch nicht committet war.
 
 Der Rollback ist heute chirurgisch (er trifft nur die konkret gelisteten Pfade),
 aber die Regel bleibt: **erst committen, dann starten.**
+
+---
+
+## Worum es überhaupt geht
+
+Du kannst eine KI bitten, ein Feature zu bauen. Das funktioniert — bis das
+Projekt groß genug ist, dass „bau mal" nicht mehr reicht. Dann passieren drei
+Dinge: Die KI baut Dinge vorweg, die noch niemand entschieden hat. Sie findet
+ihre eigenen Fehler nicht, weil sie ihren eigenen Code für richtig hält. Und
+niemand weiß hinterher, was das gekostet hat.
+
+Das T.E.A.M. beantwortet genau diese drei Punkte — mit **Arbeitsteilung statt
+einer allmächtigen Instanz**:
+
+- **Geplant wird vor dem Bauen.** Eine **Kaskade** ist ein Bauabschnitt, der
+  vorher in nummerierte **Stufen** zerlegt wurde. Der Bau-Loop arbeitet sie
+  stur der Reihe nach ab und darf **nichts vorwegnehmen**. Das klingt
+  bürokratisch und ist der Kern: Es macht den Fortschritt prüfbar und den
+  Abbruch billig.
+- **Finder ≠ Fixer.** Wer einen Fehler sucht, darf ihn nicht beheben. Das Red
+  Team (Harry, Marv) kommt **read-only** ins Projekt — es kann gar nicht
+  „schnell mal reparieren" und damit den Fund verwischen. Ein Fund wird
+  aufgeschrieben und **übergeben**. Wer prüft, was er selbst gebaut hat, findet
+  vorhersehbar wenig.
+- **Jeder Lauf kostet Geld, also wird es gezählt.** Budget-Deckel brechen
+  Ausreißer ab, und nach jedem Lauf wandern die tatsächlichen Kosten in eine
+  committete Datei. Ohne diesen Schritt ist der Verbrauch nach zwei Wochen
+  blind.
+
+**Deine Rolle dabei:** Du entscheidest Richtung und Prioritäten, gibst
+Kaskaden frei und schaltest sie scharf. Bauen, Angreifen, Fixen und Ermitteln
+machen die KI-Rollen. Deshalb *„Toll, Ein Anderer Macht's"* — mit voller
+Absicht.
+
+---
+
+## Glossar — die Begriffe in einem Satz
+
+Diese Wörter tauchen überall auf; hier stehen sie einmal an einem Ort.
+
+| Begriff | Bedeutung |
+|---|---|
+| **Strippenzieher** | Du. Der Mensch, der Richtung, Prioritäten und Freigaben bestimmt. |
+| **Kaskade** | Ein geplanter Bauabschnitt, zerlegt in nummerierte Stufen. Die Einheit, in der hier gearbeitet und abgerechnet wird. |
+| **Stufe** | Ein Schritt einer Kaskade — ein Commit, ein grüner Smoke-Test. |
+| **Aushärten** | Eine lose Skizze in einen festen Plan mit Stufennummern und Deckel überführen. Macht der Architekt, erst auf deine Freigabe. |
+| **Scharfschalten** | Den Zeiger `.ralph-plan` auf den fertigen Plan setzen, damit der Loop ihn baut. Bleibt **deine** Handarbeit. |
+| **Promise** | Die Quittung einer Rolle am Ende ihrer Arbeit (`<promise>STUFE_N_COMPLETE</promise>`). Fehlt sie, gilt die Stufe als unfertig. |
+| **Sweep** | Ein Durchlauf des Red Teams: Harry und Marv suchen Schwachstellen, ohne etwas zu ändern. |
+| **Fund** | Eine entdeckte Schwachstelle, dokumentiert mit Reproschritten. Trägt eine Nummer (`HM-7`). |
+| **Beutebuch** | Die Datei, in der alle Funde stehen — samt Status, wer gerade dran ist. Das Übergabeprotokoll zwischen den Rollen. |
+| **Ermittlungsakte** | Axels Bericht zu einem harten Fall: Ursache plus Fix-Plan (`AX-3`). Er denkt, Frank tippt. |
+| **Guard** | Die Schutzmechanik, die nach jedem Lauf prüft, ob eine read-only Rolle doch geschrieben hat — und das zurücksetzt. |
+| **Cap** | Ein Budget-Deckel in USD. **Soft-Cap** warnt, **Hard-Cap** bricht ab. |
+| **Ledger** | Die committete Kostendatei (`.budget-ledger`). Die maschinelle Wahrheit darüber, was gelaufen ist. |
+| **Closeout** | Der Pflichtabschluss nach jedem Lauf: Protokoll schreiben, Kosten buchen. Ohne ihn sind die Kosten blind. |
+| **Backlog** | Kleinkram und Schulden, die keine eigene Kaskade rechtfertigen. |
 
 ---
 

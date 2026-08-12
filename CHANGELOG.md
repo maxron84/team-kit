@@ -2,9 +2,38 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
-## [Unreleased]
+## [2.7.0] — 2026-08-12
+
+**Die Regeldatei wird geschnitten, und ein Gurt bewacht den Schnitt (`BL-56`).**
+
+Jede Rolle startet über `claude -p`; Claude Code lädt dabei automatisch die
+installierte `CLAUDE.md`. Bei ~25 Rollenaufrufen je Kaskade waren das rund
+**990k Token allein für Regeln** — und die Rolle bekam ~11k Token Projektregeln
+gegen ~500 Token eigenen Auftrag. Der Dreischnitt bringt die Vorlage auf
+**26.985 B (−31,6 %)** nach dem Grundsatz **„das WANN gilt für alle, das WIE nur
+für einen"**. Zuschnitt am Ende: **Rollen-Regeln → Regeldatei, Bedienung →
+`TEAM.md`, Bau → Anhang A.**
+
+Damit dabei nichts still verschwindet, entstand zuerst das **Regel-Inventar**:
+73 klassifizierte Aussagen, 61 davon geltendes Recht mit wörtlichem Zitat und
+Trägerdatei, geprüft als Stufe 7 in `kit-test.sh`.
+
+Dazu ein **Einstieg für Entwickler, die das Kit nicht kennen** — bisher benutzte
+`TEAM.md` ein Dutzend Fachbegriffe, ohne sie irgendwo zu erklären.
 
 ### Added
+
+- **Einstieg für Neulinge in `TEAM.md` — „Worum es überhaupt geht" plus
+  Glossar.** Bisher traf ein Entwickler, der das Kit nicht kennt, in den **ersten
+  32 Zeilen** auf vier undefinierte Begriffe (*Guard*, *Sweep* in Zeile 17;
+  *Kaskade*, *Cap*, *Closeout* in Zeile 32) — und ein Glossar gab es nirgends,
+  obwohl *Kaskade* 14×, *Guard* 9×, *Beutebuch* und *Ledger* je 7× vorkommen. Neu
+  sind ein Abschnitt, der das Modell in drei Punkten erklärt (geplant wird vor dem
+  Bauen · Finder ≠ Fixer · jeder Lauf wird gezählt), und ein Glossar mit 15
+  Begriffen à einem Satz. Beides steht **nach** der Commit-Warnung: Ein Test
+  besteht darauf, dass die teuerste Warnung des Kits im Kopfbereich bleibt — er
+  hat den ersten Entwurf zu Recht abgelehnt. `TEAM.md` wird vom Menschen gelesen,
+  nicht bei jedem Rollenaufruf geladen; der Zuwachs kostet kein Token-Budget.
 
 - **Regel-Inventar — der Sicherheitsgurt vor dem Umbau der Regeldatei
   (`BL-56`, Vorbedingung aus A.10).** [`doku/regel-inventar.md`](doku/regel-inventar.md)
