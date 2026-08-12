@@ -289,19 +289,32 @@ PY
     # wegklickt.
     kopf "Bitte von Hand abgleichen"
     ABGLEICH=0
+    # Die gerenderte Vorlage BLEIBT LIEGEN, wenn es eine Abweichung gibt, und
+    # der Hinweis nennt einen Befehl, der sich kopieren laesst. Vorher stand
+    # dort `diff <(…)` — ein Platzhalter fuer "die mit deinen Werten gerenderte
+    # Vorlage", ohne zu sagen, wie man sie rendert. Der Hinweis verlangte damit
+    # genau die Arbeit, die er abnehmen wollte (Bauart BL-44: angekuendigt, aber
+    # nicht am wirksamen Ort ausfuehrbar).
+    # Ablage im Temp-Bereich, NICHT im Projekt: Eine uncommittete Datei
+    # ausserhalb der Whitelist sieht fuer den Read-Only-Guard aus wie ein
+    # Regelbruch.
+    ABGLEICH_DIR="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-abgleich-XXXXXX")"
     for paar in "bootstrap/TEAM.md:TEAM.md" "bootstrap/CLAUDE.md.vorlage:CLAUDE.md"; do
-        quelle="$KIT/${paar%%:*}"; ziel="$ZIEL/${paar##*:}"
+        quelle="$KIT/${paar%%:*}"; ziel="$ZIEL/${paar##*:}"; name="${paar##*:}"
         [ -f "$ziel" ] || continue
-        gerendert="$(mktemp)"
+        gerendert="$ABGLEICH_DIR/$name"
         cp "$quelle" "$gerendert"
         fuelle_abs "$gerendert"
         if ! diff -q "$gerendert" "$ziel" >/dev/null 2>&1; then
-            echo "  ! ${paar##*:} weicht von der Kit-Fassung ab"
-            echo "      diff <(…) $ZIEL/${paar##*:}  —  Kit-Vorlage: $KIT/${paar%%:*}"
+            zeilen="$(diff "$gerendert" "$ziel" | grep -c '^[<>]' || true)"
+            echo "  ! $name weicht von der Kit-Fassung ab ($zeilen Zeilen)"
+            echo "      diff -u \"$gerendert\" \"$ziel\""
             ABGLEICH=$((ABGLEICH + 1))
+        else
+            rm -f "$gerendert"
         fi
-        rm -f "$gerendert"
     done
+    rmdir "$ABGLEICH_DIR" 2>/dev/null || true
     if [ "$ABGLEICH" -eq 0 ]; then
         gruen "  ✓ nichts offen"
     else
@@ -309,6 +322,10 @@ PY
         gelb "  gefuellte TODOs). Entscheidend ist, ob dir REGELN aus der neuen"
         gelb "  Kit-Fassung fehlen — die Mechanik ist aktualisiert, die Regeln"
         gelb "  im Projekt sind es nicht (das war die Haelfte von BL-4)."
+        echo "  Die gerenderte Kit-Fassung liegt unter $ABGLEICH_DIR/ bereit;"
+        echo "  sie traegt bereits deine Werte. Temporaer — nach dem Abgleich"
+        echo "  loeschen. Behalte deine Projekt-Spezifika und eigene Regeln,"
+        echo "  uebernimm den Rest."
     fi
 
     kopf "Selbsttest"

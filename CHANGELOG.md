@@ -2,6 +2,26 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- **Der Abgleich-Hinweis beim `--update` war nicht ausführbar.** Er nannte
+  `diff <(…) <zieldatei>` — das `<(…)` stand für „die mit deinen Werten
+  gerenderte Kit-Vorlage", nur sagte er nirgends, wie man die rendert. Der
+  Befehl ließ sich nicht kopieren, und der Hinweis verlangte damit genau die
+  Arbeit, die er abnehmen wollte. Bauart `BL-44`: angekündigt, aber nicht am
+  wirksamen Ort ausführbar. Der Installer legt die gerenderte Fassung jetzt in
+  einem Temp-Verzeichnis ab, **behält sie bei einer Abweichung** und druckt den
+  fertigen Befehl samt Zeilenzahl der Unterschiede. **Bewusst nicht im Projekt
+  abgelegt:** Eine uncommittete Datei außerhalb der Whitelist sieht für den
+  Read-Only-Guard aus wie ein Regelbruch.
+
+  Sechs neue Prüfungen in `kit-test.sh` Stufe 5 sichern das ab — dass kein
+  Platzhalter mehr auftaucht, dass die genannte Datei existiert, gefüllte Werte
+  trägt, der Befehl wirklich läuft, und dass sie **außerhalb** des Projekts
+  liegt. Gegenprobe gefahren: Rückbau auf den alten Hinweis → rot.
+
 ## [2.7.0] — 2026-08-12
 
 **Die Regeldatei wird geschnitten, und ein Gurt bewacht den Schnitt (`BL-56`).**

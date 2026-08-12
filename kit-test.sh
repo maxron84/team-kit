@@ -150,6 +150,38 @@ pruefe "lokal abweichende Infrastruktur wird gemeldet" \
        "$(grep -c 'bitte gegenlesen' "$ZIEL/.update.log")" "1"
 pruefe "keine offenen Platzhalter in den Briefings" \
        "$(grep -rlE '\{\{[A-Z_]+\}\}' "$ZIEL/team/prompts/" | wc -l)" "0"
+# Der Abgleich-Hinweis muss AUSFUEHRBAR sein, nicht nur gut gemeint. Vorher
+# stand dort `diff <(…)` — ein Platzhalter, den niemand kopieren kann, fuer
+# genau die Arbeit, die der Hinweis abnehmen wollte (Bauart BL-44).
+pruefe "Abgleich-Hinweis nennt keinen Platzhalter mehr" \
+       "$(grep -c 'diff <(…)' "$ZIEL/.update.log")" "0"
+ABGLEICH_BEFEHL="$(grep -oE 'diff -u "[^"]+" "[^"]+"' "$ZIEL/.update.log" | head -1)"
+pruefe "Abgleich-Hinweis nennt einen diff-Befehl" \
+       "$([ -n "$ABGLEICH_BEFEHL" ] && echo ja || echo nein)" "ja"
+# Die genannte gerenderte Vorlage muss existieren UND gefuellt sein — ein Pfad
+# auf eine geloeschte Datei waere derselbe Fehler in gruen.
+ABGLEICH_QUELLE="$(printf '%s' "$ABGLEICH_BEFEHL" | sed -E 's/^diff -u "([^"]+)".*/\1/')"
+pruefe "die genannte Kit-Fassung liegt wirklich da" \
+       "$([ -f "$ABGLEICH_QUELLE" ] && echo da || echo weg)" "da"
+# `grep -c` gibt bei null Treffern "0" aus UND Exit 1 zurueck — ein `|| echo 99`
+# haengt seinen Wert deshalb an die 0 an, statt sie zu ersetzen. `|| true`
+# schluckt nur den Exit; fehlt die Datei, bleibt die Ausgabe leer und die
+# Pruefung schlaegt korrekt fehl.
+pruefe "und traegt die Projektwerte statt Platzhalter" \
+       "$(grep -cE '\{\{[A-Z_]+\}\}' "$ABGLEICH_QUELLE" 2>/dev/null || true)" "0"
+pruefe "der Befehl laeuft und zeigt Unterschiede" \
+       "$(eval "$ABGLEICH_BEFEHL" >/dev/null 2>&1; echo $?)" "1"
+# Nicht im Projekt ablegen: Eine uncommittete Datei ausserhalb der Whitelist
+# sieht fuer den Read-Only-Guard aus wie ein Regelbruch.
+pruefe "die Kit-Fassung liegt NICHT im Projekt" \
+       "$(case "$ABGLEICH_QUELLE" in "$ZIEL"/*) echo drin ;; *) echo draussen ;; esac)" "draussen"
+# Aufraeumen NUR bei einem plausiblen Pfad. Ohne diese Schranke waere
+# ABGLEICH_QUELLE bei einem fehlgeschlagenen Match leer, `dirname ""` ergaebe
+# "." — und `rm -rf .` raeumte das Arbeitsverzeichnis ab.
+case "$ABGLEICH_QUELLE" in
+    */team-kit-abgleich-*/*) rm -rf "$(dirname "$ABGLEICH_QUELLE")" ;;
+    *) gelb "  (kein Abgleich-Verzeichnis erkannt — nichts aufgeraeumt)" ;;
+esac
 [ "$UPDATE_FEHLER" -eq 0 ] || exit 1
 
 # BL-51/BL-52: Die beiden Bestandsprojekt-Befunde. Der Installer ist die einzige
