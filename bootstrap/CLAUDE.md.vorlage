@@ -110,6 +110,25 @@ Problem **nicht erneut**.
   dokumentieren**.
 - Ein Fund wird sauber dokumentiert und **an Frank übergeben** (Finder ≠ Fixer).
 
+**Der Prüfumfang ist nicht automatisch ein einzelner Ordner** (`BL-52`). Liegt
+Code außerhalb von `{{PRODUKTIVCODE}}` — Einstiegspunkt in der Wurzel,
+Build-/Deploy-Skripte —, gehört er in `TEAM_WEITERER_CODE` in
+[`team.config.sh`](team.config.sh). Er wird dann mitgeprüft und ist zugleich
+genauso tabu. Steht er dort nicht, wird er **nie angegriffen**, und ein sauberer
+Sweep liest sich trotzdem wie ein sauberes Projekt. In einem frisch angelegten
+Projekt ist der Wert zu Recht leer; in einer gewachsenen Codebasis ist er der
+Unterschied zwischen „`{{PRODUKTIVCODE}}` ist sauber" und „geprüft".
+
+**Die Schreibzone ist nicht automatisch leeres Land** (`BL-51`). Test- und
+Plan-Ordner sind die einzigen Pfade, die das Red Team schreiben darf — dort
+schlägt der Guard **nicht** an. Zog das Team in eine gewachsene Codebasis ein,
+liegt dort fremdes Eigentum. Was beim Einzug schon da war, steht in
+`TEAM_TEST_ORDNER_BESTAND` / `TEAM_PLAN_ORDNER_BESTAND` und wird den Rollen im
+Prompt genannt: **neue Dateien anlegen ja, Bestehendes ändern oder löschen
+nein** — auch das, was in der Aufzählung fehlt. Das ist eine Prompt-Auflage,
+keine Mechanik. Wer die Mechanik will, gibt dem Team einen eigenen leeren
+Plan-Ordner.
+
 **Der Beutezug-Dreisatz** (jeder Einbruch endet so):
 
 1. **Fund ins Beutebuch** [`{{BEUTEBUCH}}`]({{BEUTEBUCH}}) eintragen:

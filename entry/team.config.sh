@@ -28,6 +28,44 @@ TEAM_PRODUKTIVCODE="${TEAM_PRODUKTIVCODE%/}/"
 TEAM_TEST_ORDNER="${TEAM_TEST_ORDNER%/}/"
 TEAM_PLAN_ORDNER="${TEAM_PLAN_ORDNER%/}/"
 
+# --- Prüfumfang außerhalb des Produktivcode-Ordners (BL-52) -------------------
+# Leerliste von Dateien UND Ordnern, die zum Prüfumfang des Red Teams gehören,
+# aber nicht unter TEAM_PRODUKTIVCODE liegen: Einstiegspunkt in der Repo-Wurzel,
+# Build- und Deploy-Skripte. Beispiel: "main.py bin/ deploy/".
+#
+# In einem frisch angelegten Projekt bleibt der Wert LEER — dort liegt alles
+# unter TEAM_PRODUKTIVCODE, und die Annahme trägt. In einer gewachsenen
+# Codebasis ist er der Unterschied zwischen „src/ ist sauber" und „das Projekt
+# ist geprüft": Der Code, der als erstes läuft, liegt dort regelmäßig daneben
+# und wurde bis 2.6.0 nie angegriffen, ohne dass es jemandem auffiel.
+#
+# WICHTIG — das erweitert den PRÜFUMFANG, nicht die Schreibrechte: Diese Pfade
+# sind für Harry, Marv und Axel genauso tabu wie TEAM_PRODUKTIVCODE. Die
+# Guard-Whitelist unten bleibt unverändert (nur Test- und Plan-Ordner).
+# KEIN abschließender Schrägstrich nötig; die Liste wird nicht normalisiert,
+# weil sie auch einzelne Dateien enthalten darf.
+TEAM_WEITERER_CODE="${TEAM_WEITERER_CODE:-{{WEITERER_CODE}}}"
+
+# --- Bestand in der Schreibzone der Read-Only-Rollen (BL-51) ------------------
+# Test- und Plan-Ordner sind die EINZIGEN Pfade, die Harry, Marv und Axel
+# schreiben dürfen (siehe Whitelist unten) — dort schlägt der Guard also nicht
+# an. Zog das Team in eine gewachsene Codebasis ein, lagen in diesen Ordnern
+# schon fremde Dateien: eine gewachsene Testsuite, fachliche Dokumente.
+#
+# Was hier steht, nennen die Rollen-Prompts ausdrücklich als fremdes Eigentum:
+# neue Dateien anlegen ja, Bestehendes ändern oder löschen nein. Das ist eine
+# PROMPT-Auflage, keine Mechanik — der Guard kann es nicht erzwingen, weil die
+# Pfade auf seiner Whitelist stehen. Wer die Mechanik will, gibt dem Team einen
+# eigenen, leeren Plan-Ordner (z. B. team-plans/).
+#
+# Leerliste, vom Installer beim Einzug gefüllt (bis zu zwölf Einträge, dann
+# gekürzt — der Prompt ergänzt ohnehin „und alles, was du dort nicht selbst
+# angelegt hast"). Leer = der Ordner war leer, der Normalfall im neuen Projekt.
+# Von Hand nachtragen ist ausdrücklich erlaubt. Dateinamen mit Leerzeichen
+# werden nicht unterstützt.
+TEAM_TEST_ORDNER_BESTAND="${TEAM_TEST_ORDNER_BESTAND:-{{TEST_BESTAND}}}"
+TEAM_PLAN_ORDNER_BESTAND="${TEAM_PLAN_ORDNER_BESTAND:-{{PLAN_BESTAND}}}"
+
 # Abgeleitete Pfade — nur ändern, wenn die Struktur wirklich abweicht.
 TEAM_BEUTEBUCH="${TEAM_BEUTEBUCH:-${TEAM_PLAN_ORDNER}beutebuch.md}"
 TEAM_ERMITTLUNGSAKTEN="${TEAM_ERMITTLUNGSAKTEN:-${TEAM_PLAN_ORDNER}ermittlungsakten}"

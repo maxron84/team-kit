@@ -34,10 +34,38 @@ echo "=== $ROLLE: Sweep über $RANGE_DESC ==="
 OUT="$LOG_DIR/${ROLLE}-$(date +%Y%m%d-%H%M%S).json"
 NEXT_ID="$($TEAM_BEUTEBUCH_TOOL next-id)"
 
+# BL-52: Der Prüfumfang endete bis 2.6.0 an TEAM_PRODUKTIVCODE — einem
+# EINZELNEN Ordner. In einer gewachsenen Codebasis liegen Einstiegspunkt und
+# Build-Skripte daneben; genau der Code, der als erstes läuft, wurde nie
+# angegriffen, und ein sauberer Sweep las sich trotzdem wie ein sauberes
+# Projekt. TEAM_WEITERER_CODE holt sie in den Auftrag zurück (leer im
+# Neuprojekt, dann ändert sich am Wortlaut nichts).
+PRUEFUMFANG="${TEAM_PRODUKTIVCODE}"
+TABU="${TEAM_PRODUKTIVCODE}**"
+if [ -n "${TEAM_WEITERER_CODE:-}" ]; then
+    PRUEFUMFANG="${TEAM_PRODUKTIVCODE} sowie ${TEAM_WEITERER_CODE}"
+    TABU="${TEAM_PRODUKTIVCODE}** und ${TEAM_WEITERER_CODE}"
+fi
+
 if [ -n "${TEAM_REDTEAM_FOCUS:-}" ]; then
     SCOPE_LINE="Prüfe den STABILEN Code im folgenden Fokus-Bereich ($RANGE_DESC): $TEAM_REDTEAM_FOCUS"
 else
-    SCOPE_LINE="Prüfe den STABILEN Code der App unter ${TEAM_PRODUKTIVCODE} ($RANGE_DESC)."
+    SCOPE_LINE="Prüfe den STABILEN Code der App unter ${PRUEFUMFANG} ($RANGE_DESC)."
+fi
+
+# BL-51: Test- und Plan-Ordner sind die einzigen Pfade, die diese Rolle
+# schreiben darf — zog das Team in eine gewachsene Codebasis ein, liegt dort
+# fremdes Eigentum, auf das der Guard NICHT anschlägt. Der Prompt ist die
+# einzige Stelle, an der die Grenze überhaupt gezogen werden kann.
+BESTAND_ZEILE=""
+if [ -n "${TEAM_PLAN_ORDNER_BESTAND:-}${TEAM_TEST_ORDNER_BESTAND:-}" ]; then
+    BESTAND_ZEILE="
+BESTAND — NICHT DEIN EIGENTUM: In deinen Schreibordnern lagen beim Einzug des Teams
+schon fremde Dateien${TEAM_PLAN_ORDNER_BESTAND:+ (${TEAM_PLAN_ORDNER}: ${TEAM_PLAN_ORDNER_BESTAND})}${TEAM_TEST_ORDNER_BESTAND:+ (${TEAM_TEST_ORDNER}: ${TEAM_TEST_ORDNER_BESTAND})}.
+Du legst dort NUR NEUE Dateien an. Du änderst und löschst nichts, was du nicht
+selbst angelegt hast — auch nicht, was in dieser Aufzählung fehlt. Der Guard
+lässt dich hier gewähren; die Grenze hältst du selbst.
+"
 fi
 
 PROMPT="$(team_briefing "$ROLLE")
@@ -45,8 +73,9 @@ PROMPT="$(team_briefing "$ROLLE")
 Auftrag: $AUFTRAG
 $SCOPE_LINE
 
-EISERNE REGEL: Du änderst NIEMALS Produktivcode (${TEAM_PRODUKTIVCODE}**). Schreiben NUR unter
+EISERNE REGEL: Du änderst NIEMALS Produktivcode (${TABU}). Schreiben NUR unter
 ${TEAM_TEST_ORDNER} (Reproducer, klar als xfail/Skip markiert) und ${TEAM_PLAN_ORDNER}. Du committest NICHT.
+${BESTAND_ZEILE}
 
 Führe KEINE Reproducer/Skripte aus und stelle KEINE Rückfrage zum Ausführen —
 du bist strikt read-only (der Guard erzwingt das ohnehin). Dokumentiere

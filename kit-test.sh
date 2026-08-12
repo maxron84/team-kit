@@ -7,11 +7,11 @@
 #
 # WARUM ES DIESES SKRIPT GIBT
 #
-# Die Regressionstests unter team/tests/ (Stand 2.5.0: 267 Fälle in 44 Dateien)
+# Die Regressionstests unter team/tests/ (Stand 2.6.0: 280 Fälle in 46 Dateien)
 # setzen die INSTALLIERTE Ablage voraus: Entrypoints in der Repo-Wurzel,
 # CLAUDE.md und team.config.sh mit gefüllten Platzhaltern. Im Kit-Repo liegen
 # sie unter entry/ und bootstrap/ — `pytest team/tests` schlägt hier deshalb
-# fehl (Stand 2.5.0: 19 Fehler, 240 grün, 8 übersprungen), ohne dass
+# fehl (Stand 2.6.0: 21 Fehler, 240 grün, 19 übersprungen), ohne dass
 # irgendetwas kaputt wäre. Ergebnis: Ein im Kit committeter Fix war bis zur
 # nächsten Feldinstallation ungeprüft. Genau so ging BL-1 (tote Fixphase) durch
 # drei Releases.
@@ -56,14 +56,14 @@ aufraeumen() {
 }
 trap aufraeumen EXIT
 
-kopf "1/4 — Wegwerf-Repo anlegen"
+kopf "1/6 — Wegwerf-Repo anlegen"
 git -C "$ZIEL" init -q
 # Lokale Identität, damit der Lauf auch ohne globale Git-Config committen kann.
 git -C "$ZIEL" config user.email "kit-test@localhost"
 git -C "$ZIEL" config user.name  "Kit-Selbsttest"
 gruen "  ✓ $ZIEL"
 
-kopf "2/4 — Kit installieren (nicht-interaktiv)"
+kopf "2/6 — Kit installieren (nicht-interaktiv)"
 # Ohne TEAM_INIT_*-Vorgaben: genau die Defaults, die ein Anwender bekäme.
 if ! bash "$KIT/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.log" 2>&1; then
     rot "  ✗ install.sh schlug fehl:"
@@ -72,7 +72,7 @@ if ! bash "$KIT/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.log" 2>
 fi
 gruen "  ✓ $(grep -oE 'Fertig — [0-9]+ Dateien geschrieben' "$ZIEL/.install.log" | head -1)"
 
-kopf "3/4 — Ungefüllte Platzhalter suchen"
+kopf "3/6 — Ungefüllte Platzhalter suchen"
 # Ein übrig gebliebenes {{...}} heißt: Der Installer kennt die Datei nicht oder
 # der Platzhalter wurde umbenannt. Beides fällt sonst erst im Feld auf, wo die
 # Briefings die Pfade des Ursprungsprojekts nennen würden — falsche Guard-Grenze.
@@ -85,7 +85,7 @@ if [ -n "$RESTE" ]; then
 fi
 gruen "  ✓ keine"
 
-kopf "4/5 — Regressionstests in der Installation"
+kopf "4/6 — Regressionstests in der Installation"
 # Vor dem Testlauf committen — dieselbe Reihenfolge, die TEAM.md dem Anwender
 # vorschreibt. Ein Test, der den Git-Zustand liest, sieht damit den echten.
 git -C "$ZIEL" add -A
@@ -105,7 +105,7 @@ fi
 # einmaliges Handprotokoll: Wir tun so, als sei das Projekt in Betrieb
 # (Ledger, Kaskadenstand, Beutebuch-Fund, eigener Smoke-Test), fahren das
 # Update und pruefen, dass davon NICHTS angefasst wurde.
-kopf "5/5 — Update-Pfad schuetzt Projektdaten"
+kopf "5/6 — Update-Pfad schuetzt Projektdaten"
 echo '2026-08-01 | 1 | 9.4204 | abo | produkt | roles | Lauf' >> "$ZIEL/.budget-ledger"
 echo '### HM-1 — echter Fund' >> "$ZIEL/plans/beutebuch.md"
 echo '5' > "$ZIEL/.ralph-state"
@@ -151,6 +151,82 @@ pruefe "lokal abweichende Infrastruktur wird gemeldet" \
 pruefe "keine offenen Platzhalter in den Briefings" \
        "$(grep -rlE '\{\{[A-Z_]+\}\}' "$ZIEL/team/prompts/" | wc -l)" "0"
 [ "$UPDATE_FEHLER" -eq 0 ] || exit 1
+
+# BL-51/BL-52: Die beiden Bestandsprojekt-Befunde. Der Installer ist die einzige
+# Stelle, an der sie auffallen koennen — in der Installation liegt er nicht mehr,
+# also gehoert der Nachweis hierher und nicht in team/tests/.
+kopf "6/6 — Einzug in eine gewachsene Codebasis (BL-51, BL-52)"
+BESTAND_REPO="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-bestand.XXXXXX")"
+bestand_aufraeumen() { [ "$BEHALTEN" -eq 1 ] || rm -rf "$BESTAND_REPO"; }
+trap 'aufraeumen; bestand_aufraeumen' EXIT
+git -C "$BESTAND_REPO" init -q
+git -C "$BESTAND_REPO" config user.email "kit-test@localhost"
+git -C "$BESTAND_REPO" config user.name  "Kit-Selbsttest"
+# Die Lage aus Project-Family-ERP: belegtes plans/, gewachsene Testsuite,
+# Einstiegspunkt in der Wurzel.
+mkdir -p "$BESTAND_REPO/plans" "$BESTAND_REPO/tests" "$BESTAND_REPO/src"
+echo '# Architektur' > "$BESTAND_REPO/plans/family-erp-architecture.md"
+echo '# Refactoring' > "$BESTAND_REPO/plans/codebase-refactoring-plan.md"
+echo 'def test_alt(): pass' > "$BESTAND_REPO/tests/test_scanner.py"
+echo 'print("start")' > "$BESTAND_REPO/main.py"
+git -C "$BESTAND_REPO" add -A
+git -C "$BESTAND_REPO" commit -q -m "Bestand vor dem Einzug"
+
+if ! bash "$KIT/install.sh" "$BESTAND_REPO" --nicht-interaktiv \
+        > "$BESTAND_REPO/.install.log" 2>&1; then
+    rot "  ✗ install.sh schlug im Bestandsprojekt fehl:"
+    tail -20 "$BESTAND_REPO/.install.log" >&2
+    exit 1
+fi
+
+BESTAND_FEHLER=0
+b_pruefe() {  # b_pruefe <beschreibung> <ist> <soll>
+    if [ "$2" = "$3" ]; then
+        gruen "  ✓ $1"
+    else
+        rot "  ✗ $1 — erwartet '$3', ist '$2'"
+        BESTAND_FEHLER=1
+    fi
+}
+b_pruefe "belegter Plan-Ordner wird gemeldet" \
+    "$(grep -c "Plan-Ordner 'plans/' ist nicht leer" "$BESTAND_REPO/.install.log")" "1"
+b_pruefe "die Folge wird benannt (Guard schlaegt dort nicht an)" \
+    "$(grep -c 'der Guard schlägt dort NICHT an' "$BESTAND_REPO/.install.log")" "2"
+b_pruefe "belegter Test-Ordner wird gemeldet" \
+    "$(grep -c "Test-Ordner 'tests/' ist nicht leer" "$BESTAND_REPO/.install.log")" "1"
+b_pruefe "Bestandsdokument namentlich genannt" \
+    "$(grep -c 'family-erp-architecture.md' "$BESTAND_REPO/.install.log")" "1"
+# Der Vermerk ist der Traeger: Aus ihm holen die Rollen-Prompts den Bestand.
+b_pruefe "Plan-Bestand steht in team.config.sh" \
+    "$(grep -c 'TEAM_PLAN_ORDNER_BESTAND:-.*codebase-refactoring-plan.md' \
+        "$BESTAND_REPO/team.config.sh")" "1"
+b_pruefe "Test-Bestand steht in team.config.sh" \
+    "$(grep -c 'TEAM_TEST_ORDNER_BESTAND:-.*test_scanner.py' \
+        "$BESTAND_REPO/team.config.sh")" "1"
+b_pruefe "keine offenen Platzhalter" \
+    "$(grep -rlE '\{\{[A-Z_]+\}\}' "$BESTAND_REPO" --exclude-dir=.git \
+        --exclude=.install.log 2>/dev/null | wc -l)" "0"
+# Gegenprobe: Im leeren Repo aus Schritt 2 darf nichts davon erschienen sein —
+# eine Warnung, die immer kommt, erzieht zum Wegsehen (BL-14).
+b_pruefe "im leeren Repo schweigt die Pruefung" \
+    "$(grep -c 'ist nicht leer' "$ZIEL/.install.log")" "0"
+b_pruefe "und meldet die leere Schreibzone ausdruecklich" \
+    "$(grep -c 'nichts fremdes in der Schreibzone' "$ZIEL/.install.log")" "1"
+# BL-52: Der Hinweis auf ungeprueften Wurzel-Code kommt beim Update, weil
+# team.config.sh dort nicht angefasst wird.
+if ! bash "$KIT/install.sh" "$BESTAND_REPO" --update \
+        > "$BESTAND_REPO/.update.log" 2>&1; then
+    rot "  ✗ install.sh --update schlug im Bestandsprojekt fehl:"
+    tail -20 "$BESTAND_REPO/.update.log" >&2
+    exit 1
+fi
+b_pruefe "Update meldet ungeprueften Code in der Wurzel" \
+    "$(grep -c 'Ungeprueft in der Wurzel: main.py' "$BESTAND_REPO/.update.log")" "1"
+b_pruefe "Update erinnert an den Bestand in der Schreibzone" \
+    "$(grep -c 'Bestand in der Schreibzone' "$BESTAND_REPO/.update.log")" "1"
+b_pruefe "im leeren Repo schweigt auch das Update" \
+    "$(grep -c 'Ungeprueft in der Wurzel' "$ZIEL/.update.log")" "0"
+[ "$BESTAND_FEHLER" -eq 0 ] || exit 1
 
 gruen "
 ✓ Kit-Selbstverifikation grün."

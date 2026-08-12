@@ -2,6 +2,87 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.6.0] — 2026-08-12
+
+**Das Kit zieht in gewachsene Codebasen ein (`BL-51`, `BL-52`).**
+
+Beide Befunde stammen aus der Analyse einer fremden Bestandscodebasis
+(`Project-Family-ERP`, 2026-08-11, nur gelesen). Der rote Faden: **Zwei
+tragende Defaults sind Annahmen über ein leeres Repo — und sie scheitern
+lautlos.** Ein belegter Plan-Ordner macht die Read-Only-Rollen zu
+Schreibberechtigten, ohne dass der Guard je anschlägt; ein Prüfumfang aus
+genau einem Ordner lässt den Einstiegspunkt ungeprüft, und der Sweep meldet
+trotzdem „sauber".
+
+### Added
+
+- **`TEAM_WEITERER_CODE` — der Prüfumfang endet nicht mehr am
+  Produktivcode-Ordner (`BL-52`).** Leerliste aus Dateien **und** Ordnern
+  (`"main.py bin/"`), die mitgeprüft werden, ohne unter `TEAM_PRODUKTIVCODE` zu
+  liegen. Sie erscheint in der Scope-Zeile des Sweeps
+  ([`team/redteam.sh`](team/redteam.sh)), in der **eisernen Regel** von Red Team
+  und Axel — mitgeprüft heißt **genauso tabu**, nicht „freigegeben" — und in
+  Franks Fix-Auftrag ([`entry/frank.sh`](entry/frank.sh)), damit er den Fund
+  dort reparieren darf, wo er liegt. Das Aufnahme-Interview fragt danach
+  (neunter Wert); im neuen Projekt bleibt der Wert leer und **kein Wortlaut
+  ändert sich** — dafür gibt es eine eigene Gegenprobe.
+  **Nicht** umgesetzt wurde die Backlog-Skizze, `TEAM_PRODUKTIVCODE` selbst zur
+  Liste zu machen: Der Wert trägt die Invariante „endet auf genau einen
+  Schrägstrich" ([`entry/team.config.sh`](entry/team.config.sh)), an der
+  `**`-Muster, Guard-Meldungen und ein Test-Regex hängen — und eine Liste, die
+  auch einzelne Dateien enthalten darf, kann sie nicht halten.
+- **Der Installer erkennt eine belegte Schreibzone (`BL-51`).** Nach dem
+  Interview prüft er Plan- **und** Test-Ordner auf Inhalt, nennt die gefundenen
+  Dateien und die Folge in einem Satz („Harry, Marv und Axel dürfen in diesem
+  Ordner schreiben und löschen — der Guard schlägt dort NICHT an"), und bietet
+  interaktiv einen anderen Ordner an. **Gewarnt, nicht verboten:** Ein bewusst
+  geteilter Ordner kann legitim sein.
+- **`TEAM_TEST_ORDNER_BESTAND` / `TEAM_PLAN_ORDNER_BESTAND`.** Wer den Ordner
+  behält, bekommt den Bestand in `team.config.sh` vermerkt — und aus dieser
+  Quelle nennen die Rollen-Prompts ihn als **fremdes Eigentum**: neue Dateien
+  anlegen ja, Bestehendes ändern oder löschen nein, „auch nicht, was in dieser
+  Aufzählung fehlt". Der letzte Halbsatz ist tragend: Die Liste ist bei zwölf
+  Einträgen gekürzt und veraltet, sobald jemand eine Datei hinzulegt.
+  **Das ist eine Prompt-Auflage, keine Mechanik** — der Guard kann sie nicht
+  erzwingen, weil die Pfade auf seiner Whitelist stehen. Die Config sagt das an
+  Ort und Stelle und nennt die harte Variante: ein eigener, leerer Plan-Ordner.
+- **`kit-test.sh` fährt einen sechsten Schritt: den Einzug in eine gewachsene
+  Codebasis.** Zweites Wegwerf-Repo mit belegtem `plans/`, gewachsener
+  `tests/`-Suite und `main.py` in der Wurzel — die Lage aus Family-ERP. Zwölf
+  Zusicherungen, darunter beide **Gegenproben** im leeren Repo: Dort schweigen
+  Installer und Update. Eine Warnung, die immer erscheint, erzieht zum
+  Wegsehen (`BL-14`).
+
+### Changed
+
+- **`install.sh --update` schaut auf das, was es nicht anfassen darf.** Es
+  fasst `team.config.sh` weiterhin nicht an, meldet aber (a) den vermerkten
+  Bestand in der Schreibzone und (b) — nur wenn `TEAM_WEITERER_CODE` fehlt und
+  in der Wurzel wirklich Code liegt — die ungeprüften Dateien samt der Zeile,
+  die man einträgt. Gemeldet wird **ausschließlich**, was in der Config steht
+  oder wirklich existiert: Nach dem Einzug ist der Plan-Ordner die
+  Arbeitsfläche des Teams, dort ist „fremd" nicht mehr unterscheidbar.
+- **Doku-Träger nachgezogen:** [`bootstrap/CLAUDE.md.vorlage`](bootstrap/CLAUDE.md.vorlage)
+  (Red-Team-Kapitel: Prüfumfang **und** Schreibzone sind im Bestand keine
+  Selbstverständlichkeit), [`bootstrap/TEAM.md`](bootstrap/TEAM.md) (eigener
+  Abschnitt „Zog das Team in eine gewachsene Codebasis ein?") und die
+  [README](README.md).
+
+### Tests
+
+- **Zwei neue Testdateien, 280 statt 267 Testfälle.**
+  `test_bl52_pruefumfang.py` und `test_bl51_bestandsordner.py` prüfen am
+  **echten Prompt**: `harry.sh` läuft mit gestubbter CLI, die den Prompt
+  wegschreibt. Ein Test gegen den Skript-Quelltext hätte die Kopplung
+  „Wert gesetzt ⇒ steht im Auftrag" nicht gezeigt.
+- **Die Fixtures setzen die Bestandswerte selbst zurück.** Die Config benutzt
+  `${VAR:-default}` — eine **leere** Umgebungsvariable fällt auf den
+  Projektwert zurück. Ohne das wäre die Gegenprobe „ohne Bestand kein Block"
+  in genau den Projekten rot geworden, für die das Feature gebaut ist.
+- **Gegenprobe gefahren:** ohne den Fix 11 der 13 neuen Fälle rot; die zwei
+  Gegenproben (leerer Wert ⇒ unveränderter Wortlaut) bleiben erwartungsgemäß
+  in beiden Richtungen grün.
+
 ## [2.5.0] — 2026-08-11
 
 **Sechs Feldbefunde aus `team-kit_project_platformer` (K29–K33), abgearbeitet.**

@@ -202,6 +202,20 @@ team/                   Team-Infrastruktur (lib, tools, prompts, tests)
 **Einen Wert ändern?** Immer in `team.config.sh`. Er wirkt sofort in allen
 Rollen, ohne Neuinstallation.
 
+### Zog das Team in eine gewachsene Codebasis ein?
+
+Zwei Werte in `team.config.sh` tragen dann Gewicht, die im neuen Projekt leer
+bleiben dürfen:
+
+| Wert | Wozu |
+|---|---|
+| `TEAM_WEITERER_CODE` | Code außerhalb von `{{PRODUKTIVCODE}}`, der mitgeprüft werden soll: Einstiegspunkt in der Wurzel, Build-/Deploy-Skripte. Was hier nicht steht, greift das Red Team **nie** an — und ein sauberer Sweep sieht trotzdem aus wie ein sauberes Projekt (`BL-52`). |
+| `TEAM_TEST_ORDNER_BESTAND` / `TEAM_PLAN_ORDNER_BESTAND` | Was beim Einzug schon in den beiden Schreibordnern lag. Der Guard schlägt dort **nicht** an — Harry, Marv und Axel dürfen dort schreiben und löschen. Die Einträge werden den Rollen im Prompt als fremdes Eigentum genannt: neue Dateien anlegen ja, Bestehendes anfassen nein (`BL-51`). |
+
+Der Installer füllt beides beim Einzug und warnt, wenn Plan- oder Test-Ordner
+belegt sind. **Die harte Variante** bleibt der eigene, leere Plan-Ordner
+(`team-plans/`): Dann ist die Grenze Mechanik statt Prompt-Auflage.
+
 ---
 
 ## Wenn etwas schiefgeht

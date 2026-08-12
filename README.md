@@ -10,13 +10,13 @@ bash install.sh ~/Source/mein-projekt
 
 *(Kurzform von überall: `bash ~/.claude/scripts/team-init.sh <zielpfad>`)*
 
-Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 73 Dateien im
+Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 75 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
-`TEAM.md` und 267 Regressionstests.
+`TEAM.md` und 280 Regressionstests.
 
-**Stand: Version 2.5.0** (2026-08-11). Für ein Bestandsprojekt gibt es zwei
-Einstellungen, die anders gesetzt werden müssen als im Default — siehe
+**Stand: Version 2.6.0** (2026-08-12). Zieht das Team in eine gewachsene
+Codebasis ein, fragt und warnt der Installer von sich aus — siehe
 [In ein bestehendes Projekt](#in-ein-bestehendes-projekt).
 
 ---
@@ -82,7 +82,8 @@ Auth eingerichtet (`bash ~/.claude/scripts/team-auth-setup.sh`).
 | Frage | Default | Bedeutung |
 |---|---|---|
 | Projektname | Ordnername | erscheint in Berichten und Ledger |
-| Produktivcode-Ordner | `src/` | **tabu** für Harry, Marv, Axel — und zugleich der **Prüfumfang** des Sweeps (`BL-52`) |
+| Produktivcode-Ordner | `src/` | **tabu** für Harry, Marv, Axel — und zugleich der **Prüfumfang** des Sweeps |
+| Weiterer Code außerhalb | *(leer)* | Leerliste (`main.py bin/`): Code, der mitgeprüft wird, aber nicht unter dem Produktivcode-Ordner liegt. Im neuen Projekt leer, im Bestand entscheidend (`BL-52`) |
 | Test-Ordner | `tests/` | wo Reproducer hindürfen (bleibt **deinem** Testrunner) |
 | Plan-Ordner | `plans/` | Kaskaden, Beutebuch, Akten, Roadmap — **Schreibzone** der Read-Only-Rollen (`BL-51`) |
 | Smoke-Test-Befehl | *(leer)* | **der wichtigste Wert**, siehe unten |
@@ -138,21 +139,20 @@ Namensraum, `TEAM.md`. Deine Ordner werden nicht angefasst, dein Testrunner
 bleibt deiner, der Smoke-Test ist im Bestandsprojekt meist schon vorhanden —
 genau das Feld, das im leeren Projekt zuerst fehlt.
 
-> **Belegstand.** Nachgewiesen ist bisher die **Analyse**, nicht der scharfe
-> Lauf: Am fremden Bestandsprojekt `Project-Family-ERP` (Python/tkinter,
-> Einstiegspunkt in der Wurzel, `src/`, `bin/`, gewachsene `tests/`, belegtes
-> `plans/`) hat eine Architekten-Sitzung 2026-08-11 **nur gelesen, nicht
-> installiert** und dabei die beiden Stellen gefunden, an denen die Defaults
-> nur für ein Neuprojekt taugen (`BL-51`, `BL-52`). Beide sind **offen**; bis
-> ein Bestandslauf sie im Feld bestätigt hat, sind sie hier von Hand zu
-> umgehen.
+> **Belegstand.** Die beiden Stellen, an denen die Defaults nur für ein
+> Neuprojekt taugten, stammen aus der Analyse einer fremden Bestandscodebasis
+> (`Project-Family-ERP`, Python/tkinter, Einstiegspunkt in der Wurzel, `src/`,
+> `bin/`, gewachsene `tests/`, belegtes `plans/`; 2026-08-11 **nur gelesen,
+> nicht installiert**). Beide sind in **2.6.0 gebaut** und im Selbsttest gegen
+> genau diese Lage nachgewiesen — **noch nicht** gelaufen ist ein scharfer
+> Bestandslauf mit Agenten.
 
-**Zwei Werte anders setzen als im Default:**
+**Zwei Stellen, an denen ein Bestandsprojekt anders liegt:**
 
-| Falle | Warum sie nur im Bestand greift | Was du tust |
+| Falle | Warum sie nur im Bestand greift | Was das Kit tut |
 |---|---|---|
-| **Plan-Ordner** (`BL-51`) | Die Guard-Whitelist ist **positiv**: Harry, Marv und Axel dürfen im Plan-Ordner schreiben und löschen. Zeigt er auf ein bereits belegtes `plans/` oder `docs/`, bekommen die drei ausdrücklich als Read-Only geführten Rollen stillschweigend Schreibrecht auf Bestandsdokumente — **der Guard schlägt dort nie an**. Der Installer prüft nicht, ob der Ordner leer ist. | Einen **eigenen, leeren** Ordner angeben, z. B. `team-plans/`. |
-| **Prüfumfang** (`BL-52`) | Der Sweep-Auftrag zeigt auf `TEAM_PRODUKTIVCODE` — **einen einzelnen Ordner**. Im Bestand liegen Einstiegspunkt (`main.py`), Build- und Deploy-Skripte regelmäßig daneben und werden nie angegriffen. Ein Sweep, der `src/` sauber meldet, sieht dann aus wie ein sauberes Projekt. Das ist **keine** Guard-Lücke (außerhalb der Whitelist bleibt jede Änderung eine Verletzung), sondern eine Prüfumfangs-Lücke. | Den Code außerhalb im **Fokus-String** der Kaskade benennen, bis `TEAM_PRODUKTIVCODE` eine Leerliste akzeptiert. |
+| **Schreibzone** (`BL-51`) | Die Guard-Whitelist ist **positiv**: Harry, Marv und Axel dürfen Plan- und Test-Ordner schreiben und löschen. Zeigen sie auf ein belegtes `plans/`/`docs/` oder eine gewachsene Suite, haben die drei ausdrücklich als Read-Only geführten Rollen Schreibrecht auf Bestand — **der Guard schlägt dort nie an**. | Der Installer prüft beide Ordner, nennt die gefundenen Dateien samt Folge und bietet einen anderen Ordner an. Wer behält, bekommt den Bestand in `TEAM_*_ORDNER_BESTAND` vermerkt; die Rollen-Prompts nennen ihn als fremdes Eigentum. **Die harte Variante bleibt der eigene, leere Ordner** (`team-plans/`) — nur dort ist die Grenze Mechanik statt Auflage. |
+| **Prüfumfang** (`BL-52`) | Der Sweep-Auftrag zeigte auf `TEAM_PRODUKTIVCODE` — **einen einzelnen Ordner**. Im Bestand liegen Einstiegspunkt (`main.py`), Build- und Deploy-Skripte regelmäßig daneben und wurden nie angegriffen. Ein Sweep, der `src/` sauber meldet, sieht dann aus wie ein sauberes Projekt. Das ist **keine** Guard-Lücke, sondern eine Prüfumfangs-Lücke. | Das Interview fragt danach; `TEAM_WEITERER_CODE` (Leerliste, Dateien und Ordner) kommt in Scope-Zeile, eiserne Regel und Franks Fix-Auftrag. **Mitgeprüft heißt genauso tabu**, nicht freigegeben. `--update` erinnert daran, wenn in der Wurzel ungeprüfter Code liegt. |
 
 **Erste Kaskade im Bestand:** den Fokus auf die **Naht** zwischen Neuem und
 Gewachsenem legen, nicht auf die neue Mechanik. Feld-Gegenprobe aus zwei
@@ -181,7 +181,7 @@ team/                   Team-Namensraum — landet als team/ im Zielprojekt
 ├── redteam.sh          Gemeinsame Sweep-Logik von Harry und Marv
 ├── tools/              kosten.py (1569 Z), beutebuch.py (286 Z)
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-└── tests/              44 Testdateien, 267 Testfälle
+└── tests/              46 Testdateien, 280 Testfälle
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
 install.sh              Der Installer
@@ -244,13 +244,15 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
   zwei Löcher in der Kostenerfassung bis zur vierten Fehlerklasse „Stufe
   fertig, Quittung fehlt". Die Erwartung ist nicht, dass das aufhört; die
   Mechanik dafür ist der Rückkanal Feld → Kit.
-- **Bestandsprojekte sind analysiert, nicht gefahren.** Siehe
-  [In ein bestehendes Projekt](#in-ein-bestehendes-projekt): `BL-51` und
-  `BL-52` sind offen, die Umgehung steht dort.
+- **Bestandsprojekte: gebaut und im Selbsttest belegt, aber noch nicht scharf
+  gefahren.** `BL-51` und `BL-52` sind in 2.6.0 umgesetzt und gegen die
+  nachgestellte Bestandslage geprüft (`kit-test.sh`, Schritt 6). Was fehlt, ist
+  eine Kaskade mit echten Agenten in einer gewachsenen Codebasis — bis dahin
+  gilt die Warnung des Installers als ungeprüft im Feld.
 - **Noch nie gelaufen: Axel.** Der Forensiker hat in 33 Kaskaden keine einzige
   Ledgerzeile — sein Pfad ist getestet, aber nicht im Feld belegt.
 - **Selbstverifikation**: `./kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 267 Tests. `pytest team/tests` **im Kit-Repo**
+  Wegwerf-Repo und fährt dort die 280 Tests. `pytest team/tests` **im Kit-Repo**
   schlägt dagegen erwartungsgemäß fehl — die Tests setzen die installierte
   Ablage voraus (Entrypoints in der Wurzel statt unter `entry/`).
 - **Guard-Tests nur in Wegwerf-Repos.** Nie im echten Projekt.

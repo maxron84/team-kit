@@ -34,12 +34,30 @@ OUT="$LOG_DIR/axel-${HM}-$(date +%Y%m%d-%H%M%S).json"
 AX_NR="$(find "$TEAM_ERMITTLUNGSAKTEN" -name 'AX-*.md' 2>/dev/null | wc -l | awk '{print $1+1}')"
 START_HASH="$(git rev-parse HEAD)"
 
+# BL-52: derselbe Prüfumfang wie beim Red Team — was Harry und Marv angreifen
+# dürfen, muss Axel lesen dürfen und trotzdem tabu bleiben.
+AXEL_TABU="${TEAM_PRODUKTIVCODE}**"
+[ -n "${TEAM_WEITERER_CODE:-}" ] && AXEL_TABU="${TEAM_PRODUKTIVCODE}** und ${TEAM_WEITERER_CODE}"
+
+# BL-51: Der Plan-Ordner ist Axels EINZIGE Schreibzone; in einer gewachsenen
+# Codebasis liegt dort fremdes Eigentum, auf das der Guard nicht anschlägt.
+AXEL_BESTAND=""
+if [ -n "${TEAM_PLAN_ORDNER_BESTAND:-}" ]; then
+    AXEL_BESTAND="
+BESTAND — NICHT DEIN EIGENTUM: In ${TEAM_PLAN_ORDNER} lagen beim Einzug des Teams
+schon fremde Dateien (${TEAM_PLAN_ORDNER_BESTAND}). Du legst dort NUR NEUE Dateien an
+und änderst oder löschst nichts, was du nicht selbst angelegt hast — auch nicht,
+was in dieser Aufzählung fehlt. Der Guard lässt dich hier gewähren.
+"
+fi
+
 PROMPT="$(team_briefing axel)
 
 Knacke den Fall $HM aus ${TEAM_BEUTEBUCH}, an dem Frank gescheitert ist.
 
-EISERNE REGEL: Read-only. Du änderst NUR ${TEAM_PLAN_ORDNER} — NIEMALS ${TEAM_PRODUKTIVCODE}**. Du fixst NICHTS
+EISERNE REGEL: Read-only. Du änderst NUR ${TEAM_PLAN_ORDNER} — NIEMALS ${AXEL_TABU}. Du fixst NICHTS
 und committest NICHT. Du lieferst eine Ermittlungsakte, Frank setzt sie um.
+${AXEL_BESTAND}
 
 Lege ${TEAM_ERMITTLUNGSAKTEN}/AX-${AX_NR}.md an:
 # AX-${AX_NR} — <Titel> (Bezug: $HM)

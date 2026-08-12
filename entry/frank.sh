@@ -48,7 +48,12 @@ START_HASH="$(git rev-parse HEAD)"
 # statt site/) sachlich falsch — der Prompt widersprach bislang der Realität
 # der laufenden Kaskade. Ist TEAM_REDTEAM_FOCUS gesetzt (Strippenzieher-Schalter
 # derselben Kaskade), übernimmt Frank denselben Fokus statt der site/-Fixierung.
-SCHRITT1="Code-Fix unter ${TEAM_PRODUKTIVCODE} umsetzen.${SMOKE_SUFFIX}"
+# BL-52: Findet das Red Team etwas ausserhalb des Produktivcode-Ordners (Ein-
+# stiegspunkt, Build-Skript), muss Franks Auftrag den Ort auch nennen duerfen —
+# sonst repariert er den Fund am falschen Platz oder gar nicht.
+FIX_ORTE="${TEAM_PRODUKTIVCODE}"
+[ -n "${TEAM_WEITERER_CODE:-}" ] && FIX_ORTE="${TEAM_PRODUKTIVCODE} (oder, wenn der Fund dort liegt: ${TEAM_WEITERER_CODE})"
+SCHRITT1="Code-Fix unter ${FIX_ORTE} umsetzen.${SMOKE_SUFFIX}"
 if [ -n "${TEAM_REDTEAM_FOCUS:-}" ]; then
     SCHRITT1="Code-Fix im Fokus-Bereich dieser Kaskade umsetzen (${TEAM_REDTEAM_FOCUS}). Betrifft der Fix ${TEAM_PRODUKTIVCODE}, zusätzlich:${SMOKE_SUFFIX}"
 fi

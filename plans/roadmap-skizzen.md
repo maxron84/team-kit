@@ -24,9 +24,9 @@ mehrstufige Arbeit.
 
 **Was entschieden wurde:** „Installieren und dort prüfen" statt
 layout-agnostischer Tests — das prüft den Installer gleich mit und lässt die
-Tests dort laufen, wo sie gelten (damals 149, Stand 2.5.0 **267**). Die
+Tests dort laufen, wo sie gelten (damals 149, Stand 2.6.0 **280**). Die
 Fehlschläge von `pytest team/tests` **im Kit-Repo** bleiben bestehen und sind
-**erwartet** — damals 17, Stand 2.5.0 **19** von 267.
+**erwartet** — damals 17, Stand 2.6.0 **21** von 280.
 
 **Offen geblieben:** Ob der Lauf zusätzlich in einen Git-Hook gehört, oder ob
 die Regel „vor jedem Release" reicht. Bisher reicht sie — es gibt genau einen

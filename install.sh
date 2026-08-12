@@ -21,6 +21,7 @@
 # Umgebungsvariablen für den nicht-interaktiven Betrieb:
 #   TEAM_INIT_PROJEKT TEAM_INIT_PRODUKTIVCODE TEAM_INIT_TEST_ORDNER
 #   TEAM_INIT_PLAN_ORDNER TEAM_INIT_SMOKE_TEST TEAM_INIT_TECH_STACK
+#   TEAM_INIT_WEITERER_CODE (BL-52) TEAM_INIT_DOMAENEN TEAM_INIT_COMMIT_MODUS
 #
 # Der Installer ist idempotent: ein zweiter Lauf überschreibt nichts, sondern
 # meldet, was bereits vorhanden ist.
@@ -121,6 +122,54 @@ if [ "$UPDATE" -eq 1 ]; then
     DEPLOY="TODO: in CLAUDE.md nachtragen"
     DEPLOY_AUSNAHMEN="keine"
     gruen "  ✓ Projektwerte aus team.config.sh gelesen (Projekt: $PROJEKT)"
+
+    # BL-51: --update ist der einzige Zeitpunkt, zu dem jemand von aussen auf
+    # die Installation schaut. Gemeldet wird NUR, was in der Config steht —
+    # keine Heuristik ueber den Ordnerinhalt: Nach dem Einzug ist der
+    # Plan-Ordner die Arbeitsflaeche des Teams, dort ist "fremd" nicht mehr
+    # unterscheidbar. Eine Warnung, die bei jedem Aufruf erscheint, erzieht zum
+    # Wegsehen (BL-14).
+    if [ -n "${TEAM_PLAN_ORDNER_BESTAND:-}${TEAM_TEST_ORDNER_BESTAND:-}" ]; then
+        kopf "Bestand in der Schreibzone (BL-51)"
+        [ -n "${TEAM_PLAN_ORDNER_BESTAND:-}" ] && \
+            echo "  · ${PLAN_ORDNER}: ${TEAM_PLAN_ORDNER_BESTAND}"
+        [ -n "${TEAM_TEST_ORDNER_BESTAND:-}" ] && \
+            echo "  · ${TEST_ORDNER}: ${TEAM_TEST_ORDNER_BESTAND}"
+        gelb "  Diese Dateien lagen beim Einzug des Teams schon da und stehen"
+        gelb "  auf der Guard-Whitelist — die Read-Only-Rollen duerfen sie"
+        gelb "  aendern und loeschen. Die Rollen-Prompts nennen sie als fremdes"
+        gelb "  Eigentum; erzwingen kann der Guard es nicht. Wer die Mechanik"
+        gelb "  will, gibt dem Team einen eigenen leeren Plan-Ordner."
+    fi
+
+    # BL-52: Ein Projekt von vor 2.6.0 kennt TEAM_WEITERER_CODE nicht, und
+    # --update fasst team.config.sh bewusst nicht an. Der Hinweis kommt nur,
+    # wenn im Wurzelverzeichnis ueberhaupt fremder Code liegt — sonst waere er
+    # in jedem gruenen Projekt Rauschen.
+    if [ -z "${TEAM_WEITERER_CODE:-}" ]; then
+        WURZEL_CODE=""
+        for f in "$ZIEL"/*; do
+            [ -f "$f" ] || continue
+            # Die Entrypoints des Kits sind kein Projektcode; Doku und
+            # Konfigdateien greift kein Red Team an. Alles andere MIT Endung
+            # ist Code, der heute ausserhalb des Pruefumfangs liegt.
+            case "$(basename "$f")" in
+                ralph.sh|frank.sh|axel.sh|harry.sh|marv.sh) ;;
+                vollautomatik.sh|halbautomatik.sh|team-status.sh|team-test.sh|team.config.sh) ;;
+                *.md|LICENSE*|Makefile|*.toml|*.cfg|*.ini|*.txt|*.json|*.yaml|*.yml) ;;
+                *.*) WURZEL_CODE="$WURZEL_CODE $(basename "$f")" ;;
+            esac
+        done
+        if [ -n "$WURZEL_CODE" ]; then
+            kopf "Pruefumfang endet an ${PRODUKTIVCODE} (BL-52)"
+            echo "  Ungeprueft in der Wurzel:$WURZEL_CODE"
+            gelb "  Das Red Team prueft ausschliesslich ${PRODUKTIVCODE} — Einstiegs-"
+            gelb "  punkte und Build-Skripte daneben sieht es nie, und ein sauberer"
+            gelb "  Sweep liest sich trotzdem wie ein sauberes Projekt."
+            gelb "  Abhilfe (team.config.sh, --update fasst sie nicht an):"
+            gelb "    TEAM_WEITERER_CODE=\"\${TEAM_WEITERER_CODE:-<pfade>}\""
+        fi
+    fi
 
     # Der Commit-Entscheid steht NUR im Architekten-Briefing, nicht in der
     # Config. Aus der bestehenden Datei retten, statt ihn stillschweigend auf
@@ -338,9 +387,16 @@ frage() {  # frage <variable> <text> <default>
     printf -v "$var" '%s' "${eingabe:-$vorgabe}"
 }
 
-kopf "Aufnahme-Interview — acht Werte, alles Weitere per Feld-Default"
+kopf "Aufnahme-Interview — neun Werte, alles Weitere per Feld-Default"
 frage PROJEKT        "Projektname"                    "$(basename "$ZIEL")"
 frage PRODUKTIVCODE  "Produktivcode-Ordner (tabu für Red Team)" "src/"
+if [ "$INTERAKTIV" -eq 1 ]; then
+    echo "  Liegt Code AUSSERHALB dieses Ordners, der mitgeprüft werden soll?"
+    echo "  Einstiegspunkt in der Wurzel (main.py), Build-/Deploy-Skripte (bin/)."
+    echo "  Im neuen Projekt: leer lassen. In einer gewachsenen Codebasis ist das"
+    echo "  der Unterschied zwischen \"src/ ist sauber\" und \"geprüft\" (BL-52)."
+fi
+frage WEITERER_CODE  "Weiterer Code außerhalb (Leerliste)" ""
 frage TEST_ORDNER    "Test-Ordner"                    "tests/"
 frage PLAN_ORDNER    "Plan-Ordner"                    "plans/"
 if [ "$INTERAKTIV" -eq 1 ]; then
@@ -365,6 +421,61 @@ frage COMMIT_MODUS   "Architekt committet selbst? (j/n)" "n"
 PRODUKTIVCODE="${PRODUKTIVCODE%/}/"
 TEST_ORDNER="${TEST_ORDNER%/}/"
 PLAN_ORDNER="${PLAN_ORDNER%/}/"
+
+# ---------------------------------------------------------------- BL-51
+# Test- und Plan-Ordner sind die Schreibzone der drei Read-Only-Rollen: Die
+# Guard-Whitelist ist POSITIV, dort schlaegt er nicht an. In einem neuen
+# Projekt ist das folgenlos (die Ordner entstehen erst). In einer gewachsenen
+# Codebasis ist "plans/" oder "docs/" typischerweise belegt — und Harry, Marv
+# und Axel bekommen stillschweigend Schreib- und Loeschrecht auf
+# Bestandsdokumente. Beobachtet an Project-Family-ERP: zehn fachliche Dokumente
+# in plans/, darunter die Architektur- und die Refactoring-Planung.
+#
+# Gewarnt wird, nicht verboten: Ein bewusst geteilter Ordner kann legitim sein.
+# Wer den Vorschlag annimmt, bekommt die Mechanik (eigener leerer Ordner); wer
+# ihn ablehnt, bekommt den Bestand in team.config.sh vermerkt und damit in die
+# Rollen-Prompts.
+bestand_eintraege() {  # bestand_eintraege <ordner> — bis zu 12 Namen, sonst mit … gekuerzt
+    local d="$ZIEL/${1%/}" n=0 ausgabe=""
+    [ -d "$d" ] || return 0
+    for eintrag in "$d"/* "$d"/.[!.]*; do
+        [ -e "$eintrag" ] || continue
+        n=$((n + 1))
+        [ "$n" -le 12 ] && ausgabe="$ausgabe $(basename "$eintrag")"
+    done
+    [ "$n" -gt 12 ] && ausgabe="$ausgabe …"
+    printf '%s' "${ausgabe# }"
+}
+
+bestand_pruefen() {  # bestand_pruefen <ORDNER-VARIABLE> <text> <rollen>
+    local var="$1" text="$2" rollen="$3" eintraege neu
+    while :; do
+        eintraege="$(bestand_eintraege "${!var}")"
+        [ -n "$eintraege" ] || break
+        gelb "  ! $text '${!var}' ist nicht leer:"
+        for e in $eintraege; do echo "      · $e"; done
+        gelb "    $rollen dürfen in diesem Ordner schreiben und löschen —"
+        gelb "    der Guard schlägt dort NICHT an (BL-51). Sie sind Read-Only"
+        gelb "    gegenüber deinem Code, nicht gegenüber diesem Ordner."
+        if [ "$INTERAKTIV" -eq 0 ]; then
+            gelb "    Nicht-interaktiv: Ordner bleibt. Der Bestand wird in"
+            gelb "    team.config.sh vermerkt und den Rollen als fremdes Eigentum genannt."
+            break
+        fi
+        read -r -p "    Anderer Ordner? (leer = '${!var}' behalten): " neu || true
+        [ -n "$neu" ] || break
+        printf -v "$var" '%s' "${neu%/}/"
+    done
+    printf -v "${var}_BESTAND" '%s' "$(bestand_eintraege "${!var}")"
+}
+
+kopf "Bestand in der Schreibzone der Read-Only-Rollen (BL-51)"
+bestand_pruefen PLAN_ORDNER "Plan-Ordner" "Harry, Marv und Axel"
+bestand_pruefen TEST_ORDNER "Test-Ordner" "Harry und Marv"
+if [ -z "$PLAN_ORDNER_BESTAND" ] && [ -z "$TEST_ORDNER_BESTAND" ]; then
+    gruen "  ✓ beide Ordner leer oder neu — nichts fremdes in der Schreibzone"
+fi
+
 DEPLOY="TODO: in CLAUDE.md nachtragen"
 DEPLOY_AUSNAHMEN="keine"
 case "${COMMIT_MODUS,,}" in
@@ -402,10 +513,11 @@ fuelle() {
     [ -f "$datei" ] || return 0
     python3 - "$datei" "$PROJEKT" "$PRODUKTIVCODE" "$TEST_ORDNER" "$PLAN_ORDNER" \
                        "$SMOKE_TEST" "$TECH_STACK" "$DEPLOY" "$DEPLOY_AUSNAHMEN" \
-                       "$DOMAENEN" "$COMMIT_ENTSCHEID" <<'PY'
+                       "$DOMAENEN" "$COMMIT_ENTSCHEID" "$WEITERER_CODE" \
+                       "$TEST_ORDNER_BESTAND" "$PLAN_ORDNER_BESTAND" <<'PY'
 import sys, pathlib
 (d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
- domaenen, commit) = sys.argv[1:12]
+ domaenen, commit, weiterer, test_bestand, plan_bestand) = sys.argv[1:15]
 p = pathlib.Path(d); t = p.read_text(encoding="utf-8")
 for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{TEST_ORDNER}}", test), ("{{PLAN_ORDNER}}", plan.rstrip("/")),
@@ -415,7 +527,13 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{SMOKE_TEST}}", smoke or "TODO: noch keiner — Stufe 1 der ersten Kaskade"),
              ("{{TECH_STACK}}", stack), ("{{DEPLOY}}", deploy),
              ("{{DEPLOY_AUSNAHMEN}}", ausn), ("{{DOMAENEN}}", domaenen),
-             ("{{COMMIT_ENTSCHEID}}", commit)]:
+             ("{{COMMIT_ENTSCHEID}}", commit),
+             # BL-52/BL-51: leer ist der Normalfall — die Platzhalter stehen nur
+             # in team.config.sh, damit eine leere Ersetzung nirgends Prosa
+             # zerreisst.
+             ("{{WEITERER_CODE}}", weiterer),
+             ("{{TEST_BESTAND}}", test_bestand),
+             ("{{PLAN_BESTAND}}", plan_bestand)]:
     t = t.replace(a, b)
 p.write_text(t, encoding="utf-8")
 PY
