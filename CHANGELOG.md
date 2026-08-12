@@ -31,6 +31,18 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Changed
 
+- **Dreischnitt, dritter Block: `## Loop-Mechanik & Auth` von 6,3 auf 2,8 KB
+  (`BL-56`).** Der Befund dahinter: **Das meiste hieran macht die Shell, nicht
+  die Rolle.** Auth-Auflösung, Retry-Deckel, Cap-Durchsetzung und
+  Key-Verdrängung laufen in `team/lib.sh`, **bevor** eine Rolle startet — sie
+  las seitenweise Verhalten mit, das sie nicht beeinflussen kann. Geblieben ist,
+  wonach eine Rolle handelt: `.ralph-state`, „429 weicht den Guard nicht auf",
+  Exit 42 unverändert durchreichen, Guard auf **jedem** Pfad, Smoke-Test im
+  Vordergrund. Zwei Regeln wechselten den Träger zum **Menschen**: die
+  `.bashrc`-Key-Falle (bindet den Strippenzieher an seiner Maschine, keine Rolle
+  kann sie befolgen) steht jetzt in `TEAM.md` samt ~13,8-USD-Feldbeleg; „Die
+  Arbeit ist meistens fertig" stand dort längst wortgleich.
+
 - **Dreischnitt, zweiter Block: `## Kaskaden-Planungsregeln` von 8,2 auf 5,3 KB
   (`BL-56`).** Das ausführliche Verfahren (Plankopf, Scharfschalt-Sequenz
   Schritt für Schritt) steht im Briefing des Architekten; in der Regeldatei
