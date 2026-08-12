@@ -327,97 +327,48 @@ Voll-Read** obendrauf (bei ~20–30 Aufrufen je Kaskade). Verbindlich:
 
 ## Loop-Mechanik & Auth (Ralph)
 
-- **Modell:** `sonnet` (z. B. Sonnet — teures Opus für den Loop meist
-  überflüssig). ✅ erprobt
+> **Das meiste hieran macht die Shell, nicht die Rolle.** Auth-Auflösung,
+> Retry-Deckel und Cap-Durchsetzung laufen in `team/lib.sh`, **bevor** eine
+> Rolle startet — sie kann daran nichts ändern. Hier stehen deshalb nur die
+> Sätze, nach denen eine Rolle **handelt**. Einrichtung und Fehlersuche für den
+> Menschen: [`TEAM.md`](TEAM.md). Bau- und Auflösungsdetails: **Anhang A.3**
+> (Auth-Fallback) und **A.8** (429-Robustheit, numerische Default-Deckel).
+
+- **Modell:** `sonnet` (teures Opus für den Loop meist überflüssig). ✅ erprobt
 - **Permission-Mode:** `bypassPermissions` (headless hat keinen Approver). ✅ erprobt
 - **Smoke-Test:** Syntaxprüfung (z. B. `py_compile`/`ast.parse` — im Zielprojekt
   auf die reale Sprache/Toolchain anpassen), **kein** GUI-Import.
-- **Budget kappen:** `RALPH_BUDGET_USD=N` (Empfehlung: kleiner Betrag pro Stufe).
 - **Promise-Match:** `<promise>STUFE_N_COMPLETE</promise>` mit Tags.
 - **Zustand:** [`.ralph-state`](.ralph-state) = nächste auszuführende Stufe.
-- **Bei Hängern:** Prozess- und Log-Prüfung, bevor abgebrochen wird.
 
-**Auth-Modi** (`abo`):
+**Auth:** Loop-Rollen starten im **Abomodus**; scheitert ein Aufruf
+(Timeout/Limit/Fehler), folgt **ein** aufruf-lokaler API-Retry, danach wieder
+Abo. **Auch Axel und Der Architekt laufen Abo-first** — das starke Modell im Abo
+ist schlicht günstiger, die Budget-Caps bleiben als Airbag. **Keine** Rolle ist
+fest `api`. Modell und Auth sind zwei getrennte Achsen.
 
-- **Auflösung (✅ erprobt, Prio absteigend):** Env `AUTH_MODE` → maschinenlokale
-  Config `~/.config/claude-team/auth-mode` → Rollen-Default (**Loop-Rollen:
-  `abo`**, starke Rollen Axel/Architekt: `api`).
-- `abo` = Claude-Abo via `claude login` (nicht token-abgerechnet). **Achtung,
-  Verdrängungsfalle (✅ im Feld beobachtet):** Ein exportierter
-  `ANTHROPIC_API_KEY` hat Vorrang vor dem Abo-Login („takes precedence"-Warnung
-  der CLI) — `team-lib.sh` entfernt den Key im Abo-Modus deshalb aktiv aus der
-  Prozess-Umgebung. Der Key gehört **nie** per `export` in `.bashrc` & Co.;
-  bereits offene Terminals/IDE-Prozesse behalten einen geerbten Key außerdem
-  bis `unset` bzw. Neustart (Env-Vererbung!).
-  - **Aktive Startwarnung (✅ erprobt, `BL-27`, website-maxron-de 2026-07-12):**
-    `team_resolve_auth_mode()` warnt zusätzlich **einmal pro Prozessbaum** auf
-    stderr, wenn `AUTH_MODE=abo` gilt, aber ein `ANTHROPIC_API_KEY` in der
-    Prozess-Umgebung liegt — **bevor** der `unset` greift. Reine Sichtbarkeit,
-    **kein Abbruch**; abschaltbar über `TEAM_ABO_KEY_WARNUNG=0` (Default an), im
-    `api`-Modus erscheint sie nie. Realer Auslöser: ein ~13,8-USD-Leerlauf-Lauf
-    lief komplett über API statt Abo-first, weil ein `.bashrc`-Key das Design
-    still aushebelte.
-- `api` = Pay-per-Use. Key-Quelle: Env `ANTHROPIC_API_KEY`, sonst
-  `~/.config/claude-team/api-key` (eine Zeile, `chmod 600`).
-- **Abo-Default mit API-Fallback (✅ erprobt):** Loop-Rollen starten im
-  **Abomodus**; scheitert ein Aufruf (Timeout/Limit), folgt **ein** API-Retry nur
-  **bis zum Abschluss der laufenden Stufe**, danach wieder Abo. **Auch Axel und
-  Der Architekt laufen Abo-first** — das starke Modell
-  im Abo ist schlicht günstiger, die Budget-Caps bleiben als Airbag. **Keine**
-  Rolle ist mehr fest `api`. Rezept: Anhang A.3.
-- **Einrichtung pro Maschine:** einmalig `~/.claude/scripts/team-auth-setup.sh`
-  (idempotent: legt Config an, migriert Keys aus Shell-Profilen in die
-  Key-Datei, testet den Abo-Login headless).
+**Session-Limit (429) — die dritte Fehlerklasse  ✅ erprobt (`BL-20`/`BL-25`):**
+Ein Session-Limit ist **weder** ein sauberer Erfolg **noch** ein „echter"
+Fehler, sondern eine eigene, klar benannte Klasse — sie weicht
+Guard/Read-Only-Regeln **nicht** auf.
 
-**Session-Limit (429) — dritte Fehlerklasse, Strategie A+B  ✅ erprobt
-(`BL-20`/`BL-25`, website-maxron-de 2026-07-11):** Ein Claude-Session-Limit
-(`api_error_status: 429`, `result`-Text „session limit"/„resets HH:MMpm") ist
-**weder** ein sauberer Erfolg **noch** ein „echter" Fehler, sondern eine eigene,
-klar benannte dritte Klasse — sie weicht Guard/Read-Only-Regeln **nicht** auf.
-
-- **API-Fallback zuerst — auch beim 429.** Scheitert der Abo-Aufruf aus
-  **irgendeinem** Grund (Timeout, Fehler ODER 429), versucht `team_claude()`
-  **sofort** den einmaligen Abo→API-Fallback; der API-Key hat ein **eigenes,
-  separates Kontingent**. Erst wenn **auch** der API-Weg 429/Fehler liefert,
-  greift die 429-Sonderbehandlung.
-- **A) Auto-Retry mit hartem Deckel.** Bleibt das finale Ergebnis 429, parst
-  `team_claude()` die Reset-Zeit (12h→24h, tageswechselsicher), wartet
-  (Reset + Puffer) und wiederholt — begrenzt durch `TEAM_429_MAX_RETRIES` /
-  `TEAM_429_MAX_WARTEN` / `TEAM_429_PUFFER`. Unbekannter/zu ferner Reset → sofort B.
-- **B) Sauberer Pausen-Exit.** Sind die Retries erschöpft, gibt `team_claude()`
-  **Exit-Code 42** zurück (statt des generischen Fehlers). **Alle** Loop-Rollen
-  (`ralph.sh`, `redteam.sh`, `frank.sh`, `axel.sh`) reichen 42 **unverändert als
-  eigenen Exit 42** durch — **kein** State-Fortschritt, **kein** Fehlversuchs-
-  Zähler (`.frank-attempts` bleibt stehen, keine Axel-Eskalation). Der
-  Read-Only-Guard läuft dabei auf **jedem** Pfad (auch Pause), bevor der Code
-  ausgewertet wird. `vollautomatik.sh` erkennt Exit 42 in **allen** Phasen und
-  beendet mit „⏸ Session-Limit erreicht — Lauf pausiert, bitte später erneut
-  starten. Kein Fehler, kein Datenverlust." statt der „ECHTER Fehler"-Meldung.
-- **C) Vierte Fehlerklasse: Sitzung beendet, Auftrag unquittiert (Exit 43).**
-  Eine bauende Rolle kann einen Hintergrund-Task/Monitor/Wakeup starten und
-  darauf „warten" — headless kommt diese Benachrichtigung **nie**. Die Sitzung
-  endet, und das Log trägt `subtype: success`, `is_error: false`: Für jede
-  Fehlerprüfung ist das ein **sauberer Erfolg**, nur das Promise fehlt. Fehlt
-  das Promise, während das Log sich selbst für erfolgreich erklärt, meldet der
-  Loop das **benannt** und endet mit **Exit 43** statt mit „ECHTER Fehler".
-  **Die Arbeit ist in diesem Fall meistens fertig** — erst prüfen (committet?
-  Smoke-Test grün?), dann von Hand quittieren und `.ralph-state` weiterschalten;
-  ein Neubau wirft bezahlte Arbeit weg. Vorbeugend gilt für **jede** bauende
-  Rolle: Der Smoke-Test läuft im **Vordergrund**, nie als Hintergrund-Task und
-  nie mit einem Wakeup darauf.
+- **Pausen-Exit statt Fehler.** Sind die Retries erschöpft, gibt `team_claude()`
+  **Exit-Code 42** zurück. **Alle** Loop-Rollen reichen 42 **unverändert als
+  eigenen Exit 42** durch — **kein** State-Fortschritt, **kein**
+  Fehlversuchs-Zähler. Der **Read-Only-Guard läuft dabei auf jedem Pfad (auch
+  Pause)**, bevor der Code ausgewertet wird.
+- **Vierte Fehlerklasse: Sitzung beendet, Auftrag unquittiert (Exit 43).** Eine
+  bauende Rolle kann einen Hintergrund-Task starten und darauf „warten" —
+  headless kommt die Benachrichtigung **nie**, das Log trägt trotzdem
+  `subtype: success`. Fehlt das Promise, während das Log sich selbst für
+  erfolgreich erklärt, endet der Loop mit **Exit 43** statt „ECHTER Fehler".
+  **Vorbeugend gilt für jede bauende Rolle:** Der Smoke-Test läuft im
+  **Vordergrund**, nie als Hintergrund-Task und nie mit einem Wakeup darauf.
 - **Auslauf-Bremse gegen Leerlaufkosten (`TEAM_FIX_MAX_STAGNATION`, `BL-25`).**
-  Die Frank↔Axel-Fixphase vergleicht pro Runde einen Beutebuch-Snapshot
-  vorher/nachher; bleibt **weder** ein Frank-Fix **noch** eine neue Axel-Akte
-  **noch** ein Status­wechsel, zählt eine `stagnation`-Kennzahl hoch. Ab
-  `TEAM_FIX_MAX_STAGNATION` Runden in Folge bricht die Phase mit „⛔ Fix-Phase
-  stagniert — Mensch prüfen" ab, statt bis zur groben Obergrenze
-  `TEAM_MAX_RUNDEN` teuer leerzudrehen. Realer Auslöser: ~13,8 USD Leerlauf über
-  8 Runden am selben Fund. **Kein** Aufweichen echter Fehler — die Bremse misst
+  Bleibt in der Frank↔Axel-Fixphase **weder** ein Fix **noch** eine neue Akte
+  **noch** ein Statuswechsel, bricht die Phase nach N Runden ab, statt teuer
+  leerzudrehen. **Kein** Aufweichen echter Fehler — die Bremse misst
   ausschließlich Fortschritt.
-
-> Die numerischen **Default-Deckel** dieser Env-Knöpfe (`TEAM_429_*`,
-> `TEAM_FIX_MAX_STAGNATION`, `TEAM_MAX_RUNDEN`) stehen in **Anhang A.8** — hier
-> zählt der Verhaltens-Vertrag, nicht die Feinabstimmung.
 
 ---
 

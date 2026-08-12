@@ -241,6 +241,22 @@ belegt sind. **Die harte Variante** bleibt der eigene, leere Plan-Ordner
 bezahlte, plausible Arbeit per Rollback weg und **vervielfacht** die Kosten,
 statt zu sparen. Lieber großzügig starten und nachjustieren.
 
+**Der API-Key gehört nicht in dein Shell-Profil — das ist der teuerste stille
+Fehler.** Ein exportierter `ANTHROPIC_API_KEY` hat **Vorrang vor dem
+Abo-Login** („takes precedence"-Warnung der CLI). Der Lauf funktioniert dann
+tadellos — er wird nur komplett über die API abgerechnet statt übers Abo. Im
+Feld lief so ein **~13,8-USD-Leerlauf-Lauf** vollständig über API, weil ein
+`.bashrc`-Key das Design still aushebelte. **Der Key gehört **nie** per
+`export` in `.bashrc` & Co.**, sondern in `~/.config/claude-team/api-key`
+(eine Zeile, `chmod 600`) — dorthin legt ihn `team-auth-setup.sh`.
+
+Zwei Tücken dabei: Das Team entfernt den Key im Abo-Modus zwar aktiv aus der
+Prozess-Umgebung und warnt einmal pro Lauf auf stderr — aber **bereits offene
+Terminals und IDE-Prozesse behalten einen geerbten Key** bis `unset` oder
+Neustart (Env-Vererbung).
+
+**Guard-Experimente nur in einem Wegwerf-Repo**, nie hier.
+
 **Guard-Experimente nur in einem Wegwerf-Repo**, nie hier.
 
 ---

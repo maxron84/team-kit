@@ -92,14 +92,14 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Doku-Hygiene — die Regeldatei bleibt Regelquelle  ✅ erprobt | HERLEITUNG | Regeldatei | kommt pro Rollenaufruf ein **zweiter Voll-Read** obendrauf (bei ~20–30 Aufrufen je Kaskade) |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | **Permission-Mode:** `bypassPermissions` |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | **Zustand:** [`.ralph-state`](.ralph-state) = nächste auszuführende Stufe. |
-| Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | Der Key gehört **nie** per `export` in `.bashrc` & Co. |
+| Loop-Mechanik & Auth (Ralph) | NORM | TEAM.md | Der Key gehört **nie** per `export` in `.bashrc` & Co. |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | sie weicht Guard/Read-Only-Regeln **nicht** auf |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | reichen 42 **unverändert als eigenen Exit 42** durch |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | Der Read-Only-Guard läuft dabei auf **jedem** Pfad (auch Pause) |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | Der Smoke-Test läuft im **Vordergrund**, nie als Hintergrund-Task und nie mit einem Wakeup darauf. |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | **Kein** Aufweichen echter Fehler — die Bremse misst ausschließlich Fortschritt. |
-| Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | **Die Arbeit ist in diesem Fall meistens fertig** |
-| Loop-Mechanik & Auth (Ralph) | HERLEITUNG | Regeldatei | ein ~13,8-USD-Leerlauf-Lauf lief komplett über API statt Abo-first |
+| Loop-Mechanik & Auth (Ralph) | NORM | TEAM.md | **Die Arbeit ist in diesem Fall meistens fertig** |
+| Loop-Mechanik & Auth (Ralph) | HERLEITUNG | TEAM.md | ein **~13,8-USD-Leerlauf-Lauf** vollständig über API |
 | Kostenkontrolle | NORM | Regeldatei | **Modell** und **Auth** sind zwei getrennte Achsen |
 | Kostenkontrolle | NORM | Regeldatei | ein überschrittener **Soft-Cap** ist nur ein **Hinweis** |
 | Kostenkontrolle | NORM | Regeldatei | Das starke/teure Modell (Axel, Architekt) läuft **nie im Dauer-Loop** |
