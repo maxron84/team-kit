@@ -39,6 +39,15 @@ aber die Regel bleibt: **erst committen, dann starten.**
 **Finder ≠ Fixer**: Wer einen Fehler findet, behebt ihn nicht selbst. Übergabe
 läuft über das Beutebuch ([`{{PLAN_ORDNER}}/beutebuch.md`]({{PLAN_ORDNER}}/beutebuch.md)).
 
+> **T.E.A.M. international** — für Projekte auf Englisch oder Italienisch bleiben
+> die Initialen **T-E-A-M** zwingend erhalten, ebenso die selbstironische Pointe
+> („die Arbeit macht — mit voller Absicht — ein anderer"):
+> - 🇬🇧 **Thankfully, Everyone (but me) Achieves More** — dreht das bekannte
+>   Motivationsposter „Together Everyone Achieves More" ironisch um.
+> - 🇮🇹 **Tanto, Ecco, Altri (lo fanno)… Ma certo!** — „Ach, sieh an, andere
+>   machen's… aber sicher!"; das achselzuckende *„Tanto…"* spiegelt das ironische
+>   deutsche „Toll".
+
 ---
 
 ## Der Ablauf einer Kaskade

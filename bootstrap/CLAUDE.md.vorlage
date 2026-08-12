@@ -56,21 +56,14 @@ Senior-Entwicklers** (des **Strippenzieher**). Jede Instanz sollte wissen,
 > entscheidet Richtung und Prioritäten; die Umsetzung machen die KI-Rollen. Damit
 > das reibungslos klappt, hat jede Rolle einen sauber definierten Übergabepunkt
 > (der `[Unreleased]`-Block + Backlog), sodass zwischen ihnen nichts verloren geht
-> oder doppelt gemacht wird.
-
-> **T.E.A.M. international** — für Projekte auf Englisch oder Italienisch bleiben
-> die Initialen **T-E-A-M** zwingend erhalten, ebenso die selbstironische Pointe
-> („die Arbeit macht — mit voller Absicht — ein anderer"):
-> - 🇬🇧 **Thankfully, Everyone (but me) Achieves More** — dreht das bekannte
->   Motivationsposter „Together Everyone Achieves More" ironisch um.
-> - 🇮🇹 **Tanto, Ecco, Altri (lo fanno)… Ma certo!** — „Ach, sieh an, andere
->   machen's… aber sicher!"; das achselzuckende *„Tanto…"* spiegelt das ironische
->   deutsche „Toll".
+> oder doppelt gemacht wird. (Die mehrsprachigen Fassungen des Akronyms stehen
+> in der Bedienanleitung [`TEAM.md`](TEAM.md) — sie richten sich an den
+> Menschen, nicht an die Rollen.)
 
 | Rolle | Wer/Was | Aufgabe | Kern-Prinzip |
 |-------|---------|---------|--------------|
 | **Ralph** | Der headless Bau-Loop ([`ralph.sh`](ralph.sh)) | Arbeitet den **aktiven Plan** Stufe für Stufe ab, ein Commit pro Stufe (`{{FEAT_PRAEFIX}}(stufeN): …`). | Nimmt **keine** Features aus späteren Stufen vorweg. Liest vor jeder Stufe den `[Unreleased]`-Block und baut dort gelistete Fixes **nicht erneut**. ✅ erprobt |
-| **Der Architekt** | Planungs-Instanz (interaktiv, Architect-Mode) | **Plant Kaskaden**, schreibt Plan-Dokumente unter [`{{PLAN_ORDNER}}`]({{PLAN_ORDNER}}), pflegt Roadmap/Backlog, setzt Caps. Trifft die Struktur-Entscheidungen, die Ralph ausführt. **Commit-Regel dieses Projekts:** {{COMMIT_ENTSCHEID}} | Spec ist Wahrheit vor Annahmen. **Pflicht vor jedem Entwurf:** `[Unreleased]` + `Frank-Fix`-Zeilen abgleichen. **Modell stark (`opus`); Auth Abo-first** (Feldprojekt website-maxron-de, Entscheid 2026-07-13 — die frühere „Architekt immer API"-Regel ist aufgehoben). Kosten daher **Abo-Gegenwert**, erfasst per Live-Schätzung statt Konsolenwert (siehe `## Kostenkontrolle`). Greift **normalerweise nicht** selbst in Produktivcode ein. ✅ erprobt |
+| **Der Architekt** | Planungs-Instanz (interaktiv, Architect-Mode) | **Plant Kaskaden**, schreibt Plan-Dokumente unter [`{{PLAN_ORDNER}}`]({{PLAN_ORDNER}}), pflegt Roadmap/Backlog, setzt Caps. Trifft die Struktur-Entscheidungen, die Ralph ausführt. **Commit-Regel dieses Projekts:** {{COMMIT_ENTSCHEID}} | Spec ist Wahrheit vor Annahmen. **Pflicht vor jedem Entwurf:** `[Unreleased]` + `Frank-Fix`-Zeilen abgleichen. **Modell stark (`opus`); Auth Abo-first**. Kosten daher **Abo-Gegenwert**, erfasst per Live-Schätzung statt Konsolenwert (siehe `## Kostenkontrolle`). Greift **normalerweise nicht** selbst in Produktivcode ein. ✅ erprobt |
 | **Frank der Fixer** | Spontane Out-of-Loop-Bugfixes | Behebt **akut auffallende** Bugs/UX-Reibungen **außerhalb** des Loops, ohne auf die nächste Kaskade zu warten. | Jeder Fix folgt dem **Dreisatz** (Commit `{{FIX_PRAEFIX}}: …` → CHANGELOG → Backlog). Der **Normalweg** für Ad-hoc-Fixes. ✅ erprobt |
 | **Harry** | Read-Only Red Team — **Security/Pentest** | Versucht die App **bewusst auszuhebeln**: Auth/PINs/Tokens umgehen, Angriffsfläche der Netz-Schnittstellen, Pfad-/Injection-Tricks, Datenlecks in Logs/Exports. | **Rührt keinen Produktivcode an.** Nur lesen, angreifen, dokumentieren — dann Übergabe an Frank. ✅ erprobt (manuell) |
 | **Marv** | Read-Only Red Team — **Chaos/Regression** | Wirft der App Steine in den Weg: kaputte/riesige/leere Inputs (Fuzzing), Race-Conditions, korrupte Dateien, Migrations-Edge-Cases, „DAU klickt dreimal". | **Rührt keinen Produktivcode an.** Nur lesen, brechen, dokumentieren — dann Übergabe an Frank. ✅ erprobt (manuell) |
@@ -189,12 +182,10 @@ zugeordnet, ohne dass es dafür eine Extra-Liste braucht.
   möglich) — analog zum Architekten, **auch im Abomodus**. Die übrigen Loop-Rollen
   (Ralph/Harry/Marv/Frank) bleiben beim günstigen Modell.
 - **Auth:** **Abo-first mit aufruf-lokalem API-Fallback** (wie die anderen
-  automatisierten Rollen; Strippenzieher-Entscheid im Feldprojekt
-  website-maxron-de, 2026-07-10 — die frühere „Axel immer API"-Regel ist
-  aufgehoben, weil das starke Modell im Abo schlicht günstiger ist).
-  **Seit 2026-07-13 gilt das auch für Den Architekten** — **keine** Rolle ist
-  mehr fest API. Das ändert nur die Auth-Achse; die Modell-Achse (stark für
-  Axel/Architekt, günstig für die Loop-Rollen) bleibt unberührt.
+  automatisierten Rollen), weil das starke Modell im Abo schlicht günstiger ist.
+  Das gilt **auch für Den Architekten** — **keine** Rolle ist mehr fest API.
+  Das ändert nur die Auth-Achse; die Modell-Achse (stark für Axel/Architekt,
+  günstig für die Loop-Rollen) bleibt unberührt.
 
 **Nie im Dauer-Loop** (ein Fall pro Aufruf). Budget pro Fall im
 **Zwei-Schwellen-Modell** (`BL-30`, siehe `## Kostenkontrolle`): **Soft-Cap**
@@ -284,8 +275,8 @@ Umschalten von `.ralph-plan`/[`.ralph-state`](.ralph-state) und der Start
 bleiben Strippenzieher-Handarbeit. Die Regel automatisiert die **Ausgabe der
 Vorlage**, nicht ihre Ausführung.
 
-**5. Abschluss-Doc ist Pflicht pro gebauter Kaskade (✅ erprobt,
-website-maxron-de, Entscheid 2026-07-13 — „ab sofort immer so").** Nach **jedem**
+**5. Abschluss-Doc ist Pflicht pro gebauter Kaskade (✅ erprobt, Entscheid „ab
+sofort immer so").** Nach **jedem**
 Vollautomatik-Lauf legt der Architekt ein committetes
 **`{{PLAN_ORDNER}}/kaskade-N-abschluss.md`** an.
 
@@ -419,7 +410,7 @@ Voll-Read** obendrauf (bei ~20–30 Aufrufen je Kaskade). Verbindlich:
 - **Abo-Default mit API-Fallback (✅ erprobt):** Loop-Rollen starten im
   **Abomodus**; scheitert ein Aufruf (Timeout/Limit), folgt **ein** API-Retry nur
   **bis zum Abschluss der laufenden Stufe**, danach wieder Abo. **Auch Axel und
-  Der Architekt laufen Abo-first** (Entscheide 2026-07-10/13) — das starke Modell
+  Der Architekt laufen Abo-first** — das starke Modell
   im Abo ist schlicht günstiger, die Budget-Caps bleiben als Airbag. **Keine**
   Rolle ist mehr fest `api`. Rezept: Anhang A.3.
 - **Einrichtung pro Maschine:** einmalig `~/.claude/scripts/team-auth-setup.sh`

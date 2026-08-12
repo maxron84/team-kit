@@ -2,6 +2,29 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- **Die Regeldatei-Vorlage trägt keine Aktenlage mehr (Vorstufe zu `BL-56`).**
+  Die mehrsprachigen Fassungen des T.E.A.M.-Akronyms stehen jetzt in
+  `bootstrap/TEAM.md` — sie richten sich an den Menschen, nicht an die Rollen,
+  und die Bedienanleitung ist ihr Ort. Wörtlich verschoben, per Diff gegen den
+  alten Stand geprüft. Dazu vier Entscheid-Provenienzen entfernt („Entscheid
+  2026-07-13", „die frühere Regel ist aufgehoben"), deren Aktenlage
+  `doku/anhang-a.md` A.3 **bereits wörtlich trägt** — das war Doppelung, keine
+  Streichung. Die Regeln selbst sind unverändert; kein Beleg, kein
+  `✅ erprobt`-Marker und keine Geltung angetastet. **753 B, 1,9 %.**
+
+  Der Anlass ist die Messung in `BL-56`: Jede Rolle startet über `claude -p`,
+  Claude Code lädt dabei automatisch die installierte `CLAUDE.md` — ~11k Token
+  je Aufruf, ~990k Token je Kaskade allein für Regeln. Mehr als diese 753 B war
+  ohne Geltungs-Entscheid nicht zu holen: Die Dateigröße ist **testgeschützte
+  Absicht** (`test_bl49`, `test_bl17` verlangen den Feld-Beleg ausdrücklich *in*
+  der Regeldatei, `test_bl50` beide Träger). Der eigentliche Hebel — 14 KB, die
+  nur den Architekten binden und trotzdem in jeden Loop-Rollen-Aufruf geladen
+  werden — steht als benannter Entscheid in `BL-56`.
+
 ## [2.6.0] — 2026-08-12
 
 **Das Kit zieht in gewachsene Codebasen ein (`BL-51`, `BL-52`).**
