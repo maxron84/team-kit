@@ -1,3 +1,6 @@
+![T.E.A.M. — Toll, ein anderer macht's: der Architekt, Frank der Fixer, Ralph
+Wiggum, Axel Foley, Harry & Marv](team-banner.webp)
+
 # T.E.A.M.-Starterkit
 
 Ein vollständiges KI-Rollenteam auf Knopfdruck in ein Software-Projekt —
