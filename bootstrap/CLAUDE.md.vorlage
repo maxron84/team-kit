@@ -482,17 +482,15 @@ die iterierenden „Sorgenkinder" **Frank & Axel**. Beide zentral in `team-lib.s
 — **eine** Zahl statt mehrerer divergierender Defaults.
 **Warnschwelle**: 80 % des Soft-Caps — reiner Hinweis, kein Abbruch.
 
-**Zwei-Schwellen-Modell — warum (realer Auslöser HM-32, 2026-07-12):** Ein zu
-tiefer Pro-Fall-Cap greift **nach** dem bereits bezahlten Claude-Aufruf. Als ein
-Frank-Versuch den 1-USD-Cap sprengte, wertete der Loop den plausiblen Fix als
-Fehlversuch und warf ihn per **Rollback** weg — der nächste Versuch kostete
-erneut. Der zu tiefe Cap „sparte" nichts, sondern **vervielfachte** die Kosten.
-Konsequenz:
+**Was ein überschrittener Cap für die eigene Arbeit bedeutet:**
 
 - **Frank & Axel:** ein überschrittener **Soft-Cap** ist nur ein **Hinweis** —
   **kein** Rollback, **kein** Fehlversuch; Fix/Akte bleiben gültig und werden
   normal geprüft. Erst der **Hard-Cap** (echter Ausreißer: Endlosschleife/
-  kaputter Prompt) bricht mit Rollback+Cleanup ab.
+  kaputter Prompt) bricht mit Rollback+Cleanup ab. Grund: Ein zu tiefer Cap
+  greift **nach** dem bereits bezahlten Aufruf und wirft plausible Arbeit per
+  Rollback weg — er „sparte" nichts, sondern **vervielfachte** die Kosten
+  (realer Auslöser `HM-32`).
 - **Ralph/Harry/Marv:** sofortiger **Hard-Cap** beim Soft-Wert (kein
   Soft-Fenster) — Ralph stoppt nach dem Commit **vor** dem
   .ralph-state-Weiterschalten (kein Rollback, Mensch schaltet weiter),
@@ -519,97 +517,18 @@ Konsequenz:
 > - Bei großen Dateien mit `offset`/`limit` gezielt lesen statt komplett.
 > - Antworten knapp halten, wenn nicht ausdrücklich mehr gefragt ist.
 
-**Interaktive Akteur-Kosten erfassen (✅ erprobt, `BL-28`/`BL-29`/`BL-33`,
-website-maxron-de 2026-07-12):** **Interaktiv** (außerhalb `team_claude`)
-arbeitende Rollen — **Der Architekt** und **Frank-im-Abo** — schreiben **keine**
-`total_cost_usd`-JSONs und fallen sonst durch die automatische Kostenerfassung
-(die nur `.<rolle>-logs/` liest). Realer Auslöser: eine einzelne
-Architekten-Session kostete laut Konsole **~16 USD** — strukturell unerfasst.
-Operativer Vertrag (Bau-Details in **Anhang A.9**):
+**Kostenabschluss — das WANN gilt für alle, das WIE nur für einen.** Pro
+gebauter Kaskade sind **zwei** Dinge Pflicht: das **Abschluss-Doc**
+(Planungsregel 5) **und** der **Kostenabschluss** über das Kontostand-Werkzeug —
+beides **nach** dem Lauf im Architekten-Closeout, **nie** in einer Loop-Stufe
+(siehe A.7, Lehre 8). Eine Abschluss-**Stufe** würde mitten im Lauf genau das
+Geld wegräumen, das die Pro-Lauf-Durchsetzung noch messen muss.
 
-- **A2 — grobe Live-Schätzung (nur Architekt):** `--budget` zeigt eine aus dem
-  Plan-/Doku-Churn abgeleitete **Größenordnung** der laufenden Architekt-Kosten,
-  klar als „geschätzt" markiert — **nie** persistiert, nie als exakter Wert
-  getarnt.
-- **A1 — Wert beim Kaskaden-Abschluss (rollen-agnostisch), auth-abhängig:**
-  `./team-status.sh --akteur-abschluss <rolle> <auth:abo|api> <USD> <domaene> ["<notiz>"]`.
-  Das Tool **ersetzt** (statt verdoppelt) eine vorhandene Zeile **derselben Rolle
-  + Kaskade** — Schätzung und eingetragener Wert zählen so nie doppelt.
-  `--architekt-abschluss` bleibt als dünner Alias.
-  - **Im API-Betrieb:** Der Strippenzieher liest den realen Verbrauch aus der
-    Anbieter-Konsole ab und trägt ihn ein.
-  - **Im Abo-Betrieb (Regelfall, seit alle Rollen Abo-first laufen):** Es gibt
-    **keinen** Konsolenwert — im Abo wird nichts abgerechnet. Zwei Wege, in
-    dieser Reihenfolge:
-    1. **Messen** (vorzuziehen): Das Sitzungstranskript der Agenten-CLI enthält
-       die echten Token-Zahlen. Zwei Fallen: Antworten über die **Nachrichten-ID
-       deduplizieren** (eine Antwort erzeugt mehrere Zeilen mit derselben
-       Verbrauchsangabe) und das **Preismodell an einem headless-Lauf mit
-       bekanntem Konsolenwert eichen** (der Cache-Write-Preis hängt an der
-       Cache-Laufzeit). So geeicht ist der Restfehler klein genug, um die Zahl
-       ohne Vorbehalt zu buchen.
-    2. **A2-Schätzung** als Notbehelf, wenn kein Transkript vorliegt.
-    Beides wird als **Abo-Gegenwert** persistiert (`… <rolle> abo <USD> …`) und
-    **nie** stillschweigend als abgerechneter Betrag ausgegeben. Erwarte, dass
-    der Löwenanteil auf das **erneute Vorlegen des Kontexts** entfällt, nicht auf
-    den erzeugten Text — lange Sitzungen mit vielen Werkzeugaufrufen sind darum
-    teurer, als ihr Ergebnis vermuten lässt.
-- **Ledger domänengetrennt (`BL-29`):** Das Ledger-Schema trägt je Zeile eine
-  `domaene`/`rolle` (Altzeilen bleiben „unzugeordnet").
-- **Eine Domäne ist der Normalfall (`BL-9`).** `--budget` zeigt die
-  Domänenaufstellung nur, wenn dieses Projekt **mehrere** Domänen führt. Die
-  frühere feste Trennung `produkt` ↔ `team` stammt aus dem Ursprungsprojekt, in
-  dem die Team-Infrastruktur **im** Projekt gebaut wurde. Seit es das Kit gibt,
-  gilt das nicht mehr: **Am T.E.A.M. wird hier nicht entwickelt.** Was am Team
-  auffällt, geht als Fund ins Kit-Repo zurück und wird dort verbucht — eine
-  „T.E.A.M."-Zeile im Kontostand dieses Projekts wäre strukturell `0.0000`.
-  Eine Kennzahl, die immer null zeigt, erzieht dazu, den ganzen Block zu
-  überlesen; deshalb ist sie weg. Mehrere Domänen nur für fachlich getrennte
-  Stränge **dieses** Projekts (z. B. `backend frontend`), einzutragen unter
-  `TEAM_DOMAENEN` in `team.config.sh`.
-
-**Kaskadenabschluss-Pflicht (✅ erprobt, website-maxron-de bis Kaskade 22):** Pro
-gebauter Kaskade sind **zwei** Dinge Pflicht — das **Abschluss-Doc**
-(Planungsregel 5) **und** der **Kostenabschluss** über das Kontostand-Werkzeug
-(`--rollen-abschluss`, `--akteur-abschluss`), beides **nach** dem Lauf im
-Architekten-Closeout, **nie** in einer Loop-Stufe (siehe A.7, Lehre 8).
-
-> **`BL-4` — warum `--rollen-abschluss` beide Zeilen schreibt:** Der Befehl
-> ledgerte ursprünglich nur `.team-logs` (Harry/Marv/Frank/Axel). Ralphs
-> Baukosten aus `.ralph-logs` landeten in **keiner** Zeile — sie standen nur
-> im Live-Kontostand, und dieser Ordner ist `.gitignore`t. Ein frischer Clone
-> verlor damit die gesamte Bau-Kostenhistorie (im Feld: 2,1621 von 9,4204 USD).
-> Seit dem Fix bucht **ein** Aufruf beide Quellen als **zwei** getrennte Zeilen
-> (`roles` und `ralph`) und archiviert beide Log-Ordner. Die Trennung
-> Bau ↔ Sweep/Fix bleibt damit lesbar — an genau dieser Kennzahl fiel im Feld
-> überhaupt auf, dass Ralph fehlte.
->
-> **`BL-5` — ein zweiter Abschluss überschreibt nicht mehr.** Lief nach dem
-> Closeout noch eine Rolle, bricht der erneute Aufruf ab und nennt Alt-, Neu-
-> und Summenwert; `--addieren` bucht den Nachlauf dazu, `--ersetzen` korrigiert
-> eine falsche Altzeile.
-
-> **Skizze D — der Abschluss wird geprüft, nicht geglaubt.** `--ledger-pruefen`
-> beantwortet nach dem Closeout drei Fragen: Fehlt einer Kaskade eine Zeile je
-> Quelle? Liegen unarchivierte Logs herum, obwohl sie schon gebucht ist? Und
-> **ergeben die archivierten Rohlogs mehr, als das Ledger ausweist?** Nur die
-> letzte Frage zieht ihre Kennzahl aus einer **anderen** Quelle als das
-> Geprüfte — und genau das fehlte bei `BL-1`, `BL-4` und `BL-5`, die alle drei
-> ein Mensch beim Vergleich zweier Dokumente fand, nicht ein Werkzeug. Exit `4`
-> bei Warnbefunden; bewusst **kein** hartes Gate im Closeout, weil eine Kaskade
-> mit legitim fehlender Zeile sonst nicht abschließen könnte und ein Gate, das
-> man regelmäßig umgeht, wirkungslos ist. Stattdessen läuft die Prüfung bei
-> jedem `--budget` ungefragt mit.
-
-> **Feld-Lehre gegen die naheliegende Alternative:** Eine fortgeschriebene
-> Kosten-Prosaseite (`wiki/kosten.md` o. Ä.) als Abschlusspflicht **trägt nicht**
-> — im Feld blieb genau diese Seite bei Kaskade 17 stehen, während die Kaskaden
-> weiterliefen, und die Regel zeigte ins Leere. Konsequenz: Prosa-Kostenseite als
-> **Historie einfrieren**, maschinelle Wahrheit ist die committete
-> .budget-ledger plus das Kontostand-Werkzeug; die erzählende Auswertung je Lauf
-> übernimmt das Abschluss-Doc.
-
----
+> **Wie** abgerechnet wird — Verben, Ledger-Zeilen, Domänen, Abo-Messung und
+> die Prüfung des Abschlusses gegen eine **zweite** Quelle — steht im Briefing
+> des Architekten (`team/prompts/rolle-architekt.md`). Es ist **seine**
+> Handarbeit; keine andere Rolle ruft diese Befehle auf. Bau-Details: **Anhang
+> A.9**.
 
 ---
 

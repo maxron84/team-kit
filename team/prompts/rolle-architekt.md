@@ -95,6 +95,25 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    eichen) und schätze nur dann, wenn kein Transkript vorliegt. Rechne damit,
    dass der Löwenanteil auf das erneute Vorlegen des Kontexts entfällt, nicht auf
    den erzeugten Text — meine Sitzung ist teurer, als ihr Ergebnis vermuten lässt.
+   Der Wert wird als **Abo-Gegenwert** gebucht und **nie** stillschweigend als
+   abgerechneter Betrag ausgegeben. Das Werkzeug ist rollen-agnostisch —
+   `--akteur-abschluss <rolle> <auth:abo|api> <USD> <domaene> ["<notiz>"]`
+   deckt jede interaktiv arbeitende Rolle ab (auch Frank-im-Abo);
+   `--architekt-abschluss` ist der dünne Alias dafür. Das Tool **ersetzt**
+   (statt verdoppelt) eine vorhandene Zeile **derselben Rolle + Kaskade**,
+   damit Schätzung und eingetragener Wert nie doppelt zählen.
+3. **Domänen nur, wenn es sie wirklich gibt.** Das Ledger trägt je Zeile eine
+   `domaene`/`rolle`; **eine** Domäne ist der Normalfall. Mehrere lohnen nur für
+   fachlich getrennte Stränge **dieses** Projekts (z. B. `backend frontend`),
+   einzutragen unter `TEAM_DOMAENEN` in `team.config.sh`. Eine Kennzahl, die
+   immer null zeigt, erzieht dazu, den ganzen Block zu überlesen.
+
+**Keine fortgeschriebene Kosten-Prosaseite.** Eine erzählende `wiki/kosten.md`
+als Abschlusspflicht **trägt nicht** — im Feld blieb genau diese Seite bei
+Kaskade 17 stehen, während die Kaskaden weiterliefen, und die Regel zeigte ins
+Leere. Bestehende Prosaseiten friere ich als **Historie** ein; die **maschinelle
+Wahrheit ist die committete `.budget-ledger` plus das Kontostand-Werkzeug**, die
+erzählende Auswertung je Lauf übernimmt das Abschluss-Doc.
 
 **Fund am Team statt am Projekt:** Steckt ein Closeout-Fund in `team/`, in einem
 Entrypoint oder in einer Regel aus `CLAUDE.md`/`TEAM.md`, dann ist es **kein

@@ -104,14 +104,15 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Kostenkontrolle | NORM | Regeldatei | ein überschrittener **Soft-Cap** ist nur ein **Hinweis** |
 | Kostenkontrolle | NORM | Regeldatei | Das starke/teure Modell (Axel, Architekt) läuft **nie im Dauer-Loop** |
 | Kostenkontrolle | NORM | Regeldatei | Nur aktivieren, wenn das Budget es erzwingt, und Axel möglichst **ausnehmen**. |
-| Kostenkontrolle | NORM | Regeldatei | Das Tool **ersetzt** (statt verdoppelt) eine vorhandene Zeile **derselben Rolle + Kaskade** |
-| Kostenkontrolle | NORM | Regeldatei | **nie** stillschweigend als abgerechneter Betrag ausgegeben |
+| Kostenkontrolle | NORM | rolle-architekt | Das Tool **ersetzt** (statt verdoppelt) eine vorhandene Zeile **derselben Rolle + Kaskade** |
+| Kostenkontrolle | NORM | rolle-architekt | **nie** stillschweigend als abgerechneter Betrag ausgegeben |
 | Kostenkontrolle | NORM | Regeldatei | beides **nach** dem Lauf im Architekten-Closeout, **nie** in einer Loop-Stufe |
-| Kostenkontrolle | NORM | Regeldatei | maschinelle Wahrheit ist die committete .budget-ledger plus das Kontostand-Werkzeug |
+| Kostenkontrolle | NORM | rolle-architekt | **maschinelle Wahrheit ist die committete `.budget-ledger` plus das Kontostand-Werkzeug** |
 | Kostenkontrolle | HERLEITUNG | Regeldatei | Der zu tiefe Cap „sparte" nichts, sondern **vervielfachte** die Kosten. |
-| Kostenkontrolle | HERLEITUNG | Regeldatei | eine einzelne Architekten-Session kostete laut Konsole **~16 USD** — strukturell unerfasst |
-| Kostenkontrolle | HERLEITUNG | Regeldatei | ein Gate, das man regelmäßig umgeht, wirkungslos ist |
-| Kostenkontrolle | HISTORIE | Regeldatei | Die frühere feste Trennung `produkt` ↔ `team` stammt aus dem Ursprungsprojekt |
+| Kostenkontrolle | HERLEITUNG | anhang-a | eine **einzelne** Architekten-Session kostete laut Konsole **~16 USD** |
+| Kostenkontrolle | HERLEITUNG | anhang-a | ein Gate, das man regelmäßig umgeht, ist wirkungslos |
+| Kostenkontrolle | NORM | rolle-architekt | **eine** Domäne ist der Normalfall |
+| Kostenkontrolle | HISTORIE | anhang-a | Die frühere feste Trennung `produkt` ↔ `team` stammt aus dem **Ursprungsprojekt** |
 | Anhang A — Loop-Infrastruktur | NORM | Regeldatei | **Der `team/`-Ordner gehört der Infrastruktur, nicht dem Projekt.** |
 | Anhang A — Loop-Infrastruktur | NORM | Regeldatei | **Team-Tests laufen getrennt** |
 | Anhang A — Loop-Infrastruktur | NORM | Regeldatei | Diese Datei bleibt **Regelquelle** |

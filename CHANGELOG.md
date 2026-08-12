@@ -31,6 +31,24 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Changed
 
+- **Dreischnitt, erster Block: `## Kostenkontrolle` von 8,6 auf 3,2 KB
+  (`BL-56`).** Das **WANN** gilt für alle und bleibt in der Regeldatei
+  (Zwei-Schwellen-Modell, was ein überschrittener Cap für die eigene Arbeit
+  bedeutet, Token-Sparregeln, und die Pflicht, den Kostenabschluss **nach** dem
+  Lauf im Architekten-Closeout zu machen, **nie** in einer Loop-Stufe). Das
+  **WIE** — Verben, Ledger-Zeilen, Domänen, Abo-Messung, Prüfung gegen eine
+  zweite Quelle — steht jetzt im Briefing des Architekten; keine andere Rolle
+  ruft diese Befehle je auf. Drei Herleitungen wanderten nach Anhang A.9
+  (`~16 USD`-Auslöser, warum `--ledger-pruefen` kein hartes Gate ist, warum
+  **eine** Domäne der Normalfall ist).
+
+  Der Umbau war **kein Umzug, sondern ein Dedup**: `rolle-architekt.md` trug
+  die Substanz bereits (Closeout mit Pflichtfrage, `--addieren`/`--ersetzen`,
+  `--ledger-pruefen`, Abo-Messung). Ergänzt wurden nur die drei Regeln, die
+  wirklich fehlten. Der Regel-Inventar-Gurt meldete **genau drei** NORMen mit
+  gewechseltem Träger und sonst nichts — der Beleg, dass Text gekürzt wurde und
+  keine Geltung. Vorlage: **39.472 → 33.358 B (−15,5 %)**.
+
 - **Die Regeldatei-Vorlage trägt keine Aktenlage mehr (Vorstufe zu `BL-56`).**
   Die mehrsprachigen Fassungen des T.E.A.M.-Akronyms stehen jetzt in
   `bootstrap/TEAM.md` — sie richten sich an den Menschen, nicht an die Rollen,

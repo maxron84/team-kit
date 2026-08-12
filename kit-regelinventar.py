@@ -41,6 +41,8 @@ KLASSEN = ("NORM", "HERLEITUNG", "HISTORIE")
 TRAEGER = {
     "Regeldatei": REGELDATEI,
     "TEAM.md": WURZEL / "bootstrap" / "TEAM.md",
+    # Ziel fuer HERLEITUNG/HISTORIE nach Doku-Hygiene-Regel 1.
+    "anhang-a": WURZEL / "doku" / "anhang-a.md",
     "rolle-architekt": WURZEL / "team" / "prompts" / "rolle-architekt.md",
     "rolle-ralph": WURZEL / "team" / "prompts" / "rolle-ralph.md",
     "rolle-harry": WURZEL / "team" / "prompts" / "rolle-harry.md",
