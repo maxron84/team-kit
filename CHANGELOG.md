@@ -4,6 +4,31 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Regel-Inventar — der Sicherheitsgurt vor dem Umbau der Regeldatei
+  (`BL-56`, Vorbedingung aus A.10).** [`doku/regel-inventar.md`](doku/regel-inventar.md)
+  klassifiziert **72 Aussagen** der ausgelieferten Regeldatei über alle 10
+  Abschnitte als `NORM` (60), `HERLEITUNG` (11) oder `HISTORIE` (1) — mit
+  wörtlichem Zitat. [`kit-regelinventar.py`](kit-regelinventar.py) prüft als
+  **Stufe 7 in `kit-test.sh`**, dass jedes `NORM`-Zitat wörtlich in
+  `bootstrap/CLAUDE.md.vorlage` steht, dass kein Abschnitt unerfasst ist und
+  dass das Inventar keine Abschnitte nennt, die es nicht mehr gibt.
+
+  **Der Gurt verbietet keine Änderung — er macht sie sichtbar.** Wer eine Regel
+  umformuliert oder streicht, bekommt rot und muss die Inventarzeile **benannt**
+  nachziehen, statt sie stillschweigend verschwinden zu lassen. Gegenprobe über
+  die volle Kette gefahren: entfernte Regel → `kit-test.sh` Exit 1 mit
+  Namensnennung der verschwundenen Regel; ebenso neuer Abschnitt ohne
+  Inventarzeile und Inventar-Leiche.
+
+  Zwei Bauentscheide, die auch für Nachbauten gelten (in A.10 nachgetragen):
+  Verglichen wird **normalisiert** (Blockquote-Marker, Betonungszeichen,
+  Zeilenumbrüche raus) — sonst scheitert ein wörtlich richtiges Zitat an einem
+  `**nie**` mitten im Satz. Und der Prüfer bewacht die **Vorlage**, nicht die
+  Installation: Ein Feldprojekt darf seine `CLAUDE.md` umformulieren (so hält es
+  `test_bl55` ausdrücklich fest), die Vorlage darf es nicht unbemerkt.
+
 ### Changed
 
 - **Die Regeldatei-Vorlage trägt keine Aktenlage mehr (Vorstufe zu `BL-56`).**

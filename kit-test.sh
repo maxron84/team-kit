@@ -56,14 +56,14 @@ aufraeumen() {
 }
 trap aufraeumen EXIT
 
-kopf "1/6 — Wegwerf-Repo anlegen"
+kopf "1/7 — Wegwerf-Repo anlegen"
 git -C "$ZIEL" init -q
 # Lokale Identität, damit der Lauf auch ohne globale Git-Config committen kann.
 git -C "$ZIEL" config user.email "kit-test@localhost"
 git -C "$ZIEL" config user.name  "Kit-Selbsttest"
 gruen "  ✓ $ZIEL"
 
-kopf "2/6 — Kit installieren (nicht-interaktiv)"
+kopf "2/7 — Kit installieren (nicht-interaktiv)"
 # Ohne TEAM_INIT_*-Vorgaben: genau die Defaults, die ein Anwender bekäme.
 if ! bash "$KIT/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.log" 2>&1; then
     rot "  ✗ install.sh schlug fehl:"
@@ -72,7 +72,7 @@ if ! bash "$KIT/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.log" 2>
 fi
 gruen "  ✓ $(grep -oE 'Fertig — [0-9]+ Dateien geschrieben' "$ZIEL/.install.log" | head -1)"
 
-kopf "3/6 — Ungefüllte Platzhalter suchen"
+kopf "3/7 — Ungefüllte Platzhalter suchen"
 # Ein übrig gebliebenes {{...}} heißt: Der Installer kennt die Datei nicht oder
 # der Platzhalter wurde umbenannt. Beides fällt sonst erst im Feld auf, wo die
 # Briefings die Pfade des Ursprungsprojekts nennen würden — falsche Guard-Grenze.
@@ -85,7 +85,7 @@ if [ -n "$RESTE" ]; then
 fi
 gruen "  ✓ keine"
 
-kopf "4/6 — Regressionstests in der Installation"
+kopf "4/7 — Regressionstests in der Installation"
 # Vor dem Testlauf committen — dieselbe Reihenfolge, die TEAM.md dem Anwender
 # vorschreibt. Ein Test, der den Git-Zustand liest, sieht damit den echten.
 git -C "$ZIEL" add -A
@@ -105,7 +105,7 @@ fi
 # einmaliges Handprotokoll: Wir tun so, als sei das Projekt in Betrieb
 # (Ledger, Kaskadenstand, Beutebuch-Fund, eigener Smoke-Test), fahren das
 # Update und pruefen, dass davon NICHTS angefasst wurde.
-kopf "5/6 — Update-Pfad schuetzt Projektdaten"
+kopf "5/7 — Update-Pfad schuetzt Projektdaten"
 echo '2026-08-01 | 1 | 9.4204 | abo | produkt | roles | Lauf' >> "$ZIEL/.budget-ledger"
 echo '### HM-1 — echter Fund' >> "$ZIEL/plans/beutebuch.md"
 echo '5' > "$ZIEL/.ralph-state"
@@ -155,7 +155,7 @@ pruefe "keine offenen Platzhalter in den Briefings" \
 # BL-51/BL-52: Die beiden Bestandsprojekt-Befunde. Der Installer ist die einzige
 # Stelle, an der sie auffallen koennen — in der Installation liegt er nicht mehr,
 # also gehoert der Nachweis hierher und nicht in team/tests/.
-kopf "6/6 — Einzug in eine gewachsene Codebasis (BL-51, BL-52)"
+kopf "6/7 — Einzug in eine gewachsene Codebasis (BL-51, BL-52)"
 BESTAND_REPO="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-bestand.XXXXXX")"
 bestand_aufraeumen() { [ "$BEHALTEN" -eq 1 ] || rm -rf "$BESTAND_REPO"; }
 trap 'aufraeumen; bestand_aufraeumen' EXIT
@@ -227,6 +227,17 @@ b_pruefe "Update erinnert an den Bestand in der Schreibzone" \
 b_pruefe "im leeren Repo schweigt auch das Update" \
     "$(grep -c 'Ungeprueft in der Wurzel' "$ZIEL/.update.log")" "0"
 [ "$BESTAND_FEHLER" -eq 0 ] || exit 1
+
+kopf "7/7 — Regel-Inventar gegen die Regeldatei (A.10, BL-56)"
+# Der Sicherheitsgurt vor dem Umbau der Regeldatei: Jedes NORM-Zitat muss
+# woertlich in bootstrap/CLAUDE.md.vorlage stehen, jeder Abschnitt im Inventar
+# vertreten sein. Prueft die VORLAGE, nicht die Installation — ein Feldprojekt
+# darf seine CLAUDE.md umformulieren (so haelt es test_bl55 ausdruecklich
+# fest), die Vorlage darf es nicht unbemerkt.
+if ! python3 "$KIT/kit-regelinventar.py"; then
+    rot "  ✗ Regel-Inventar und Regeldatei stehen auseinander."
+    exit 1
+fi
 
 gruen "
 ✓ Kit-Selbstverifikation grün."
