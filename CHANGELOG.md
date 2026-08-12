@@ -2,7 +2,22 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
-## [Unreleased]
+## [2.7.1] — 2026-08-12
+
+**Der Weg zurück ins eigene Projekt.** Zwei Lücken, die beide erst auffielen,
+als die Frage lautete: „Was hat mein zukünftiges Ich in sechs Monaten
+eigentlich zur Verfügung?" — Antwort: im Projekt liegt nur `TEAM.md`, der
+README bleibt im Kit-Repo zurück.
+
+### Added
+
+- **`TEAM.md` erklärt jetzt, wie man auf eine neue Kit-Version hebt.** Bisher
+  stand dazu **kein Wort** in der einzigen Anleitung, die im Zielprojekt liegt.
+  Neu: der Befehl, was `--update` anfasst und was nicht, die `--force`-Warnung,
+  und vor allem **der Schritt, den nur der Mensch machen kann** — die Regeln aus
+  der neuen `CLAUDE.md` nachziehen, weil der Updater sie zum Schutz der
+  Projektdaten nicht überschreibt. Mit dem kopierbaren `diff`-Befehl aus dem
+  Fix unten.
 
 ### Fixed
 

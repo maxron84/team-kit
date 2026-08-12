@@ -7,7 +7,8 @@ Die Regeln für die KI-Rollen stehen in [`CLAUDE.md`](CLAUDE.md).
 **Neu hier?** Erst die Warnung direkt darunter — sie ist die teuerste des
 Kits. Dann [Worum es überhaupt geht](#worum-es-überhaupt-geht) und das
 [Glossar](#glossar--die-begriffe-in-einem-satz); danach ergibt der Rest sich
-von selbst.
+von selbst. Später mal einen neueren Kit-Stand holen? →
+[Auf eine neue Kit-Version heben](#auf-eine-neue-kit-version-heben).
 
 ---
 
@@ -286,6 +287,49 @@ bleiben dürfen:
 Der Installer füllt beides beim Einzug und warnt, wenn Plan- oder Test-Ordner
 belegt sind. **Die harte Variante** bleibt der eigene, leere Plan-Ordner
 (`team-plans/`): Dann ist die Grenze Mechanik statt Prompt-Auflage.
+
+---
+
+## Auf eine neue Kit-Version heben
+
+Das T.E.A.M. wird weiterentwickelt. So holst du dir einen neueren Stand — der
+Kit-Pfad ist der Ordner, aus dem installiert wurde (typisch
+`~/Source/team-kit`):
+
+```bash
+git add -A && git commit -m "chore: vor Kit-Update"   # erst committen!
+bash <kit-pfad>/install.sh . --update
+```
+
+**`--update` fasst nur die Infrastruktur an** — Entrypoints, `team/lib.sh`,
+die Werkzeuge, die Rollen-Briefings, die Team-Tests. **Unangetastet bleiben**
+deine Projektdaten: `team.config.sh`, `CLAUDE.md`, `CHANGELOG.md`,
+`.budget-ledger`, `.ralph-state` und der ganze Plan-Ordner. Der Lauf listet am
+Ende beides auf.
+
+> ⚠ **Nimm niemals `--force`.** Das ist kein Update: Es leert das Ledger
+> (Kostenhistorie weg), setzt `.ralph-state` auf 1 zurück (Kaskadenstand weg)
+> und ersetzt das Beutebuch durch die leere Vorlage (**alle Funde weg**).
+> `--force` ist nur für eine kaputte **Erst**installation gedacht.
+
+**Der Schritt, den nur du machen kannst: die Regeln nachziehen.** Weil
+`CLAUDE.md` deine Projektwerte und womöglich eigene Regeln trägt, schreibt der
+Updater sie **nicht** um — er meldet nur, dass die Kit-Fassung sich geändert
+hat, und legt sie **mit deinen Werten gerendert** zum Vergleich bereit:
+
+```
+! CLAUDE.md weicht von der Kit-Fassung ab (412 Zeilen)
+    diff -u "/tmp/team-kit-abgleich-…/CLAUDE.md" "…/CLAUDE.md"
+```
+
+Diesen Befehl kannst du direkt kopieren. Beim Durchsehen gilt: **deine**
+Projekt-Spezifika und eigenen Regeln behalten, geänderte oder neue **Kit-Regeln
+übernehmen.** Überspringst du das, läuft die Mechanik der Doku davon — die
+Skripte können dann etwas, wovon die Regeln nichts wissen. Genau daran ist im
+Feld schon einmal die halbe Kostenerfassung gescheitert.
+
+Was sich zwischen den Versionen geändert hat, steht im `CHANGELOG.md` **des
+Kit-Repos** (nicht in deinem — deiner gehört deinem Projekt).
 
 ---
 
