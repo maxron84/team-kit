@@ -31,6 +31,23 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Changed
 
+- **Dreischnitt, zweiter Block: `## Kaskaden-Planungsregeln` von 8,2 auf 5,3 KB
+  (`BL-56`).** Das ausführliche Verfahren (Plankopf, Scharfschalt-Sequenz
+  Schritt für Schritt) steht im Briefing des Architekten; in der Regeldatei
+  bleibt je Regel der normative Kern plus alles, was **andere** Rollen
+  begrenzt. **Testgepinnt und deshalb unangetastet:** die Gegenprobe-Regel samt
+  Feld-Beleg (`test_bl49` verlangt „zwei fremde Werte"/„sieben"), die
+  Pflichtzeile „nebenbei eingelöst — wer zitiert sie?" und die Schreibweise
+  `Kit-BL-<N>` (`test_bl50`).
+
+  **Ein Test hat einen echten Fehler abgefangen.** Die kopierfertige Gliederung
+  des Abschluss-Docs war mit weggefallen — `test_bl50` verlangt sie
+  ausdrücklich, weil die Pflichtzeile **im** Block stehen muss und nicht
+  daneben: Die Gliederung ist das, was ein kalt startendes Architekt-Ich
+  kopiert, und beim Kopieren fiele die Frage sonst weg. Genau die Bauart aus
+  `BL-44`. Der Block wurde **wörtlich aus dem Altstand** zurückgeholt, nicht neu
+  getippt.
+
 - **Dreischnitt, erster Block: `## Kostenkontrolle` von 8,6 auf 3,2 KB
   (`BL-56`).** Das **WANN** gilt für alle und bleibt in der Regeldatei
   (Zwei-Schwellen-Modell, was ein überschrittener Cap für die eigene Arbeit

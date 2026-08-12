@@ -210,92 +210,43 @@ erledigt (Frank-Fix, …) → an Mensch eskaliert`.
 
 ## Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt
 
+> **Diese Regeln binden ausschließlich den Architekten.** Das ausführliche
+> Verfahren — Plankopf, Scharfschalt-Sequenz Schritt für Schritt, Gliederung des
+> Abschluss-Docs — steht in seinem Briefing
+> (`team/prompts/rolle-architekt.md`). Hier stehen die Sätze, die auch **andere**
+> Rollen kennen müssen, weil sie deren Arbeit begrenzen.
+
 **1. Skizze zuerst.** Neue Themen/Stränge werden **zunächst als Skizze** in
-[`{{PLAN_ORDNER}}/roadmap-skizzen.md`]({{PLAN_ORDNER}}/roadmap-skizzen.md) gehalten: Ziel, grober
-Umfang, Bezug, offene Fragen — **ohne** feste Stufen-Nummern, **ohne** Cap.
+[`{{PLAN_ORDNER}}/roadmap-skizzen.md`]({{PLAN_ORDNER}}/roadmap-skizzen.md)
+gehalten: Ziel, grober Umfang, Bezug, offene Fragen — **ohne** feste
+Stufen-Nummern, **ohne** Cap.
 
 **2. Aushärtung on demand.** **Erst wenn ein Strang zur nächsten Kaskade wird**
 (der Strippenzieher gibt frei), härtet der Architekt ihn voll aus: eigene
-`{{PLAN_ORDNER}}/ralph-kaskade-N-….md`, fester Stufen-Bogen mit konkreten Nummern, einzelne
-`## Stufe N`-Blöcke (Umsetzung / Verifikation / Promise), gesetzter `RALPH_CAP`-Wert
-im Loop-Skript und „Vor dem Start"-Checkliste. Nur die **jeweils nächste** Kaskade
-wird so ausgehärtet; alles Fernere bleibt Skizze.
-
-> **Was nicht in den Loop gehört (✅ Feld-Lehre website-maxron-de, Kaskade 22):**
-> **Textvolumen-gebundene Prosa-Arbeit** (Doku umbauen, verdichten, umziehen)
-> plant der Architekt als **eigene Handarbeit** ein — auch wenn der Rest der
-> Kaskade in den Loop gehört. Der Loop zahlt pro Stufe einen **Kaltstart** und
-> liest die gewachsene Datei erneut; der interaktive Architekt hält denselben
-> Kontext durchgehend. Im Feld kosteten Prosa-Stufen **3,23 / 3,97 / 4,68 USD**
-> gegenüber **2,16 / 2,35 USD** für Code-Stufen derselben Kaskade (Vergleichs-
-> Kaskade: 1,85 USD/Stufe) — die teuerste Prosa-Stufe lag bereits **über der
-> 80-%-Warnschwelle** des Pro-Stufe-Caps. Details siehe Anhang A.7, Lehre 7.
-
-> **Zentrale Werte gehören gegengeprobt, nicht gegrept (✅ Feld-Lehre, 2026-08-11).**
-> Ändert eine Stufe einen **zentralen Wert** (Konstante, Default, Schwellwert,
-> Balancing-Zahl), verlangt ihre **Verifikation** ausdrücklich die Gegenprobe:
-> Wert probeweise auf **zwei fremde Werte** (höher/niedriger), Suite laufen
-> lassen, danach **nachweislich zurücksetzen**. Grund: Eine Kopplung, die
-> *arithmetisch* ist, steht per Textsuche nicht auffindbar im Test — weder der
-> Name der Konstante noch ihr alter Wert kommen dort vor. Im Feld fand `grep`
-> **fünf** Stellen, das Verstellen **sieben**; die zwei zusätzlichen wären beim
-> nächsten Tweak an unerklärlicher Stelle rot geworden. Die Probe kostet einen
-> Suitenlauf und beweist genau das, was die Umstellung behauptet.
+`{{PLAN_ORDNER}}/ralph-kaskade-N-….md`, fester Stufen-Bogen, `## Stufe N`-Blöcke
+(Umsetzung / Verifikation / Promise), gesetzter `RALPH_CAP`. Nur die **jeweils
+nächste** Kaskade wird so ausgehärtet; alles Fernere bleibt Skizze.
 
 **3. Nummerierung erst bei der Aushärtung.** Der Start richtet sich nach dem
 **aktuellen** Stand in [`.ralph-state`](.ralph-state) — es entstehen keine
 „fernen" fixen Nummern, die verschoben werden müssten.
 
-**4. Scharfschalt-Sequenz ist Pflicht-Ausgabe (✅ erprobt, website-maxron-de,
-2026-07-11).** **Am Ende jeder Aushärtung** (und ebenso, wenn der Architekt eine
-bereits ausgehärtete Kaskade für den Start vorbereitet) gibt der Architekt
-**immer automatisch** eine fertige, kopierbare **Startsequenz** aus — der
-Strippenzieher soll sie nie selbst aus dem Plan zusammensuchen müssen. Sie
-wird **aus dem Plankopf abgeleitet** (nicht geraten) und enthält verbindlich:
-
-1. **Zeiger umlegen:** `echo {{PLAN_ORDNER}}/ralph-kaskade-N-….md > .ralph-plan` (Pfad des
-   frisch ausgehärteten Plans) — die **einzige** Quelle, aus der der Loop
-   Plan-Pfad **und** `RALPH_CAP` liest und aus der die Vollautomatik die
-   `BUDGET_EMPFEHLUNG_USD` zieht. Ein veralteter Zeiger löst den stillen
-   Fehlstart aus (`.ralph-state > altem RALPH_CAP` → „Feierabend", die Kaskade
-   wird nie gebaut).
-2. **Konsistenz-Check:** `cat .ralph-state .ralph-plan` gegen die
-   Soll-Erwartung (Startstufe + neuer Plan-Pfad), damit der Zeiger-Blocker sofort
-   auffällt.
-3. **Budget ansehen:** `./team-status.sh --budget` (reine Anzeige; die
-   Deckel-Anhebung auf `BUDGET_EMPFEHLUNG_USD` macht `vollautomatik.sh` selbst).
-4. **Red-Team-Fokus**, **falls** die Kaskade **Team-Infrastruktur statt
-   {{PRODUKTIVCODE}}** anfasst: `export TEAM_REDTEAM_FOCUS="…"` (Pflicht,
-   sonst prüft das Red Team am Bau vorbei). Bei einer reinen Produktivcode-Kaskade
-   entfällt dieser Schritt.
-5. **Start:** `./vollautomatik.sh`.
-
-**Grenze:** Der Architekt **gibt die Sequenz nur aus** — das tatsächliche
+**4. Scharfschalt-Sequenz ist Pflicht-Ausgabe.** Am Ende jeder Aushärtung gibt
+der Architekt **immer automatisch** eine kopierfertige Startsequenz aus, aus dem
+Plankopf abgeleitet (Zeiger umlegen → Konsistenz-Check → Budget → ggf.
+Red-Team-Fokus → Start). **Grenze:** Der Architekt **gibt die Sequenz nur aus** — das
 Umschalten von `.ralph-plan`/[`.ralph-state`](.ralph-state) und der Start
-bleiben Strippenzieher-Handarbeit. Die Regel automatisiert die **Ausgabe der
-Vorlage**, nicht ihre Ausführung.
+bleiben Strippenzieher-Handarbeit.
 
 **5. Abschluss-Doc ist Pflicht pro gebauter Kaskade (✅ erprobt, Entscheid „ab
-sofort immer so").** Nach **jedem**
-Vollautomatik-Lauf legt der Architekt ein committetes
-**`{{PLAN_ORDNER}}/kaskade-N-abschluss.md`** an.
+sofort immer so").** Nach **jedem** Vollautomatik-Lauf legt der Architekt ein
+committetes `{{PLAN_ORDNER}}/kaskade-N-abschluss.md` an. **Warum:** Der im
+Terminal gedruckte Abschlussbericht ist **flüchtig** — er liegt nur in
+`.gitignore`-ten Logs, und die Roh-Kostenlogs werden beim Kostenabschluss
+zusätzlich **wegarchiviert**. Ohne Abschluss-Doc gibt es **kein** dauerhaftes,
+im Git nachlesbares Lauf-Protokoll.
 
-**Warum:** Der im Terminal gedruckte Abschlussbericht ist **flüchtig** — er liegt
-nur in `.gitignore`-ten Logs, und die Roh-Kostenlogs werden beim Kostenabschluss
-zusätzlich **wegarchiviert**. Ohne Abschluss-Doc gibt es **kein** dauerhaftes, im
-Git nachlesbares Lauf-Protokoll, aus dem ein später **kalt startendes**
-Architekt-Ich den Lauf eigenständig auswerten kann. Das Doc hält verbindlich
-fest:
-
-- **Ist-Stand** (Bau / Deploy / State / Qualitäts-Gates),
-- **echte Lauf-Kosten** inklusive der Nuance **„gedruckte ‚Dieser Lauf'-Zahl vs.
-  Ledger-Basis + Restlogs"** — die gedruckte Zahl **untertreibt**, weil bereits
-  geledgerte/archivierte Stufen herausfallen (siehe A.7, Lehre 8),
-- **Funde** (Fund-/Akten-/Backlog-Nummern + Status),
-- **Release-Strategie** und **Deploy-Bedarf**,
-- die **offenen operativen Schritte** (Kostenabschluss, Backlog/Roadmap nachziehen).
-
-**Bewährte Gliederung** (Feldprojekt, Kaskaden 16–22 — sieben Abschnitte):
+**Bewährte Gliederung** — die Pflichtzeile steht **im** Block, nicht daneben:
 
 ```markdown
 # Kaskade N — Abschluss-Protokoll (<Thema>)
@@ -335,15 +286,16 @@ doppelt belegt — dieselbe Nummer bedeutet hier und dort etwas anderes, und wer
 (als Mensch oder Werkzeug) einen Verweis nachschlägt, landet im falschen
 Dokument.
 
-Abschnitt **2** ist der, den man am ehesten weglässt und am meisten braucht: Die
-Prosa-Lehre (A.7, Lehre 7) entstand genau hier, aus dem Vergleich der Kosten je
-Stufe gegen die Erwartung. Abschnitt **4** ebenso — `BL-55`, der teuerste Fund
-des Feldprojekts, fiel nicht im Lauf auf, sondern **beim Schreiben dieses
-Abschnitts**.
-
-Wie die Scharfschalt-Sequenz (Regel 4) ist es Architekt-**Ausgabe**; das
-Committen bleibt Strippenzieher-Handarbeit, sofern das Projekt den
-Architekten nicht selbst committen lässt.
+> **Zentrale Werte gehören gegengeprobt, nicht gegrept (✅ Feld-Lehre, 2026-08-11).**
+> Ändert eine Stufe einen **zentralen Wert** (Konstante, Default, Schwellwert,
+> Balancing-Zahl), verlangt ihre **Verifikation** ausdrücklich die Gegenprobe:
+> Wert probeweise auf **zwei fremde Werte** (höher/niedriger), Suite laufen
+> lassen, danach **nachweislich zurücksetzen**. Grund: Eine Kopplung, die
+> *arithmetisch* ist, steht per Textsuche nicht auffindbar im Test — weder der
+> Name der Konstante noch ihr alter Wert kommen dort vor. Im Feld fand `grep`
+> **fünf** Stellen, das Verstellen **sieben**; die zwei zusätzlichen wären beim
+> nächsten Tweak an unerklärlicher Stelle rot geworden. Die Probe kostet einen
+> Suitenlauf und beweist genau das, was die Umstellung behauptet.
 
 ---
 
