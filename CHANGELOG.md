@@ -31,6 +31,25 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Changed
 
+- **Repo-Pflege nach dem Umbau — die zitierenden Stellen nachgezogen.** Genau
+  die Gegenrichtung, die die eigene Pflichtzeile verlangt („welche Stellen
+  zitieren, was sich geändert hat?"). `README.md`: Aufbau um
+  `kit-regelinventar.py` und `doku/regel-inventar.md` ergänzt, `kit-test.sh` als
+  **7**-stufig beschrieben, und die Regel „Regeln ändern heißt: Inventarzeile
+  nachziehen" unter „Grenzen" aufgenommen. `doku/anhang-a.md` A.9: Der Satz „der
+  operative Vertrag steht im Vorlagenblock" stimmte nach dem Schnitt nur noch
+  halb — er ist jetzt **zweigeteilt** beschrieben (WANN im Vorlagenblock, WIE im
+  Architekten-Briefing). `doku/regel-inventar.md`: `anhang-a` fehlte in der
+  Träger-Liste, obwohl der Prüfer ihn längst kennt; dazu der Zuschnitt in einem
+  Satz (Regeldatei = was Rollen befolgen, `TEAM.md` = was der Strippenzieher
+  tut, `anhang-a` = warum es so gebaut ist). `BL-56` trug noch die Zahlen seiner
+  Frühfassung (72/60 statt 73/61; 5,7 KB und „14 KB", real 8,2 KB und knapp
+  17 KB) und einen fehlenden Satztrenner — beides berichtigt.
+
+  **Nicht geändert, weil geprüft und korrekt:** die „75 Dateien" im README. Eine
+  Zählung der echten Installation ergibt 128 Dateien, davon sind 53
+  `__pycache__`/`.pytest_cache`/Logs — **git-getrackt sind exakt 75**.
+
 - **Dreischnitt, dritter Block: `## Loop-Mechanik & Auth` von 6,3 auf 2,8 KB
   (`BL-56`).** Der Befund dahinter: **Das meiste hieran macht die Shell, nicht
   die Rolle.** Auth-Auflösung, Retry-Deckel, Cap-Durchsetzung und

@@ -27,8 +27,14 @@ Die Spalte „Abschnitt" bleibt daneben die **Sachgruppe** — sie sagt, worum e
 geht, nicht wo es steht. Beim Dreischnitt (`BL-56`) wandern Regeln aus der
 Regeldatei in die Rollen-Briefings; ohne diese Spalte ginge jede verschobene
 Regel rot, und der Gurt würde den Umbau **blockieren**, statt ihn sichtbar zu
-machen. Erlaubte Träger: `Regeldatei`, `TEAM.md`, `rolle-architekt`,
-`rolle-ralph`, `rolle-harry`, `rolle-marv`, `rolle-frank`, `rolle-axel`.
+machen. Erlaubte Träger: `Regeldatei`, `TEAM.md`, `anhang-a`,
+`rolle-architekt`, `rolle-ralph`, `rolle-harry`, `rolle-marv`, `rolle-frank`,
+`rolle-axel`.
+
+Die drei Träger tragen verschiedene Adressaten — der Zuschnitt aus `BL-56`:
+**Regeldatei** = was Rollen befolgen, **`TEAM.md`** = was der Strippenzieher an
+seiner Maschine tut, **`anhang-a`** = warum es so gebaut ist. `HERLEITUNG` und
+`HISTORIE` landen regulär in `anhang-a` (Doku-Hygiene-Regel 1).
 
 **Geprüft wird zweierlei** (Stufe 7 in `kit-test.sh`):
 1. Jedes **NORM**-Zitat kommt wörtlich in **seinem Träger** vor.

@@ -188,11 +188,16 @@ team/                   Team-Namensraum — landet als team/ im Zielprojekt
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
 install.sh              Der Installer
-kit-test.sh             Selbstverifikation: installiert in ein Wegwerf-Repo
-                        und fährt dort die Tests — DAS Gate vor jedem Release
+kit-test.sh             Selbstverifikation in 7 Stufen: installiert in ein
+                        Wegwerf-Repo, fährt dort die Tests, prüft Update-Pfad,
+                        Bestandslage und Regel-Inventar — DAS Gate vor jedem Release
+kit-regelinventar.py    Prüfer für das Regel-Inventar (Stufe 7). Kit-only —
+                        bewacht die Vorlage, nicht die installierte CLAUDE.md
 plans/                  Roadmap und Backlog DES KITS (nicht die Vorlagen —
                         die liegen in bootstrap/ und werden installiert)
 doku/anhang-a.md        Bau-Anleitung und Betriebslehren
+doku/regel-inventar.md  Jede Regel der Vorlage als NORM/HERLEITUNG/HISTORIE,
+                        mit Träger und wörtlichem Zitat
 ```
 
 ### Im Zielprojekt
@@ -258,6 +263,12 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
   Wegwerf-Repo und fährt dort die 280 Tests. `pytest team/tests` **im Kit-Repo**
   schlägt dagegen erwartungsgemäß fehl — die Tests setzen die installierte
   Ablage voraus (Entrypoints in der Wurzel statt unter `entry/`).
+- **Regeln ändern heißt: Inventarzeile nachziehen.** Stufe 7 prüft jede
+  geltende Regel der Vorlage gegen `doku/regel-inventar.md` — wörtliches Zitat,
+  und in welcher Datei es steht. Das verbietet keine Änderung, es macht sie
+  sichtbar: Wer eine Regel umformuliert, verschiebt oder streicht, bekommt rot
+  und muss die betroffene Zeile **benannt** nachziehen, statt sie stillschweigend
+  verschwinden zu lassen.
 - **Guard-Tests nur in Wegwerf-Repos.** Nie im echten Projekt.
 - **`--permission-mode default` ist undokumentiert.** Die beiden Read-Only-Rollen
   (Harry/Marv über `redteam.sh`, Axel) rufen die CLI damit auf. Der Wert wird von
