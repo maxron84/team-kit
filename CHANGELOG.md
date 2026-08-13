@@ -2,6 +2,48 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.8.0] — 2026-08-13
+
+**Das Interview redet jetzt mit dem Anwender, nicht mit dem Autor.** Ein Einzug
+in `Project-Family-ERP` legte offen, dass die Fragen zwar korrekt waren, aber
+nur für den verständlich, der die Mechanik dahinter schon kennt: Der Anwender
+trug `tests/` in den *Prüfumfang* ein — den Ordner, den er zwei Fragen später
+als *Schreibzone* vergab —, und ließ zugleich `main.py` und `bin/` weg, also
+genau den Code, für den die Frage gebaut wurde.
+
+### Changed
+
+- **Jede Interview-Frage hat einen Vorspann in Anwendersprache.** Was die
+  Antwort bewirkt, ein konkretes Beispiel und was ein falscher Wert kostet.
+  Begriffe, die nur intern etwas heißen — „Produktivcode-Ordner", „Guard",
+  „Domänen", „Smoke-Test" — stehen nicht mehr in der Frage, sondern werden
+  erklärt: „Ordner mit dem Programmcode", „ein Wächter setzt das durch",
+  „Kostenkonten", „Prüfbefehl".
+- **Die Fragen kommen in neuer Reihenfolge:** erst Test- und Plan-Ordner, dann
+  der Prüfumfang. Vorher wurde nach Code *außerhalb* gefragt, bevor feststand,
+  welche Ordner die Rollen beschreiben dürfen — die Frage war zum Zeitpunkt
+  ihres Erscheinens gar nicht beantwortbar.
+- **Der Installer listet Kandidaten für den Prüfumfang auf.** Was in der Wurzel
+  neben dem Produktivcode-Ordner liegt und nach Code aussieht (`main.py`,
+  `bin/`, `deploy/`), steht jetzt zum Abschreiben in der Frage. Beiwerk —
+  `docs/`, `data/`, Konfigurationsdateien, die Team-Entrypoints — ist gefiltert.
+- **Die `BL-51`-Warnung sagt die Folge in einem Satz:** „Der Wächter, der sie
+  von deinem Code fernhält, greift in diesem Ordner NICHT" — und nennt den
+  sicheren Ausweg beim Namen (`team-plans/`).
+
+### Fixed
+
+- **Ein Schreibordner im Prüfumfang wird wieder herausgenommen.** Stand
+  `tests/` in beiden Antworten, sagte der Rollen-Auftrag in **einem Absatz**
+  „Du änderst NIEMALS Produktivcode (… und tests/)" und „Schreiben NUR unter
+  tests/". Harrys Reproducer-Auftrag war damit widersprüchlich; welche Hälfte
+  gewinnt, entschied das Modell pro Lauf neu. Der Installer entfernt die
+  Kollision und begründet sie. Der Bestandsschutz für vorhandene Testdateien
+  liegt ohnehin woanders (`BL-51`).
+- **Die Schlussbefehle laufen auch bei Pfaden mit Leerzeichen.** `git -C
+  /home/…/Projekt (copy) add -A` war nicht kopierbar — der Zielpfad steht jetzt
+  in Anführungszeichen, im Einzug wie im `--update`.
+
 ## [2.7.1] — 2026-08-12
 
 **Der Weg zurück ins eigene Projekt.** Zwei Lücken, die beide erst auffielen,

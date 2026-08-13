@@ -351,7 +351,7 @@ PY
 
     kopf "Update fertig"
     rot  "  JETZT COMMITTEN — vor dem naechsten Lauf, nicht danach."
-    echo "    git -C $ZIEL add -A && git -C $ZIEL commit -m \"chore: T.E.A.M. aktualisiert\""
+    echo "    git -C \"$ZIEL\" add -A && git -C \"$ZIEL\" commit -m \"chore: T.E.A.M. aktualisiert\""
     echo
     echo "  Warum das keine Formalie ist: Die neuen Dateien liegen uncommittet in"
     echo "  team/. Der naechste Read-Only-Lauf (Harry/Marv/Axel) sieht sie ausserhalb"
@@ -404,40 +404,142 @@ frage() {  # frage <variable> <text> <default>
     printf -v "$var" '%s' "${eingabe:-$vorgabe}"
 }
 
-kopf "Aufnahme-Interview — neun Werte, alles Weitere per Feld-Default"
-frage PROJEKT        "Projektname"                    "$(basename "$ZIEL")"
-frage PRODUKTIVCODE  "Produktivcode-Ordner (tabu für Red Team)" "src/"
-if [ "$INTERAKTIV" -eq 1 ]; then
-    echo "  Liegt Code AUSSERHALB dieses Ordners, der mitgeprüft werden soll?"
-    echo "  Einstiegspunkt in der Wurzel (main.py), Build-/Deploy-Skripte (bin/)."
-    echo "  Im neuen Projekt: leer lassen. In einer gewachsenen Codebasis ist das"
-    echo "  der Unterschied zwischen \"src/ ist sauber\" und \"geprüft\" (BL-52)."
-fi
-frage WEITERER_CODE  "Weiterer Code außerhalb (Leerliste)" ""
-frage TEST_ORDNER    "Test-Ordner"                    "tests/"
-frage PLAN_ORDNER    "Plan-Ordner"                    "plans/"
-if [ "$INTERAKTIV" -eq 1 ]; then
-    echo "  Smoke-Test: der EINE Befehl, mit dem eine Rolle prüft, ob das Projekt heil ist."
-    echo "  Leer lassen, wenn es ihn noch nicht gibt — dann ist er Stufe 1 der ersten Kaskade."
-fi
-frage SMOKE_TEST     "Smoke-Test-Befehl"              ""
-frage TECH_STACK     "Tech-Stack (eine Zeile)"        "TODO: in CLAUDE.md nachtragen"
-if [ "$INTERAKTIV" -eq 1 ]; then
-    echo "  Domänen trennen im Kostenledger verschiedene Arbeitsstränge."
-    echo "  Default ist EINE Domäne: In einem Feldprojekt ist alles Produktarbeit."
-    echo "  Arbeit am T.E.A.M. selbst gehört ins Kit-Repo, nicht hierher — dafür"
-    echo "  braucht es keine zweite Domäne (siehe BL-9). Mehrere nur angeben, wenn"
-    echo "  DIESES Projekt fachlich getrennte Stränge hat, z. B. \"backend frontend\"."
-fi
-frage DOMAENEN       "Domänen (Leerliste)"            "produkt"
-if [ "$INTERAKTIV" -eq 1 ]; then
-    echo "  Darf der Architekt selbst committen, oder liefert er dir die Befehle?"
-fi
-frage COMMIT_MODUS   "Architekt committet selbst? (j/n)" "n"
+# erklaerung: Vorspann zu einer Frage. Leerzeile davor, damit Frage und
+# Erklaerung im Terminal nicht zu einer Wand verschwimmen — wer die Frage nicht
+# findet, liest die Erklaerung nicht (BL-53).
+erklaerung() {  # erklaerung <zeile>...
+    [ "$INTERAKTIV" -eq 1 ] || return 0
+    echo
+    local zeile
+    for zeile in "$@"; do echo "  $zeile"; done
+}
 
+# kandidaten_ausserhalb: was neben dem Produktivcode-Ordner in der Wurzel liegt
+# und nach Code aussieht. Eine Liste zum Abschreiben schlaegt jede Erklaerung —
+# die BL-52-Frage wird sonst verneint, weil dem Anwender im Moment der Frage
+# nicht einfaellt, was er hat.
+kandidaten_ausserhalb() {
+    local eintrag name ausgabe="" n=0
+    for eintrag in "$ZIEL"/*; do
+        [ -e "$eintrag" ] || continue
+        name="$(basename "$eintrag")"
+        case "$name" in
+            "${PRODUKTIVCODE%/}"|"${TEST_ORDNER%/}"|"${PLAN_ORDNER%/}") continue ;;
+            team|node_modules|__pycache__|venv|.venv|dist|build|target) continue ;;
+            docs|doku|data|assets|static|media|.*)                      continue ;;
+            ralph.sh|frank.sh|harry.sh|marv.sh|axel.sh|install.sh)      continue ;;
+            vollautomatik.sh|halbautomatik.sh|team-*.sh|team.config.sh) continue ;;
+            test_*|*_test.*|*.md|*.txt|*.json|*.toml|*.yaml|*.yml)      continue ;;
+            *.cfg|*.ini|*.lock|LICENSE*|Makefile)                       continue ;;
+        esac
+        [ -d "$eintrag" ] && name="$name/"
+        n=$((n + 1))
+        [ "$n" -le 10 ] && ausgabe="$ausgabe $name"
+    done
+    [ "$n" -gt 10 ] && ausgabe="$ausgabe …"
+    printf '%s' "${ausgabe# }"
+}
+
+kopf "Aufnahme-Interview — neun Fragen"
+if [ "$INTERAKTIV" -eq 1 ]; then
+    echo "  Hinter jeder Frage steht in [Klammern] eine Vorgabe. Enter nimmt sie an."
+    echo "  Nichts davon ist endgültig: Alle Antworten landen in team.config.sh"
+    echo "  und lassen sich dort jederzeit ändern."
+fi
+erklaerung "Unter welchem Namen soll das Projekt in Berichten und in der" \
+           "Kostenabrechnung auftauchen?"
+frage PROJEKT "Projektname" "$(basename "$ZIEL")"
+
+erklaerung "In welchem Ordner liegt dein Programmcode?" \
+           "Harry, Marv und Axel — die drei prüfenden Rollen — lesen ihn und" \
+           "suchen dort Fehler. Ändern dürfen sie ihn nie; das macht allein" \
+           "Frank, der Reparateur. Ein Wächter setzt das durch: Fasst eine der" \
+           "drei den Ordner doch an, wird die Änderung automatisch zurückgenommen."
+frage PRODUKTIVCODE "Ordner mit dem Programmcode" "src/"
 PRODUKTIVCODE="${PRODUKTIVCODE%/}/"
+
+erklaerung "Wohin dürfen die prüfenden Rollen Testdateien schreiben?" \
+           "Findet Harry einen Fehler, legt er hier den Test ab, der ihn zeigt." \
+           "Das ist einer von zwei Ordnern, in denen die drei schreiben UND" \
+           "löschen dürfen — der Wächter greift hier nicht. Dein eigener" \
+           "Testbefehl bleibt davon unberührt." \
+           "Liegen dort schon eigene Tests, fragt der Installer gleich noch einmal."
+frage TEST_ORDNER "Ordner für Tests" "tests/"
 TEST_ORDNER="${TEST_ORDNER%/}/"
+
+erklaerung "Wohin schreiben die Rollen ihre Pläne, Berichte und Fundlisten?" \
+           "Der zweite Ordner mit Schreib- und Löschrecht. Am saubersten ist ein" \
+           "eigener, leerer Ordner (z. B. team-plans/): Dann kommen die Rollen" \
+           "mit deinen vorhandenen Dokumenten gar nicht erst in Berührung."
+frage PLAN_ORDNER "Ordner für Pläne und Berichte" "plans/"
 PLAN_ORDNER="${PLAN_ORDNER%/}/"
+
+HINWEIS=("Liegt weiterer Programmcode AUSSERHALB von ${PRODUKTIVCODE}?" \
+         "Gemeint ist Code, der beim Benutzen wirklich läuft: der Startpunkt in" \
+         "der Wurzel (main.py), Build- und Deploy-Skripte (bin/, deploy/)." \
+         "Was hier nicht steht, sieht sich nie jemand an — der Bericht meldet" \
+         "dann \"sauber\" und meint bloß \"${PRODUKTIVCODE} ist sauber\"." \
+         "NICHT eintragen: ${TEST_ORDNER} und ${PLAN_ORDNER}. Die hast du gerade" \
+         "als Schreibordner vergeben, beides zugleich geht nicht." \
+         "Neues Projekt oder alles unter ${PRODUKTIVCODE}: einfach Enter.")
+KANDIDATEN="$(kandidaten_ausserhalb)"
+[ -n "$KANDIDATEN" ] && HINWEIS+=("" "Neben ${PRODUKTIVCODE} liegt hier: ${KANDIDATEN}" \
+                                     "Übernimm davon, was echter Programmcode ist.")
+erklaerung "${HINWEIS[@]}"
+frage WEITERER_CODE "Weiterer Code, mit Leerzeichen getrennt (leer = keiner)" ""
+
+erklaerung "Gibt es EINEN Befehl, der zeigt, ob das Projekt noch heil ist?" \
+           "Beispiele: 'pytest -q', 'npm test', 'python3 -c \"import src\"'." \
+           "Die Rollen rufen ihn nach jeder Änderung auf. Schlägt er fehl, wird" \
+           "die Änderung zurückgenommen — er ist das Sicherheitsnetz des Teams." \
+           "Kennst du keinen: leer lassen. Dann ist es die erste Aufgabe des" \
+           "Teams, einen zu bauen, und bis dahin sagt jede Rolle offen, dass sie" \
+           "ohne Netz arbeitet."
+frage SMOKE_TEST "Prüfbefehl (leer = gibt es noch nicht)" ""
+
+erklaerung "Womit ist das Projekt gebaut? Eine Zeile, die den Rollen sagt," \
+           "worauf sie sich einstellen müssen. Reine Beschreibung, nichts wird" \
+           "davon ausgeführt." \
+           "Beispiel: \"python3 tkinter sqlite\" oder \"TypeScript React Vite\"."
+frage TECH_STACK "Technik in einer Zeile" "TODO: in CLAUDE.md nachtragen"
+
+erklaerung "Auf welches Konto sollen die Kosten gebucht werden?" \
+           "EIN Konto ist fast immer richtig: Dann landet jeder Lauf auf" \
+           "'produkt' und du musst nie überlegen, wohin er gehört." \
+           "Mehrere Konten nur, wenn du die Ausgaben wirklich getrennt sehen" \
+           "willst. Der Preis: Beim Abrechnen nach jedem Lauf musst du dich für" \
+           "GENAU EIN Konto entscheiden — auch wenn der Lauf mehrere Bereiche" \
+           "berührt hat."
+frage DOMAENEN "Kostenkonten, mit Leerzeichen getrennt" "produkt"
+
+erklaerung "Der Architekt plant im Gespräch mit dir die nächste Runde und legt" \
+           "den Plan in ${PLAN_ORDNER} ab. Soll er ihn selbst ins Git eintragen (j)," \
+           "oder dir die fertigen Befehle zum Kopieren geben (n)?"
+frage COMMIT_MODUS "Architekt committet selbst? (j/n)" "n"
+
+# Kollision Pruefumfang/Schreibzone: Derselbe Ordner kann nicht beides sein.
+# Stand er in beiden Antworten, sagte der Rollen-Prompt in EINEM Absatz "tabu"
+# und "schreib hierhin" — beobachtet an Project-Family-ERP, wo tests/ in beiden
+# stand und Harrys Reproducer-Auftrag damit widerspruechlich war. Wer seinen
+# Testbestand schuetzen will, ist bei BL-51 richtig, nicht beim Pruefumfang.
+if [ -n "$WEITERER_CODE" ]; then
+    BEREINIGT=""; ENTFERNT=""
+    for eintrag in $WEITERER_CODE; do
+        case "${eintrag%/}/" in
+            "$TEST_ORDNER"|"$PLAN_ORDNER") ENTFERNT="$ENTFERNT $eintrag" ;;
+            *)                             BEREINIGT="$BEREINIGT $eintrag" ;;
+        esac
+    done
+    if [ -n "$ENTFERNT" ]; then
+        echo
+        gelb "  ! Wieder aus dem Prüfumfang genommen:$ENTFERNT"
+        gelb "    Das hast du eben schon als Schreibordner der Rollen vergeben."
+        gelb "    Beides zugleich ginge nicht: Ihr Auftrag würde \"nicht anfassen\""
+        gelb "    und \"hier ablegen\" im selben Absatz sagen. Um vorhandene Dateien"
+        gelb "    darin kümmert sich der nächste Schritt."
+        WEITERER_CODE="${BEREINIGT# }"
+    fi
+fi
 
 # ---------------------------------------------------------------- BL-51
 # Test- und Plan-Ordner sind die Schreibzone der drei Read-Only-Rollen: Die
@@ -469,24 +571,27 @@ bestand_pruefen() {  # bestand_pruefen <ORDNER-VARIABLE> <text> <rollen>
     while :; do
         eintraege="$(bestand_eintraege "${!var}")"
         [ -n "$eintraege" ] || break
-        gelb "  ! $text '${!var}' ist nicht leer:"
+        gelb "  ! Der $text '${!var}' ist nicht leer:"
         for e in $eintraege; do echo "      · $e"; done
-        gelb "    $rollen dürfen in diesem Ordner schreiben und löschen —"
-        gelb "    der Guard schlägt dort NICHT an (BL-51). Sie sind Read-Only"
-        gelb "    gegenüber deinem Code, nicht gegenüber diesem Ordner."
+        gelb "    Hier dürfen $rollen schreiben und löschen. Der Wächter, der sie"
+        gelb "    von deinem Code fernhält, greift in diesem Ordner NICHT (BL-51)."
+        gelb "    Deine Dateien verschwinden nicht einfach: Der Installer merkt sie"
+        gelb "    sich und nennt sie den Rollen ausdrücklich als fremdes Eigentum."
+        gelb "    Das ist aber eine Auflage an die KI, keine Sperre. Wirklich sicher"
+        gelb "    ist nur ein eigener, leerer Ordner — z. B. team-${!var}"
         if [ "$INTERAKTIV" -eq 0 ]; then
             gelb "    Nicht-interaktiv: Ordner bleibt. Der Bestand wird in"
             gelb "    team.config.sh vermerkt und den Rollen als fremdes Eigentum genannt."
             break
         fi
-        read -r -p "    Anderer Ordner? (leer = '${!var}' behalten): " neu || true
+        read -r -p "    Anderen, leeren Ordner nehmen? (Name, Enter = '${!var}' behalten): " neu || true
         [ -n "$neu" ] || break
         printf -v "$var" '%s' "${neu%/}/"
     done
     printf -v "${var}_BESTAND" '%s' "$(bestand_eintraege "${!var}")"
 }
 
-kopf "Bestand in der Schreibzone der Read-Only-Rollen (BL-51)"
+kopf "Liegt in den Schreibordnern der Rollen schon etwas? (BL-51)"
 bestand_pruefen PLAN_ORDNER "Plan-Ordner" "Harry, Marv und Axel"
 bestand_pruefen TEST_ORDNER "Test-Ordner" "Harry und Marv"
 if [ -z "$PLAN_ORDNER_BESTAND" ] && [ -z "$TEST_ORDNER_BESTAND" ]; then
@@ -640,12 +745,12 @@ cat <<EOF
 
 Nächste Schritte im Zielprojekt:
 
-  1. Werte prüfen:      \$EDITOR $ZIEL/team.config.sh
-  2. Regeln prüfen:     \$EDITOR $ZIEL/CLAUDE.md   (TODO-Stellen füllen)
-  3. Alles committen:   git -C $ZIEL add -A && git -C $ZIEL commit -m "chore: T.E.A.M. eingerichtet"
-     ^ WICHTIG: vor dem ersten Guard-Lauf committen. Ein Read-Only-Guard
-       betrachtet uncommittete Dateien als Verletzung und räumt sie weg.
-  4. Team-Tests:        cd $ZIEL && ./team-test.sh
+  1. Werte prüfen:      \$EDITOR "$ZIEL/team.config.sh"
+  2. Regeln prüfen:     \$EDITOR "$ZIEL/CLAUDE.md"   (TODO-Stellen füllen)
+  3. Alles committen:   git -C "$ZIEL" add -A && git -C "$ZIEL" commit -m "chore: T.E.A.M. eingerichtet"
+     ^ WICHTIG: vor dem ersten Lauf committen. Der Wächter hält uncommittete
+       Dateien für einen Übergriff der Rollen und räumt sie weg.
+  4. Team-Tests:        cd "$ZIEL" && ./team-test.sh
      (pytest, prüft NUR die Team-Infrastruktur — dein Projekt-Testbefehl
       bleibt davon unberührt)
   5. Erste Kaskade planen — Claude-Sitzung im Projektordner, Opus:
@@ -653,7 +758,7 @@ Nächste Schritte im Zielprojekt:
      Er härtet eine Skizze aus ${PLAN_ORDNER}roadmap-skizzen.md zu
      ${PLAN_ORDNER}ralph-kaskade-1-….md aus (mit RALPH_CAP= und
      BUDGET_EMPFEHLUNG_USD=) und gibt die Scharfschalt-Sequenz aus.
-  6. Lauf starten:      cd $ZIEL && TEAM_BUDGET_USD=15 ./vollautomatik.sh
+  6. Lauf starten:      cd "$ZIEL" && TEAM_BUDGET_USD=15 ./vollautomatik.sh
      ^ Deckel für DIESEN Lauf. Für einen kurzen Erstlauf sind 15 USD ein
        vernünftiger Start. Lieber nachziehen als zu tief ansetzen: ein zu
        tiefer Deckel wirft bezahlte Arbeit per Rollback weg und vervielfacht

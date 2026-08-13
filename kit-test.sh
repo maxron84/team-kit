@@ -204,7 +204,9 @@ echo 'print("start")' > "$BESTAND_REPO/main.py"
 git -C "$BESTAND_REPO" add -A
 git -C "$BESTAND_REPO" commit -q -m "Bestand vor dem Einzug"
 
-if ! bash "$KIT/install.sh" "$BESTAND_REPO" --nicht-interaktiv \
+# tests/ im Pruefumfang ist die Falle aus dem Feld: Der Ordner steht dann
+# zugleich als "tabu" und als Schreibziel im selben Rollen-Prompt.
+if ! TEAM_INIT_WEITERER_CODE="tests/" bash "$KIT/install.sh" "$BESTAND_REPO" --nicht-interaktiv \
         > "$BESTAND_REPO/.install.log" 2>&1; then
     rot "  ✗ install.sh schlug im Bestandsprojekt fehl:"
     tail -20 "$BESTAND_REPO/.install.log" >&2
@@ -222,8 +224,8 @@ b_pruefe() {  # b_pruefe <beschreibung> <ist> <soll>
 }
 b_pruefe "belegter Plan-Ordner wird gemeldet" \
     "$(grep -c "Plan-Ordner 'plans/' ist nicht leer" "$BESTAND_REPO/.install.log")" "1"
-b_pruefe "die Folge wird benannt (Guard schlaegt dort nicht an)" \
-    "$(grep -c 'der Guard schlägt dort NICHT an' "$BESTAND_REPO/.install.log")" "2"
+b_pruefe "die Folge wird benannt (Waechter greift dort nicht)" \
+    "$(grep -c 'greift in diesem Ordner NICHT' "$BESTAND_REPO/.install.log")" "2"
 b_pruefe "belegter Test-Ordner wird gemeldet" \
     "$(grep -c "Test-Ordner 'tests/' ist nicht leer" "$BESTAND_REPO/.install.log")" "1"
 b_pruefe "Bestandsdokument namentlich genannt" \
@@ -238,6 +240,12 @@ b_pruefe "Test-Bestand steht in team.config.sh" \
 b_pruefe "keine offenen Platzhalter" \
     "$(grep -rlE '\{\{[A-Z_]+\}\}' "$BESTAND_REPO" --exclude-dir=.git \
         --exclude=.install.log 2>/dev/null | wc -l)" "0"
+# Kollision Pruefumfang/Schreibzone: Ein Schreibordner im Pruefumfang machte den
+# Rollen-Prompt widerspruechlich ("tabu" und "schreib hierhin" in EINEM Absatz).
+b_pruefe "Schreibordner wird aus dem Pruefumfang genommen" \
+    "$(grep -c 'Wieder aus dem Prüfumfang genommen: tests/' "$BESTAND_REPO/.install.log")" "1"
+b_pruefe "und landet nicht in team.config.sh" \
+    "$(grep -c 'TEAM_WEITERER_CODE:-tests' "$BESTAND_REPO/team.config.sh")" "0"
 # Gegenprobe: Im leeren Repo aus Schritt 2 darf nichts davon erschienen sein —
 # eine Warnung, die immer kommt, erzieht zum Wegsehen (BL-14).
 b_pruefe "im leeren Repo schweigt die Pruefung" \

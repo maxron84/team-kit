@@ -18,8 +18,10 @@ Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
 `TEAM.md` und 280 Regressionstests.
 
-**Stand: Version 2.7.1** (2026-08-12). Zieht das Team in eine gewachsene
-Codebasis ein, fragt und warnt der Installer von sich aus — siehe
+**Stand: Version 2.8.0** (2026-08-13). Das Aufnahme-Interview erklärt jede
+Frage in Anwendersprache und schlägt beim Prüfumfang vor, was es im Projekt
+gefunden hat. Zieht das Team in eine gewachsene Codebasis ein, fragt und warnt
+der Installer von sich aus — siehe
 [In ein bestehendes Projekt](#in-ein-bestehendes-projekt).
 
 ---
@@ -82,17 +84,26 @@ Auth eingerichtet (`bash ~/.claude/scripts/team-auth-setup.sh`).
 
 **Das Aufnahme-Interview:**
 
+Jede Frage kommt mit einer kurzen Erklärung, was sie bewirkt und was ein
+falscher Wert kostet. Die Reihenfolge ist Absicht: Erst werden die beiden
+**Schreibordner** vergeben, danach erst der Prüfumfang — so ist beim Beantworten
+klar, welche Ordner dort nicht mehr hingehören.
+
 | Frage | Default | Bedeutung |
 |---|---|---|
 | Projektname | Ordnername | erscheint in Berichten und Ledger |
-| Produktivcode-Ordner | `src/` | **tabu** für Harry, Marv, Axel — und zugleich der **Prüfumfang** des Sweeps |
-| Weiterer Code außerhalb | *(leer)* | Leerliste (`main.py bin/`): Code, der mitgeprüft wird, aber nicht unter dem Produktivcode-Ordner liegt. Im neuen Projekt leer, im Bestand entscheidend (`BL-52`) |
-| Test-Ordner | `tests/` | wo Reproducer hindürfen (bleibt **deinem** Testrunner) |
-| Plan-Ordner | `plans/` | Kaskaden, Beutebuch, Akten, Roadmap — **Schreibzone** der Read-Only-Rollen (`BL-51`) |
-| Smoke-Test-Befehl | *(leer)* | **der wichtigste Wert**, siehe unten |
-| Tech-Stack | *TODO-Zeile* | eine Zeile für `CLAUDE.md`, reine Doku |
-| Domänen | `produkt` | Arbeitsstränge **dieses** Projekts; eine reicht (`BL-9`) |
+| Ordner mit dem Programmcode | `src/` | **tabu** für Harry, Marv, Axel — und zugleich der **Prüfumfang** des Sweeps |
+| Ordner für Tests | `tests/` | wo Reproducer hindürfen (bleibt **deinem** Testrunner) |
+| Ordner für Pläne und Berichte | `plans/` | Kaskaden, Beutebuch, Akten, Roadmap — **Schreibzone** der Read-Only-Rollen (`BL-51`) |
+| Weiterer Code (außerhalb) | *(leer)* | Leerliste (`main.py bin/`): Code, der mitgeprüft wird, aber nicht unter dem Produktivcode-Ordner liegt. Im neuen Projekt leer, im Bestand entscheidend (`BL-52`). Der Installer listet dazu, was er in der Wurzel gefunden hat |
+| Prüfbefehl (Smoke-Test) | *(leer)* | **der wichtigste Wert**, siehe unten |
+| Technik in einer Zeile | *TODO-Zeile* | eine Zeile für `CLAUDE.md`, reine Doku |
+| Kostenkonten (Domänen) | `produkt` | Arbeitsstränge **dieses** Projekts; eines reicht (`BL-9`) |
 | Architekt committet selbst? | `n` | sonst liefert er die Befehle zum Kopieren |
+
+Test- und Plan-Ordner im Prüfumfang nimmt der Installer **wieder heraus** und
+sagt warum: Derselbe Ordner kann nicht zugleich tabu und Ablageort sein — sonst
+stünde beides im selben Absatz des Rollen-Auftrags.
 
 Der **Smoke-Test** ist der eine Befehl, mit dem eine Rolle feststellt, dass das
 Projekt heil ist. Ralph schließt keine Stufe ohne ihn ab, Frank verifiziert keinen
