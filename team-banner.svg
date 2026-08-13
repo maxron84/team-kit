@@ -1,0 +1,287 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="604" viewBox="0 0 1600 604">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1710"/><stop offset="1" stop-color="#050c08"/></linearGradient>
+<radialGradient id="glow" cx="0.5" cy="0.16" r="0.62"><stop offset="0" stop-color="#3ddc84" stop-opacity="0.16"/><stop offset="1" stop-color="#3ddc84" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="1600" height="604" fill="url(#bg)"/>
+<rect width="1600" height="604" fill="url(#glow)"/>
+<rect x="0" y="0" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="4" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="8" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="12" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="16" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="20" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="24" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="28" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="32" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="36" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="40" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="44" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="48" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="52" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="56" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="60" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="64" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="68" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="72" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="76" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="80" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="84" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="88" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="92" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="96" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="100" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="104" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="108" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="112" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="116" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="120" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="124" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="128" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="132" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="136" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="140" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="144" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="148" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="152" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="156" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="160" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="164" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="168" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="172" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="176" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="180" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="184" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="188" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="192" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="196" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="200" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="204" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="208" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="212" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="216" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="220" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="224" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="228" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="232" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="236" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="240" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="244" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="248" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="252" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="256" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="260" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="264" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="268" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="272" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="276" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="280" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="284" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="288" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="292" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="296" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="300" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="304" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="308" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="312" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="316" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="320" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="324" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="328" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="332" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="336" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="340" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="344" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="348" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="352" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="356" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="360" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="364" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="368" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="372" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="376" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="380" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="384" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="388" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="392" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="396" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="400" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="404" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="408" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="412" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="416" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="420" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="424" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="428" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="432" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="436" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="440" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="444" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="448" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="452" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="456" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="460" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="464" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="468" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="472" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="476" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="480" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="484" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="488" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="492" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="496" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="500" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="504" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="508" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="512" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="516" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="520" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="524" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="528" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="532" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="536" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="540" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="544" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="548" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="552" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="556" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="560" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="564" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="568" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="572" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="576" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="580" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="584" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="588" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="592" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="596" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="600" width="1600" height="1" fill="#3ddc84" opacity="0.022"/>
+<rect x="0" y="0" width="1600" height="3" fill="#3ddc84"/>
+<text x="29" y="41" font-family="DejaVu Sans Mono" font-size="15" fill="#7c8f85" letter-spacing="0.5">github.com/maxron84</text>
+<rect x="1335" y="22" width="236" height="30" rx="4" fill="none" stroke="#1b3d29" stroke-width="1"/>
+<circle cx="1354" cy="37.0" r="4.5" fill="#3ddc84"/>
+<text x="1369" y="42" font-family="DejaVu Sans Mono" font-size="13" fill="#3ddc84" letter-spacing="1.6">STATUS: DELEGIERT</text>
+<text x="800.0" y="163" text-anchor="middle" font-family="DejaVu Sans" font-size="94" font-weight="bold" fill="#f2f7f4" letter-spacing="11">T.E.A.M.</text>
+<text x="800.0" y="207" text-anchor="middle" font-family="DejaVu Sans Mono" font-size="20" fill="#3ddc84" letter-spacing="7.5">TOLL · EIN · ANDERER · MACHT'S</text>
+<text x="800.0" y="245" text-anchor="middle" font-family="DejaVu Sans Mono" font-size="13" fill="#2a8f57" letter-spacing="4.5">FINDER ≠ FIXER — WER FINDET, BEHEBT NICHT SELBST</text>
+<g>
+<rect x="29.0" y="288" width="242.0" height="286" rx="5" fill="#0b1610" stroke="#1c3a26" stroke-width="1"/>
+<rect x="29.0" y="288" width="242.0" height="28" rx="5" fill="#3ddc84" opacity="0.07"/>
+<rect x="29.0" y="311" width="242.0" height="5" fill="#0b1610"/>
+<rect x="29.0" y="315" width="242.0" height="1" fill="#1c3a26"/>
+<text x="41.0" y="307" font-family="DejaVu Sans Mono" font-size="13" fill="#2a8f57" letter-spacing="1">01</text>
+<circle cx="256.0" cy="302" r="3" fill="#1b3d29"/>
+<circle cx="243.0" cy="302" r="3" fill="#1b3d29"/>
+<circle cx="230.0" cy="302" r="3" fill="#1b3d29"/>
+<text x="42.0" y="350" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">while :; do</text>
+<text x="42.0" y="373" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">  claude -p</text>
+<text x="42.0" y="396" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">    PROMPT.md</text>
+<text x="42.0" y="419" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">done</text>
+<rect x="42.0" y="430" width="8" height="15" fill="#3ddc84" opacity="0.5"/>
+<rect x="42.0" y="476" width="216.0" height="1" fill="#1c3a26"/>
+<text x="42.0" y="502" font-family="DejaVu Sans" font-size="16" font-weight="bold" fill="#f2f7f4">RALPH WIGGUM</text>
+<text x="42.0" y="523" font-family="DejaVu Sans Mono" font-size="11.5" fill="#2a8f57" letter-spacing="0.8">BAU-LOOP</text>
+<rect x="42.0" y="536" width="216.0" height="22" rx="3" fill="#3ddc84" opacity="0.12"/>
+<text x="150.0" y="551" text-anchor="middle" font-family="DejaVu Sans Mono" font-size="10" fill="#3ddc84" letter-spacing="1.2">SCHREIBT CODE</text>
+</g>
+<g>
+<rect x="289.0" y="288" width="242.0" height="286" rx="5" fill="#0b1610" stroke="#1c3a26" stroke-width="1"/>
+<rect x="289.0" y="288" width="242.0" height="28" rx="5" fill="#3ddc84" opacity="0.07"/>
+<rect x="289.0" y="311" width="242.0" height="5" fill="#0b1610"/>
+<rect x="289.0" y="315" width="242.0" height="1" fill="#1c3a26"/>
+<text x="301.0" y="307" font-family="DejaVu Sans Mono" font-size="13" fill="#2a8f57" letter-spacing="1">02</text>
+<circle cx="516.0" cy="302" r="3" fill="#1b3d29"/>
+<circle cx="503.0" cy="302" r="3" fill="#1b3d29"/>
+<circle cx="490.0" cy="302" r="3" fill="#1b3d29"/>
+<text x="302.0" y="350" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">plan(kaskade)</text>
+<text x="302.0" y="373" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">stufe 7/12</text>
+<text x="302.0" y="396" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">cap: 4.50 USD</text>
+<text x="302.0" y="419" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">closeout ✓</text>
+<rect x="302.0" y="430" width="8" height="15" fill="#3ddc84" opacity="0.5"/>
+<rect x="302.0" y="476" width="216.0" height="1" fill="#1c3a26"/>
+<text x="302.0" y="502" font-family="DejaVu Sans" font-size="16" font-weight="bold" fill="#f2f7f4">DER ARCHITEKT</text>
+<text x="302.0" y="523" font-family="DejaVu Sans Mono" font-size="11.5" fill="#2a8f57" letter-spacing="0.8">PLAN &amp; CLOSEOUT</text>
+<rect x="302.0" y="536" width="216.0" height="22" rx="3" fill="#e0a33e" opacity="0.12"/>
+<text x="410.0" y="551" text-anchor="middle" font-family="DejaVu Sans Mono" font-size="10" fill="#e0a33e" letter-spacing="1.2">NUR IM AUSNAHMEFALL</text>
+</g>
+<g>
+<rect x="549.0" y="288" width="242.0" height="286" rx="5" fill="#0b1610" stroke="#1c3a26" stroke-width="1"/>
+<rect x="549.0" y="288" width="242.0" height="28" rx="5" fill="#3ddc84" opacity="0.07"/>
+<rect x="549.0" y="311" width="242.0" height="5" fill="#0b1610"/>
+<rect x="549.0" y="315" width="242.0" height="1" fill="#1c3a26"/>
+<text x="561.0" y="307" font-family="DejaVu Sans Mono" font-size="13" fill="#2a8f57" letter-spacing="1">03</text>
+<circle cx="776.0" cy="302" r="3" fill="#1b3d29"/>
+<circle cx="763.0" cy="302" r="3" fill="#1b3d29"/>
+<circle cx="750.0" cy="302" r="3" fill="#1b3d29"/>
+<text x="562.0" y="350" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">git commit -m</text>
+<text x="562.0" y="373" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">  "fix(HM-53):</text>
+<text x="562.0" y="396" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">   guard-leck"</text>
+<text x="562.0" y="419" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">→ ledger</text>
+<rect x="562.0" y="430" width="8" height="15" fill="#3ddc84" opacity="0.5"/>
+<rect x="562.0" y="476" width="216.0" height="1" fill="#1c3a26"/>
+<text x="562.0" y="502" font-family="DejaVu Sans" font-size="16" font-weight="bold" fill="#f2f7f4">FRANK DER FIXER</text>
+<text x="562.0" y="523" font-family="DejaVu Sans Mono" font-size="11.5" fill="#2a8f57" letter-spacing="0.8">AD-HOC-FIXES</text>
+<rect x="562.0" y="536" width="216.0" height="22" rx="3" fill="#3ddc84" opacity="0.12"/>
+<text x="670.0" y="551" text-anchor="middle" font-family="DejaVu Sans Mono" font-size="10" fill="#3ddc84" letter-spacing="1.2">SCHREIBT CODE</text>
+</g>
+<g>
+<rect x="809.0" y="288" width="242.0" height="286" rx="5" fill="#0b1610" stroke="#1c3a26" stroke-width="1"/>
+<rect x="809.0" y="288" width="242.0" height="28" rx="5" fill="#3ddc84" opacity="0.07"/>
+<rect x="809.0" y="311" width="242.0" height="5" fill="#0b1610"/>
+<rect x="809.0" y="315" width="242.0" height="1" fill="#1c3a26"/>
+<text x="821.0" y="307" font-family="DejaVu Sans Mono" font-size="13" fill="#2a8f57" letter-spacing="1">04</text>
+<circle cx="1036.0" cy="302" r="3" fill="#1b3d29"/>
+<circle cx="1023.0" cy="302" r="3" fill="#1b3d29"/>
+<circle cx="1010.0" cy="302" r="3" fill="#1b3d29"/>
+<text x="822.0" y="350" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">angriff()</text>
+<text x="822.0" y="373" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">→ beutebuch</text>
+<text x="822.0" y="396" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">HM-53 offen</text>
+<text x="822.0" y="419" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">fix: nein</text>
+<rect x="822.0" y="430" width="8" height="15" fill="#3ddc84" opacity="0.5"/>
+<rect x="822.0" y="476" width="216.0" height="1" fill="#1c3a26"/>
+<text x="822.0" y="502" font-family="DejaVu Sans" font-size="16" font-weight="bold" fill="#f2f7f4">HARRY</text>
+<text x="822.0" y="523" font-family="DejaVu Sans Mono" font-size="11.5" fill="#2a8f57" letter-spacing="0.8">RED TEAM SECURITY</text>
+<rect x="822.0" y="536" width="216.0" height="22" rx="3" fill="#7c8f85" opacity="0.12"/>
+<text x="930.0" y="551" text-anchor="middle" font-family="DejaVu Sans Mono" font-size="10" fill="#7c8f85" letter-spacing="1.2">READ-ONLY</text>
+</g>
+<g>
+<rect x="1069.0" y="288" width="242.0" height="286" rx="5" fill="#0b1610" stroke="#1c3a26" stroke-width="1"/>
+<rect x="1069.0" y="288" width="242.0" height="28" rx="5" fill="#3ddc84" opacity="0.07"/>
+<rect x="1069.0" y="311" width="242.0" height="5" fill="#0b1610"/>
+<rect x="1069.0" y="315" width="242.0" height="1" fill="#1c3a26"/>
+<text x="1081.0" y="307" font-family="DejaVu Sans Mono" font-size="13" fill="#2a8f57" letter-spacing="1">05</text>
+<circle cx="1296.0" cy="302" r="3" fill="#1b3d29"/>
+<circle cx="1283.0" cy="302" r="3" fill="#1b3d29"/>
+<circle cx="1270.0" cy="302" r="3" fill="#1b3d29"/>
+<text x="1082.0" y="350" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">kaputt()</text>
+<text x="1082.0" y="373" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">→ beutebuch</text>
+<text x="1082.0" y="396" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">HM-71 offen</text>
+<text x="1082.0" y="419" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">fix: nein</text>
+<rect x="1082.0" y="430" width="8" height="15" fill="#3ddc84" opacity="0.5"/>
+<rect x="1082.0" y="476" width="216.0" height="1" fill="#1c3a26"/>
+<text x="1082.0" y="502" font-family="DejaVu Sans" font-size="16" font-weight="bold" fill="#f2f7f4">MARV</text>
+<text x="1082.0" y="523" font-family="DejaVu Sans Mono" font-size="11.5" fill="#2a8f57" letter-spacing="0.8">RED TEAM CHAOS</text>
+<rect x="1082.0" y="536" width="216.0" height="22" rx="3" fill="#7c8f85" opacity="0.12"/>
+<text x="1190.0" y="551" text-anchor="middle" font-family="DejaVu Sans Mono" font-size="10" fill="#7c8f85" letter-spacing="1.2">READ-ONLY</text>
+</g>
+<g>
+<rect x="1329.0" y="288" width="242.0" height="286" rx="5" fill="#0b1610" stroke="#1c3a26" stroke-width="1"/>
+<rect x="1329.0" y="288" width="242.0" height="28" rx="5" fill="#3ddc84" opacity="0.07"/>
+<rect x="1329.0" y="311" width="242.0" height="5" fill="#0b1610"/>
+<rect x="1329.0" y="315" width="242.0" height="1" fill="#1c3a26"/>
+<text x="1341.0" y="307" font-family="DejaVu Sans Mono" font-size="13" fill="#2a8f57" letter-spacing="1">06</text>
+<circle cx="1556.0" cy="302" r="3" fill="#1b3d29"/>
+<circle cx="1543.0" cy="302" r="3" fill="#1b3d29"/>
+<circle cx="1530.0" cy="302" r="3" fill="#1b3d29"/>
+<text x="1342.0" y="350" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">spur(HM-*)</text>
+<text x="1342.0" y="373" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">modell: opus</text>
+<text x="1342.0" y="396" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">read-only ✓</text>
+<text x="1342.0" y="419" font-family="DejaVu Sans Mono" font-size="14" fill="#3ddc84" opacity="0.82">fix: nein</text>
+<rect x="1342.0" y="430" width="8" height="15" fill="#3ddc84" opacity="0.5"/>
+<rect x="1342.0" y="476" width="216.0" height="1" fill="#1c3a26"/>
+<text x="1342.0" y="502" font-family="DejaVu Sans" font-size="16" font-weight="bold" fill="#f2f7f4">AXEL FOLEY</text>
+<text x="1342.0" y="523" font-family="DejaVu Sans Mono" font-size="11.5" fill="#2a8f57" letter-spacing="0.8">FORENSIK</text>
+<rect x="1342.0" y="536" width="216.0" height="22" rx="3" fill="#7c8f85" opacity="0.12"/>
+<text x="1450.0" y="551" text-anchor="middle" font-family="DejaVu Sans Mono" font-size="10" fill="#7c8f85" letter-spacing="1.2">READ-ONLY</text>
+</g>
+</svg>

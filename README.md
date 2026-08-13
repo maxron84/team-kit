@@ -1,5 +1,8 @@
-![T.E.A.M. — Toll, ein anderer macht's: der Architekt, Frank der Fixer, Ralph
-Wiggum, Axel Foley, Harry & Marv](team-banner.webp)
+![T.E.A.M. — Toll, ein anderer macht's. Sechs Rollenkarten im Terminal-Look:
+Ralph Wiggum (Bau-Loop), der Architekt (Plan & Closeout), Frank der Fixer
+(Ad-hoc-Fixes) — die drei dürfen Code schreiben; Harry (Red Team Security),
+Marv (Red Team Chaos) und Axel Foley (Forensik) sind read-only. Darüber der
+Leitsatz: Finder ≠ Fixer.](team-banner.webp)
 
 # T.E.A.M.-Starterkit
 
@@ -307,5 +310,5 @@ erlaubt, kommerziell wie privat; es bleibt nur die Namensnennung. Das gilt
 lösen keine Lizenzpflicht für den Code des Zielprojekts aus. Der Code stammt aus
 einem eigenen Projekt des Autors; das Urheberrecht liegt vollständig bei ihm.
 
-Ausgenommen ist der Banner `team-banner.webp`: Er zeigt Filmmaterial Dritter und
-ist **nicht** von dieser Lizenz gedeckt.
+Das gilt auch für den Banner: `team-banner.webp` ist aus der mitgelieferten
+Quelle `team-banner.svg` gerendert und enthält kein fremdes Material.
