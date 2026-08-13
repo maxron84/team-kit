@@ -299,4 +299,13 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 
 ## Lizenz
 
-Privates Werkzeug. Der Code stammt aus einem eigenen Projekt des Autors.
+[MIT](LICENSE) — © 2026 Max Ron.
+
+Benutzen, ändern, weitergeben und in eigene Projekte einziehen ist ausdrücklich
+erlaubt, kommerziell wie privat; es bleibt nur die Namensnennung. Das gilt
+**auch für die 75 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
+lösen keine Lizenzpflicht für den Code des Zielprojekts aus. Der Code stammt aus
+einem eigenen Projekt des Autors; das Urheberrecht liegt vollständig bei ihm.
+
+Ausgenommen ist der Banner `team-banner.webp`: Er zeigt Filmmaterial Dritter und
+ist **nicht** von dieser Lizenz gedeckt.
