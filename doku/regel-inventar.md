@@ -90,7 +90,7 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | HERLEITUNG | anhang-a | Prosa-Stufen **3,23 / 3,97 / 4,68 USD** gegenüber **2,16 / 2,35 USD** für Code-Stufen |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | HERLEITUNG | Regeldatei | Im Feld stand eine Skizze drei Kaskaden lang auf einer Prämisse, die der zitierte Eintrag selbst widerlegte |
 | Doku-Hygiene — die Regeldatei bleibt Regelquelle  ✅ erprobt | NORM | Regeldatei | Diese `CLAUDE.md` ist **geltendes Recht**, kein Bautagebuch. |
-| Doku-Hygiene — die Regeldatei bleibt Regelquelle  ✅ erprobt | NORM | Regeldatei | Geltende Regel → hierher. Herleitung/Historie → Wiki oder Historien-Doc, **wörtlich verschoben**, nie ersatzlos gestrichen. |
+| Doku-Hygiene — die Regeldatei bleibt Regelquelle  ✅ erprobt | NORM | Regeldatei | Geltende Regel → hierher. Herleitung/Historie → ein eigenes Historien-Doc, **wörtlich verschoben**, nie ersatzlos gestrichen. |
 | Doku-Hygiene — die Regeldatei bleibt Regelquelle  ✅ erprobt | NORM | Regeldatei | **Rollen-Briefings statt Volltext.** |
 | Doku-Hygiene — die Regeldatei bleibt Regelquelle  ✅ erprobt | NORM | Regeldatei | **Fund-/Aufgabenlisten archivieren**, sobald sie überwiegend abgeschlossen sind |
 | Doku-Hygiene — die Regeldatei bleibt Regelquelle  ✅ erprobt | NORM | Regeldatei | **Leitplanke: kürzt Text, nie Geltung.** |

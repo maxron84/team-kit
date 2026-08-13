@@ -308,10 +308,10 @@ Systemprompt jeder Instanz — und wenn die Rollen-Prompts zusätzlich „Rolle 
 CLAUDE.md, lies sie zuerst" verlangen, kommt pro Rollenaufruf ein **zweiter
 Voll-Read** obendrauf (bei ~20–30 Aufrufen je Kaskade). Verbindlich:
 
-1. **Schichten.** Geltende Regel → hierher. Herleitung/Historie → Wiki oder
+1. **Schichten.** Geltende Regel → hierher. Herleitung/Historie → ein eigenes
    Historien-Doc, **wörtlich verschoben**, nie ersatzlos gestrichen.
 2. **Rollen-Briefings statt Volltext.** Jede automatisierte Rolle bekommt ein
-   kurzes eigenes Briefing (`prompts/rolle-*.md`, ~20 Zeilen: wer ich bin, mein
+   kurzes eigenes Briefing (`team/prompts/rolle-*.md`, ~20 Zeilen: wer ich bin, mein
    Auftrag, meine eiserne Grenze, mein Dreisatz, mein Promise) — mit Fallback auf
    diese Datei, falls das Briefing fehlt. **Guards und Promise-Strings im Prompt
    bleiben unangetastet.**
@@ -331,8 +331,9 @@ Voll-Read** obendrauf (bei ~20–30 Aufrufen je Kaskade). Verbindlich:
 > Retry-Deckel und Cap-Durchsetzung laufen in `team/lib.sh`, **bevor** eine
 > Rolle startet — sie kann daran nichts ändern. Hier stehen deshalb nur die
 > Sätze, nach denen eine Rolle **handelt**. Einrichtung und Fehlersuche für den
-> Menschen: [`TEAM.md`](TEAM.md). Bau- und Auflösungsdetails: **Anhang A.3**
-> (Auth-Fallback) und **A.8** (429-Robustheit, numerische Default-Deckel).
+> Menschen: [`TEAM.md`](TEAM.md). Warum es so gebaut ist: `doku/anhang-a.md`
+> **im Kit-Repo**, Abschnitt A.3 (Auth-Fallback) und A.8 (429-Robustheit,
+> numerische Default-Deckel) — liegt nicht in diesem Projekt.
 
 - **Modell:** `sonnet` (teures Opus für den Loop meist überflüssig). ✅ erprobt
 - **Permission-Mode:** `bypassPermissions` (headless hat keinen Approver). ✅ erprobt
@@ -374,15 +375,18 @@ Guard/Read-Only-Regeln **nicht** auf.
 
 ## Kostenkontrolle
 
-**Modell / Plattform**: {{z. B. Sonnet via Claude Code — Loop-Rollen;
-opus — Axel/Architekt}} (**Modell** und **Auth** sind zwei
+**Modell / Plattform**: `TEAM_MODEL_LOOP` (Default `sonnet`) für die
+Loop-Rollen, `TEAM_MODEL_STRONG` (Default `opus`) für Axel und Den Architekten
+— beide in [`team/lib.sh`](team/lib.sh). **Modell** und **Auth** sind zwei
 getrennte Achsen: starkes Modell heißt **nicht** API — auch Axel und Der
-Architekt laufen Abo-first, siehe „Loop-Mechanik & Auth")
+Architekt laufen Abo-first, siehe „Loop-Mechanik & Auth".
+
 **Budget-Modell (Zwei-Schwellen, ✅ erprobt, `BL-30`)**: Ein zentraler
-**Soft-Cap** `5` (Default **5 USD**) gilt für **alle**
-Rollen; ein **Hard-Cap** `10` (Default **10 USD**) nur für
-die iterierenden „Sorgenkinder" **Frank & Axel**. Beide zentral in `team-lib.sh`
-— **eine** Zahl statt mehrerer divergierender Defaults.
+**Soft-Cap** (`TEAM_ROLE_BUDGET_USD`, Default **5 USD**) gilt für **alle**
+Rollen; ein **Hard-Cap** (`TEAM_ROLE_HARDCAP_USD`, Default **10 USD**) nur für
+die iterierenden „Sorgenkinder" **Frank & Axel**. Beide zentral in
+[`team.config.sh`](team.config.sh) — **eine** Zahl statt mehrerer
+divergierender Defaults.
 **Warnschwelle**: 80 % des Soft-Caps — reiner Hinweis, kein Abbruch.
 
 **Was ein überschrittener Cap für die eigene Arbeit bedeutet:**
@@ -399,15 +403,15 @@ die iterierenden „Sorgenkinder" **Frank & Axel**. Beide zentral in `team-lib.s
   .ralph-state-Weiterschalten (kein Rollback, Mensch schaltet weiter),
   Harry/Marv sind read-only (nichts Bezahltes geht verloren).
 
-Übersteuerung je Lauf/Rolle bleibt möglich (`RALPH_BUDGET_USD`,
-`ROLE_BUDGET_USD`/`ROLE_HARDCAP_USD`, `5`/`10`).
+Übersteuerung je Lauf/Rolle bleibt möglich (`TEAM_BUDGET_USD` für den Lauf,
+`TEAM_ROLE_BUDGET_USD`/`TEAM_ROLE_HARDCAP_USD` für die Schwellen).
 
 **Grundregeln (stets aktiv):**
 
 - Das starke/teure Modell (Axel, Architekt) läuft **nie im Dauer-Loop**; jede
   Iteration/jeder Fall bekommt ein hartes Budget-Cap.
-- Loop-Rollen nutzen das günstige Modell (Default sonnet), pro Rolle
-  über Env übersteuerbar (`sonnet`).
+- Loop-Rollen nutzen das günstige Modell (Default `sonnet`), über
+  `TEAM_MODEL_LOOP` übersteuerbar.
 
 **Token-Sparregeln (optional, projektabhängig — Default AUS):**
 
@@ -457,9 +461,10 @@ nicht deines Projekts.
 
 - **Team-Tests laufen getrennt**: `./team-test.sh` (pytest). Der Testbefehl
   deines Projekts bleibt `{{SMOKE_TEST}}`.
-- **Bau-Anleitung und Betriebslehren**: `doku/anhang-a.md` im Kit-Repo.
-- **Baugeschichte dieses Projekts**: `wiki/team-historie.md` anlegen, sobald die
-  erste Infrastruktur-Änderung ansteht.
+- **Bedienung für den Menschen**: [`TEAM.md`](TEAM.md) — liegt hier im Projekt.
+- **Warum das Kit so gebaut ist**: `doku/anhang-a.md` **im Kit-Repo**. Diese
+  Datei liegt nicht im Projekt; ein Fund am Team selbst gehört ebenfalls
+  dorthin zurück (siehe [`{{PLAN_ORDNER}}/backlog.md`]({{PLAN_ORDNER}}/backlog.md)).
 
 Diese Datei bleibt **Regelquelle**: geltende Regeln hierher, Herleitung und
-Historie ins Projekt-Wiki (siehe „Doku-Hygiene").
+Historie in ein eigenes Historien-Doc (siehe „Doku-Hygiene").

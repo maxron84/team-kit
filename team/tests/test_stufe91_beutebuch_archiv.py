@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fixture-Test fuer das Beutebuch-Archiv (Kaskade 22/Stufe 91, Baustein C).
 
-`scripts/beutebuch.py archiviere [--dry-run]` verschiebt jeden `### HM-<Nr>`-
+`team/tools/beutebuch.py archiviere [--dry-run]` verschiebt jeden `### HM-<Nr>`-
 Block mit Status `erledigt`/`ueberholt` woertlich vom aktiven Buch ans Ende
 des Archivs; `next-id` wird archiv-bewusst (Maximum ueber beide Dateien).
 Netz-/CLI-frei gegen temporaere Fixture-Dateien -- niemals gegen das echte

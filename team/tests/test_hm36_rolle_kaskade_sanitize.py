@@ -5,7 +5,7 @@ Zeilenumbrueche sanitisieren, bevor eine Ledger-Zeile gebaut/gematcht wird --
 sonst zerschiesst ein `|`/`\n` in `--rolle`/`--kaskade` das 7-Feld-Schema der
 `.budget-ledger`.
 
-Netz-/CLI-frei bis auf subprocess-Aufrufe von scripts/kosten.py gegen ein
+Netz-/CLI-frei bis auf subprocess-Aufrufe von team/tools/kosten.py gegen ein
 temporaeres Fixture-Ledger (kein Bezug zur echten .budget-ledger).
 """
 import subprocess

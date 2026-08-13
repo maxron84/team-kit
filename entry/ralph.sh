@@ -8,7 +8,7 @@
 #                             Schritt und hat danach ohnehin Feierabend, ein
 #                             gesprengtes Budget stoppt VOR dem State-Weiterschalten)
 #           TEAM_MODEL_LOOP   Modell (Default sonnet)
-#           AUTH_MODE         api|abo (siehe team-lib.sh)
+#           AUTH_MODE         api|abo (siehe team/lib.sh)
 # Exit:     0 = Kaskade fertig/Cap erreicht · 1 = Fehler
 #           42 = Session-Limit — Stufe pausiert (kein Fehler, State steht),
 #                siehe team_claude()/CLAUDE.md „Loop-Mechanik & Auth"

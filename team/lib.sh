@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# team-lib.sh — gemeinsame Bibliothek der T.E.A.M.-Rollen (siehe CLAUDE.md, Anhang A).
+# team/lib.sh — gemeinsame Bibliothek der T.E.A.M.-Rollen (siehe CLAUDE.md, Anhang A).
 # Wird per `source` eingebunden, nicht direkt ausgeführt.
 
 # --- Projekt-Konfiguration (T.E.A.M.-Starterkit) ------------------------------
@@ -518,7 +518,7 @@ team_quittung_fehlt_melden() {
 }
 
 # --- Rollen-Briefings (Stufe 90) ----------------------------------------------
-# team_briefing <rolle>: gibt den Inhalt von prompts/rolle-<rolle>.md aus —
+# team_briefing <rolle>: gibt den Inhalt von team/prompts/rolle-<rolle>.md aus —
 # ersetzt die frühere Prompt-Zeile "Rolle siehe CLAUDE.md — lies sie zuerst.",
 # die jeden Rollenaufruf einen zusätzlichen Voll-Read von CLAUDE.md auslösen
 # ließ. Fallback (Pflicht, Selbstbezugs-Risiko dieser Kaskade): fehlt die Datei
@@ -685,7 +685,7 @@ team_guard_urteil() {
 # dem gemeldeten Fund zu tun hat — ein Fund konnte so fälschlich als "erledigt"
 # verbucht werden, obwohl die eigentliche Fundstelle nie angefasst wurde
 # (HM-29). Diese Funktion prüft LOSE, ob mindestens eine der im Beutebuch-Block
-# per Backtick referenzierten Dateien (scripts/beutebuch.py dateien) im Diff
+# per Backtick referenzierten Dateien (team/tools/beutebuch.py dateien) im Diff
 # seit start-hash vorkommt. Nennt der Fund KEINE Datei, gilt die Prüfung als
 # bestanden (kein falscher Blocker bei rein beschreibenden Funden).
 team_diff_beruehrt_fund() {
@@ -881,7 +881,7 @@ except Exception:
 }
 
 # --- Kosten-Summierung (zentral, dedupliziert vollautomatik.sh/team-status.sh) -
-# Kapselt scripts/kosten.py — vorher existierte dieselbe Python-Summierung
+# Kapselt team/tools/kosten.py — vorher existierte dieselbe Python-Summierung
 # doppelt/dreifach als Inline-Heredoc in vollautomatik.sh und team-status.sh.
 
 # team_kosten_summe <dir…>: Gesamtsumme total_cost_usd über alle *.json in
@@ -1009,7 +1009,7 @@ team_architekt_stand() {
 # Kaskade 13/Stufe 42) — der Architekt laeuft interaktiv ausserhalb von
 # team_claude und schreibt keine total_cost_usd-JSONs. Proxy: Zeilen-Churn
 # (git diff --numstat) ueber plans/** + CLAUDE.md seit dem letzten
-# .budget-ledger-Commit, mal Eichfaktor (siehe scripts/kosten.py). Bewusst
+# .budget-ledger-Commit, mal Eichfaktor (siehe team/tools/kosten.py). Bewusst
 # eine GROBE Groessenordnung — Stufe 43 ersetzt sie beim Kaskaden-Abschluss
 # durch den echten Konsolenwert (A1). Ohne bisherigen Ledger-Commit (frisches
 # Repo) ist die Ausgabe 0.0000 statt eines Abbruchs.
@@ -1075,7 +1075,7 @@ team_kontostand_gesamt() {
 
 # team_logs_archivieren <dir>: verschiebt die aktuell in <dir> liegenden
 # *.json-Rohlogs nach <dir>/archiv/ (bleiben lokal erhalten, zaehlen aber
-# wegen des nicht-rekursiven glob() in scripts/kosten.py nicht mehr in
+# wegen des nicht-rekursiven glob() in team/tools/kosten.py nicht mehr in
 # team_kosten_summe/team_kontostand_gesamt mit). AUFRUFEN, direkt NACHDEM
 # eine neue .budget-ledger-Zeile fuer eine abgeschlossene Kaskade angehaengt
 # wurde — sonst zaehlt der Kontostand dieselben Kosten doppelt (Ledger-Zeile

@@ -6,7 +6,7 @@ gematcht wird -- sonst zerschiesst ein `|`/`\n` in `--kaskade` bei
 `rollen-abschluss` das 7-Feld-Schema der `.budget-ledger` (der HM-36-Fix
 haertete nur akteur_abschluss(), nicht die Schwesterfunktion).
 
-Netz-/CLI-frei bis auf subprocess-Aufrufe von scripts/kosten.py gegen ein
+Netz-/CLI-frei bis auf subprocess-Aufrufe von team/tools/kosten.py gegen ein
 temporaeres Fixture-Ledger (kein Bezug zur echten .budget-ledger).
 """
 import json

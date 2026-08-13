@@ -43,6 +43,41 @@ genau den Code, für den die Frage gebaut wurde.
 - **Die Schlussbefehle laufen auch bei Pfaden mit Leerzeichen.** `git -C
   /home/…/Projekt (copy) add -A` war nicht kopierbar — der Zielpfad steht jetzt
   in Anführungszeichen, im Einzug wie im `--update`.
+- **Die Regeldatei nannte einen Platzhalter, den niemand füllt.** In
+  `## Kostenkontrolle` stand `{{z. B. Sonnet via Claude Code — …}}` — kein
+  echter Platzhalter (die Prüfung sucht `{{GROSSBUCHSTABEN}}`), also stand er
+  **wörtlich so in jeder installierten `CLAUDE.md`**. Daneben vier weitere
+  Substitutions-Leichen (`Soft-Cap `5``, `` `5`/`10` ``, ein nacktes
+  `` (`sonnet`) ``) und ein Verweis auf `team-lib.sh`, die es seit dem
+  `team/`-Namensraum nicht mehr gibt. Alle fünf Stellen nennen jetzt die
+  **wirklichen** Variablennamen und ihre Defaults.
+- **Stale Pfadnamen quer durch Kommentare und Docstrings.** `team-lib.sh` →
+  `team/lib.sh`, `scripts/kosten.py` → `team/tools/kosten.py`,
+  `scripts/beutebuch.py` → `team/tools/beutebuch.py`, `prompts/rolle-*.md` →
+  `team/prompts/rolle-*.md`. Wer (Mensch oder Rolle) einem dieser Verweise
+  folgte, landete im Leeren.
+- **`team.config.sh` empfahl im Kommentar genau das, was `BL-9` verbietet.**
+  Der Domänen-Block erklärte die zweite Domäne als „Arbeit an der
+  Team-Infrastruktur" und gab `"app team"` als Beispiel — eine Zeile, die in
+  einem Feldprojekt strukturell `0.0000` bleibt. Jetzt steht dort, warum EIN
+  Konto der Normalfall ist und was mehrere kosten.
+- **Doppelte Zeile und kaputte Auszeichnung in `TEAM.md`.**
+  „Guard-Experimente nur in einem Wegwerf-Repo" stand zweimal hintereinander;
+  im API-Key-Absatz war Fettschrift ineinander verschachtelt.
+
+### Removed
+
+- **`doku/anhang-a.md` war eine Wiki-Seite aus einem fremden Repo.** Sie trug
+  Wiki-Frontmatter, **neun tote Links** (`../konzepte/…`, `../vorlagen/…`,
+  `../index.md`), eine zweite Platzhalter-Konvention, die niemand füllt
+  (`{{Plan-Ordner}}`, `{{loop-skript}}`, `{{ledger-datei}}`) — und vor allem
+  eine Anleitung, **die Skripte zu generieren**, die das Kit längst ausliefert.
+  Neu geschrieben als kit-native Warum-Schicht: −28 % Zeichen, ein einziger
+  verbleibender Link, und ein Kopf, der sagt, wofür die Datei **nicht**
+  zuständig ist. Die Abschnittsnummern `A.0`–`A.10` bleiben stabil, weil
+  Regeldatei, Regel-Inventar und Backlog darauf verweisen.
+- **`bootstrap/ermittlungsakten/` gelöscht.** Der Installer legt den Ordner
+  direkt an; die Vorlage wurde nie kopiert.
 
 ## [2.7.1] — 2026-08-12
 

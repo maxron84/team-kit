@@ -9,7 +9,7 @@ Zeilen im neuen Schema, Altzeilen zaehlen als "unzugeordnet" (nie
 stillschweigend einer Domaene zugeschlagen). Der ungefilterte Gesamtwert
 bleibt unveraendert korrekt (ledger_summe() ohne Filter, verifiziert).
 
-Netz-/CLI-frei: ruft scripts/kosten.py per subprocess gegen ein Fixture-
+Netz-/CLI-frei: ruft team/tools/kosten.py per subprocess gegen ein Fixture-
 Ledger im temporaeren Verzeichnis auf.
 """
 import subprocess

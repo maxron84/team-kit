@@ -6,10 +6,10 @@ Stufe 50 hat den Python-Kern (`kosten.py akteur-abschluss`) rollen-agnostisch
 gemacht (siehe test_stufe50_akteur_abschluss.py). Stufe 51 legt die
 Bedienoberflaeche obendrauf: `team-status.sh --akteur-abschluss <rolle>
 <auth> <USD> <domaene> ["<notiz>"]` reicht die Werte ueber den neuen
-team-lib.sh-Wrapper `team_akteur_abschluss` als eigene argv-Elemente durch
+team/lib.sh-Wrapper `team_akteur_abschluss` als eigene argv-Elemente durch
 (kein `python3 -c` mit roher Interpolation — BL-23/HM-17).
 
-Netz-/CLI-frei: team-status.sh/team-lib.sh/scripts/kosten.py werden in ein
+Netz-/CLI-frei: team-status.sh/team/lib.sh/team/tools/kosten.py werden in ein
 temporaeres Arbeitsverzeichnis kopiert und dort gegen ein isoliertes
 Fixture-".budget-ledger" ausgefuehrt (kein Bezug zur echten .budget-ledger
 des Repos, kein echter Claude-Aufruf).
@@ -33,7 +33,7 @@ DOMAENE = _dom[0] if _dom else "produkt"   # Starterkit: projektneutral
 def _fixture_repo(tmp_path):
     """Kopiert die drei benoetigten Dateien in ein isoliertes Arbeitsverzeichnis
     und legt ein leeres Fixture-Ledger an. team-status.sh macht `cd
-    "$(dirname "$0")"`, daher muss scripts/kosten.py als Geschwister-Unterordner
+    "$(dirname "$0")"`, daher muss team/tools/kosten.py als Geschwister-Unterordner
     mitkopiert werden."""
     (tmp_path / "team" / "tools").mkdir(parents=True)
     shutil.copy(REPO_ROOT / "team-status.sh", tmp_path / "team-status.sh")

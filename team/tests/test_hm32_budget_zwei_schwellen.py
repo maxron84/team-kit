@@ -7,7 +7,7 @@ bezahlte Arbeit weg — der Cap "sparte" nichts, sondern vervielfachte die Koste
 und blockierte den Fund (realer Auslöser: HM-32, Frank Versuch 2 kostete
 1,44 USD >= 1 USD → Fehlversuch trotz plausiblem Fix).
 
-Neues Modell in team-lib.sh:
+Neues Modell in team/lib.sh:
   - Zentrale Basiszahlen TEAM_ROLE_BUDGET_USD=5 (Soft, alle Rollen) und
     TEAM_ROLE_HARDCAP_USD=10 (Hard, Frank/Axel).
   - team_budget_check <kosten> <soft> <label> [hard] gibt vier Zustände zurück:
@@ -39,7 +39,7 @@ def _budget_check(kosten, soft, hard=None):
 
 
 def _var(name):
-    """Liest den Default-Wert einer team-lib.sh-Variable (ohne Env-Override)."""
+    """Liest den Default-Wert einer team/lib.sh-Variable (ohne Env-Override)."""
     cmd = f'source "{TEAM_LIB}"; printf "%s" "${{{name}}}"'
     result = subprocess.run(
         ["bash", "-c", cmd], cwd=REPO_ROOT,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fixture-Test für Stufe 44 (Kaskade 13, BL-28/BL-29-Abschluss).
 
-Belegt zwei neue team-lib.sh-Helfer, die `team-status.sh --budget` seit
+Belegt zwei neue team/lib.sh-Helfer, die `team-status.sh --budget` seit
 Stufe 44 nutzt:
 
 - `team_ledger_domaene <website|team> [pfad]` — Ledger-Summe gefiltert auf

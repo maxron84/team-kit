@@ -7,7 +7,7 @@ enthaelt real bereits mehrere eigenstaendige Zeilen derselben Kaskade/Rolle
 der auf zwei oder mehr bestehende Zeilen matcht, muss stattdessen mit einem
 Fehler abbrechen, OHNE die Datei anzufassen.
 
-Netz-/CLI-frei bis auf subprocess-Aufrufe von scripts/kosten.py gegen ein
+Netz-/CLI-frei bis auf subprocess-Aufrufe von team/tools/kosten.py gegen ein
 temporaeres Fixture-Ledger (kein Bezug zur echten .budget-ledger).
 """
 import subprocess

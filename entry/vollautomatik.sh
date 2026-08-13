@@ -20,7 +20,7 @@
 #          TEAM_BUDGET_USD   Deckel für DIESEN Lauf (Default 15) — die harte
 #                            Durchsetzung misst nur die Kosten dieses einen
 #                            Laufs (A), nicht den lebenslangen Kontostand (BL-18).
-#          TEAM_MODEL_LOOP / TEAM_MODEL_STRONG / AUTH_MODE  (siehe team-lib.sh)
+#          TEAM_MODEL_LOOP / TEAM_MODEL_STRONG / AUTH_MODE  (siehe team/lib.sh)
 # Exit:    0 = Lauf durch · 1 = echter Fehler (Mensch gefragt; inkl. Stagnation)
 #          43 = Stufe fertig, Quittung fehlt (BL-41, durchgereicht von ralph.sh):
 #               kein Neubau — prüfen und von Hand quittieren
@@ -93,7 +93,7 @@ kontostand_gesamt() { team_kontostand_gesamt; }
 # (Strippenzieher-Entscheid 2, Kaskade 6 Stufe 19). Eine explizite
 # TEAM_BUDGET_USD-Übersteuerung durch den User hat immer Vorrang und wird
 # nicht überschrieben — team_resolve_budget_cap kapselt die Regel isoliert
-# testbar (siehe team-lib.sh).
+# testbar (siehe team/lib.sh).
 BUDGET_EMPFEHLUNG="$(team_budget_empfehlung)"
 NEUER_DECKEL="$(team_resolve_budget_cap "$TEAM_BUDGET_USD" "$TEAM_BUDGET_USD_USER_GESETZT" "$BUDGET_EMPFEHLUNG")"
 if [ "$NEUER_DECKEL" != "$TEAM_BUDGET_USD" ]; then

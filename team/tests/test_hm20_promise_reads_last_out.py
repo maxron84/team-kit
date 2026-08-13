@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fixture-Test für HM-20 (Beutebuch) — belegt Stufe 35 (Kaskade 11).
 
-Root-Cause: team-lib.sh benennt die Log-Datei bei API-Fallback/429-Retry auf
+Root-Cause: team/lib.sh benennt die Log-Datei bei API-Fallback/429-Retry auf
 eine NEUE lokale Variable um (out="${out%.json}-api-fallback.json") und setzt
 am Ende korrekt TEAM_LAST_OUT="$out" — die Aufrufer (frank.sh/axel.sh/
 redteam.sh) prüften vor Stufe 35 aber ihre eigene, unveränderte $OUT-Variable,

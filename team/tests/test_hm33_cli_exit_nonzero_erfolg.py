@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fixture-Test für HM-33 (Beutebuch) — Frank-Fix in team-lib.sh.
+"""Fixture-Test für HM-33 (Beutebuch) — Frank-Fix in team/lib.sh.
 
 Root-Cause: team_claude() ließ den reinen Prozess-Exit-Code der `claude`-CLI
 über ein bereits geschriebenes Erfolgs-JSON (is_error:false) entscheiden.

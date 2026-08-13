@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # team.config.sh — alle projektspezifischen Werte des T.E.A.M. an EINER Stelle.
 #
-# Wird von team-lib.sh gesourct, also von jedem Rollen-Skript. Änderungen hier
+# Wird von team/lib.sh gesourct, also von jedem Rollen-Skript. Änderungen hier
 # wirken sofort in allen Rollen — kein erneutes Installieren nötig.
 #
 # Diese Datei gehört INS GIT des Zielprojekts (sie enthält keine Geheimnisse).
-# Geheimnisse (API-Key) liegen unter ~/.config/claude-team/, siehe team-lib.sh.
+# Geheimnisse (API-Key) liegen unter ~/.config/claude-team/, siehe team/lib.sh.
 
 # --- Projekt ------------------------------------------------------------------
 # Name des Projekts/Repos — erscheint in Berichten und Ledger-Notizen.
@@ -13,7 +13,7 @@ TEAM_PROJEKT="${TEAM_PROJEKT:-{{PROJEKTNAME}}}"
 
 # --- Pfade --------------------------------------------------------------------
 # Produktivcode: das, was Harry, Marv und Axel NIEMALS anfassen dürfen.
-# Ohne Schrägstrich am Ende schreiben; die Skripte hängen ** selbst an.
+# Der abschließende Schrägstrich ist egal — er wird unten vereinheitlicht.
 TEAM_PRODUKTIVCODE="${TEAM_PRODUKTIVCODE:-{{PRODUKTIVCODE}}}"
 
 # Test-Ordner: hier dürfen Red Team und Frank Reproducer ablegen.
@@ -103,12 +103,20 @@ TEAM_ROLE_BUDGET_USD="${TEAM_ROLE_BUDGET_USD:-5}"
 TEAM_ROLE_HARDCAP_USD="${TEAM_ROLE_HARDCAP_USD:-10}"
 
 # --- Domänen ------------------------------------------------------------------
-# Die Domäne trennt im Kostenledger die Produktarbeit von der Arbeit an der
-# Team-Infrastruktur selbst. Welche Namen gelten, bestimmt DIESES Projekt —
-# die Werkzeuge schreiben keine vor. Erster Wert = Produktarbeit (wird im
-# Statusbericht als solche ausgewiesen), zweiter = Team-Infrastruktur.
+# Kostenkonten: Unter welchen Namen die Ausgaben im Ledger gebucht werden.
+# Welche Namen gelten, bestimmt DIESES Projekt — die Werkzeuge schreiben keine
+# vor. Der erste Wert gilt als Produktarbeit und wird im Statusbericht als
+# solche ausgewiesen.
 #
-# Beispiele: "app team" · "backend frontend team" · "shop team"
+# EIN Name ist der Normalfall (BL-9). Jeder Kostenabschluss bucht auf GENAU
+# EINE Domäne; mehrere Namen heißen also: nach jedem Lauf entscheiden, wohin er
+# gehört — auch wenn er mehrere Bereiche berührt hat. Nur eintragen, wenn die
+# Ausgaben wirklich getrennt gelesen werden sollen, z. B. "backend frontend".
+#
+# KEINE eigene Domäne für die Arbeit am T.E.A.M. selbst: Am Team wird hier
+# nicht entwickelt — was auffällt, geht ins Kit-Repo zurück und wird dort
+# verbucht. Eine "team"-Zeile bliebe hier strukturell 0.0000, und eine
+# Kennzahl, die immer null zeigt, erzieht dazu, den Block zu überlesen.
 TEAM_DOMAENEN="${TEAM_DOMAENEN:-{{DOMAENEN}}}"
 export TEAM_DOMAENEN   # die Python-Werkzeuge lesen sie aus der Umgebung
 

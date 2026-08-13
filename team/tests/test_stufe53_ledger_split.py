@@ -2,7 +2,7 @@
 """Fixture-Test fuer den Ledger-Abo/API-Split (BL-17-Restpunkt/BL-29-"1b",
 Kaskade 16/Stufe 53).
 
-`kosten.py ledger --split` und der `team-lib.sh`-Wrapper `team_ledger_split`
+`kosten.py ledger --split` und der `team/lib.sh`-Wrapper `team_ledger_split`
 liefern die usd-Spalte der .budget-ledger nach auth-Bucket getrennt
 ("abo<TAB>api<TAB>gemischt") statt nur der Gesamtsumme. Bucket-Regel: NUR
 auth=="abo" zaehlt zu abo, NUR auth=="api" zu api, ALLES andere (v. a.

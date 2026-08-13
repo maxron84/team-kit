@@ -36,7 +36,7 @@ VOLLAUTOMATIK = REPO_ROOT / "vollautomatik.sh"
 
 
 def _bash(code):
-    """Führt Bash-Code mit geladener team-lib.sh aus und liefert stdout (getrimmt)."""
+    """Führt Bash-Code mit geladener team/lib.sh aus und liefert stdout (getrimmt)."""
     result = subprocess.run(
         ["bash", "-c", f'set -euo pipefail; source "{TEAM_LIB}"; {code}'],
         cwd=REPO_ROOT,

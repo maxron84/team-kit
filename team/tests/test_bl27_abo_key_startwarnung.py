@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fixture-Test für BL-27 (Kaskade 12, Stufe 40) — Auth-Startwarnung.
 
-Belegt Stufe 39 (team-lib.sh): team_resolve_auth_mode warnt einmalig auf
+Belegt Stufe 39 (team/lib.sh): team_resolve_auth_mode warnt einmalig auf
 stderr, wenn AUTH_MODE=abo gilt, aber ANTHROPIC_API_KEY in der
 Prozess-Umgebung liegt (die Claude-CLI kann dann den teuren API-Weg dem Abo
 vorziehen). Rein netz-/CLI-frei über `bash -c` + `subprocess` (Muster wie

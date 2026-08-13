@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Reproduktions-/Regressionstest fuer HM-48: `_ledger_zeile_setzen()`
-(scripts/kosten.py) machte ein Read-Modify-Write ohne jede Sperre. Zwei
+(team/tools/kosten.py) machte ein Read-Modify-Write ohne jede Sperre. Zwei
 ueberlappende Kaskaden-Abschluss-Aufrufe (akteur-abschluss/rollen-abschluss)
 konnten sich gegenseitig eine gerade erst geschriebene Zeile kommentarlos
 wieder herausreissen (Lost Update), weil der zweite Aufruf noch die alte

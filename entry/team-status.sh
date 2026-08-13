@@ -207,7 +207,7 @@ print(f'{a + b:.4f}')
     # Domänengetrennte Ledger-Aufstellung (BL-29, Kaskade 13/Stufe 44). Nur
     # die committete .budget-ledger trägt bislang eine Domäne je Zeile (ab
     # Kaskade 13) — Altzeilen davor zählen als "unzugeordnet", NIE
-    # stillschweigend einer Domäne zugeschlagen (siehe scripts/kosten.py).
+    # stillschweigend einer Domäne zugeschlagen (siehe team/tools/kosten.py).
     ledger_gesamt="$(team_ledger_summe)"
     # BL-9: Der Block erscheint nur, wenn dieses Projekt WIRKLICH mehrere
     # Domänen führt. Bei genau einer wiederholt er nur die Gesamtsumme und

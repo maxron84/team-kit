@@ -5,7 +5,7 @@ sonst schreibt ein `\\r` in `--rolle` ein rohes CR-Byte in die `.budget-ledger`,
 das beim naechsten Einlesen (universal newlines) als Zeilenumbruch interpretiert
 wird und dieselbe Ledger-Korruption wie HM-36 erzeugt.
 
-Netz-/CLI-frei bis auf subprocess-Aufrufe von scripts/kosten.py gegen ein
+Netz-/CLI-frei bis auf subprocess-Aufrufe von team/tools/kosten.py gegen ein
 temporaeres Fixture-Ledger (kein Bezug zur echten .budget-ledger).
 """
 import subprocess

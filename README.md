@@ -53,10 +53,13 @@ Frank-Fixes, wirksamer Read-Only-Guard. Er wurde **nicht neu geschrieben**, sond
 Seither läuft das Kit im Feldprojekt `team-kit_project_platformer`: **33 Kaskaden,
 157 Stufen, 93 Red-Team-Funde `HM-1`…`HM-93`, 49 `vollautomatik.sh`-Läufe,
 rund 1265 USD Abo-Gegenwert — vollständig geledgert** (Stand 2026-08-11). Aus
-diesem Betrieb kommen die Backlog-Einträge `BL-1`…`BL-50`; was davon behoben ist,
-steht im [CHANGELOG](CHANGELOG.md), der Rest in [plans/backlog.md](plans/backlog.md).
+diesem Betrieb und aus Einzügen in fremde Codebasen kommen die Backlog-Einträge
+`BL-1`…`BL-56`; was davon behoben ist, steht im [CHANGELOG](CHANGELOG.md), der
+Rest in [plans/backlog.md](plans/backlog.md).
 
-Die konzeptionelle Grundlage steht im [LLM-Wiki](../llm-wiki/wiki/vorlagen/claude-md-ki-team.md).
+Die konzeptionelle Grundlage steht im LLM-Wiki des Autors
+(`../llm-wiki/wiki/vorlagen/claude-md-ki-team.md`) — ein privates
+Schwester-Repo, nicht Teil dieses Kits.
 
 ## Installation
 
@@ -153,13 +156,14 @@ Namensraum, `TEAM.md`. Deine Ordner werden nicht angefasst, dein Testrunner
 bleibt deiner, der Smoke-Test ist im Bestandsprojekt meist schon vorhanden —
 genau das Feld, das im leeren Projekt zuerst fehlt.
 
-> **Belegstand.** Die beiden Stellen, an denen die Defaults nur für ein
-> Neuprojekt taugten, stammen aus der Analyse einer fremden Bestandscodebasis
-> (`Project-Family-ERP`, Python/tkinter, Einstiegspunkt in der Wurzel, `src/`,
-> `bin/`, gewachsene `tests/`, belegtes `plans/`; 2026-08-11 **nur gelesen,
-> nicht installiert**). Beide sind in **2.6.0 gebaut** und im Selbsttest gegen
-> genau diese Lage nachgewiesen — **noch nicht** gelaufen ist ein scharfer
-> Bestandslauf mit Agenten.
+> **Belegstand.** Die Stellen, an denen die Defaults nur für ein Neuprojekt
+> taugten, stammen aus einer fremden Bestandscodebasis (`Project-Family-ERP`,
+> Python/tkinter, Einstiegspunkt in der Wurzel, `src/`, `bin/`, gewachsene
+> `tests/`, belegtes `plans/`): erst **gelesen** (2026-08-11 → `BL-51`/`BL-52`,
+> gebaut in 2.6.0), dann **installiert** (2026-08-13 → `BL-57`, gebaut in
+> 2.8.0). Der Einzug förderte eine Klasse zutage, die kein Codelesen zeigt:
+> Die Fragen waren richtig, aber so gestellt, dass sie falsch beantwortet
+> wurden. **Noch nicht** gelaufen ist ein scharfer Bestandslauf mit Agenten.
 
 **Zwei Stellen, an denen ein Bestandsprojekt anders liegt:**
 
@@ -206,7 +210,8 @@ kit-regelinventar.py    Prüfer für das Regel-Inventar (Stufe 7). Kit-only —
                         bewacht die Vorlage, nicht die installierte CLAUDE.md
 plans/                  Roadmap und Backlog DES KITS (nicht die Vorlagen —
                         die liegen in bootstrap/ und werden installiert)
-doku/anhang-a.md        Bau-Anleitung und Betriebslehren
+doku/anhang-a.md        Die Warum-Schicht: Bauentscheide und Feld-Betriebs-
+                        lehren (A.0–A.10). Bleibt im Kit, wird nicht installiert
 doku/regel-inventar.md  Jede Regel der Vorlage als NORM/HERLEITUNG/HISTORIE,
                         mit Träger und wörtlichem Zitat
 ```
@@ -259,15 +264,15 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
   nicht deines Projekts. Verifiziert in Go-, Rust- und PHP-Projektstrukturen.
 - **Im Feld gelaufen, aber an einem Projekttyp.** Die 33 Kaskaden stammen aus
   **einem** Feldprojekt (Python/pygame, von null aufgebaut). Jeder Lauf hat
-  Kit-Fehler zutage gefördert — `BL-1`…`BL-50`, von der toten Fixphase über
+  Kit-Fehler zutage gefördert — `BL-1`…`BL-56`, von der toten Fixphase über
   zwei Löcher in der Kostenerfassung bis zur vierten Fehlerklasse „Stufe
   fertig, Quittung fehlt". Die Erwartung ist nicht, dass das aufhört; die
   Mechanik dafür ist der Rückkanal Feld → Kit.
-- **Bestandsprojekte: gebaut und im Selbsttest belegt, aber noch nicht scharf
-  gefahren.** `BL-51` und `BL-52` sind in 2.6.0 umgesetzt und gegen die
-  nachgestellte Bestandslage geprüft (`kit-test.sh`, Schritt 6). Was fehlt, ist
-  eine Kaskade mit echten Agenten in einer gewachsenen Codebasis — bis dahin
-  gilt die Warnung des Installers als ungeprüft im Feld.
+- **Bestandsprojekte: der Einzug ist belegt, der Betrieb nicht.** `BL-51`,
+  `BL-52` und `BL-57` stammen aus einer echten gewachsenen Codebasis und sind
+  gegen die nachgestellte Lage geprüft (`kit-test.sh`, Schritt 6). Was fehlt,
+  ist eine Kaskade mit echten Agenten in einem Bestandsprojekt — bis dahin ist
+  belegt, dass das Team dort **einzieht**, nicht, dass es dort **arbeitet**.
 - **Noch nie gelaufen: Axel.** Der Forensiker hat in 33 Kaskaden keine einzige
   Ledgerzeile — sein Pfad ist getestet, aber nicht im Feld belegt.
 - **Selbstverifikation**: `./kit-test.sh` installiert das Kit in ein

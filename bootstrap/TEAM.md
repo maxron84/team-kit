@@ -352,9 +352,9 @@ Fehler.** Ein exportierter `ANTHROPIC_API_KEY` hat **Vorrang vor dem
 Abo-Login** („takes precedence"-Warnung der CLI). Der Lauf funktioniert dann
 tadellos — er wird nur komplett über die API abgerechnet statt übers Abo. Im
 Feld lief so ein **~13,8-USD-Leerlauf-Lauf** vollständig über API, weil ein
-`.bashrc`-Key das Design still aushebelte. **Der Key gehört **nie** per
-`export` in `.bashrc` & Co.**, sondern in `~/.config/claude-team/api-key`
-(eine Zeile, `chmod 600`) — dorthin legt ihn `team-auth-setup.sh`.
+`.bashrc`-Key das Design still aushebelte. Der Key gehört **nie** per `export`
+in `.bashrc` & Co., sondern in `~/.config/claude-team/api-key` (eine Zeile,
+`chmod 600`) — dorthin legt ihn `team-auth-setup.sh`.
 
 Zwei Tücken dabei: Das Team entfernt den Key im Abo-Modus zwar aktiv aus der
 Prozess-Umgebung und warnt einmal pro Lauf auf stderr — aber **bereits offene
@@ -363,9 +363,7 @@ Neustart (Env-Vererbung).
 
 **Guard-Experimente nur in einem Wegwerf-Repo**, nie hier.
 
-**Guard-Experimente nur in einem Wegwerf-Repo**, nie hier.
-
 ---
 
-*Eingerichtet mit dem T.E.A.M.-Starterkit. Bau-Anleitung und Betriebslehren:
-`doku/anhang-a.md` im Kit-Repo.*
+*Eingerichtet mit dem T.E.A.M.-Starterkit. Warum das Kit so gebaut ist, steht
+in `doku/anhang-a.md` — im **Kit-Repo**, nicht in diesem Projekt.*

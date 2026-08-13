@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Zentrale Kosten-Summierung fuer die T.E.A.M.-Skripte (siehe CLAUDE.md,
-Anhang A). Wird von team-lib.sh (team_kosten_summe/team_kosten_split/
+Anhang A). Wird von team/lib.sh (team_kosten_summe/team_kosten_split/
 team_ledger_summe) aufgerufen, um die frueher doppelt/dreifach gepflegte
 Python-Summierung aus vollautomatik.sh und team-status.sh zu buendeln.
 
@@ -11,7 +11,7 @@ Nutzung:
                                         --split getrennt nach "abo<TAB>api"
                                         (api = Dateiname enthaelt
                                         "-api-fallback", siehe team_claude
-                                        in team-lib.sh). Mit --since EPOCH nur
+                                        in team/lib.sh). Mit --since EPOCH nur
                                         Logs, deren mtime >= EPOCH ist (Kosten
                                         EINES Laufs statt lebenslang — Basis der
                                         Pro-Lauf-Deckel-Durchsetzung, BL-18).
@@ -766,7 +766,7 @@ def _ledger_lock(pfad):
     _ledger_zeile_setzen() (HM-48): ein `flock` auf eine feste Lock-Datei
     neben dem Ledger, EX-gehalten fuer die volle Read-Modify-Write-Spanne.
     Serialisiert konkurrierende kosten.py-Prozesse (egal ob direkt oder ueber
-    team-status.sh/team-lib.sh aufgerufen) unabhaengig vom Aufrufer, statt
+    team-status.sh/team/lib.sh aufgerufen) unabhaengig vom Aufrufer, statt
     sich auf eine Sperre der Shell-Seite (team_lock()) zu verlassen, die
     ohnehin nicht fuer alle drei Abschluss-Kommandos genutzt wurde."""
     lock_pfad = pfad + ".lock"

@@ -4,7 +4,7 @@
 Realer Auslöser (2026-07-12, .ralph-logs/archiv/stufe-49-20260712-134536.json):
 Die Claude-CLI meldete das Session-Limit als
     "You've hit your session limit · resets 3pm (Europe/Berlin)"
-— also mit voller Stunde OHNE ":MM". Die 429-Parser in team-lib.sh verlangten
+— also mit voller Stunde OHNE ":MM". Die 429-Parser in team/lib.sh verlangten
 zuvor zwingend Minuten (\\d{1,2}:\\d{2}), wodurch:
   * team_429_reset_epoch die Reset-Zeit NICHT parsen konnte → "Reset unbekannt"
     → die Auto-Warte-/Retry-Logik (Strategie A) wurde übersprungen;
@@ -13,7 +13,7 @@ zuvor zwingend Minuten (\\d{1,2}:\\d{2}), wodurch:
     Fehler / Exit 1 behandelt worden statt als saubere Pause / Exit 42).
 
 Dieser Test belegt den Fix (Minuten optional, Default 0) rein netz-/CLI-frei
-über `bash -c` + `source team-lib.sh` (Muster wie test_bl27_abo_key_startwarnung.py).
+über `bash -c` + `source team/lib.sh` (Muster wie test_bl27_abo_key_startwarnung.py).
 Kein echter Claude-Aufruf.
 """
 import json

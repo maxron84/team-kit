@@ -9,7 +9,7 @@ Anthropic-Konsole abgelesenen Wert an. Ein zweiter Aufruf fuer dieselbe
 Kaskade ERSETZT die vorhandene Architekt-Zeile statt sie zu verdoppeln, damit
 Schaetzung und echter Wert nie beide zaehlen.
 
-Netz-/CLI-frei bis auf subprocess-Aufrufe von scripts/kosten.py gegen ein
+Netz-/CLI-frei bis auf subprocess-Aufrufe von team/tools/kosten.py gegen ein
 temporaeres Fixture-Ledger (kein Bezug zur echten .budget-ledger).
 """
 import subprocess

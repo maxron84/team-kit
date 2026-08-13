@@ -6,13 +6,13 @@ Der Architekt laeuft interaktiv ausserhalb von team_claude und schreibt keine
 total_cost_usd-JSONs -- anders als Ralph/Frank/Axel/Harry/Marv gibt es fuer ihn
 also keine geloggte Kostenbasis. Proxy: Zeilen-Churn (git diff --numstat) ueber
 plans/** + CLAUDE.md seit einer Referenz, multipliziert mit dem dokumentierten
-Eichfaktor ARCHITEKT_USD_PRO_CHURN_ZEILE (scripts/kosten.py). Bewusst eine grobe
+Eichfaktor ARCHITEKT_USD_PRO_CHURN_ZEILE (team/tools/kosten.py). Bewusst eine grobe
 Groessenordnung -- Stufe 43 ersetzt sie beim Kaskaden-Abschluss durch den
 echten Konsolenwert.
 
 Netz-frei, aber CLI-lastig: baut ein eigenes temporaeres Git-Repo mit
 bekanntem Churn auf (kein Bezug zum echten website-maxron-de-Repo) und ruft
-scripts/kosten.py per subprocess dagegen auf.
+team/tools/kosten.py per subprocess dagegen auf.
 """
 import subprocess
 import sys
@@ -97,7 +97,7 @@ def test_ungueltige_referenz_bricht_sauber_ab(tmp_path):
 
 
 def test_eichprobe_session_churn_mal_faktor_ergibt_16_usd():
-    # Dokumentierte Eichbasis (Kommentar in scripts/kosten.py): Session-Churn
+    # Dokumentierte Eichbasis (Kommentar in team/tools/kosten.py): Session-Churn
     # 1045 Zeilen * Faktor ~= 16 USD (Toleranz fuer Rundung).
     session_churn = 1045
     ergebnis = session_churn * kosten.ARCHITEKT_USD_PRO_CHURN_ZEILE
