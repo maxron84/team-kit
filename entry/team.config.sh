@@ -95,6 +95,28 @@ TEAM_FEAT_PRAEFIX="${TEAM_FEAT_PRAEFIX:-feat}"
 TEAM_BEUTEBUCH_TOOL="${TEAM_BEUTEBUCH_TOOL:-python3 team/tools/beutebuch.py}"
 TEAM_KOSTEN_TOOL="${TEAM_KOSTEN_TOOL:-python3 team/tools/kosten.py}"
 
+# --- Angriffsfläche des Red Teams (BL-20) -------------------------------------
+# Der ausgelieferte Grundauftrag von Harry und Marv beschreibt die METHODE, nicht
+# deinen Stack — er behauptet bewusst nichts über dein Projekt. Wer die
+# Angriffsfläche in einem Satz benennen kann, holt hier deutlich mehr heraus:
+# Im Feld fand derselbe Sweep über denselben Code mit passendem Auftrag einen
+# Fund, den er ohne ihn nicht sah.
+#
+# Beispiele: "Level-Dateien und Speicherstände kommen von der Platte und sind
+# nicht vertrauenswürdig" · "Alle Eingänge sind HTTP-Handler unter api/" ·
+# "Der Prozess liest Sensordaten über die serielle Schnittstelle".
+#
+# Diese Werte stehen hier und nicht in harry.sh/marv.sh, weil `install.sh
+# --update` diese Datei bewusst überleben lässt — eine Anpassung im Skript wäre
+# beim nächsten Update weg. Leer lassen ist in Ordnung; dann gilt der
+# stack-neutrale Default.
+#
+# NICHT zu verwechseln mit TEAM_REDTEAM_FOCUS: Der ist der Fokus EINER Kaskade
+# (Umgebungsvariable, gilt für einen Lauf). Diese beiden sind der stehende
+# Grundauftrag des Projekts.
+TEAM_REDTEAM_AUFTRAG_HARRY="${TEAM_REDTEAM_AUFTRAG_HARRY:-}"
+TEAM_REDTEAM_AUFTRAG_MARV="${TEAM_REDTEAM_AUFTRAG_MARV:-}"
+
 # --- Budget (Defaults aus dem Feld, HM-32/BL-30) ------------------------------
 # Soft-Cap gilt für alle Rollen (nur Hinweis bei Frank/Axel), Hard-Cap bricht ab.
 # Zu tiefe Pro-Fall-Caps VERVIELFACHEN die Kosten, statt zu sparen — sie werfen

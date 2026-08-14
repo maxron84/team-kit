@@ -47,11 +47,57 @@ if [ -n "${TEAM_WEITERER_CODE:-}" ]; then
     TABU="${TEAM_PRODUKTIVCODE}** und ${TEAM_WEITERER_CODE}"
 fi
 
+# BL-31: TEAM_REDTEAM_FOCUS ist eine Umgebungsvariable ohne Verfallsdatum. Im
+# Feld lief der erste Sweep der Kaskade 11 mit dem Fokus aus Kaskade 10 und
+# prüfte pflichtgemäß Leveldesign, während der Commit-Bereich etwas ganz
+# anderes enthielt; beide Funde betrafen alte Level, keiner den tatsächlichen
+# Bau. Die Kaskade war formal abgehakt und inhaltlich ungeprüft. Die Gegenprobe
+# im selben Closeout: ein Fokus, der die fünf Flächen des Laufs benannte, fand
+# an zwei davon je einen Fund — für 3,11 USD gegen 7,62 des fehlgeleiteten
+# Durchgangs.
+#
+# Der Fokus wird deshalb an den LAUF gebunden statt an die Prozessumgebung:
+# .team-focus-<rolle> hält fest, für welchen HEAD er gesetzt wurde. Steht beim
+# nächsten Sweep ein anderer HEAD an, gilt er als verfallen — er wird NICHT
+# still weiterverwendet. Kein Abbruch: Der Lauf fällt auf den Grundauftrag
+# zurück und sagt laut, dass er das tut.
+FOCUS_STATE=".team-focus-${ROLLE}"
+if [ -n "${TEAM_REDTEAM_FOCUS:-}" ]; then
+    printf '%s\n' "$HEAD_HASH" > "$FOCUS_STATE"
+    printf '%s\n' "$TEAM_REDTEAM_FOCUS" >> "$FOCUS_STATE"
+elif [ -f "$FOCUS_STATE" ]; then
+    FOCUS_HEAD="$(head -1 "$FOCUS_STATE")"
+    if [ "$FOCUS_HEAD" = "$HEAD_HASH" ]; then
+        TEAM_REDTEAM_FOCUS="$(tail -n +2 "$FOCUS_STATE")"
+    else
+        echo "[$ROLLE] Der zuletzt gesetzte Fokus gehört zu einem anderen Stand ($FOCUS_HEAD) — VERFALLEN (BL-31)." >&2
+        echo "  Dieser Sweep läuft mit dem Grundauftrag. Für eine gezielte Prüfung TEAM_REDTEAM_FOCUS neu setzen." >&2
+        rm -f "$FOCUS_STATE"
+    fi
+fi
+
 if [ -n "${TEAM_REDTEAM_FOCUS:-}" ]; then
     SCOPE_LINE="Prüfe den STABILEN Code im folgenden Fokus-Bereich ($RANGE_DESC): $TEAM_REDTEAM_FOCUS"
 else
     SCOPE_LINE="Prüfe den STABILEN Code der App unter ${PRUEFUMFANG} ($RANGE_DESC)."
 fi
+
+# BL-39: Zwei Fragen, die im Feld getragen hätten und in keinem Auftrag standen.
+# (a) Ein Sweep, der "macht die neue Methode dasselbe?" fragt, vergleicht Rumpf
+# gegen Rumpf — er sieht nicht, dass aus einem `return` ein `break` wurde: Beide
+# beenden die Schleife, nur `return` beendet auch die Methode und übersprang
+# eine Nachprüfung. (b) Zwei Funde derselben Kaskade waren derselbe Fehler an
+# zwei Stellen: Ein bestehender Guard wurde für eine neue Bedeutung mitbenutzt,
+# ohne zu prüfen, was sonst an ihm hängt. Die Kopplung war im Bestand unsichtbar,
+# weil sie vorher keine zweite Bedeutung hatte.
+KONTROLLFLUSS_ZEILE="Zwei Fragen, die zum Auftrag gehören und die ein Verhaltensvergleich NICHT beantwortet:
+- Welche Zeilen LIEFEN vorher und laufen jetzt nicht mehr? Vergleiche den
+  Kontrollfluss, nicht nur die Rümpfe — ein 'return', das zu einem 'break'
+  wurde, sieht Zeile für Zeile harmlos aus und überspringt trotzdem alles, was
+  nach der Schleife stand.
+- Was hängt SONST NOCH an einer Bedingung, die dieser Lauf mitbenutzt? Zähle
+  die Nutzer eines mitbenutzten Guards durch, statt es dir vorzunehmen: Eine
+  Kopplung, die vorher nur eine Bedeutung hatte, ist im Bestand unsichtbar."
 
 # BL-51: Test- und Plan-Ordner sind die einzigen Pfade, die diese Rolle
 # schreiben darf — zog das Team in eine gewachsene Codebasis ein, liegt dort
@@ -72,6 +118,8 @@ PROMPT="$(team_briefing "$ROLLE")
 
 Auftrag: $AUFTRAG
 $SCOPE_LINE
+
+$KONTROLLFLUSS_ZEILE
 
 EISERNE REGEL: Du änderst NIEMALS Produktivcode (${TABU}). Schreiben NUR unter
 ${TEAM_TEST_ORDNER} (Reproducer, klar als xfail/Skip markiert) und ${TEAM_PLAN_ORDNER}. Du committest NICHT.

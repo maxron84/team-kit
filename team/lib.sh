@@ -618,7 +618,7 @@ team_guard_fremdpfade() {
 # LAUFENDEN AUFRUFS löschen — ein selbstverschuldeter BL-4 (verlorene
 # Kostenhistorie), ausgelöst ausgerechnet vom Wächter. Vorher scheiterte das
 # `rm -f` an ihnen still; dass das gut ging, war Zufall, kein Entwurf.
-TEAM_GUARD_LAUFZEIT='^(\.team-logs/|\.ralph-logs/|\.team-loop\.lock$|\.ralph-state$|\.harry-state$|\.marv-state$|\.frank-attempts$)'
+TEAM_GUARD_LAUFZEIT='^(\.team-logs/|\.ralph-logs/|\.team-loop\.lock$|\.ralph-state$|\.harry-state$|\.marv-state$|\.frank-attempts$|\.team-focus-[a-z]+$)'
 
 team_guard_verify() {
     local rolle="$1" whitelist="$2" roh fremd nicht_angelastet verletzungen pfad

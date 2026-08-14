@@ -237,10 +237,33 @@ nächste** Kaskade wird so ausgehärtet; alles Fernere bleibt Skizze.
 
 **4. Scharfschalt-Sequenz ist Pflicht-Ausgabe.** Am Ende jeder Aushärtung gibt
 der Architekt **immer automatisch** eine kopierfertige Startsequenz aus, aus dem
-Plankopf abgeleitet (Zeiger umlegen → Konsistenz-Check → Budget → ggf.
+Plankopf abgeleitet (Zeiger umlegen → Konsistenz-Check → Budget →
 Red-Team-Fokus → Start). **Grenze:** Der Architekt **gibt die Sequenz nur aus** — das
 Umschalten von `.ralph-plan`/[`.ralph-state`](.ralph-state) und der Start
 bleiben Strippenzieher-Handarbeit.
+
+**Der Fokus wird bei JEDER Kaskade gesetzt**, auch bei reinen
+Produktivcode-Läufen — er hat kein Verfallsdatum, und ein stehen gebliebener
+Fokus lenkt den nächsten Lauf still in die falsche Richtung (das Werkzeug
+verwirft ihn inzwischen, aber dann läuft der Sweep ohne Schwerpunkt).
+
+**Seine Bauform ist vorgegeben:** Der Fokus beantwortet **nicht** „was ist
+neu?", sondern **„welche bestehenden Verträge berührt das Neue?"** — jede
+Stelle, an der die neue Mechanik in einen Pfad greift, den es schon gab, wird
+im String **namentlich** genannt. Beleg aus dem Feld: Ein so gebauter Fokus
+brachte fünf Funde, **alle fünf** an der Naht zwischen Neuem und Gewachsenem,
+vier davon in den zwei namentlich genannten Klassen; die Vorkaskade mit einem
+Fokus auf die neue Mechanik selbst fand ihre Wechselwirkungen nicht — sie
+fielen später in der Handprüfung an und kosteten vier Out-of-Loop-Fixes.
+
+**Was im Fokus steht, wird geprüft; was danebensteht, nicht.** Vor dem Ausgeben
+der Sequenz liest der Architekt seine eigene Übergabenachricht auf Sätze der
+Form „das sollte noch jemand prüfen" durch. Jeder davon gehört in den
+Fokus-String, in eine Plan-Zusicherung oder ins Beutebuch — **nie** nur in die
+Nachricht. Sonst entsteht der Eindruck, ein Punkt sei geprüft worden, weil er
+ausgesprochen wurde: Im Feld hat der Architekt eine Taktart-Ungenauigkeit
+ausdrücklich „dem Red Team als Prüfpunkt" vorgelegt und sie nicht in den String
+geschrieben — Harry und Marv haben sie folgerichtig nie gesehen.
 
 **5. Abschluss-Doc ist Pflicht pro gebauter Kaskade (✅ erprobt, Entscheid „ab
 sofort immer so").** Nach **jedem** Vollautomatik-Lauf legt der Architekt ein

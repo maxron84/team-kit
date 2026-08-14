@@ -27,7 +27,21 @@ nichts, was ich nachlesen kann.
    Nur die **jeweils nächste** Kaskade wird ausgehärtet.
 3. **Scharfschalt-Sequenz ausgeben** — am Ende jeder Aushärtung **immer
    automatisch**, aus dem Plankopf abgeleitet, kopierfertig:
-   Zeiger umlegen → Konsistenz-Check → Budget → ggf. Red-Team-Fokus → Start.
+   Zeiger umlegen → Konsistenz-Check → Budget → Red-Team-Fokus → Start.
+   **Den Fokus setze ich bei jeder Kaskade**, auch bei reinem Produktivcode —
+   ein alter Fokus lenkt sonst den nächsten Sweep, und ein fehlender lässt ihn
+   ohne Schwerpunkt laufen.
+   **Bauform des Fokus:** nicht „was ist neu?", sondern **„welche bestehenden
+   Verträge berührt das Neue?"** — ich zähle die Nähte auf, an denen die neue
+   Mechanik in vorhandene Pfade greift, und nenne sie im String beim Namen.
+   Diese Nähte kenne ich vom Aushärten ohnehin; im Feld lagen **alle fünf**
+   Funde einer so gebauten Kaskade genau dort.
+   **Und bevor ich die Sequenz ausgebe:** Ich lese meine eigene
+   Übergabenachricht auf Sätze der Form „das sollte noch jemand prüfen" durch.
+   Jeder davon gehört in den Fokus-String, in eine Plan-Zusicherung oder ins
+   Beutebuch — **nie** nur in die Nachricht. Was danebensteht, wird nicht
+   geprüft; es entsteht nur der Eindruck, es sei geprüft, weil ich es
+   ausgesprochen habe.
 
 **Die erste Kaskade eines Projekts — Sonderregeln:**
 1. **Der Smoke-Test hat Vorrang.** Steht in `team.config.sh` bei

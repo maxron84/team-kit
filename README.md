@@ -251,6 +251,7 @@ Grund für den eigenen Plan-Ordner — siehe `BL-51` oben.
 | `./team-status.sh` | Pipeline, Beutebuch, Kaskadenstand |
 | `./team-status.sh --budget` | Kontostand, API vs. Abo getrennt |
 | `./team-status.sh --ledger-pruefen` | Ist für jede Kaskade alles gebucht? Gegenprobe gegen die archivierten Rohlogs (Exit `4` = Warnbefunde) |
+| `./team-status.sh --altlast [N]` | Produktivdateien, die seit N Kaskaden in keinem Diff lagen — die Auswahlhilfe für einen Altlast-Sweep (`BL-40`) |
 | `./team-test.sh` | Regressionstests der Team-Infrastruktur (pytest) |
 | `bash <kit>/install.sh . --update` | Auf eine neue Kit-Version heben, ohne Projektdaten anzufassen |
 | `python3 team/tools/beutebuch.py list` | Alle Funde mit Status |

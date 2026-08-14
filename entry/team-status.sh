@@ -40,6 +40,8 @@
 #                                       Exit 4 = Warnbefunde, 0 = sauber oder
 #                                       nur Hinweise. Laeuft bei --budget
 #                                       ungefragt mit (dort nur Anzeige).
+#          ./team-status.sh --altlast [N]   Produktivdateien, die seit N
+#                                        Kaskaden in keinem Diff waren
 #          ./team-status.sh --beutebuch-archivieren [--dry-run]
 #                                       Verschiebt erledigte/ueberholte Funde
 #                                       (Kaskade 22/Stufe 91) wortgleich nach
@@ -406,6 +408,52 @@ status_rollen_abschluss() {
     return "$rc"
 }
 
+# status_altlast [N]: Produktivdateien, die seit N Kaskaden (Default 5) in
+# KEINEM Diff lagen — die Auswahlhilfe fuer einen Altlast-Sweep.
+#
+# BL-40: Das Red Team prueft entlang des Diffs. Nie beruehrter Code ist damit
+# der am schlechtesten gepruefte, und niemand weist darauf hin. Im Feld lagen
+# BEIDE Funde einer Kaskade in Code, den sie nicht geschrieben hatte; dieselbe
+# Datei lieferte in DREI aufeinanderfolgenden Kaskaden Funde — immer dann, wenn
+# sie angefasst wurde. Gruendlichkeit korreliert also mit Aenderungshaeufigkeit,
+# nicht mit Risiko.
+#
+# Bewusst nur eine KENNZAHL und kein automatischer Sweep: Die Kosten skalieren
+# mit der Flaeche, und die Diff-Bindung ist der Grund, warum die Sweeps
+# ueberhaupt bezahlbar sind. Diese Liste belegt die Auswahl, statt sie zu raten
+# — den Fokus setzt weiterhin ein Mensch.
+status_altlast() {
+    local n="${1:-5}" seit datei letzte
+    # Als Zeitmarke dient der Add-Commit der N-letzten Kaskaden-Plandatei: Die
+    # entsteht bei jeder Scharfschaltung genau einmal und ist damit die einzige
+    # maschinell lesbare Kaskadengrenze im Repo (dieselbe Quelle wie BL-45).
+    seit="$(git log --diff-filter=A --format='%H %ct' --reverse \
+             -- "${TEAM_PLAN_ORDNER}ralph-kaskade-*.md" 2>/dev/null \
+            | tail -n "$n" | head -1 | awk '{print $2}')"
+    if [ -z "$seit" ]; then
+        echo "Altlast-Kennzahl: weniger als $n Kaskaden im Repo — noch keine Aussage moeglich."
+        return 0
+    fi
+    echo "Produktivdateien ohne Diff seit den letzten $n Kaskaden:"
+    local gefunden=0
+    while IFS= read -r datei; do
+        [ -z "$datei" ] && continue
+        letzte="$(git log -1 --format=%ct -- "$datei" 2>/dev/null)"
+        [ -z "$letzte" ] && continue
+        if [ "$letzte" -lt "$seit" ]; then
+            printf '  %s (zuletzt %s)\n' "$datei" \
+                "$(date -d "@$letzte" +%Y-%m-%d 2>/dev/null || echo "$letzte")"
+            gefunden=$((gefunden + 1))
+        fi
+    done <<< "$(git ls-files -- "${TEAM_PRODUKTIVCODE}" ${TEAM_WEITERER_CODE:-})"
+    if [ "$gefunden" -eq 0 ]; then
+        echo "  (keine — jede Produktivdatei war zuletzt im Diff)"
+    else
+        echo "  $gefunden Datei(en). Kandidaten fuer einen Altlast-Sweep:"
+        echo "  TEAM_REDTEAM_FOCUS=\"Altlast-Sweep: <Datei(en) aus dieser Liste>\" ./harry.sh"
+    fi
+}
+
 # status_ledger_pruefen: reicht auf kosten.py ledger-pruefen durch (Skizze D).
 # Exit 4 = Warnbefunde, 0 = sauber oder nur Hinweise, 1 = Bedienfehler.
 status_ledger_pruefen() {
@@ -435,6 +483,9 @@ elif [ "${1:-}" = "--rollen-abschluss" ]; then
 elif [ "${1:-}" = "--ledger-pruefen" ]; then
     shift
     status_ledger_pruefen "$@"
+elif [ "${1:-}" = "--altlast" ]; then
+    shift
+    status_altlast "$@"
 elif [ "${1:-}" = "--beutebuch-archivieren" ]; then
     shift
     status_beutebuch_archivieren "$@"

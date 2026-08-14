@@ -88,6 +88,11 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | **3. Nummerierung erst bei der Aushärtung.** |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | **4. Scharfschalt-Sequenz ist Pflicht-Ausgabe** |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | Der Architekt **gibt die Sequenz nur aus** |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | **Der Fokus wird bei JEDER Kaskade gesetzt** |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | **„welche bestehenden Verträge berührt das Neue?"** |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | Jeder davon gehört in den |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | rolle-architekt | **Den Fokus setze ich bei jeder Kaskade** |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | rolle-architekt | ich zähle die Nähte auf |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | **5. Abschluss-Doc ist Pflicht pro gebauter Kaskade** |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | rolle-architekt | Textvolumen-gebundene Prosa-Arbeit (Doku umbauen, verdichten, umziehen) plane ich als **eigene Handarbeit** |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | Wert probeweise auf **zwei fremde Werte** (höher/niedriger), Suite laufen lassen, danach **nachweislich zurücksetzen** |
