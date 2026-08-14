@@ -333,6 +333,66 @@ An der **real installierten** CLI verifizieren — **nicht raten**:
      **Summe aller Versuchs-Logs**; das finale Log bleibt separat für die
      Promise-Auswertung.
 
+9. **Der Kontext ist der Kostentreiber, nicht der erzeugte Text (`BL-35`).**
+   Der teuerste Einzelposten des Feldprojekts war keine Kaskade, sondern **eine
+   lange interaktive Sitzung**: 70,42 USD für eine Datei plus Sprites, davon
+   rund **75 % reine Kontext-Wiedervorlage** (159 Mio Token `cache_read` gegen
+   566 Tsd. Token erzeugten Text). Zum Vergleich kostete eine **komplette**
+   Kaskade — Aushärtung, vier Bau-Stufen, Sweeps, Fixphase, Closeout — 24,71
+   USD. Zwei Regeln, beide bezahlt:
+   - **Rollenwechsel = neue Sitzung.** Ein `/model`-Wechsel tauscht das
+     **Modell**, nicht den **Kontext**: Im Feld kostete Frank dadurch 11,44 USD
+     reine Wiedervorlage, bevor er die erste Zeile ansah.
+   - **Eine Nachbesserungsschleife ist kein Grund, die Sitzung offen zu
+     lassen.** Ab der dritten, vierten Runde ist der Wiedervorlage-Anteil
+     größer als die Arbeit. Ein Schnitt mit kurzer schriftlicher Übergabe ist
+     billiger als die Bequemlichkeit des laufenden Kontexts.
+10. **Ein Fund, dessen erster Schritt Wartezeit ist, gehört nicht in den Loop
+   (`BL-36`).** Frank hat keine Wartezeit: Seine Fixphase ist auf
+   **Urteilsarbeit in einer Sitzung** geschnitten. Im Feld bekam er einen
+   Flaky-Test-Fund, dessen Reproduktion eine **Messreihe** war; er startete sie
+   korrekt (35 Minuten, methodisch sauber) — und hatte danach keine Sitzung
+   mehr, um den Fix zu committen. Der Lauf war verbraucht, das Ergebnis nicht
+   gesichert. Erst als der Architekt die Messreihe **außerhalb** des Loops fuhr
+   und den **diagnostizierten** Fund übergab, war es Frank-Arbeit. **Das
+   Kriterium ist nicht „schwer", sondern „hat der Loop dafür die richtige
+   Form?"** — verbraucht der kritische Pfad **Uhrzeit statt Denken**
+   (Messreihen, Reproduktionsläufe, Warten auf externe Zustände), wird der Fund
+   **vor** der Übergabe diagnostiziert.
+11. **Zwei Schätzfehler, die sich über drei Kaskaden wiederholt haben
+   (`BL-37`).** Beide betreffen die **Aushärtung**, nicht den Bau:
+   - **Eine wiederholte Zusicherung ist nie billiger als das Original.** Die
+     Stufe „zweiter Gegnertyp = die einfachere Zustandsmaschine" war mit 3,0
+     angesetzt und kostete **5,90** (Soft-Cap gerissen): Sie musste die
+     Zusicherung der Vorstufe in einer **anderen** Zustandsmaschine neu bauen.
+     **Regel:** Eine Zusicherung, die in einer zweiten Zustandsmaschine
+     wiederholt wird, bekommt **mindestens** den Ansatz der ersten.
+   - **Kopplung schlägt Urteilsarbeit.** Dieselbe Kaskade setzte die
+     „schwierige" Entwurfsstufe auf 5,0 (real 3,31, **−34 %**) und die
+     „mechanische" Umbenennungsstufe auf 3,5 (real 4,69, **+34 %**). Der
+     Unterschied ist die **Streuung**: konzentriert in einer neuen Datei gegen
+     breit über vier Module gekoppelt. **Regel:** Der Kostentreiber im Loop ist
+     die **Zahl gleichzeitig zu erfüllender Kopplungen**, nicht die
+     Schwierigkeit des Gedankens — ab etwa drei gekoppelten Ansprüchen die
+     Stufe teilen.
+   - **Das Turn-Profil ist die Diagnose.** 87 Turns in 13 Minuten gegen 47/57
+     Turns über 17 Minuten bei den *teureren* Nachbarstufen: viele kurze Turns
+     = Nacharbeit (Planfehler), wenige lange = Urteilsarbeit (richtig
+     geschnitten). Die Zahl steht in jedem Log; seit `BL-37` weist der
+     Abschlussbericht sie aus (`kosten.py turns`).
+12. **Beweisbarkeit gehört vor den Stufenschnitt (`BL-38`).** Im Feld hing eine
+   ganze Kaskade an der Zusicherung „die Bewegung läuft in Subpixeln". Ein
+   Spike vor der Aushärtung ergab: Unter der headless-Umgebung, in der **die
+   gesamte Suite läuft**, ist genau diese Eigenschaft **prinzipiell
+   unsichtbar** — der Software-Renderer rundet. Die Zusicherung wäre grün
+   gewesen, ohne je geprüft worden zu sein. **Regel für die
+   Aushärtungs-Checkliste:** *Mit welchem Befehl wird diese Zusicherung rot —
+   und läuft dieser Befehl in der Umgebung, in der wir prüfen?* Kostet einen
+   Spike, spart eine Kaskade, deren Kernaussage unbelegt bleibt. Das ist die
+   `BL-17`-Krankheit in ihrer subtilsten Form: nicht die Verifikation richtet
+   sich den Erfolg ein, sondern die **Prüfumgebung ist für den Gegenstand
+   blind**.
+
 ## A.8 Session-Limit-Robustheit (429) ✅ erprobt (`BL-20`/`BL-25`)
 
 Ein Session-Limit ist eine **dritte Fehlerklasse** neben „sauberer Erfolg" und
@@ -390,11 +450,46 @@ Bau-Details von `team/tools/kosten.py`:
   aus dem Zeilen-Churn (`git diff --numstat` im Plan-Ordner + `CLAUDE.md` seit
   dem letzten Ledger-Commit) × Eichfaktor — bewusst grob, **nie** persistiert;
   für Produktivcode-Fixes nicht aussagekräftig, daher architekt-spezifisch.
-- **A1 (rollen-agnostisch):** `kosten.py akteur-abschluss` hängt den Wert an
-  und **ersetzt** (statt verdoppelt) die Zeile derselben **Rolle + Kaskade**.
+  **A2 misst bewegten Text, der Treiber ist aber die Kontext-Wiedervorlage
+  (`BL-32`).** Solange die Arbeit überwiegend **Schreiben** ist, trägt der
+  Stellvertreter und überschätzt verlässlich (Feld: +13 / +28 / +23 / +27 %);
+  daraus entstand die Korrekturregel `A2 / 1,25`. **Diese Regel gilt nur für
+  schreiblastige Sitzungen** — pauschal angewandt vergrößert sie den Fehler:
+  Eine Beschaffungssitzung (viel Lesen, 22 Mio Token Wiedervorlage, kaum
+  Doku-Churn) zeigte 9,40 gegen gemessene **18,39** (−49 %), `A2 / 1,25` hätte
+  daraus −59 % gemacht; eine gemischte Sitzung mit zwei Testläufen lag bei
+  **+96 %**, korrigiert immer noch bei +57 %. **Reine Dateirotation zählt seit
+  `BL-32` nicht mehr als Churn** (Archivdateien fallen aus der Messung) — nach
+  einer Beutebuch-Rotation von 2.456 Zeilen sprang der Schätzer sonst auf 43,68
+  USD für eine Sitzung, in der niemand nachgedacht hatte. **Belastbar ist die
+  Richtung, nicht der Betrag:** A2 wird am Laufende abgelesen, gemessen wird
+  nach dem Closeout; ein sauberer Datenpunkt entstünde erst, wenn beide im
+  **selben Moment** genommen werden.
+- **A1 (rollen-agnostisch):** `kosten.py akteur-abschluss` hängt den Wert an.
+  Steht für dieselbe **Rolle + Kaskade** schon eine Zeile, **bricht der Aufruf
+  ab** und nennt Alt-, Neu- und Summenwert (`--addieren` für die Folgesitzung,
+  `--ersetzen` für die Korrektur einer Fehlmessung — `BL-25`, symmetrisch zu
+  `BL-5`). Vorher wurde still ersetzt; im Feld sind so 5,5515 USD spurlos
+  verschwunden, weil ein Akteur vormittags aushärtete und abends abschloss.
   Der Wert ist im API-Betrieb der abgelesene Konsolenwert, im **Abo-Betrieb**
-  die A2-Schätzung als **Abo-Gegenwert**. Defensiv validieren (endliche,
-  nicht-negative Zahl, **keine** rohe `python3 -c`-Interpolation).
+  die Messung aus dem Sitzungstranskript als **Abo-Gegenwert**. Defensiv
+  validieren (endliche, nicht-negative Zahl, **keine** rohe `python3
+  -c`-Interpolation). **Wrapper reichen Schalter durch, statt sie zu
+  schlucken** (`BL-26`): Ein verschluckter `--kaskade` buchte im Feld auf die
+  Nummer aus `.ralph-plan` — die nach jedem Closeout auf die **vorige** Kaskade
+  zeigt — und ersetzte dort eine abgeschlossene Zeile über 8,4678 USD.
+- **Ein tauglicher Abo-Messweg hat vier Eigenschaften (`BL-33`).** Das Kit
+  besitzt das Messwerkzeug nicht, **verlässt sich aber darauf** — deshalb steht
+  hier, was es können muss, statt einen Namen zu nennen:
+  **(1) Modell je Antwort** aus dem Transkript (`message.model`), nicht als
+  Aufrufer-Vorgabe: Eine Sonnet-Sitzung mit der Opus-Tabelle abgerechnet ergab
+  **14,36 statt 8,61 USD (+67 %)**, und eine in sich **gemischte** Sitzung (122
+  Opus- und 520 Sonnet-Antworten) **106,13 statt 70,42 (+51 %)** — es genügt
+  also nicht, den Aufrufer das Modell wählen zu lassen.
+  **(2) Deduplikation über die Nachrichten-ID** — sonst grobe Überschätzung.
+  **(3) Cache-Write nach Laufzeit getrennt.**
+  **(4) Ein Transkript je Aufruf** — mehrere kommentarlos zu summieren macht
+  die Messung in beiden Richtungen falsch.
 - **Sanitisierung gilt für *jedes* interpolierte Feld (`HM-36`).** Nicht nur
   die Notiz, sondern **auch** `rolle` und `kaskade` müssen **vor** dem
   Idempotenz-Match gegen Trennzeichen und Zeilenumbrüche gesäubert werden —

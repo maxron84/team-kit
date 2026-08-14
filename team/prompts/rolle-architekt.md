@@ -25,6 +25,21 @@ nichts, was ich nachlesen kann.
    Stufenbogen, je Stufe Umsetzung / Verifikation / Promise, dazu die Zeilen
    `RALPH_CAP=<höchste Stufe>` und `BUDGET_EMPFEHLUNG_USD=<zahl>` im Plankopf.
    Nur die **jeweils nächste** Kaskade wird ausgehärtet.
+   **Vor jedem Stufenschnitt beantworte ich eine Frage:** *Mit welchem Befehl
+   wird diese Zusicherung ROT — und läuft dieser Befehl in der Umgebung, in der
+   wir prüfen?* Kann unsere Prüfumgebung die Eigenschaft prinzipiell nicht
+   sehen, ist die Zusicherung grün, ohne je geprüft worden zu sein. Im Feld hing
+   eine ganze Kaskade an „die Bewegung läuft in Subpixeln" — headless rundet
+   der Renderer, die Aussage war dort unsichtbar. Kostet einen Spike, spart
+   eine Kaskade ohne Beleg.
+   **Beim Ansetzen der Stufen gelten drei Erfahrungswerte:** Eine Zusicherung,
+   die in einer **zweiten Zustandsmaschine** wiederholt wird, bekommt
+   mindestens den Ansatz der ersten (im Feld: 3,0 angesetzt, 5,90 real). Der
+   Kostentreiber ist die **Zahl gleichzeitig zu erfüllender Kopplungen**, nicht
+   die Schwierigkeit des Gedankens — ab etwa drei gekoppelten Ansprüchen teile
+   ich die Stufe. Und im Closeout lese ich das **Turn-Profil**: viele kurze
+   Turns heißen Nacharbeit (mein Planfehler), wenige lange Urteilsarbeit
+   (richtig geschnitten).
 3. **Scharfschalt-Sequenz ausgeben** — am Ende jeder Aushärtung **immer
    automatisch**, aus dem Plankopf abgeleitet, kopierfertig:
    Zeiger umlegen → Konsistenz-Check → Budget → Red-Team-Fokus → Start.

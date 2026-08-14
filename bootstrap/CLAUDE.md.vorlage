@@ -143,6 +143,18 @@ Plan-Ordner.
    quittiert nach dem Fix mit `erledigt (Frank-Fix, <commit>)` und trägt den Fix in
    den `[Unreleased]`-Block ein.
 
+**Ausschlusskriterium für die Übergabe:** Ein Fund, dessen **Reproduktion
+selbst eine Messreihe ist** (Flaky-Test über N Läufe, Warten auf einen externen
+Zustand, Reproduktionslauf über Minuten), geht **nicht** an Frank, sondern wird
+**vorher diagnostiziert** — vom Architekten oder vom Strippenzieher, außerhalb
+des Loops. Frank hat keine Wartezeit: Seine Fixphase ist auf Urteilsarbeit in
+**einer** Sitzung geschnitten. Im Feld startete er eine solche Messreihe
+methodisch korrekt (35 Minuten) und hatte danach keine Sitzung mehr, um den Fix
+zu committen — der Lauf war verbraucht, das Ergebnis nicht gesichert. Das
+Kriterium ist nicht „schwer", sondern **„hat der Loop dafür die richtige
+Form?"**: Verbraucht der kritische Pfad **Uhrzeit statt Denken**, gehört er
+nicht in den Loop.
+
 **Fund-Format** — steht als `## Vorlage`-Block oben im Beutebuch selbst, damit
 jede Rolle es beim Schreiben vor Augen hat:
 

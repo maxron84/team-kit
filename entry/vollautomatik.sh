@@ -210,6 +210,12 @@ done
 log "=== ABSCHLUSSBERICHT ==="
 ./team-status.sh || true
 log "Dieser Lauf: $(lauf_kosten) USD (Deckel $TEAM_BUDGET_USD). Gesamt-Kontostand: $(kontostand_gesamt) USD."
+# BL-37: Das Turn-Profil ist die Diagnose des Stufenschnitts und steht bereits
+# in jedem Log — viele kurze Turns heissen Nacharbeit (Planfehler), wenige
+# lange Urteilsarbeit (richtig geschnitten). Im Feld lief eine als "einfacher"
+# angesetzte Stufe mit 87 Turns in 13 Minuten auf das Doppelte ihres Ansatzes,
+# waehrend die teureren Nachbarstufen 47/57 Turns ueber 17 Minuten brauchten.
+$TEAM_KOSTEN_TOOL turns .ralph-logs 2>/dev/null | sed 's/^/  /' || true
 command -v notify-send >/dev/null && \
     notify-send "T.E.A.M. Vollautomatik fertig" "Kaskade durch. Dieser Lauf: $(lauf_kosten) USD · Gesamt: $(kontostand_gesamt) USD" 2>/dev/null || true
 log "Vollautomatik beendet."

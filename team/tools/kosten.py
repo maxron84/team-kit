@@ -223,6 +223,8 @@ def domaenen_hinweis():
 
 
 ARCHITEKT_USD_PRO_CHURN_ZEILE = 16.0 / 1045
+# Dateien, in die anderswo geloeschte Zeilen nur UMZIEHEN (BL-32).
+_IST_ARCHIVDATEI = re.compile(r"(^|/)[^/]*archiv[^/]*\.md$", re.I)
 
 
 def team_log_dateien(dirs, since=None):
@@ -755,6 +757,36 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
     return befunde
 
 
+def turn_profil(dirs, files=None):
+    """(anzahl_laeufe, gesamt_turns, [(datei, turns, usd), …]) aus den
+    num_turns-Feldern der Rohlogs — absteigend nach Turns.
+
+    BL-37 (c): Das Turn-Profil ist die DIAGNOSE eines Planfehlers. Im Feld lief
+    eine als "die einfachere Zustandsmaschine" mit 3,0 USD angesetzte Stufe auf
+    5,90 USD — ihr Profil waren 87 Turns in 13 Minuten, waehrend die TEUREREN
+    Nachbarstufen mit 47/57 Turns ueber 17 Minuten liefen. Viele kurze Turns =
+    Nacharbeit (der Schnitt war falsch), wenige lange = Urteilsarbeit (der
+    Schnitt war richtig). Die Zahl steht in jedem Log und wurde bis hierher
+    nirgends ausgewertet."""
+    if files is None:
+        files = team_log_dateien(dirs)
+    zeilen = []
+    for datei in files:
+        try:
+            data = json.load(open(datei))
+        except Exception:
+            continue
+        if not isinstance(data, dict):
+            continue
+        turns = data.get("num_turns")
+        if not isinstance(turns, int) or turns < 0:
+            continue
+        kosten, ok = _datei_kosten(datei)
+        zeilen.append((datei, turns, kosten if ok else None))
+    zeilen.sort(key=lambda z: z[1], reverse=True)
+    return len(zeilen), sum(z[1] for z in zeilen), zeilen
+
+
 def kaskade_beginn(kaskade, repo="."):
     """Epoch-Zeitstempel des Commits, der die PLANDATEI der Kaskade angelegt
     hat — der maschinell verfuegbare Beginn eines Laufs. None, wenn keine
@@ -830,6 +862,16 @@ def git_churn(seit, pfade, repo="."):
             continue
         hinzu, weg = felder[0], felder[1]
         if hinzu == "-" or weg == "-":
+            continue
+        # BL-32 (b): Reine DATEIROTATION ist kein Churn. Zeilen, die aus dem
+        # aktiven Dokument ins Archiv wandern, sind ein Werkzeugaufruf und kein
+        # Gedanke — im Feld sprang der Schaetzer nach einer Beutebuch-Rotation
+        # von 2.456 Zeilen auf 43,68 USD fuer eine Sitzung, in der niemand
+        # nachgedacht hatte. Die Archivdateien fallen deshalb heraus; die
+        # Loeschung im Aktivdokument bleibt drin (sie ist von einer echten
+        # Streichung nicht unterscheidbar, und Untertreiben ist hier der
+        # kleinere Fehler).
+        if len(felder) > 2 and _IST_ARCHIVDATEI.search(felder[2]):
             continue
         try:
             churn += int(hinzu) + int(weg)
@@ -1266,6 +1308,21 @@ def _main(argv):
         hinweis = verworfen_hinweis(verworfene_versuche(rest, since=since))
         if hinweis:
             print(hinweis, file=sys.stderr)
+        return 0
+
+    if befehl == "turns":
+        # BL-37 (c): Turn-Profil des Laufs — die Diagnose, ob der Stufenschnitt
+        # stimmte. Viele kurze Turns = Nacharbeit, wenige lange = Urteilsarbeit.
+        dirs = [a for a in rest if not a.startswith("--")] or [".ralph-logs"]
+        anzahl, gesamt, zeilen = turn_profil(dirs)
+        if not anzahl:
+            print("Keine Logs mit num_turns gefunden.")
+            return 0
+        print(f"{anzahl} Lauf/Laeufe, {gesamt} Turns "
+              f"(Schnitt {gesamt / anzahl:.1f}).")
+        for datei, turns, usd in zeilen:
+            betrag = f"{usd:.4f} USD" if usd is not None else "Kosten unbekannt"
+            print(f"  {turns:4d} Turns  {betrag:>18}  {os.path.basename(datei)}")
         return 0
 
     if befehl == "ledger":

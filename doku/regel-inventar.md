@@ -77,6 +77,10 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Franks Dreisatz — Out-of-Loop-Fixes  ✅ erprobt | NORM | rolle-frank | **Reproducer scharfstellen.** |
 | Franks Dreisatz — Out-of-Loop-Fixes  ✅ erprobt | NORM | rolle-frank | muss dieser Test **rot** werden — geprüft, nicht vermutet |
 | Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | HERLEITUNG | Regeldatei | eine **neue** Testdatei ist nie vorab referenziert, ihr regelkonformer Fix würde also stillschweigend zurückgerollt |
+| Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | NORM | Regeldatei | **Reproduktion selbst eine Messreihe ist** |
+| Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | HERLEITUNG | Regeldatei | Frank hat keine Wartezeit |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | rolle-architekt | **Vor jedem Stufenschnitt beantworte ich eine Frage:** |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | rolle-architekt | **Zahl gleichzeitig zu erfüllender Kopplungen** |
 | Axel — Read-Only Forensiker  ✅ erprobt (manuell) | NORM | Regeldatei | **Axel denkt, Frank tippt.** |
 | Axel — Read-Only Forensiker  ✅ erprobt (manuell) | NORM | Regeldatei | **Nie im Dauer-Loop** (ein Fall pro Aufruf). |
 | Axel — Read-Only Forensiker  ✅ erprobt (manuell) | NORM | Regeldatei | **Modell:** **immer stark** |
@@ -130,6 +134,15 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Kostenkontrolle | HERLEITUNG | anhang-a | eine **einzelne** Architekten-Session kostete laut Konsole **~16 USD** |
 | Kostenkontrolle | HERLEITUNG | anhang-a | ein Gate, das man regelmäßig umgeht, ist wirkungslos |
 | Kostenkontrolle | NORM | rolle-architekt | **eine** Domäne ist der Normalfall |
+| Kostenkontrolle | NORM | anhang-a | **Rollenwechsel = neue Sitzung.** |
+| Kostenkontrolle | NORM | anhang-a | Eine Nachbesserungsschleife ist kein Grund, die Sitzung offen zu |
+| Kostenkontrolle | NORM | anhang-a | Reine Dateirotation zählt seit |
+| Kostenkontrolle | NORM | anhang-a | **(1) Modell je Antwort** |
+| Kostenkontrolle | NORM | anhang-a | **(2) Deduplikation über die Nachrichten-ID** |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | anhang-a | bekommt **mindestens** den Ansatz der ersten |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | anhang-a | ab etwa drei gekoppelten Ansprüchen die |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | anhang-a | **Das Turn-Profil ist die Diagnose.** |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | anhang-a | *Mit welchem Befehl wird diese Zusicherung rot — |
 | Kostenkontrolle | HISTORIE | anhang-a | Die frühere feste Trennung `produkt` ↔ `team` stammt aus dem **Ursprungsprojekt** |
 | Anhang A — Loop-Infrastruktur | NORM | Regeldatei | **Der `team/`-Ordner gehört der Infrastruktur, nicht dem Projekt.** |
 | Anhang A — Loop-Infrastruktur | NORM | Regeldatei | **Team-Tests laufen getrennt** |
