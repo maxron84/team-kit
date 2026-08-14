@@ -19,13 +19,16 @@ bash install.sh ~/Source/mein-projekt
 Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 75 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
-`TEAM.md` und 280 Regressionstests.
+`TEAM.md` und 281 Regressionstests.
 
-**Stand: Version 2.8.0** (2026-08-13). Das Aufnahme-Interview erklärt jede
+**Stand: Version 2.8.1** (2026-08-14). Das Aufnahme-Interview erklärt jede
 Frage in Anwendersprache und schlägt beim Prüfumfang vor, was es im Projekt
 gefunden hat. Zieht das Team in eine gewachsene Codebasis ein, fragt und warnt
 der Installer von sich aus — siehe
-[In ein bestehendes Projekt](#in-ein-bestehendes-projekt).
+[In ein bestehendes Projekt](#in-ein-bestehendes-projekt). Neu in 2.8.1: Die
+Selbstverifikation fährt die Testsuite ein zweites Mal gegen eine
+**angepasste** `team.config.sh` — Zusicherungen, die nur im
+Auslieferungszustand halten, fallen jetzt hier auf statt im Feldprojekt.
 
 ---
 
@@ -202,14 +205,16 @@ team/                   Team-Namensraum — landet als team/ im Zielprojekt
 ├── redteam.sh          Gemeinsame Sweep-Logik von Harry und Marv
 ├── tools/              kosten.py (1569 Z), beutebuch.py (286 Z)
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-└── tests/              46 Testdateien, 280 Testfälle
+└── tests/              46 Testdateien, 281 Testfälle
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
 install.sh              Der Installer
-kit-test.sh             Selbstverifikation in 7 Stufen: installiert in ein
-                        Wegwerf-Repo, fährt dort die Tests, prüft Update-Pfad,
-                        Bestandslage und Regel-Inventar — DAS Gate vor jedem Release
-kit-regelinventar.py    Prüfer für das Regel-Inventar (Stufe 7). Kit-only —
+kit-test.sh             Selbstverifikation in 8 Stufen: installiert in ein
+                        Wegwerf-Repo, fährt dort die Tests zweimal (Ausliefe-
+                        rungswerte und angepasste team.config.sh), prüft
+                        Update-Pfad, Bestandslage und Regel-Inventar — DAS Gate
+                        vor jedem Release
+kit-regelinventar.py    Prüfer für das Regel-Inventar (Stufe 8). Kit-only —
                         bewacht die Vorlage, nicht die installierte CLAUDE.md
 plans/                  Roadmap und Backlog DES KITS (nicht die Vorlagen —
                         die liegen in bootstrap/ und werden installiert)
@@ -279,10 +284,16 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 - **Noch nie gelaufen: Axel.** Der Forensiker hat in 33 Kaskaden keine einzige
   Ledgerzeile — sein Pfad ist getestet, aber nicht im Feld belegt.
 - **Selbstverifikation**: `./kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 280 Tests. `pytest team/tests` **im Kit-Repo**
-  schlägt dagegen erwartungsgemäß fehl — die Tests setzen die installierte
-  Ablage voraus (Entrypoints in der Wurzel statt unter `entry/`).
-- **Regeln ändern heißt: Inventarzeile nachziehen.** Stufe 7 prüft jede
+  Wegwerf-Repo und fährt dort die 281 Tests — **zweimal**: einmal mit den
+  Auslieferungswerten, einmal mit angepasster `team.config.sh` (Caps,
+  Commit-Präfixe, zwei Domänen). Der zweite Lauf ist die Lehre aus `BL-58`: In
+  einer frischen Installation stehen dieselben Werte wie in `team/lib.sh`, ein
+  Test, der die Zusicherung am *aufgelösten* Wert misst statt an der
+  Bibliothek, ist dort immer grün — und wird erst im Feldprojekt rot.
+  `pytest team/tests` **im Kit-Repo** schlägt dagegen erwartungsgemäß fehl —
+  die Tests setzen die installierte Ablage voraus (Entrypoints in der Wurzel
+  statt unter `entry/`).
+- **Regeln ändern heißt: Inventarzeile nachziehen.** Stufe 8 prüft jede
   geltende Regel der Vorlage gegen `doku/regel-inventar.md` — wörtliches Zitat,
   und in welcher Datei es steht. Das verbietet keine Änderung, es macht sie
   sichtbar: Wer eine Regel umformuliert, verschiebt oder streicht, bekommt rot

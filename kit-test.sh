@@ -7,7 +7,7 @@
 #
 # WARUM ES DIESES SKRIPT GIBT
 #
-# Die Regressionstests unter team/tests/ (Stand 2.6.0: 280 Fälle in 46 Dateien)
+# Die Regressionstests unter team/tests/ (Stand 2.8.1: 281 Fälle in 46 Dateien)
 # setzen die INSTALLIERTE Ablage voraus: Entrypoints in der Repo-Wurzel,
 # CLAUDE.md und team.config.sh mit gefüllten Platzhaltern. Im Kit-Repo liegen
 # sie unter entry/ und bootstrap/ — `pytest team/tests` schlägt hier deshalb
@@ -18,6 +18,11 @@
 #
 # Statt die Tests layout-agnostisch zu machen, prüft dieses Skript dort, wo die
 # Tests gelten: in einer echten Installation. Das prüft den Installer gleich mit.
+#
+# Die Suite läuft dabei ZWEIMAL: einmal im Auslieferungszustand (Schritt 4) und
+# einmal mit angepasster team.config.sh (Schritt 5). Der zweite Lauf ist die
+# Lehre aus BL-58 — eine frische Installation trägt dieselben Werte wie die
+# Bibliothek, dort fällt eine falsch gesetzte Messstelle nie auf.
 #
 # Das Zielrepo ist ein frisches mktemp-Verzeichnis — ein Wegwerf-Repo im Sinne
 # der README-Regel "Guard-Tests nie im echten Projekt". Es wird am Ende
@@ -38,6 +43,11 @@ done
 
 rot()  { printf '\033[31m%s\033[0m\n' "$*"; }
 gruen(){ printf '\033[32m%s\033[0m\n' "$*"; }
+# gelb wurde in Schritt 6 aufgerufen, ohne je definiert zu sein. Der Aufruf
+# steht im Fehlerzweig der Abgleich-Pfad-Erkennung — bei `set -e` hätte dort
+# statt der Meldung ein "command not found" mit Exit 127 gestanden, also
+# ausgerechnet dann, wenn das Skript etwas erklären wollte.
+gelb() { printf '\033[33m%s\033[0m\n' "$*"; }
 kopf() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 
 if ! command -v pytest >/dev/null 2>&1; then
@@ -56,14 +66,14 @@ aufraeumen() {
 }
 trap aufraeumen EXIT
 
-kopf "1/7 — Wegwerf-Repo anlegen"
+kopf "1/8 — Wegwerf-Repo anlegen"
 git -C "$ZIEL" init -q
 # Lokale Identität, damit der Lauf auch ohne globale Git-Config committen kann.
 git -C "$ZIEL" config user.email "kit-test@localhost"
 git -C "$ZIEL" config user.name  "Kit-Selbsttest"
 gruen "  ✓ $ZIEL"
 
-kopf "2/7 — Kit installieren (nicht-interaktiv)"
+kopf "2/8 — Kit installieren (nicht-interaktiv)"
 # Ohne TEAM_INIT_*-Vorgaben: genau die Defaults, die ein Anwender bekäme.
 if ! bash "$KIT/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.log" 2>&1; then
     rot "  ✗ install.sh schlug fehl:"
@@ -72,7 +82,7 @@ if ! bash "$KIT/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.log" 2>
 fi
 gruen "  ✓ $(grep -oE 'Fertig — [0-9]+ Dateien geschrieben' "$ZIEL/.install.log" | head -1)"
 
-kopf "3/7 — Ungefüllte Platzhalter suchen"
+kopf "3/8 — Ungefüllte Platzhalter suchen"
 # Ein übrig gebliebenes {{...}} heißt: Der Installer kennt die Datei nicht oder
 # der Platzhalter wurde umbenannt. Beides fällt sonst erst im Feld auf, wo die
 # Briefings die Pfade des Ursprungsprojekts nennen würden — falsche Guard-Grenze.
@@ -85,18 +95,79 @@ if [ -n "$RESTE" ]; then
 fi
 gruen "  ✓ keine"
 
-kopf "4/7 — Regressionstests in der Installation"
+kopf "4/8 — Regressionstests in der Installation (Auslieferungswerte)"
 # Vor dem Testlauf committen — dieselbe Reihenfolge, die TEAM.md dem Anwender
 # vorschreibt. Ein Test, der den Git-Zustand liest, sieht damit den echten.
 git -C "$ZIEL" add -A
 git -C "$ZIEL" commit -q -m "chore: T.E.A.M. eingerichtet"
 
 cd "$ZIEL"
-if ! ./team-test.sh "${PYTEST_ARGS[@]}"; then
-    RC=$?
+# BL-59: `RC=$?` IM then-Zweig eines `if ! cmd` liest immer 0 — das `!` hat den
+# Status schon umgedreht. Das Gate schrieb also "FEHLGESCHLAGEN (Exit 0)" und
+# beendete sich mit genau diesem Exit 0: rot auf dem Bildschirm, grün für jeden
+# Aufrufer. Gefunden bei der Gegenprobe zu Schritt 5, wo dieselbe Zeile stand.
+RC=0
+./team-test.sh "${PYTEST_ARGS[@]}" || RC=$?
+if [ "$RC" -ne 0 ]; then
     rot "
 ✗ Kit-Selbstverifikation FEHLGESCHLAGEN (Exit $RC)."
     [ "$BEHALTEN" -eq 0 ] && echo "  Mit --behalten erneut laufen lassen, um im Repo nachzusehen." >&2
+    exit "$RC"
+fi
+
+# BL-58: Schritt 4 prüft die Installation im AUSLIEFERUNGSZUSTAND — dort trägt
+# team.config.sh genau die Werte, die auch in team/lib.sh als Default stehen.
+# Ein Test, der eine Kit-Zusicherung am AUFGELÖSTEN Wert misst statt an der
+# Bibliothek, ist deshalb hier grün, obwohl er die falsche Stelle misst. Rot
+# wird er erst in einem Feldprojekt, das seine Werte angepasst hat — also an dem
+# einen Ort, an dem niemand mehr auf einen Kit-Test schaut.
+#
+# Genau so ging BL-58 durch: `test_zentrale_defaults` las den Soft-Cap per
+# `source team/lib.sh` — und lib.sh sourct in ihren ersten Zeilen selbst die
+# team.config.sh des Projekts. Der Test las damit den Projektwert und behauptete,
+# den Bibliotheks-Default zu prüfen. Im Kit und in jeder frischen Installation
+# grün, im Feld rot, sobald dort ein Cap regelkonform angehoben wurde.
+#
+# Dieser Schritt ist die fehlende Messstelle: dieselbe Suite ein zweites Mal,
+# gegen eine Installation, in der die zum Verstellen GEDACHTEN Werte verstellt
+# SIND. Verstellt wird nur, wozu team.config.sh an Ort und Stelle einlädt —
+# Caps ("lieber großzügig ansetzen"), Commit-Präfixe, mehrere Domänen. Pfade
+# und Ordner bleiben unangetastet: Die sind die Ablage, gegen die die Tests
+# gelten dürfen, nicht der Regler, an dem ein Projekt dreht.
+kopf "5/8 — Regressionstests unter angepasster team.config.sh (BL-58)"
+sed -i \
+    -e 's|^TEAM_ROLE_BUDGET_USD=.*|TEAM_ROLE_BUDGET_USD="${TEAM_ROLE_BUDGET_USD:-10}"|' \
+    -e 's|^TEAM_ROLE_HARDCAP_USD=.*|TEAM_ROLE_HARDCAP_USD="${TEAM_ROLE_HARDCAP_USD:-20}"|' \
+    -e 's|^TEAM_FIX_PRAEFIX=.*|TEAM_FIX_PRAEFIX="${TEAM_FIX_PRAEFIX:-fix(qa)}"|' \
+    -e 's|^TEAM_FEAT_PRAEFIX=.*|TEAM_FEAT_PRAEFIX="${TEAM_FEAT_PRAEFIX:-feature}"|' \
+    -e 's|^TEAM_DOMAENEN=.*|TEAM_DOMAENEN="${TEAM_DOMAENEN:-backend frontend}"|' \
+    "$ZIEL/team.config.sh"
+# Ein `sed`, das nichts trifft, meldet sich nicht — die Suite liefe dann gegen
+# die unveränderte Config und wäre grün, ohne irgendetwas geprüft zu haben.
+# Das wäre dieselbe Bauart wie der Fund selbst, nur eine Etage höher.
+for erwartet in 'TEAM_ROLE_BUDGET_USD:-10' 'TEAM_ROLE_HARDCAP_USD:-20' \
+                'TEAM_FIX_PRAEFIX:-fix(qa)' 'TEAM_FEAT_PRAEFIX:-feature' \
+                'TEAM_DOMAENEN:-backend frontend'; do
+    if ! grep -qF -- "$erwartet" "$ZIEL/team.config.sh"; then
+        rot "  ✗ '$erwartet' steht nicht in team.config.sh — die Anpassung hat nicht gegriffen."
+        echo "      Variable umbenannt oder Zeile umgebaut? Dann prüft dieser Schritt nichts mehr." >&2
+        exit 1
+    fi
+done
+gruen "  ✓ Caps 10/20, Präfixe fix(qa)/feature, zwei Domänen gesetzt"
+
+RC=0
+./team-test.sh "${PYTEST_ARGS[@]}" || RC=$?
+if [ "$RC" -ne 0 ]; then
+    rot "
+✗ Die Suite ist grün im Auslieferungszustand und rot mit angepasster Config (Exit $RC)."
+    echo "  Das ist der BL-58-Fall: Der fehlgeschlagene Test misst den PROJEKTWERT," >&2
+    echo "  behauptet aber, eine Zusicherung des KITS zu prüfen. Die Zusicherung ist" >&2
+    echo "  meist richtig, die Messstelle falsch — Vorbild für den Umbau ist" >&2
+    echo "  _lib_default() in team/tests/test_hm32_budget_zwei_schwellen.py: Es liest" >&2
+    echo "  die Zeile NAME=\"\${NAME:-wert}\" statisch aus team/lib.sh, statt zu sourcen." >&2
+    echo "  Gilt die Zusicherung dagegen wirklich für den aufgelösten Wert (Beispiel:" >&2
+    echo "  hard > soft), gehört sie ausdrücklich als solche geschrieben." >&2
     exit "$RC"
 fi
 
@@ -105,7 +176,7 @@ fi
 # einmaliges Handprotokoll: Wir tun so, als sei das Projekt in Betrieb
 # (Ledger, Kaskadenstand, Beutebuch-Fund, eigener Smoke-Test), fahren das
 # Update und pruefen, dass davon NICHTS angefasst wurde.
-kopf "5/7 — Update-Pfad schuetzt Projektdaten"
+kopf "6/8 — Update-Pfad schuetzt Projektdaten"
 echo '2026-08-01 | 1 | 9.4204 | abo | produkt | roles | Lauf' >> "$ZIEL/.budget-ledger"
 echo '### HM-1 — echter Fund' >> "$ZIEL/plans/beutebuch.md"
 echo '5' > "$ZIEL/.ralph-state"
@@ -139,6 +210,11 @@ pruefe "Kaskadenstand unangetastet" "$(cat "$ZIEL/.ralph-state")"             "5
 pruefe "Beutebuch-Fund erhalten"  "$(grep -c 'HM-1' "$ZIEL/plans/beutebuch.md")" "1"
 pruefe "Smoke-Test in der Config erhalten" \
        "$(grep -c 'smoke.sh' "$ZIEL/team.config.sh")" "1"
+# Der konkrete BL-58-Wert: Genau diese Anhebung hat im Feld ein `--update`
+# nicht ueberlebt — allerdings in der Testdatei, nicht in der Config. Dass die
+# Config sie traegt, ist die andere Haelfte des Versprechens.
+pruefe "angehobener Hard-Cap ueberlebt das Update" \
+       "$(grep -c 'TEAM_ROLE_HARDCAP_USD:-20' "$ZIEL/team.config.sh")" "1"
 # BL-12: NICHT loeschen. Ein Testfile, das das Kit nicht kennt, kann ein
 # projekteigener Infrastruktur-Test sein — im Feld hat ein pauschales rm genau
 # so einen geloescht. Es bleibt liegen und wird gemeldet.
@@ -187,7 +263,7 @@ esac
 # BL-51/BL-52: Die beiden Bestandsprojekt-Befunde. Der Installer ist die einzige
 # Stelle, an der sie auffallen koennen — in der Installation liegt er nicht mehr,
 # also gehoert der Nachweis hierher und nicht in team/tests/.
-kopf "6/7 — Einzug in eine gewachsene Codebasis (BL-51, BL-52)"
+kopf "7/8 — Einzug in eine gewachsene Codebasis (BL-51, BL-52)"
 BESTAND_REPO="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-bestand.XXXXXX")"
 bestand_aufraeumen() { [ "$BEHALTEN" -eq 1 ] || rm -rf "$BESTAND_REPO"; }
 trap 'aufraeumen; bestand_aufraeumen' EXIT
@@ -268,7 +344,7 @@ b_pruefe "im leeren Repo schweigt auch das Update" \
     "$(grep -c 'Ungeprueft in der Wurzel' "$ZIEL/.update.log")" "0"
 [ "$BESTAND_FEHLER" -eq 0 ] || exit 1
 
-kopf "7/7 — Regel-Inventar gegen die Regeldatei (A.10, BL-56)"
+kopf "8/8 — Regel-Inventar gegen die Regeldatei (A.10, BL-56)"
 # Der Sicherheitsgurt vor dem Umbau der Regeldatei: Jedes NORM-Zitat muss
 # woertlich in bootstrap/CLAUDE.md.vorlage stehen, jeder Abschnitt im Inventar
 # vertreten sein. Prueft die VORLAGE, nicht die Installation — ein Feldprojekt

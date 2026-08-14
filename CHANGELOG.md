@@ -2,6 +2,53 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.8.1] — 2026-08-14
+
+**Ein Kit-Test, der nur dort scheitern kann, wo niemand hinsieht, ist keine
+Zusicherung.** Aus dem Feldprojekt kam zurück, dass `test_zentrale_defaults`
+den Soft-Cap per `source team/lib.sh` las — und `lib.sh` sourct in ihren ersten
+Zeilen die `team.config.sh` des Projekts. Der Test maß damit den *Projektwert*
+und behauptete, den *Bibliotheks-Default* zu prüfen. Im Kit-Repo (das gar keine
+`team.config.sh` hat) und in jeder frischen Installation ist er deshalb immer
+grün; rot wird er ausschließlich in einem Feldprojekt, das seine Caps
+regelkonform angehoben hat.
+
+### Fixed
+
+- **`test_zentrale_defaults` misst wieder das Kit (`BL-58`).** Neu ist
+  `_lib_default()`: Es liest die Zeile `NAME="${NAME:-wert}"` **statisch** aus
+  `team/lib.sh`, statt die Bibliothek zu sourcen. Zurückgespielt aus
+  `team-kit_project_platformer`, wo der Fix seit dem 2026-08-09 lief und ein
+  `install.sh --update` auf 2.6.0 ihn überschrieben hatte — der `BL-12`-Fall,
+  vor dem der Installer selbst warnt.
+- **`kit-test.sh` meldete Fehlschläge rot und beendete sich mit Exit 0
+  (`BL-59`).** `RC=$?` stand im `then`-Zweig eines `if ! cmd` — dort hat das
+  `!` den Status bereits umgedreht, `$?` ist immer 0. Das Gate schrieb
+  „FEHLGESCHLAGEN (Exit 0)" und gab genau diese 0 zurück: für jeden Aufrufer
+  ein grüner Lauf. Gefunden bei der Gegenprobe zur neuen Stufe 5.
+- **`gelb()` war in `kit-test.sh` nie definiert**, wurde aber im Fehlerzweig
+  der Abgleich-Pfad-Erkennung aufgerufen — bei `set -e` hätte dort statt der
+  Erklärung ein „command not found" mit Exit 127 gestanden.
+
+### Added
+
+- **`kit-test.sh` fährt die Regressionssuite zweimal — Stufe 5 ist neu:**
+  einmal im Auslieferungszustand, einmal gegen eine Installation mit
+  **angepasster** `team.config.sh` (Caps 10/20, Präfixe `fix(qa)`/`feature`,
+  zwei Domänen). Verstellt wird nur, wozu die Config an Ort und Stelle einlädt;
+  Pfade und Ordner bleiben unangetastet — die sind die Ablage, gegen die Tests
+  gelten dürfen, nicht der Regler, an dem ein Projekt dreht. Schlägt der zweite
+  Lauf fehl, nennt die Meldung die Klasse (Messstelle statt Zusicherung) und
+  `_lib_default()` als Vorbild. Ein `grep`-Riegel davor stellt sicher, dass die
+  `sed`-Anpassung überhaupt gegriffen hat — ein Schritt, der nichts verstellt,
+  wäre derselbe Fehler eine Etage höher.
+- **`test_projektwert_haelt_das_hard_groesser_soft_verhaeltnis`** — ebenfalls
+  aus dem Feld zurückgespielt und dort vom Update mitgerissen. Er prüft
+  ausdrücklich die **aufgelösten** Werte: `team_budget_check` wertet den
+  Hard-Cap nur bei `hard > soft` aus, bei `hard == soft` verlieren Frank und
+  Axel ihren harten Abbruch still. Genau diese Falle war bei der Cap-Anhebung
+  im Feld beinahe zugeschnappt. Damit 281 Testfälle.
+
 ## [2.8.0] — 2026-08-13
 
 **Das Interview redet jetzt mit dem Anwender, nicht mit dem Autor.** Ein Einzug

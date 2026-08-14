@@ -506,7 +506,7 @@ Regeldatei („Doku-Hygiene"); hier die Bau-Details:
   A.7/Lehre 7 (Prosa-Arbeit als Architekt-Handarbeit).
 - **Im Kit gebaut (`BL-56`):** Das Inventar für die ausgelieferte Regeldatei
   liegt in [`regel-inventar.md`](regel-inventar.md), der Prüfer in
-  [`kit-regelinventar.py`](../kit-regelinventar.py) (Stufe 7 in `kit-test.sh`).
+  [`kit-regelinventar.py`](../kit-regelinventar.py) (Stufe 8 in `kit-test.sh`).
   Zwei Bauentscheide, die ein Nachbau übernehmen sollte: **(1) Normalisiert
   vergleichen** — Blockquote-Marker, Betonungszeichen und Zeilenumbrüche raus,
   sonst scheitert ein wörtlich richtiges Zitat an einem `**nie**` mitten im
