@@ -78,9 +78,13 @@ def test_vollstaendiger_aufruf_traegt_korrekte_zeile_ein(tmp_path):
 
 
 def test_zweiter_aufruf_ersetzt_statt_verdoppelt(tmp_path):
+    # --ersetzen seit BL-25: Der Wrapper reicht den Schalter jetzt durch
+    # (BL-26), der Zweitaufruf ohne ihn bricht ab. Geprueft bleibt, dass
+    # Ersetzen KEINE zweite Zeile erzeugt.
     repo = _fixture_repo(tmp_path)
     _run(repo, "frank", "abo", "10", DOMAENE, "erster Versuch")
-    rc, out, err = _run(repo, "frank", "abo", "15.5", DOMAENE, "korrigiert")
+    rc, out, err = _run(repo, "frank", "abo", "15.5", DOMAENE, "korrigiert",
+                        "--ersetzen")
     assert rc == 0, err
     assert "ersetzt" in out
 

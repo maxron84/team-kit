@@ -945,17 +945,26 @@ team_ledger_split() {
 # Interpolation — Lehre aus BL-23/HM-17). pfad/repo optional, Default wie
 # kosten.py (".budget-ledger"/"."), damit Fixture-Tests isoliert gegen ein
 # Test-Ledger pruefen koennen.
+# BL-26: Alles ab Position 8 sind Schalter des WERKZEUGS (--kaskade,
+# --addieren, --ersetzen) und werden unveraendert durchgereicht. Vorher
+# endete der Wrapper bei Position 7 und liess alles Weitere kommentarlos
+# fallen — im Feld buchte ein Aufruf mit `--kaskade vor-23` dadurch auf die
+# Kaskade aus .ralph-plan und ersetzte dort eine abgeschlossene Zeile ueber
+# 8,4678 USD. Ein Wrapper, der Schalter still verschluckt, ist bei JEDER
+# Erweiterung des Werkzeugs eine neue Falle; unbekannte Schalter lehnt
+# kosten.py selbst ab, laut statt leise.
 team_akteur_abschluss() {
     local rolle="$1" auth="$2" usd="$3" domaene="$4" notiz="${5:-}"
     local pfad="${6:-.budget-ledger}" repo="${7:-.}"
+    if [ "$#" -gt 7 ]; then shift 7; else set --; fi
     if [ -n "$notiz" ]; then
         $TEAM_KOSTEN_TOOL akteur-abschluss --usd "$usd" \
             --domaene "$domaene" --rolle "$rolle" --auth "$auth" \
-            --notiz "$notiz" --pfad "$pfad" --repo "$repo"
+            --notiz "$notiz" --pfad "$pfad" --repo "$repo" "$@"
     else
         $TEAM_KOSTEN_TOOL akteur-abschluss --usd "$usd" \
             --domaene "$domaene" --rolle "$rolle" --auth "$auth" \
-            --pfad "$pfad" --repo "$repo"
+            --pfad "$pfad" --repo "$repo" "$@"
     fi
 }
 
@@ -975,6 +984,36 @@ team_architekt_kaskade() {
     # darf ein Projekt ohne erkennbare Kaskade den Aufrufer nicht wegreissen.
     printf '%s' "$plan_datei" \
         | grep -oE 'ralph-kaskade-[0-9]+' | grep -oE '[0-9]+' | head -1
+}
+
+# team_bau_notiz [plan-datei]: Notiztext fuer die ralph-(Bau-)Ledgerzeile,
+# ABGELEITET aus dem Namen der Plandatei statt vom Menschen abgeschrieben.
+# "plans/ralph-kaskade-22-doku-konsolidierung.md" -> "K22 doku-konsolidierung".
+# Leer, wenn kein Muster erkennbar ist — dann schreibt kosten.py seinen
+# eigenen Vorspann, und niemand behauptet etwas Falsches.
+#
+# BL-34: --rollen-abschluss schreibt ZWEI Zeilen (roles + ralph) und trug
+# bisher in beide DENSELBEN, von Hand getippten Text. Der Mensch denkt beim
+# Abschluss an das Red Team, also stand ueber Ralphs vier Baustufen die Notiz
+# "Harry/Marv-Sweeps + Frank HM-9/HM-10". Zweimal im Feld passiert, beide Male
+# von jemandem, der die Regel kurz vorher gelesen bzw. zitiert hatte — die
+# Disziplinloesung traegt hier nachweislich nicht. Diese Ableitung ist die
+# Variante (2) der Fix-Skizze: Die Information liegt in .ralph-plan vor und
+# ist fuer eine Bau-Zeile die richtige.
+team_bau_notiz() {
+    local plan_datei="${1:-$(team_plan_datei)}" name nummer thema
+    name="$(basename -- "$plan_datei" 2>/dev/null)"
+    name="${name%.md}"
+    case "$name" in
+        ralph-kaskade-[0-9]*)
+            nummer="$(printf '%s' "$name" | grep -oE '[0-9]+' | head -1)"
+            thema="${name#ralph-kaskade-${nummer}}"
+            thema="${thema#-}"
+            [ -n "$thema" ] && printf 'K%s %s' "$nummer" "$thema" \
+                            || printf 'K%s' "$nummer"
+            ;;
+        *) ;;
+    esac
 }
 
 # team_architekt_stand [ledger-pfad] [plan-datei]: liefert "USD<TAB>status"

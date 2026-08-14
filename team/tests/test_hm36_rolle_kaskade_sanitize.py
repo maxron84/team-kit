@@ -80,6 +80,10 @@ def test_newline_in_rolle_erzeugt_keine_zweite_zeile(tmp_path):
 
 
 def test_idempotenz_greift_auf_saniertem_wert(tmp_path):
+    # --ersetzen seit BL-25: Der Zweitaufruf bricht sonst ab (Default
+    # "abbrechen"). Geprueft wird hier die TREFFERSUCHE auf dem sanierten
+    # Wert, nicht der Umgang mit dem Bestand — dafuer muss der Ersetzungsweg
+    # ausdruecklich gewaehlt werden.
     ledger = _fixture_ledger(tmp_path)
     _run("akteur-abschluss", "--rolle", "frank|X", "--kaskade", "16",
          "--auth", "abo", "--domaene", DOMAENE, "--usd", "1.0",
@@ -87,7 +91,7 @@ def test_idempotenz_greift_auf_saniertem_wert(tmp_path):
     rc, out, err = _run("akteur-abschluss", "--rolle", "frank|X",
                          "--kaskade", "16", "--auth", "abo",
                          "--domaene", DOMAENE, "--usd", "2.0",
-                         "--pfad", str(ledger))
+                         "--ersetzen", "--pfad", str(ledger))
     assert rc == 0, err
     assert "ersetzt" in out
 

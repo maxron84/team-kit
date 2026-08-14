@@ -179,6 +179,13 @@ def test_die_eine_bedienhandlung_trennt_die_herkunft(tmp_path):
     _log(repo / ".ralph-logs", "stufe-1.json", 6.3851)
     (repo / ".budget-ledger").write_text(
         "# datum | kaskade | usd | auth | domaene | rolle | notiz\n")
+    # BL-34: Die Bau-Notiz wird aus dem Plannamen abgeleitet, wenn der Mensch
+    # keine zweite angibt. Ohne .ralph-plan bliebe die Zeile ehrlich
+    # unbeschriftet ("Bau — abo …"); geprueft werden soll hier aber der
+    # Regelfall eines laufenden Projekts.
+    (repo / "plans").mkdir()
+    (repo / "plans" / "ralph-kaskade-3-kamera.md").write_text("# Plan\n")
+    (repo / ".ralph-plan").write_text("plans/ralph-kaskade-3-kamera.md\n")
     ziel = repo / "team-status.sh"
     shutil.copy(TEAM_STATUS, ziel)
     ziel.chmod(0o755)
@@ -192,6 +199,10 @@ def test_die_eine_bedienhandlung_trennt_die_herkunft(tmp_path):
     ledger = repo / ".budget-ledger"
     assert _notiz(ledger, "roles").startswith("Rollen: ")
     assert _notiz(ledger, "ralph").startswith("Bau: ")
+    # BL-34: Der Vorspann allein reichte nicht — der TEXT dahinter war im Feld
+    # zweimal der des Red Teams. Er darf auf der Bau-Zeile nicht mehr stehen.
+    assert "Harry" not in _notiz(ledger, "ralph")
+    assert "K3" in _notiz(ledger, "ralph")
     # Die Betraege bleiben unangetastet — BL-19 war nie ein Rechenfehler.
     zeilen = {z["rolle"]: z["usd"] for z in kosten.ledger_zeilen(str(ledger))}
     assert zeilen["roles"] == pytest.approx(2.4085)

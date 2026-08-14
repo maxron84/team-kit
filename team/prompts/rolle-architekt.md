@@ -99,9 +99,16 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    abgerechneter Betrag ausgegeben. Das Werkzeug ist rollen-agnostisch —
    `--akteur-abschluss <rolle> <auth:abo|api> <USD> <domaene> ["<notiz>"]`
    deckt jede interaktiv arbeitende Rolle ab (auch Frank-im-Abo);
-   `--architekt-abschluss` ist der dünne Alias dafür. Das Tool **ersetzt**
-   (statt verdoppelt) eine vorhandene Zeile **derselben Rolle + Kaskade**,
-   damit Schätzung und eingetragener Wert nie doppelt zählen.
+   `--architekt-abschluss` ist der dünne Alias dafür. Steht für **dieselbe
+   Rolle + Kaskade** schon eine Zeile, **bricht das Tool ab** und nennt Alt-,
+   Neu- und Summenwert; ich entscheide dann zwischen `--addieren`
+   (Folgesitzung an derselben Kaskade — der Normalfall) und `--ersetzen`
+   (die Altzeile war eine Fehlmessung). **Nie raten:** Im Feld hat ein stilles
+   Ersetzen 5,5515 USD aus dem Ledger gelöscht. Schalter des Werkzeugs —
+   `--kaskade`, `--addieren`, `--ersetzen` — hänge ich hinten an; der Wrapper
+   reicht sie durch. Ohne `--kaskade` bucht das Tool auf die Nummer aus
+   `.ralph-plan`, und die zeigt nach einem Closeout auf die **vorige**
+   Kaskade.
 3. **Domänen nur, wenn es sie wirklich gibt.** Das Ledger trägt je Zeile eine
    `domaene`/`rolle`; **eine** Domäne ist der Normalfall. Mehrere lohnen nur für
    fachlich getrennte Stränge **dieses** Projekts (z. B. `backend frontend`),

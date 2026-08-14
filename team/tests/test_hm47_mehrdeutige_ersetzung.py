@@ -75,8 +75,12 @@ def test_akteur_abschluss_ersetzt_weiterhin_genau_eine_zeile(tmp_path):
         "2026-07-12 | 13 | 1.0000 | api | team | architekt | andere Rolle\n"
     )
 
+    # bestand="ersetzen" seit BL-25 (Default ist "abbrechen"): Dieser Test
+    # prueft die EINDEUTIGKEIT der Ersetzung — genau eine Zeile, die richtige —,
+    # nicht die Frage, ob ersetzt werden darf.
     ersetzt = kosten.akteur_abschluss(
         9.9999, "team", "13", "ralph", "api", notiz="Korrektur", pfad=str(pfad),
+        bestand="ersetzen",
     )
     assert ersetzt is True
     inhalt = pfad.read_text()

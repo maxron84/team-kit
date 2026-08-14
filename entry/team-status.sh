@@ -300,13 +300,30 @@ status_architekt_abschluss() {
 # Rolle/Auth statt der festen architekt/api-Vorbelegung. Reicht alle Werte
 # als eigene argv-Elemente an team_akteur_abschluss()/kosten.py weiter (kein
 # python3 -c mit roher Interpolation — BL-23/HM-17).
+#
+# BL-26: Der Wrapper las ausschliesslich $1…$5 — jedes weitere Argument fiel
+# kommentarlos weg. `--kaskade vor-23` erreichte das Werkzeug damit nie, das
+# leitete die Nummer aus .ralph-plan ab und ersetzte im Feld eine fremde,
+# abgeschlossene Zeile ueber 8,4678 USD. Verschaerfend: Ein veralteter
+# .ralph-plan-Zeiger ist nach jedem Closeout der NORMALZUSTAND, die
+# Fehlbuchung trifft also systematisch die zuletzt abgeschlossene Kaskade.
+# Jetzt gilt: Was nach den Pflichtwerten kommt, geht unveraendert an
+# kosten.py. Ein Argument, das mit -- beginnt, ist NIE die Notiz — sonst
+# waere `… <domaene> --kaskade 22` als Notiztext "--kaskade" gebucht worden.
 status_akteur_abschluss() {
-    local rolle="${1:-}" auth="${2:-}" usd="${3:-}" domaene="${4:-}" notiz="${5:-}"
+    local rolle="${1:-}" auth="${2:-}" usd="${3:-}" domaene="${4:-}"
     if [ -z "$rolle" ] || [ -z "$auth" ] || [ -z "$usd" ] || [ -z "$domaene" ]; then
-        echo "Nutzung: $0 --akteur-abschluss <rolle> <auth:abo|api> <USD> <domaene> [\"<notiz>\"]" >&2
+        echo "Nutzung: $0 --akteur-abschluss <rolle> <auth:abo|api> <USD> <domaene> [\"<notiz>\"] [weitere kosten.py-Schalter]" >&2
         return 1
     fi
-    team_akteur_abschluss "$rolle" "$auth" "$usd" "$domaene" "$notiz"
+    shift 4
+    local notiz=""
+    case "${1:-}" in
+        --*|"") ;;
+        *)      notiz="$1"; shift ;;
+    esac
+    team_akteur_abschluss "$rolle" "$auth" "$usd" "$domaene" "$notiz" \
+        ".budget-ledger" "." "$@"
 }
 
 # status_rollen_abschluss: kaskadenscharfer .team-logs-Abschluss (BL-17-
@@ -332,17 +349,33 @@ status_akteur_abschluss() {
 # Summenwert. --addieren (Nachlauf: eine Rolle lief nach dem Abschluss noch)
 # und --ersetzen (Korrektur einer falschen Altzeile) werden als optionaler
 # vierter Parameter durchgereicht.
+#
+# BL-34: Die beiden Zeilen bekommen GETRENNTE Notizen. Der dritte Parameter
+# beschriftet die Rollen-Zeile (Harry/Marv/Frank/Axel), der optionale vierte
+# die Bau-Zeile. Fehlt der vierte, wird die Bau-Notiz aus dem Plannamen
+# ABGELEITET (team_bau_notiz) — der Text des Menschen wird nicht mehr auf
+# eine Zeile kopiert, die er nicht beschreibt.
 status_rollen_abschluss() {
-    local kaskade="${1:-}" domaene="${2:-}" notiz="${3:-}" modus="${4:-}"
+    local kaskade="${1:-}" domaene="${2:-}"
     if [ -z "$kaskade" ] || [ -z "$domaene" ]; then
-        echo "Nutzung: $0 --rollen-abschluss <kaskade> <domaene> [\"<notiz>\"] [--addieren|--ersetzen]" >&2
+        echo "Nutzung: $0 --rollen-abschluss <kaskade> <domaene> [\"<notiz-rollen>\"] [\"<notiz-bau>\"] [--addieren|--ersetzen]" >&2
         return 1
     fi
+    shift 2
+    local notiz="" bau_notiz="" modus=""
+    case "${1:-}" in --*|"") ;; *) notiz="$1"; shift ;; esac
+    case "${1:-}" in --*|"") ;; *) bau_notiz="$1"; shift ;; esac
+    modus="${1:-}"
     case "$modus" in
         ""|--addieren|--ersetzen) ;;
         *) echo "Unbekannter Modus '$modus' — erlaubt: --addieren, --ersetzen" >&2
            return 1 ;;
     esac
+    # Nur ableiten, wenn der Mensch nichts eigenes gesagt hat. Bleibt die
+    # Ableitung leer (kein erkennbarer Plannamen), schreibt kosten.py seinen
+    # eigenen Vorspann "Bau — abo x / api y" — ehrlich unbeschriftet ist
+    # besser als falsch beschriftet.
+    [ -n "$bau_notiz" ] || bau_notiz="$(team_bau_notiz)"
 
     # BL-4: BEIDE Kostenquellen einer Kaskade abschliessen — .team-logs
     # (Harry/Marv/Frank/Axel -> rolle=roles) UND .ralph-logs (Bau -> rolle=
@@ -351,12 +384,18 @@ status_rollen_abschluss() {
     # sie einen zweiten, nirgends vorgeschriebenen Befehl gebraucht haetten.
     # Beide Verben laufen unabhaengig: Bricht einer ab (z. B. BL-5-Bestand),
     # wird der andere trotzdem versucht und der Fehler am Ende gemeldet.
-    local rc=0 einzel_rc verb
+    local rc=0 einzel_rc verb zeilen_notiz
     for verb in rollen-abschluss ralph-abschluss; do
         einzel_rc=0
-        if [ -n "$notiz" ]; then
+        # BL-34: je Zielrolle der EIGENE Text, nie derselbe zweimal.
+        if [ "$verb" = "ralph-abschluss" ]; then
+            zeilen_notiz="$bau_notiz"
+        else
+            zeilen_notiz="$notiz"
+        fi
+        if [ -n "$zeilen_notiz" ]; then
             $TEAM_KOSTEN_TOOL "$verb" --kaskade "$kaskade" \
-                --domaene "$domaene" --notiz "$notiz" --archivieren \
+                --domaene "$domaene" --notiz "$zeilen_notiz" --archivieren \
                 ${modus:+"$modus"} || einzel_rc=$?
         else
             $TEAM_KOSTEN_TOOL "$verb" --kaskade "$kaskade" \

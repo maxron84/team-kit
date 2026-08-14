@@ -876,16 +876,60 @@ def _sanitize_pipe_feld(wert):
     return wert.replace("|", "/").replace("\r", " ").replace("\n", " ").strip()
 
 
+def _alt_usd_lesen(felder, rolle, kaskade):
+    """USD-Feld einer bestehenden Ledger-Zeile. Gemeinsamer Helfer fuer
+    akteur_abschluss() und rollen_abschluss() (BL-25): Beide muessen den
+    Altwert kennen, bevor sie ihn ueberschreiben duerfen, und beide duerfen
+    bei einem unlesbaren Feld NICHTS schreiben. Nur Feld 2 wird gelesen — ein
+    maschinengeschriebener Zahlwert. Der abo/api-Split der Altzeile wird
+    BEWUSST NICHT aus der Notiz zurueckgeparst: Notizen werden real von Hand
+    korrigiert (Feld-Kaskade 1), ein Parser darauf waere die naechste stille
+    Fehlerquelle."""
+    try:
+        wert = float(felder[2])
+    except (IndexError, ValueError):
+        raise ValueError(
+            f"Die bestehende {rolle}-Zeile der Kaskade {kaskade} hat kein "
+            f"lesbares USD-Feld ({felder[2] if len(felder) > 2 else '—'}). "
+            "Es wird NICHTS geschrieben — die Zeile von Hand pruefen.")
+    if not math.isfinite(wert) or wert < 0:
+        raise ValueError(
+            f"Die bestehende {rolle}-Zeile der Kaskade {kaskade} traegt "
+            f"einen unplausiblen Wert ({wert}). Es wird NICHTS "
+            "geschrieben — die Zeile von Hand pruefen.")
+    return wert
+
+
 def akteur_abschluss(usd, domaene, kaskade, rolle, auth, notiz="",
-                      pfad=".budget-ledger"):
+                      pfad=".budget-ledger", bestand="abbrechen"):
     """A1-Ersetzung, rollen-agnostisch (BL-33, Stufe 50): haengt eine echte
-    Ledger-Zeile fuer <rolle>/<kaskade> an. Existiert bereits eine Zeile
-    DERSELBEN Rolle DERSELBEN Kaskade (7-Feld-Schema), wird sie ERSETZT statt
-    verdoppelt -- Idempotenz bei mehrfachem Aufruf, ohne die Zeile einer
-    ANDEREN Rolle derselben Kaskade zu beruehren (z. B. Frank- und
-    Architekt-Zeile der gleichen Kaskade koexistieren). Wirft ValueError bei
-    ungueltigen Eingaben, OHNE die Datei anzufassen. Gibt True zurueck, wenn
-    eine vorhandene Zeile ersetzt wurde, sonst False (neu angelegt)."""
+    Ledger-Zeile fuer <rolle>/<kaskade> an. Eine bestehende Zeile DERSELBEN
+    Rolle DERSELBEN Kaskade (7-Feld-Schema) wird nach `bestand` behandelt;
+    die Zeile einer ANDEREN Rolle derselben Kaskade bleibt immer unberuehrt
+    (z. B. Frank- und Architekt-Zeile der gleichen Kaskade koexistieren).
+    Wirft ValueError bei ungueltigen Eingaben, OHNE die Datei anzufassen.
+    Gibt True zurueck, wenn eine vorhandene Zeile angefasst wurde, sonst
+    False (neu angelegt).
+
+    bestand (BL-25) — symmetrisch zu rollen_abschluss() (BL-5):
+
+      "abbrechen" (Default)  ValueError, Datei unangetastet. Die Meldung
+                             nennt Alt-, Neu- und Summenwert.
+      "addieren"             Neuer Wert wird auf den Altwert ADDIERT.
+      "ersetzen"             Altes Verhalten: Altwert wird ueberschrieben.
+
+    WARUM der Default nicht mehr "ersetzen" ist: Ein Akteur, der ueber
+    mehrere Sitzungen an einer Kaskade arbeitet (Aushaertung vormittags,
+    Closeout abends), bucht zwangslaeufig zweimal — und der zweite Aufruf
+    loeschte den ersten Wert wortlos. Im Feld sind so 5,5515 USD aus einem
+    Ledger verschwunden (platformer, Kaskade 9). Der Default bricht ab
+    statt zu addieren, weil ein Wiederholungsaufruf mit denselben Zahlen
+    (Vertipper, zweiter Anlauf) sonst verdoppeln wuerde — dieselbe
+    Symmetrieueberlegung, die BL-5 fuer rollen_abschluss angestellt hat.
+
+    Anders als dort ist hier "ersetzen" der Korrektur-, nicht der
+    Normalfall: Der uebergebene Wert ist ein extern GEMESSENER Absolutwert
+    (Transkript, Konsolenausgabe), kein aus Restlogs gezaehlter Zuwachs."""
     pruefe_domaene(domaene)
     if auth not in ("abo", "api"):
         raise ValueError(f"auth muss 'abo' oder 'api' sein, nicht '{auth}'")
@@ -908,14 +952,46 @@ def akteur_abschluss(usd, domaene, kaskade, rolle, auth, notiz="",
     def match_fn(felder):
         return len(felder) >= 7 and felder[1] == kaskade and felder[5] == rolle
 
-    return _ledger_zeile_setzen(zeile_neu, match_fn, pfad)
+    if bestand not in ("abbrechen", "addieren", "ersetzen"):
+        raise ValueError(
+            f"bestand muss 'abbrechen', 'addieren' oder 'ersetzen' sein, "
+            f"nicht '{bestand}'")
+    if bestand == "ersetzen":
+        return _ledger_zeile_setzen(zeile_neu, match_fn, pfad)
+
+    def merge_fn(felder):
+        alt = _alt_usd_lesen(felder, rolle, kaskade)
+        if bestand == "abbrechen":
+            raise ValueError(
+                f"Fuer Kaskade {kaskade} steht bereits eine {rolle}-Zeile ueber "
+                f"{alt:.4f} USD. Dieser Aufruf wuerde sie durch {usd:.4f} USD "
+                f"ERSETZEN und die Differenz verlieren. Es wird NICHTS "
+                f"geschrieben.\n"
+                f"  Folgesitzung (dieselbe Rolle arbeitete erneut an dieser "
+                f"Kaskade): --addieren  -> {alt + usd:.4f} USD\n"
+                f"  Korrektur (die Altzeile war eine Fehlmessung):            "
+                f"  --ersetzen  -> {usd:.4f} USD")
+        summe = alt + usd
+        alt_auth = felder[3] if len(felder) > 3 else ""
+        auth_summe = auth if alt_auth == auth else "abo/api"
+        notiz_summe = (f"{notiz_sauber} (addiert auf Bestand {alt:.4f} USD, "
+                       f"auth {alt_auth or '—'})") if notiz_sauber else \
+            (f"addiert auf Bestand {alt:.4f} USD, auth {alt_auth or '—'}")
+        return (f"{date.today().isoformat()} | {kaskade} | {summe:.4f} | "
+                f"{auth_summe} | {domaene} | {rolle} | {notiz_summe}\n")
+
+    return _ledger_zeile_setzen(zeile_neu, match_fn, pfad, merge_fn=merge_fn)
 
 
-def architekt_abschluss(usd, domaene, kaskade, notiz="", pfad=".budget-ledger"):
+def architekt_abschluss(usd, domaene, kaskade, notiz="", pfad=".budget-ledger",
+                         bestand="abbrechen"):
     """Duenner, rueckwaertskompatibler Alias auf akteur_abschluss() mit
-    rolle=architekt/auth=api (unveraendertes Verhalten seit Stufe 43)."""
+    rolle=architekt/auth=api. `bestand` wird durchgereicht (BL-25) — der
+    Architekt ist die Rolle, die am haeufigsten zweimal an derselben Kaskade
+    bucht."""
     return akteur_abschluss(usd, domaene, kaskade, rolle="architekt",
-                             auth="api", notiz=notiz, pfad=pfad)
+                             auth="api", notiz=notiz, pfad=pfad,
+                             bestand=bestand)
 
 
 def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
@@ -1018,28 +1094,8 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     if bestand == "ersetzen":
         return _ledger_zeile_setzen(zeile_neu, match_fn, pfad)
 
-    def alt_usd(felder):
-        """USD-Feld der bestehenden Zeile. Nur Feld 2 wird gelesen — ein
-        maschinengeschriebener Zahlwert. Der abo/api-Split der Altzeile wird
-        BEWUSST NICHT aus der Notiz zurueckgeparst: Notizen werden real von
-        Hand korrigiert (Feld-Kaskade 1), ein Parser darauf waere die
-        naechste stille Fehlerquelle."""
-        try:
-            wert = float(felder[2])
-        except (IndexError, ValueError):
-            raise ValueError(
-                f"Die bestehende {rolle}-Zeile der Kaskade {kaskade} hat kein "
-                f"lesbares USD-Feld ({felder[2] if len(felder) > 2 else '—'}). "
-                "Es wird NICHTS geschrieben — die Zeile von Hand pruefen.")
-        if not math.isfinite(wert) or wert < 0:
-            raise ValueError(
-                f"Die bestehende {rolle}-Zeile der Kaskade {kaskade} traegt "
-                f"einen unplausiblen Wert ({wert}). Es wird NICHTS "
-                "geschrieben — die Zeile von Hand pruefen.")
-        return wert
-
     def merge_fn(felder):
-        alt = alt_usd(felder)
+        alt = _alt_usd_lesen(felder, rolle, kaskade)
         if bestand == "abbrechen":
             raise ValueError(
                 f"Fuer Kaskade {kaskade} steht bereits eine {rolle}-Zeile ueber "
@@ -1286,9 +1342,16 @@ def _main(argv):
         notiz = ""
         pfad = ".budget-ledger"
         repo = "."
+        bestand = "abbrechen"   # BL-25: nie stillschweigend ueberschreiben
         i = 0
         while i < len(rest):
-            if rest[i] == "--usd":
+            if rest[i] == "--addieren":
+                bestand = "addieren"
+                i += 1
+            elif rest[i] == "--ersetzen":
+                bestand = "ersetzen"
+                i += 1
+            elif rest[i] == "--usd":
                 if i + 1 >= len(rest):
                     print("Fehler: --usd braucht einen Wert", file=sys.stderr)
                     return 1
@@ -1367,11 +1430,15 @@ def _main(argv):
             else os.path.join(repo, pfad)
         try:
             ersetzt = akteur_abschluss(usd, domaene, kaskade, rolle, auth,
-                                        notiz=notiz, pfad=ledger_pfad)
+                                        notiz=notiz, pfad=ledger_pfad,
+                                        bestand=bestand)
         except ValueError as exc:
             print(f"Fehler: {exc}", file=sys.stderr)
             return 1
-        aktion = "ersetzt" if ersetzt else "angelegt"
+        if not ersetzt:
+            aktion = "angelegt"
+        else:
+            aktion = "addiert" if bestand == "addieren" else "ersetzt"
         print(f"{rolle.capitalize()}-Zeile Kaskade {kaskade} ({domaene}) "
               f"{aktion}: {usd:.4f} USD")
         return 0

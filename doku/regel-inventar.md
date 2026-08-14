@@ -110,7 +110,8 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Kostenkontrolle | NORM | Regeldatei | ein überschrittener **Soft-Cap** ist nur ein **Hinweis** |
 | Kostenkontrolle | NORM | Regeldatei | Das starke/teure Modell (Axel, Architekt) läuft **nie im Dauer-Loop** |
 | Kostenkontrolle | NORM | Regeldatei | Nur aktivieren, wenn das Budget es erzwingt, und Axel möglichst **ausnehmen**. |
-| Kostenkontrolle | NORM | rolle-architekt | Das Tool **ersetzt** (statt verdoppelt) eine vorhandene Zeile **derselben Rolle + Kaskade** |
+| Kostenkontrolle | NORM | rolle-architekt | **bricht das Tool ab** und nennt Alt-, Neu- und Summenwert |
+| Kostenkontrolle | NORM | rolle-architekt | Schalter des Werkzeugs — `--kaskade`, `--addieren`, `--ersetzen` — hänge ich hinten an |
 | Kostenkontrolle | NORM | rolle-architekt | **nie** stillschweigend als abgerechneter Betrag ausgegeben |
 | Kostenkontrolle | NORM | Regeldatei | beides **nach** dem Lauf im Architekten-Closeout, **nie** in einer Loop-Stufe |
 | Kostenkontrolle | NORM | rolle-architekt | **maschinelle Wahrheit ist die committete `.budget-ledger` plus das Kontostand-Werkzeug** |

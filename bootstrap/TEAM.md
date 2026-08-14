@@ -154,16 +154,30 @@ Vorsichtiger, Schritt für Schritt mit Halt bei dir:
 ### 4. Closeout — Pflicht, nicht Kür
 
 ```bash
-./team-status.sh --rollen-abschluss <N> <domaene>
+./team-status.sh --rollen-abschluss <N> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"]
 ./team-status.sh --architekt-abschluss <USD> <domaene> "Kaskade N geplant"
 ```
 
 Der erste Befehl schließt **beide** Kostenquellen des Laufs ab und schreibt
 dafür **zwei** Ledger-Zeilen: `roles` für Harry/Marv/Frank/Axel und `ralph`
 für die Baukosten. Die Rohlogs werden dabei archiviert, damit der Kontostand
-sie nicht ein zweites Mal zählt. Deine Notiz landet in **beiden** Zeilen, jede
-mit ihrem eigenen Vorspann (`Rollen: …` bzw. `Bau: …`) — so sagt jede Zeile aus
-sich heraus, welche Kosten sie trägt, auch wenn dein Text nur zur anderen passt.
+sie nicht ein zweites Mal zählt. Jede Zeile bekommt ihren **eigenen** Text:
+Der dritte Parameter beschriftet die Rollen-Zeile, der vierte die Bau-Zeile.
+Lässt du den vierten weg, wird die Bau-Notiz aus dem Plannamen abgeleitet
+(`K22 doku-konsolidierung`) — **nicht** von deinem Rollen-Text kopiert. Grund:
+Beim Abschluss denkst du an die Sweeps, und genau dieser Text stand im Feld
+zweimal über Ralphs Baustufen.
+
+**Wenn für Kaskade und Rolle schon eine Zeile steht, brechen beide Befehle
+ab** und nennen Alt-, Neu- und Summenwert. Dann entscheidest du:
+`--addieren` (es lief noch etwas nach bzw. du arbeitest in einer zweiten
+Sitzung an derselben Kaskade) oder `--ersetzen` (die Altzeile war eine
+Fehlmessung). Nichts wird stillschweigend überschrieben — im Feld sind so
+5,5515 USD spurlos aus einem Ledger verschwunden.
+
+Buchst du für eine **andere** als die aktive Kaskade, hänge `--kaskade <N>`
+an: Ohne den Schalter nimmt das Werkzeug die Nummer aus `.ralph-plan`, und
+die zeigt nach einem Closeout noch auf die **vorige** Kaskade.
 
 **Warum das nicht optional ist:** Der Architekt läuft interaktiv, außerhalb der
 Kostenlogs. Ohne diesen Schritt bleibt seine Sitzung strukturell unerfasst — im

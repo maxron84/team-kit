@@ -57,6 +57,10 @@ def test_erster_aufruf_legt_genau_eine_architekt_zeile_an(tmp_path):
 
 
 def test_zweiter_aufruf_gleiche_kaskade_ersetzt_statt_verdoppelt(tmp_path):
+    # --ersetzen seit BL-25: Der Zweitaufruf bricht ohne Schalter ab, damit
+    # eine Folgesitzung keine fremde Messung mehr wortlos loescht. Die
+    # Zusicherung DIESES Tests ist unveraendert — wird ersetzt, entsteht
+    # KEINE zweite Zeile.
     ledger = _fixture_ledger(tmp_path)
     rc1, _out1, err1 = _run("architekt-abschluss", "--usd", "16.00",
                              "--domaene", "team", "--kaskade", "13",
@@ -65,7 +69,7 @@ def test_zweiter_aufruf_gleiche_kaskade_ersetzt_statt_verdoppelt(tmp_path):
 
     rc2, out2, err2 = _run("architekt-abschluss", "--usd", "18.25",
                             "--domaene", "team", "--kaskade", "13",
-                            "--pfad", str(ledger))
+                            "--ersetzen", "--pfad", str(ledger))
     assert rc2 == 0, err2
     assert "ersetzt" in out2
 
