@@ -145,9 +145,32 @@ fi
 ROLLE_BUDGET_USD="${ROLE_BUDGET_USD:-${TEAM_ROLE_BUDGET_USD}}"
 BUDGET_RC=0
 team_budget_check "$TEAM_LAST_COST" "$ROLLE_BUDGET_USD" "${ROLLE^} Sweep" || BUDGET_RC=$?
+# BL-30: Der Deckel vernichtete die QUITTUNG, nicht die Arbeit — und liess
+# damit genau das Einzige fallen, was er beschaedigen kann. Die Begruendung
+# "read-only, es geht nichts Bezahltes verloren" stimmt fuer die FUNDE (die
+# liegen uncommittet im Baum), nicht fuer den Zustandszeiger: Im Feld meldete
+# Marvs Sweep is_error=false, subtype=success, Promise gesetzt und zwei sauber
+# formatierte Funde — und wurde wegen 6,52 >= 5,00 als "ECHTER Fehler"
+# abgebrochen. $STATE_FILE blieb stehen, ein Neustart haette dieselben 22
+# Commits ein zweites Mal geprueft und ein zweites Mal bezahlt.
+#
+# Ein nachweislich ERFOLGREICHER Aufruf behaelt deshalb seinen Fortschritt: Der
+# Lauf laeuft unten regulaer zu Ende (Zeiger, Commit, Bericht), die
+# Ueberschreitung wird als Warnung ausgewiesen. Der Deckel bleibt voll
+# wirksam — er verhindert den NAECHSTEN Aufruf, denn vollautomatik.sh liest den
+# Kontostand vor jeder Runde. Das ist ausdruecklich KEIN Aufweichen des
+# Read-Only-Guards und keine Soft-Cap-Ausweitung auf Harry/Marv.
+BUDGET_UEBERSCHRITTEN=0
 if [ "$BUDGET_RC" -ge 2 ]; then
-    echo "[$ROLLE] Budget-Hard-Cap überschritten — Abbruch (read-only, kein Datenverlust; $STATE_FILE bleibt unverändert)." >&2
-    exit 1
+    if team_result_meldet_erfolg "$TEAM_LAST_OUT" \
+       && team_promise_in "$TEAM_LAST_OUT" "REDTEAM_SWEEP_COMPLETE"; then
+        BUDGET_UEBERSCHRITTEN=1
+        echo "[$ROLLE] Budget-Cap überschritten ($TEAM_LAST_COST USD ≥ $ROLLE_BUDGET_USD USD) — der Aufruf war aber nachweislich erfolgreich (Promise + sauberes Log)." >&2
+        echo "  Der Fortschritt wird gebucht; der Deckel verhindert den NÄCHSTEN Aufruf, nicht diesen (BL-30)." >&2
+    else
+        echo "[$ROLLE] Budget-Hard-Cap überschritten — Abbruch (kein vollständiges Ergebnis; $STATE_FILE bleibt unverändert)." >&2
+        exit 1
+    fi
 fi
 
 if ! team_promise_in "$TEAM_LAST_OUT" "REDTEAM_SWEEP_COMPLETE"; then
@@ -210,5 +233,11 @@ if [ -n "$(git status --porcelain -- "$TEAM_BEUTEBUCH" "$TEAM_TEST_ORDNER")" ]; 
     fi
 else
     echo "[$ROLLE] Geprüft, keine neuen Funde ($TEAM_LAST_COST USD). Sauber, nichts zu committen."
+fi
+# BL-30: Die Überschreitung bleibt die letzte Zeile des Laufs — sie soll im
+# Protokoll stehen, auch wenn der Fortschritt gebucht wurde. Wer sie überliest,
+# merkt es spätestens beim nächsten Aufruf: Der Kontostand deckelt ihn.
+if [ "$BUDGET_UEBERSCHRITTEN" -eq 1 ]; then
+    echo "[$ROLLE] ERINNERUNG: Dieser Sweep lag über dem Cap ($TEAM_LAST_COST USD ≥ $ROLLE_BUDGET_USD USD). Fortschritt ist gebucht, der nächste Aufruf ist gedeckelt." >&2
 fi
 exit 0

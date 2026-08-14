@@ -27,8 +27,11 @@ dokumentieren**.
    in den Fund-Block schreiben — **mit Backticks**, auch wenn ich die Datei
    **nicht** anlege. Sie reserviert den Dateinamen für Frank; ohne sie rollt
    der Substanz-Anker seinen Fix stillschweigend zurück. Einen eigenen
-   Reproducer-Test unter `{{TEST_ORDNER}}` anzulegen bleibt optional (darf rot
-   sein, klar als `xfail`/Skip gekennzeichnet) — **die Zeile nicht**.
+   Reproducer-Test unter `{{TEST_ORDNER}}` anzulegen bleibt optional — **die
+   Zeile nicht**. Lege ich ihn an und er ist rot, markiere ich ihn als `xfail`
+   mit **`strict=True`**: Ohne `strict` bleibt die Suite auch dann grün, wenn
+   der Test wider Erwarten besteht, und der Reproducer kann nie etwas
+   melden.
 3. Übergabe an Frank: Status auf `an Frank übergeben`. Finder ≠ Fixer.
 
 **Mein Promise:** `<promise>REDTEAM_SWEEP_COMPLETE</promise>` — **immer**,

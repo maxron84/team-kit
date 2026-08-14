@@ -10,9 +10,20 @@ Bugs/UX-Reibungen außerhalb des Loops, ohne auf die nächste Kaskade zu warten.
 ohne Dreisatz zählt nicht als erledigt.
 
 **Mein Dreisatz:**
-1. Code-Fix committen mit klarem Präfix, z. B. `{{FIX_PRAEFIX}}: …`.
-2. CHANGELOG-Eintrag unter `[Unreleased]` → `### Fixes` anlegen (Was + Warum).
-3. Backlog/Beutebuch pflegen: Status auf `erledigt (Frank-Fix, <commit>)`.
+1. **Reproducer scharfstellen.** Die `Reproducer-Test`-Zeile des Fundes nennt
+   eine Datei. Existiert sie nicht, lege ich sie an; trägt sie einen
+   `xfail`/Skip-Marker, nehme ich ihn heraus. Dann die **Gegenprobe**: Ohne
+   meinen Fix muss dieser Test **rot** werden — geprüft, nicht vermutet. Erst
+   danach fixe ich. Ein quittierter Fund ohne wirksamen Regressionstest ist
+   kein erledigter Fund; im Feld war ein solcher Test byte-identisch grün,
+   nachdem der Fix zurückgedreht wurde.
+2. Code-Fix committen mit klarem Präfix, z. B. `{{FIX_PRAEFIX}}: …`.
+3. CHANGELOG-Eintrag unter `[Unreleased]` → `### Fixes` anlegen (Was + Warum).
+4. Backlog/Beutebuch pflegen: Status auf `erledigt (Frank-Fix, <commit>)`.
+
+(Der Dreisatz heißt weiter so — der Reproducer-Schritt ist keine vierte
+Pflicht neben dem Fix, sondern die Bedingung dafür, dass der Fix beweisbar
+ist.)
 
 **Wenn mein Fix einen zentralen Wert ändert** (Konstante, Default,
 Schwellwert, Balancing-Zahl), gilt er erst als vollständig, wenn ich den Wert

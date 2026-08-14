@@ -70,6 +70,12 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | NORM | Regeldatei | **neue Dateien anlegen ja, Bestehendes ändern oder löschen nein** |
 | Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | NORM | Regeldatei | **Pflicht: `Reproducer-Test`-Zeile setzen**, mit dem Pfad **in Backticks** |
 | Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | NORM | Regeldatei | **Reproducer-Tests nach der Fund-Nummer benennen** |
+| Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | NORM | Regeldatei | `xfail` mit **`strict=True`** |
+| Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | HERLEITUNG | Regeldatei | Ohne `strict` sind **beide** Ausgänge stumm |
+| Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | NORM | rolle-harry | mit **`strict=True`** |
+| Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | NORM | rolle-marv | mit **`strict=True`** |
+| Franks Dreisatz — Out-of-Loop-Fixes  ✅ erprobt | NORM | rolle-frank | **Reproducer scharfstellen.** |
+| Franks Dreisatz — Out-of-Loop-Fixes  ✅ erprobt | NORM | rolle-frank | muss dieser Test **rot** werden — geprüft, nicht vermutet |
 | Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | HERLEITUNG | Regeldatei | eine **neue** Testdatei ist nie vorab referenziert, ihr regelkonformer Fix würde also stillschweigend zurückgerollt |
 | Axel — Read-Only Forensiker  ✅ erprobt (manuell) | NORM | Regeldatei | **Axel denkt, Frank tippt.** |
 | Axel — Read-Only Forensiker  ✅ erprobt (manuell) | NORM | Regeldatei | **Nie im Dauer-Loop** (ein Fall pro Aufruf). |

@@ -60,6 +60,11 @@ STATUS_RE = re.compile(r"^(-\s+\*\*Status\*\*:\s*)(.+?)\s*$")
 # (team_diff_beruehrt_fund) verwarf jeden Fix, der nur sie berührte, und Frank
 # lief in einen endlosen Rollback-Zyklus (im Feld BL-6, real 12,00 USD an HM-4).
 DATEI_RE = re.compile(r"`([A-Za-z0-9_./-]+\.[A-Za-z0-9]+)(?:::[^`]*)?`")
+# Die Pflichtzeile aus BL-15. Sie ist die EINZIGE Zeile im Fundblock, deren
+# Zweck die Absicherung ist — deshalb ist ihr Pfad der richtige Anker fuer
+# BL-28, waehrend "irgendeine im Block genannte Datei" auch die Produktivdatei
+# treffen kann, die der Fix ohnehin anfasst.
+REPRODUCER_RE = re.compile(r"^-\s+\*\*Reproducer-Test\*\*:\s*(.+?)\s*$")
 
 
 def _lies_zeilen(pfad):
@@ -195,6 +200,67 @@ def _next_id(aktiv_pfad, archiv_pfad):
     return f"HM-{max(nummern, default=0) + 1}"
 
 
+def reproducer_pfad(text):
+    """Pfad aus der `- **Reproducer-Test**:`-Zeile eines Fundblocks, oder None.
+
+    Der Pfad MUSS in Backticks stehen (BL-15) — eine Zeile ohne Backticks ist
+    fuer jedes Werkzeug unlesbar und gilt deshalb als nicht gesetzt."""
+    for zeile in text.splitlines():
+        m = REPRODUCER_RE.match(zeile)
+        if not m:
+            continue
+        treffer = DATEI_RE.findall(m.group(1))
+        return treffer[0] if treffer else None
+    return None
+
+
+def lint(hm_soll, pfad=BEUTEBUCH):
+    """Prueft EINEN Fundblock auf genau das, was die Fixphase gleich auswerten
+    wird. Liefert eine Liste von Maengeln (leer = brauchbar) oder None, wenn
+    es den Fund nicht gibt.
+
+    BL-29: Im Feld nannte ein Fundblock die Fundstelle als `pfad::testname` in
+    Backticks. Der Substanz-Anker erkannte sie nicht als Datei, Franks
+    inhaltlich KORREKTER Fix scheiterte am Anker und wurde zurueckgesetzt —
+    der Fehlversuchszaehler stand danach auf 1, ohne dass Frank einen Fehler
+    gemacht hatte. Kostenpunkt: ein vollstaendiger Frank-Lauf.
+
+    Der gemeinsame Nenner mit BL-11 und BL-15: Der Fundblock ist ein
+    MASCHINENLESBARES Dokument, wird aber von Harry, Marv und dem Architekten
+    wie Prosa geschrieben — und niemand prueft ihn, bevor er Geld kostet.
+    Prueflinge sind deshalb genau die drei Groessen, an denen die Fixphase
+    entscheidet: Statuszeile parsbar, mindestens ein Dateipfad extrahierbar,
+    Reproducer-Zeile vorhanden und in Backticks.
+
+    Die Kostenlogik ist dieselbe wie bei BL-23: Pruefungen, die VOR dem
+    bezahlten Aufruf laufen, sind die einzigen, die den Aufruf noch sparen
+    koennen."""
+    text = block_text(hm_soll, pfad)
+    if text is None:
+        return None
+    maengel = []
+    if not any(STATUS_RE.match(z) for z in text.splitlines()):
+        maengel.append(
+            "keine parsbare `- **Status**:`-Zeile — die Fixphase findet den "
+            "Fund nicht und kann seinen Status nicht fortschreiben.")
+    if not DATEI_RE.findall(text):
+        maengel.append(
+            "kein Dateipfad in Backticks — der Substanz-Anker "
+            "(team_diff_beruehrt_fund) kann keinen Fix als zum Fund gehoerig "
+            "erkennen und wuerde JEDEN Fix zuruecknehmen.")
+    zeilen = [z for z in text.splitlines() if REPRODUCER_RE.match(z)]
+    if not zeilen:
+        maengel.append(
+            "keine `- **Reproducer-Test**:`-Zeile (Pflicht seit BL-15) — ohne "
+            "sie kennt niemand den Namen, unter dem die Absicherung entstehen "
+            "soll.")
+    elif not reproducer_pfad(text):
+        maengel.append(
+            "die `- **Reproducer-Test**:`-Zeile nennt keinen Pfad in "
+            "Backticks — fuer ein Werkzeug ist sie damit leer.")
+    return maengel
+
+
 def _pop_flag(argv, name):
     if name in argv:
         idx = argv.index(name)
@@ -254,6 +320,37 @@ def main() -> int:
         for pfad in sorted(set(DATEI_RE.findall(text))):
             print(pfad)
         return 0
+
+    if cmd == "reproducer":
+        # BL-28: Der Pfad aus der Reproducer-Test-Zeile, allein. Exit 1, wenn
+        # der Fund fehlt oder die Zeile keinen Pfad in Backticks traegt.
+        hm_soll = rest[0]
+        text = block_text(hm_soll, aktiv_pfad)
+        if text is None and "--alle" in rest:
+            text = block_text(hm_soll, archiv_pfad)
+        if text is None:
+            print(f"FEHLER: {hm_soll} nicht im Beutebuch gefunden.", file=sys.stderr)
+            return 1
+        pfad = reproducer_pfad(text)
+        if not pfad:
+            return 1
+        print(pfad)
+        return 0
+
+    if cmd == "lint":
+        # BL-29: Was die Fixphase gleich auswerten wird, wird VOR dem ersten
+        # bezahlten Frank-Aufruf geprueft.
+        hm_soll = rest[0] if rest else None
+        if not hm_soll:
+            print("FEHLER: lint braucht eine HM-Nummer.", file=sys.stderr)
+            return 2
+        maengel = lint(hm_soll, aktiv_pfad)
+        if maengel is None:
+            print(f"FEHLER: {hm_soll} nicht im Beutebuch gefunden.", file=sys.stderr)
+            return 1
+        for mangel in maengel:
+            print(f"[{hm_soll}] {mangel}", file=sys.stderr)
+        return 3 if maengel else 0
 
     if cmd == "archiviere":
         dry_run = "--dry-run" in rest

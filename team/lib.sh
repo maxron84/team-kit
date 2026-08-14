@@ -608,11 +608,24 @@ team_guard_fremdpfade() {
     return 0
 }
 
+# Laufzeitartefakte, die die SHELL um den Rollenaufruf herum schreibt — nicht
+# die Rolle. Sie stehen im gitignore-Fragment; fehlt es (Einzug in eine
+# gewachsene Codebasis, in der der Anwender das Fragment abgelehnt hat),
+# tauchen sie in `git status --porcelain` auf und sähen wie ein Übergriff aus.
+#
+# BL-24 macht diese Liste zur Pflicht statt zur Kosmetik: Seit der Rollback
+# Verzeichnisse wirklich entfernen kann, würde er hier die Kostenlogs DES
+# LAUFENDEN AUFRUFS löschen — ein selbstverschuldeter BL-4 (verlorene
+# Kostenhistorie), ausgelöst ausgerechnet vom Wächter. Vorher scheiterte das
+# `rm -f` an ihnen still; dass das gut ging, war Zufall, kein Entwurf.
+TEAM_GUARD_LAUFZEIT='^(\.team-logs/|\.ralph-logs/|\.team-loop\.lock$|\.ralph-state$|\.harry-state$|\.marv-state$|\.frank-attempts$)'
+
 team_guard_verify() {
     local rolle="$1" whitelist="$2" roh fremd nicht_angelastet verletzungen pfad
     roh="$( { git diff --name-only "$TEAM_GUARD_HASH" HEAD 2>/dev/null;
               git status --porcelain | cut -c4-; } | sort -u \
-            | grep -Ev "$whitelist" || true)"
+            | grep -Ev "$whitelist" \
+            | grep -Ev "$TEAM_GUARD_LAUFZEIT" || true)"
     [ -z "$roh" ] && return 0
 
     fremd="$(team_guard_fremdpfade)"
@@ -637,12 +650,24 @@ team_guard_verify() {
     # Die Meldung trennt die beiden Fälle ausdrücklich sprachlich. Im Feld wurde
     # der Übergriff zunächst der falschen Rolle zugeschrieben, weil die Pfadliste
     # im Log neben ihrem Namen stand — belegt war das nirgends.
-    echo "[$rolle] GUARD-VERLETZUNG — DIESE ROLLE hat die folgenden Pfade geändert (chirurgischer Rollback):" >&2
+    #
+    # BL-24: Die Vollzugsmeldung steht bewusst NICHT mehr vor dem Aufräumen.
+    # `rm -f` (ohne -r) kann kein Verzeichnis entfernen, und `git status
+    # --porcelain` meldet ein untracked Verzeichnis als EINEN Eintrag mit
+    # Schrägstrich (`raw/`), nicht als Liste seiner Dateien. Der Rollback
+    # scheiterte damit still, während elf Zeilen vorher schon "chirurgischer
+    # Rollback" gedruckt war — der Guard behauptete einen Vollzug, den es
+    # nicht gab. Im Feld an einem Harry-Sweep beobachtet; dort ein Glücksfall,
+    # weil der Ordner erhalten bleiben sollte. Legt eine Rolle selbst ein
+    # Verzeichnis an (Wegwerf-Skripte, `__pycache__` unter einem neuen Pfad),
+    # bleibt es samt Inhalt liegen, während der Lauf Vollzug protokolliert.
+    echo "[$rolle] GUARD-VERLETZUNG — DIESE ROLLE hat die folgenden Pfade geändert:" >&2
     printf '%s\n' "$verletzungen" >&2
     if [ -n "$nicht_angelastet" ]; then
         echo "[$rolle] NICHT angelastet (beim Rollenstart bereits geändert, seither unverändert):" >&2
         printf '%s\n' "$nicht_angelastet" | sed 's/^/  /' >&2
     fi
+    local rest=""
     while IFS= read -r pfad; do
         [ -z "$pfad" ] && continue
         if git cat-file -e "$TEAM_GUARD_HASH:$pfad" 2>/dev/null; then
@@ -650,10 +675,35 @@ team_guard_verify() {
             git checkout "$TEAM_GUARD_HASH" -- "$pfad" 2>/dev/null || true
         else
             # Neu entstanden (committet oder untracked) → gezielt entfernen.
-            git rm -f --cached -- "$pfad" >/dev/null 2>&1 || true
-            rm -f -- "$pfad"
+            #
+            # `-r` ist hier nötig (Verzeichnisse), und `-r` auf einem Pfad aus
+            # `git status` ist genau die Zeile, die man einmal richtig schreibt
+            # und nie wieder ansieht. Deshalb die Plausibilitätsprüfung davor:
+            # Der Pfad kommt ausschließlich aus `git status --porcelain`
+            # innerhalb des Repos, ist also relativ und ohne führenden
+            # Schrägstrich. Alles andere wird NICHT entfernt, sondern gemeldet.
+            case "$pfad" in
+                /*|*..*|"")
+                    echo "[$rolle] Guard: '$pfad' sieht nicht nach einem Repo-Pfad aus — NICHT entfernt." >&2
+                    rest="$rest$pfad"$'\n'
+                    continue ;;
+            esac
+            git rm -rf --cached -- "$pfad" >/dev/null 2>&1 || true
+            rm -rf -- "$pfad"
+        fi
+        # Der Erfolg wird GEPRÜFT, nicht angenommen. Sonst wiederholt sich die
+        # eigentliche Lehre dieses Fundes bei der nächsten Ursache.
+        if [ -e "$pfad" ] && ! git diff --quiet "$TEAM_GUARD_HASH" -- "$pfad" 2>/dev/null; then
+            rest="$rest$pfad"$'\n'
         fi
     done <<< "$verletzungen"
+    if [ -n "$rest" ]; then
+        echo "[$rolle] Guard: ROLLBACK UNVOLLSTÄNDIG — diese Pfade stehen weiterhin abweichend im Baum:" >&2
+        printf '%s' "$rest" | sed 's/^/  /' >&2
+        echo "  Von Hand prüfen und zurücknehmen; der Lauf gilt als Übergriff." >&2
+    else
+        echo "[$rolle] Guard: chirurgischer Rollback vollzogen." >&2
+    fi
     return 1
 }
 
@@ -701,6 +751,27 @@ team_diff_beruehrt_fund() {
             esac
         done <<< "$diff_dateien"
     done <<< "$fund_dateien"
+    return 1
+}
+
+# team_reproducer_liegt_vor <HM-Nr>
+# BL-28: Der Substanz-Anker oben besteht, sobald IRGENDEINE im Fundblock
+# referenzierte Datei im Diff liegt — und das ist regelmäßig die
+# Produktivdatei, die der Fix ohnehin anfasst. Im Feld reservierte `HM-30`
+# einen Reproducer-Pfad, Franks Fix berührte CHANGELOG und Produktivdatei, die
+# Testdatei entstand NIE, und der Anker war zufrieden. Damit ist die
+# Absicherung genau dort wirkungslos, wo BL-15 sie einführen wollte.
+#
+# Diese Funktion prüft die EINE Datei, deren Zweck die Absicherung ist: den
+# Pfad aus der `Reproducer-Test`-Zeile. Rückgabe 0, wenn er existiert ODER der
+# Fund keine lesbare solche Zeile trägt (dafür ist `beutebuch.py lint` vor dem
+# Lauf zuständig, BL-29 — nicht diese Prüfung nach dem Lauf).
+# Rückgabe 1 nur im benannten Fall: Pfad reserviert, Datei nicht angelegt.
+team_reproducer_liegt_vor() {
+    local hm="$1" pfad
+    pfad="$($TEAM_BEUTEBUCH_TOOL reproducer "$hm" 2>/dev/null || true)"
+    [ -z "$pfad" ] && return 0
+    [ -e "$pfad" ] && return 0
     return 1
 }
 

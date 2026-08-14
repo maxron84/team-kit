@@ -34,6 +34,23 @@ HM="$($TEAM_BEUTEBUCH_TOOL first 'Fix-Plan liegt vor' \
     exit 3
 }
 
+# BL-29: Der Fundblock wird geprüft, BEVOR er Geld kostet. Er ist ein
+# maschinenlesbares Dokument, wird aber wie Prosa geschrieben — im Feld nannte
+# ein Block die Fundstelle als `pfad::testname`, der Substanz-Anker erkannte
+# keine Datei, und Franks inhaltlich KORREKTER Fix wurde zurückgesetzt und als
+# Fehlversuch gezählt. Kostenpunkt: ein vollständiger Frank-Lauf, für einen
+# Formfehler im Auftrag. Prüfungen vor dem bezahlten Aufruf sind die einzigen,
+# die den Aufruf noch sparen können (dieselbe Kostenlogik wie BL-23).
+#
+# Exit 3 statt 1: Das ist kein Fehlversuch der ROLLE. Der Zähler bleibt
+# unangetastet, der Fund behält seinen Status, und die Meldung sagt, was am
+# Block fehlt — zu reparieren ist er von dem, der ihn geschrieben hat.
+if ! $TEAM_BEUTEBUCH_TOOL lint "$HM"; then
+    echo "[frank] $HM ist als Auftrag unbrauchbar (siehe oben) — KEIN Aufruf, kein Fehlversuch." >&2
+    echo "  Der Fundblock gehört nachgebessert (Harry/Marv/Architekt), dann erneut starten." >&2
+    exit 3
+fi
+
 # Versuchszähler für genau diesen Fund führen (Format: "HM-N COUNT").
 gelesen_hm="" ; gelesen_n=0
 if [ -f "$ATTEMPTS_FILE" ]; then read -r gelesen_hm gelesen_n < "$ATTEMPTS_FILE" || true; fi
@@ -64,7 +81,12 @@ Behebe GENAU den Fund $HM aus ${TEAM_BEUTEBUCH} (lies dessen Reproschritte).
 Falls zu $HM eine Ermittlungsakte unter ${TEAM_ERMITTLUNGSAKTEN}/ existiert (Axel
 hat einen Fix-Plan hinterlegt), folge diesem Plan.
 
-Franks Dreisatz — alle drei Schritte sind PFLICHT:
+Franks Dreisatz — alle Schritte sind PFLICHT:
+0. Reproducer scharfstellen: Die 'Reproducer-Test'-Zeile von $HM nennt eine
+   Datei. Fehlt sie, lege sie an; trägt sie einen xfail/Skip-Marker, nimm ihn
+   heraus. Gegenprobe: OHNE deinen Fix muss dieser Test ROT sein — fahre ihn
+   einmal in diesem Zustand. Ein Fund ohne wirksamen Regressionstest gilt
+   nicht als erledigt (BL-22/BL-28).
 1. $SCHRITT1
 2. Genau EIN Commit: '${TEAM_FIX_PRAEFIX}: <was+warum> ($HM)'.
 3. ${TEAM_CHANGELOG} unter '## [Unreleased]' → '### Fixes' den Fix eintragen (Was+Warum)
@@ -120,10 +142,20 @@ if [ "$BUDGET_GESPRENGT" -eq 0 ]; then
        && [ "$(git rev-parse HEAD)" != "$START_HASH" ] \
        && git log "$START_HASH..HEAD" --pretty=%s | grep -qF "$TEAM_FIX_PRAEFIX" \
        && printf '%s' "$NEUER_STATUS" | grep -q "erledigt" \
-       && team_diff_beruehrt_fund "$HM" "$START_HASH"; then
+       && team_diff_beruehrt_fund "$HM" "$START_HASH" \
+       && team_reproducer_liegt_vor "$HM"; then
         rm -f "$ATTEMPTS_FILE"
         echo "[frank] $HM erledigt (Dreisatz verifiziert)."
         exit 0
+    fi
+    # BL-28: Der Substanz-Anker allein besteht schon, wenn die Produktivdatei
+    # im Diff liegt — die reservierte Testdatei muss dafür nie entstehen. Genau
+    # so ging im Feld ein Fix ohne seinen Reproducer als "erledigt" durch.
+    # Die Meldung nennt den Fall getrennt, sonst liest er sich wie ein
+    # beliebiger Dreisatz-Fehler.
+    if ! team_reproducer_liegt_vor "$HM"; then
+        echo "[frank] $HM: die im Fundblock reservierte Reproducer-Datei existiert nach dem Fix NICHT." >&2
+        echo "  Ein quittierter Fund ohne wirksamen Regressionstest ist kein erledigter Fund (BL-28)." >&2
     fi
 fi
 

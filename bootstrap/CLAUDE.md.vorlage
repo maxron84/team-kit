@@ -133,8 +133,12 @@ Plan-Ordner.
    Diff eine im Fund-Block backtick-referenzierte Datei berührt; eine **neue**
    Testdatei ist nie vorab referenziert, ihr regelkonformer Fix würde also
    stillschweigend zurückgerollt. **Optional** bleibt nur, den Test selbst
-   gleich mit anzulegen (darf rot sein — klar als `xfail`/Skip kennzeichnen,
-   damit die Suite grün bleibt).
+   gleich mit anzulegen. Er darf rot sein — dann `xfail` mit **`strict=True`**
+   (bzw. der strikten Entsprechung des Test-Frameworks). Ohne `strict` sind
+   **beide** Ausgänge stumm: Der Fehlschlag zählt als erwartet, der Erfolg als
+   `xpass`, und die Suite bleibt in beiden Fällen grün. Im Feld war ein so
+   markierter Reproducer byte-identisch grün, nachdem der Fix
+   **zurückgedreht** wurde — er hat nie etwas geprüft.
 3. **Übergabe an Frank**: Status auf `offen → an Frank übergeben` setzen. Frank
    quittiert nach dem Fix mit `erledigt (Frank-Fix, <commit>)` und trägt den Fix in
    den `[Unreleased]`-Block ein.
