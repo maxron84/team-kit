@@ -18,6 +18,7 @@ Dieser Test ruft team_budget_check rein über die Bash-Funktion auf
 (subprocess, netz-/CLI-frei) und belegt alle Übergänge sowie die zentralen
 Defaults.
 """
+import re
 import subprocess
 from pathlib import Path
 
@@ -38,21 +39,50 @@ def _budget_check(kosten, soft, hard=None):
     return result.returncode, result.stdout
 
 
-def _var(name):
-    """Liest den Default-Wert einer team/lib.sh-Variable (ohne Env-Override)."""
-    cmd = f'source "{TEAM_LIB}"; printf "%s" "${{{name}}}"'
-    result = subprocess.run(
-        ["bash", "-c", cmd], cwd=REPO_ROOT,
-        capture_output=True, text=True, env={"PATH": "/usr/bin:/bin"},
-    )
-    return result.stdout.strip()
+def _lib_default(name):
+    """Liest den BIBLIOTHEKS-Default aus team/lib.sh — die Zeile
+    `NAME="${NAME:-wert}"` statt des aufgeloesten Wertes.
+
+    Warum statisch und nicht per `source`: team/lib.sh laedt in ihren ersten
+    Zeilen selbst die team.config.sh des Projekts, und die setzt dieselben
+    Variablen. Ein `source team/lib.sh; echo $NAME` liefert deshalb NICHT den
+    Bibliotheks-Default, sondern den PROJEKTWERT — obwohl team.config.sh
+    genau die Datei ist, in der ein Projekt seine Caps anpassen soll und die
+    `install.sh --update` bewusst ueberlebt.
+
+    Gefunden am 2026-08-09 (Feldprojekt platformer, Untersuchung BL-100): Das
+    Projekt hob seinen Soft-Cap regelkonform in team.config.sh von 5 auf 10 —
+    und brach damit diesen Kit-Test, der eine Kit-Zusicherung zu pruefen
+    behauptete. Die Zusicherung selbst bleibt richtig und wird hier
+    unveraendert weitergefuehrt; nur die Messstelle war die falsche.
+    """
+    quelle = TEAM_LIB.read_text(encoding="utf-8")
+    treffer = re.search(rf'^{name}="\$\{{{name}:-([^}}]*)\}}"', quelle, re.M)
+    assert treffer, f"{name} nicht als Default-Zeile in team/lib.sh gefunden"
+    return treffer.group(1)
 
 
 # --- Zentrale Defaults --------------------------------------------------------
 
 def test_zentrale_defaults():
-    assert _var("TEAM_ROLE_BUDGET_USD") == "5", "Soft-Cap-Default muss 5 sein"
-    assert _var("TEAM_ROLE_HARDCAP_USD") == "10", "Hard-Cap-Default muss 10 sein"
+    assert _lib_default("TEAM_ROLE_BUDGET_USD") == "5", "Soft-Cap-Default muss 5 sein"
+    assert _lib_default("TEAM_ROLE_HARDCAP_USD") == "10", "Hard-Cap-Default muss 10 sein"
+
+
+def test_projektwert_haelt_das_hard_groesser_soft_verhaeltnis():
+    """Der Hard-Cap MUSS ueber dem Soft-Cap liegen — sonst prueft
+    team_budget_check ihn nie (`hard > soft`) und Frank/Axel verlieren ihren
+    harten Abbruch still. Diese Pruefung gilt fuer die AUFGELOESTEN Werte,
+    also inklusive der Projektanpassung in team.config.sh — anders als
+    test_zentrale_defaults, das den Bibliotheks-Default prueft."""
+    cmd = ('source "%s"; printf "%%s %%s" "$TEAM_ROLE_BUDGET_USD" '
+           '"$TEAM_ROLE_HARDCAP_USD"' % TEAM_LIB)
+    result = subprocess.run(["bash", "-c", cmd], cwd=REPO_ROOT,
+                            capture_output=True, text=True)
+    soft, hard = (float(v) for v in result.stdout.split())
+    assert hard > soft, (
+        f"Hard-Cap {hard} muss groesser als Soft-Cap {soft} sein — bei "
+        f"hard == soft ist der harte Abbruch fuer Frank/Axel wirkungslos")
 
 
 # --- Zwei-Zustand-Modus (ohne hard-limit): Ralph/Harry/Marv -------------------
