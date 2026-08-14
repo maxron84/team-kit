@@ -2,6 +2,103 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.9.0] — 2026-08-14
+
+**Der Backlog ist abgearbeitet.** 26 offene Rückmeldungen aus dem Feld —
+`BL-20`…`BL-61` — von drei Buchungsverlusten am Kostenwerkzeug über einen
+Guard-Rollback, der Vollzug meldete, den er nicht leisten konnte, bis zu zwölf
+Betriebslehren, die nirgends standen. Vier Funde wurden **beim Bauen** entdeckt
+und mit behoben; zwei davon hätte der jeweilige Fix selbst verursacht.
+
+### Fixed
+
+- **Drei Buchungsverluste am selben Werkzeug.** `akteur-abschluss` ersetzte
+  still, wo `rollen-abschluss` seit `BL-5` abbricht (`BL-25`, im Feld 5,5515
+  USD spurlos verloren); die Wrapper verschluckten Schalter, sodass `--kaskade`
+  nie ankam und auf die Kaskade aus `.ralph-plan` gebucht wurde (`BL-26`, eine
+  abgeschlossene Zeile über 8,4678 USD ersetzt); **ein** Notiztext beschriftete
+  **zwei** Ledger-Zeilen (`BL-34`, zweimal im Feld die Arbeit des Red Teams
+  über Ralphs Baustufen).
+- **Der Wächter sah die vergessene Buchung nicht** (`BL-27`): `ledger-pruefen`
+  wischte jede Kaskade ohne Rollenzeile als „geplant" weg — 33,89 USD lagen
+  ungebucht in den Logordnern, gemeldet wurden null Warnungen. Das tragende
+  Merkmal ist das **Alter** der Logs, nicht ihre Anwesenheit: Während eines
+  laufenden Baus sind offene Logs der Normalzustand. Dieselbe Mechanik meldet
+  beim Buchen Logs, die aus der Zeit **zwischen** zwei Kaskaden stammen
+  (`BL-45`).
+- **Der chirurgische Rollback konnte keine Verzeichnisse entfernen** (`BL-24`)
+  und druckte den Vollzug elf Zeilen vor dem Aufräumen. Jetzt `rm -rf` mit
+  Plausibilitätsprüfung, Erfolgskontrolle und Meldung **danach**.
+- **Ein quittierter Fund ohne wirksamen Regressionstest** (`BL-22`/`BL-28`):
+  Der Substanz-Anker bestand, sobald irgendeine im Fundblock genannte Datei im
+  Diff lag — meist die Produktivdatei. Geprüft wird jetzt die reservierte
+  Reproducer-Datei; `xfail` verlangt `strict=True`, und Franks Dreisatz beginnt
+  mit der Gegenprobe „ohne den Fix muss der Test rot sein".
+- **Der Fundblock wird geprüft, bevor er Geld kostet** (`BL-29`):
+  `beutebuch.py lint` vor dem ersten Frank-Aufruf, Exit 3 statt Fehlversuch —
+  ein unbrauchbarer Auftrag ist kein Versagen des Ausführenden.
+- **Der Deckel vernichtete die Quittung statt der Arbeit** (`BL-30`): Ein
+  nachweislich erfolgreicher read-only-Sweep behält seinen Zustandszeiger.
+- **Der Cap verdeckte die `BL-41`-Erkennung** (`BL-60`): Eine Stufe, die beides
+  tat, meldete sich als generischer Fehler. Die Reihenfolge der **Meldung** ist
+  gedreht, der Effekt des Caps unverändert. Dazu der dritte Ausgang in der
+  Prüfanleitung (`BL-61`): Rot **nur** in den neu angelegten Testdateien der
+  Stufe heißt defekter Testaufbau, nicht kaputter Produktivcode — ein Neubau
+  hätte im Feld 330 Zeilen korrekte Arbeit weggeworfen.
+- **Der Budget-Stopp stoppte im teuersten Moment** (`BL-23`): Kulanzband von
+  15 % für eine angefangene Fixrunde, **einmal**; jeder Abbruch druckt jetzt
+  die offenen Funde und den Fortsetzungsbefehl.
+
+### Changed
+
+- **Die Red-Team-Aufträge behaupten keinen Stack mehr** (`BL-20`). Der
+  ausgelieferte Default beschrieb eine statische Website — in jedem anderen
+  Projekt eine **sachlich falsche** Behauptung, die das Modell übernimmt.
+  Projektseitig übersteuerbar über `TEAM_REDTEAM_AUFTRAG_HARRY`/`_MARV`.
+  Marvs Auftrag fragt zusätzlich, **was der gewöhnliche Pfad kostet** (`BL-21`,
+  mit Schwelle: asymptotisch, kein Feintuning).
+- **Der Red-Team-Fokus hat ein Verfallsdatum** (`BL-31`): an den Stand
+  gebunden, nicht an die Prozessumgebung. Dazu seine **Bauform** — „welche
+  bestehenden Verträge berührt das Neue?" (`BL-43`) — und die Auflage, dass
+  Prüfpunkte in den **String** gehören, nicht in die Übergabenachricht
+  (`BL-44`). Zwei neue Fragen in jedem Sweep-Prompt: Kontrollfluss statt
+  Rumpfvergleich und die Durchzählung mitbenutzter Bedingungen (`BL-39`).
+- **`A2 / 1,25` gilt nur für schreiblastige Sitzungen** (`BL-32`); reine
+  Dateirotation zählt nicht mehr als Churn. Die A1-Regel nennt die vier
+  Eigenschaften eines tauglichen Abo-Messwegs, statt ein Werkzeug zu nennen,
+  das dem Kit nicht gehört (`BL-33`).
+- **Zwölf Feld-Betriebslehren** in `doku/anhang-a.md` (`BL-35`…`BL-38`), die
+  planwirksamen zusätzlich im Architekten-Briefing.
+
+### Added
+
+- **`./team-status.sh --altlast [N]`** (`BL-40`) — Produktivdateien ohne Diff
+  seit N Kaskaden. Nur eine Kennzahl: Die Diff-Bindung ist der Grund, warum die
+  Sweeps bezahlbar sind.
+- **`kosten.py turns`** (`BL-37`) — das Turn-Profil stand in jedem Log und
+  wurde nie ausgewertet. `vollautomatik.sh` druckt es im Abschlussbericht.
+- **`team/tools/zitat_lint.py`** (`BL-50`, Stufe 2) — meldet Plandateien, die
+  einen erledigten Backlog-Eintrag noch als offene Frage zitieren. Bewusst
+  schmal: Der erste Anlauf fiel prompt in die eigene Falle und meldete drei
+  Rückblicke im Roadmap-Dokument des Kits.
+- **`plans/backlog-archiv.md`** (`BL-53`) — 58 abgetragene Einträge, wörtlich.
+  Der aktive Backlog schrumpft von 154 KB auf 6 KB.
+
+### Beim Bauen gefunden
+
+- **`kit-test.sh` gab bei rotem Testlauf Exit 0 zurück** (`BL-59`) — `RC=$?` im
+  `then`-Zweig eines `if ! cmd`. Rot für den Menschen, grün für jede Automatik.
+- **Der scharfgestellte Guard-Rollback hätte die Kostenlogs des laufenden
+  Aufrufs gelöscht** — `.team-logs/` ist ein untracked Verzeichnis außerhalb
+  jeder Whitelist. `TEAM_GUARD_LAUFZEIT` nimmt die Artefakte der Shell aus der
+  Bewertung.
+- **Die `BL-27`-Prüfung hätte bei jedem `--budget` mitten im Lauf rot
+  gemeldet** — `test_bl13` fing es beim Bauen ab und erzwang das richtige
+  Merkmal.
+- **`BL-42` und `BL-58` waren derselbe Fund**, zweimal aus demselben
+  Feldprojekt gemeldet: Der erste Bericht blieb liegen, `--update` überschrieb
+  den Feldfix, das Feld musste ihn erneut melden.
+
 ## [2.8.1] — 2026-08-14
 
 **Ein Kit-Test, der nur dort scheitern kann, wo niemand hinsieht, ist keine

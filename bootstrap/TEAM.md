@@ -225,6 +225,14 @@ ist eine Live-Schätzung, keine Ledger-Zeile) — sobald du sie per
 `--architekt-abschluss` gebucht hast, springt sie auf `echt, im Gesamt
 enthalten` und darf **nicht** noch einmal draufgerechnet werden.
 
+```bash
+python3 team/tools/zitat_lint.py
+```
+
+Meldet Plandateien, die einen **erledigten** Backlog-Eintrag noch als offene
+Frage zitieren — der Fall, der sonst erst auffällt, wenn dir jemand einen
+Kandidaten vorlegt, den es nicht mehr gibt. Exit `3` = Befunde, kein Blocker.
+
 Der Architekt schreibt außerdem ein `{{PLAN_ORDNER}}/kaskade-N-abschluss.md`.
 Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 

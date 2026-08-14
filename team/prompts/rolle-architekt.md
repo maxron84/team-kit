@@ -94,6 +94,11 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    die Ausnahme; der Bauplan der Kaskade nennt so etwas nirgends. Verweise auf
    den Backlog eines **anderen** Projekts schreibe ich als `Kit-BL-<N>`, damit
    der doppelt belegte Nummernraum nicht in die falsche Datei führt.
+   **Die Gegenprobe dazu ist maschinell:** `python3 team/tools/zitat_lint.py`
+   meldet Plandateien, die einen erledigten Eintrag noch als offene Frage
+   zitieren. Exit `3` heißt Befunde — kein Blocker, der Lint urteilt über
+   Prosa; ein bewusster Rückblick ist keiner. Er ist absichtlich schmal
+   gehalten und meldet lieber einen Fall zu wenig als dauernd das Falsche.
 2. **Kostenabschluss** — erst **jetzt**, niemals in einer Loop-Stufe:
    `./team-status.sh --rollen-abschluss <N> <domaene>` und meine eigene Sitzung
    per `./team-status.sh --architekt-abschluss <USD> <domaene> "<notiz>"`.

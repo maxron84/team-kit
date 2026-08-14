@@ -101,13 +101,60 @@ if [ "$NEUER_DECKEL" != "$TEAM_BUDGET_USD" ]; then
     TEAM_BUDGET_USD="$NEUER_DECKEL"
 fi
 
+# BL-23: Das KULANZBAND der Fixphase. Der Deckel greift nach dem bereits
+# bezahlten Aufruf und kennt die Restarbeit nicht — er kann eine Fixphase
+# mitten zwischen "Fund an Frank uebergeben" und "Fix liegt vor" kappen. Genau
+# das ist im Feld eingetreten: Lauf bei 19,96 von 19 USD gestoppt, ein Fund vom
+# Schweregrad HOCH im Status "an Frank uebergeben" zurueckgelassen. Die
+# fehlende Restarbeit kostete 1,52 USD; dagegen standen Handstart, zweiter
+# Kontextaufbau, Architekten-Nachfrage und ein ueber zwei Sitzungen zerfallener
+# Closeout. Der Stopp hat weniger gespart, als sein eigenes Aufraeumen kostete.
+#
+# Die angefangene Runde laeuft deshalb zu Ende, solange der Lauf unter
+# Deckel + TEAM_BUDGET_KULANZ_PROZENT liegt UND ein Fund tatsaechlich in
+# Bearbeitung ist. Die Obergrenze bleibt eine BENANNTE Zahl statt eines
+# Gefuehls, und sie gilt nur in Phase 4 — die Bauphase hat keinen halbfertigen
+# Zwischenzustand, den ein Stopp beschaedigen koennte.
+TEAM_BUDGET_KULANZ_PROZENT="${TEAM_BUDGET_KULANZ_PROZENT:-15}"
+KULANZ_GEWAEHRT=0
+
 budget_ok() {
-    local jetzt; jetzt="$(lauf_kosten)"
-    if python3 -c "import sys; sys.exit(0 if float('$jetzt') >= float('$TEAM_BUDGET_USD') else 1)"; then
-        log "LAUF-BUDGET erreicht: dieser Lauf $jetzt USD >= Deckel $TEAM_BUDGET_USD USD — harter Stopp (Gesamt-Kontostand $(kontostand_gesamt) USD, nur Anzeige)."
-        return 1
+    local kulanz="${1:-nein}" jetzt deckel_kulant
+    jetzt="$(lauf_kosten)"
+    if ! python3 -c "import sys; sys.exit(0 if float('$jetzt') >= float('$TEAM_BUDGET_USD') else 1)"; then
+        return 0
     fi
-    return 0
+    if [ "$kulanz" = "kulanz" ] && [ "$KULANZ_GEWAEHRT" -eq 0 ] \
+       && $TEAM_BEUTEBUCH_TOOL first 'an Frank übergeben' >/dev/null 2>&1; then
+        deckel_kulant="$(python3 -c "print(float('$TEAM_BUDGET_USD') * (1 + $TEAM_BUDGET_KULANZ_PROZENT / 100))")"
+        if python3 -c "import sys; sys.exit(0 if float('$jetzt') < float('$deckel_kulant') else 1)"; then
+            KULANZ_GEWAEHRT=1
+            log "LAUF-BUDGET erreicht ($jetzt USD >= $TEAM_BUDGET_USD USD), aber ein Fund ist in Bearbeitung — die angefangene Runde laeuft im Kulanzband bis $deckel_kulant USD zu Ende (+$TEAM_BUDGET_KULANZ_PROZENT %, BL-23). DANACH harter Stopp."
+            return 0
+        fi
+    fi
+    log "LAUF-BUDGET erreicht: dieser Lauf $jetzt USD >= Deckel $TEAM_BUDGET_USD USD — harter Stopp (Gesamt-Kontostand $(kontostand_gesamt) USD, nur Anzeige)."
+    return 1
+}
+
+# BL-23 (3): Ein Abbruch endet nie ohne Weiterweg. Der Bericht kostet nichts,
+# loest die Kostenfrage nicht — aber die Reibung, und er hilft bei JEDEM
+# Abbruchgrund, nicht nur beim Deckel.
+abbruch_bericht() {
+    local grund="$1" offen
+    log "--- WIE ES WEITERGEHT ($grund) ---"
+    offen="$($TEAM_BEUTEBUCH_TOOL list 2>/dev/null \
+             | grep -Ev 'erledigt|überholt' || true)"
+    if [ -n "$offen" ]; then
+        log "Offene Funde:"
+        printf '%s\n' "$offen" | sed 's/^/    /'
+        log "Fixphase fortsetzen:  ./frank.sh   (ein Fund je Aufruf)"
+        log "Danach der Closeout:  ./team-status.sh --rollen-abschluss <N> <domaene>"
+    else
+        log "Keine offenen Funde — nur der Closeout fehlt:"
+        log "  ./team-status.sh --rollen-abschluss <N> <domaene>"
+    fi
+    log "Ganzen Lauf fortsetzen: ./vollautomatik.sh (nimmt den Faden am Zeigerstand auf)"
 }
 
 # --- Phase 1: Ralph baut die Kaskade -----------------------------------------
@@ -130,7 +177,7 @@ if [ "$rc" -ne 0 ]; then
     log "Ralph endete mit Fehler ($rc) — Vollautomatik stoppt, Mensch gefragt."
     exit 1
 fi
-budget_ok || exit 1
+budget_ok || { abbruch_bericht "Budget-Deckel"; exit 1; }
 
 # --- Phase 2+3: Red-Team-Sweeps ----------------------------------------------
 for rolle in harry marv; do
@@ -142,7 +189,7 @@ for rolle in harry marv; do
         42) log "⏸ Session-Limit erreicht — Lauf pausiert ($rolle). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."; exit 42 ;;
         *) log "$rolle endete mit ECHTEM Fehler ($rc: is_error/Guard-Verletzung/Aufruf-Fehlschlag — ein bloß fehlendes Promise bei sauberem Fund liefert bereits 0) — Vollautomatik stoppt."; exit 1 ;;
     esac
-    budget_ok || exit 1
+    budget_ok || { abbruch_bericht "Budget-Deckel"; exit 1; }
 done
 
 # --- Phase 4: Fix-Runden (Frank ↔ Axel) --------------------------------------
@@ -168,7 +215,7 @@ while [ "$runde" -lt "$MAX_RUNDEN" ]; do
         42) log "⏸ Session-Limit erreicht — Lauf pausiert (Frank). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."; exit 42 ;;
         *) getan=1; log "Runde $runde: Frank-Fehlversuch (ggf. Eskalation an Axel)." ;;
     esac
-    budget_ok || exit 1
+    budget_ok kulanz || { abbruch_bericht "Budget-Deckel"; exit 1; }
 
     # Axel nur rufen, wenn ein Fall auf ihn wartet.
     if $TEAM_BEUTEBUCH_TOOL first "an Axel übergeben" >/dev/null; then
@@ -179,7 +226,7 @@ while [ "$runde" -lt "$MAX_RUNDEN" ]; do
             42) log "⏸ Session-Limit erreicht — Lauf pausiert (Axel). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."; exit 42 ;;
             *) getan=1; log "Runde $runde: Axel-Fehler ($rc) — Fall bleibt offen." ;;
         esac
-        budget_ok || exit 1
+        budget_ok kulanz || { abbruch_bericht "Budget-Deckel"; exit 1; }
     fi
 
     if [ "$getan" -eq 0 ]; then
@@ -201,6 +248,7 @@ while [ "$runde" -lt "$MAX_RUNDEN" ]; do
             || $TEAM_BEUTEBUCH_TOOL first 'an Axel übergeben' 2>/dev/null \
             || echo '?')"
         log "⛔ Fix-Phase stagniert: $STUCK macht seit $stagnation Runden keinen Fortschritt — Mensch prüfen. Lauf gestoppt, um Leerlaufkosten zu vermeiden."
+        abbruch_bericht "Stagnation"
         exit 1
     fi
 done

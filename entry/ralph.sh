@@ -99,13 +99,27 @@ Regeln:
     # überschritten) ist für Ralph der harte Fall: Stopp VOR dem State-
     # Weiterschalten (Commit der Stufe bleibt, kein Rollback; Mensch schaltet
     # manuell weiter, ggf. mit erhöhtem RALPH_BUDGET_USD).
+    #
+    # BL-60: Der EFFEKT des Caps bleibt unverändert — die MELDUNG kommt erst
+    # nach der Quittungsprüfung. Vorher stieg der Cap mit `exit 1` aus, bevor
+    # die BL-41-Erkennung überhaupt lief; eine Stufe, die beides tut (Cap
+    # sprengen UND ohne Quittung enden), meldete sich als generischer „Fehler
+    # (1)". Das ist kein Randfall: Eine lange Stufe ist teurer UND wartet eher
+    # auf einen Hintergrund-Smoke-Test — die Verdeckung trifft bevorzugt die
+    # teuren Stufen, bei denen ein unnötiger Neubau am meisten kostet. Im Feld
+    # (K35) trat BL-41 dreimal in einer Kaskade auf; zweimal griff die
+    # Erkennung vorbildlich, beim dritten Mal (11,09 USD) verdeckte sie der Cap.
     team_budget_check "$TEAM_LAST_COST" "$RALPH_BUDGET_USD" "Ralph Stufe $STUFE" || RC=$?
-    if [ "$RC" -ge 2 ]; then
-        exit 1
-    fi
+    CAP_GESPRENGT=0
+    [ "$RC" -ge 2 ] && CAP_GESPRENGT=1
     # RC=1 (Warnschwelle): weitermachen ist erlaubt, die Meldung steht im Log.
 
     if team_promise_in "$TEAM_LAST_OUT" "STUFE_${STUFE}_COMPLETE"; then
+        # Quittung liegt vor: Beim gesprengten Cap bleibt es beim heutigen
+        # Verhalten — Stopp OHNE Weiterschalten, der Commit der Stufe bleibt.
+        if [ "$CAP_GESPRENGT" -eq 1 ]; then
+            exit 1
+        fi
         NEXT=$((STUFE + 1))
         echo "$NEXT" > "$STATE_FILE"
         echo "Ralph: Promise erhalten — Stufe $STUFE abgeschlossen, weiter mit $NEXT."
@@ -113,12 +127,22 @@ Regeln:
         # BL-41: Erst prüfen, ob der BENANNTE vierte Ausgang vorliegt (Sitzung
         # beendet, Log meldet Erfolg, Quittung fehlt) — sonst führt die
         # generische Meldung den Menschen in den Plan statt in den Fehlermodus.
+        CAP_ZEILE="(Soft-Cap eingehalten.)"
+        [ "$CAP_GESPRENGT" -eq 1 ] && CAP_ZEILE="ACHTUNG: Soft-Cap ebenfalls überschritten ($TEAM_LAST_COST USD ≥ $RALPH_BUDGET_USD USD) — beim Neustart RALPH_BUDGET_USD anheben, sonst stoppt die nächste Stufe genauso."
+        # BL-61: Der dritte Ausgang. „Sonst neu bauen" warf zwei sehr
+        # verschiedene Lagen zusammen — und im Feld hätte der Neubau 330 Zeilen
+        # fertigen, korrekten Produktivcode weggeworfen (7,46 USD), weil die
+        # von der Stufe SELBST geschriebenen Tests drei Aufbaufehler hatten.
+        # Gleiches Modell, gleicher Prompt, gleiche Stufe: Der Neubau hätte sie
+        # mit hoher Wahrscheinlichkeit erneut erzeugt.
         if team_quittung_fehlt_melden ralph "$TEAM_LAST_OUT" \
             "Stufe $STUFE hat kein <promise>STUFE_${STUFE}_COMPLETE</promise> gegeben." \
             "git log -1 && git status — hat Ralph committet?" \
             "${TEAM_SMOKE_TEST:-(kein Smoke-Test konfiguriert)} — ist der Baum grün?" \
             "Beides ja: von Hand quittieren — \`echo $((STUFE + 1)) > $STATE_FILE\`, dann erneut starten." \
-            "Sonst: Stufe $STUFE regulär neu bauen."; then
+            "Baum ROT? Erst prüfen, WO: Sind ausschließlich die von DIESER Stufe neu angelegten Testdateien rot (\`git status\` zeigt sie als '??'), ist der Testaufbau der wahrscheinlichere Schuldige als der Produktivcode — dann den Aufbau von Hand reparieren, OHNE eine Zusicherung abzuschwächen, statt die Stufe neu zu bauen." \
+            "Ist BESTEHENDER Testbestand rot, hat die Stufe etwas gebrochen: dann neu bauen." \
+            "$CAP_ZEILE"; then
             exit 43
         fi
         echo "Ralph: KEIN Promise für Stufe $STUFE — Loop stoppt. Log prüfen: $TEAM_LAST_OUT" >&2

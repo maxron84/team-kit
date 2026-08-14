@@ -19,16 +19,15 @@ bash install.sh ~/Source/mein-projekt
 Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 75 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
-`TEAM.md` und 281 Regressionstests.
+`TEAM.md` und 362 Regressionstests.
 
-**Stand: Version 2.8.1** (2026-08-14). Das Aufnahme-Interview erklärt jede
-Frage in Anwendersprache und schlägt beim Prüfumfang vor, was es im Projekt
-gefunden hat. Zieht das Team in eine gewachsene Codebasis ein, fragt und warnt
-der Installer von sich aus — siehe
-[In ein bestehendes Projekt](#in-ein-bestehendes-projekt). Neu in 2.8.1: Die
-Selbstverifikation fährt die Testsuite ein zweites Mal gegen eine
-**angepasste** `team.config.sh` — Zusicherungen, die nur im
-Auslieferungszustand halten, fallen jetzt hier auf statt im Feldprojekt.
+**Stand: Version 2.9.0** (2026-08-14). Der komplette Backlog des Kits ist
+abgearbeitet: 26 offene Feld-Rückmeldungen aus `BL-20`…`BL-61` — drei
+Buchungsverluste am Kostenwerkzeug, ein Guard-Rollback ohne Vollzug, ein
+Substanz-Anker, der den falschen Beleg prüfte, stack-neutrale Red-Team-Aufträge,
+ein Fokus mit Verfallsdatum und zwölf Feld-Betriebslehren. Abgetragene Einträge
+stehen jetzt in [plans/backlog-archiv.md](plans/backlog-archiv.md); der aktive
+Backlog ist von 154 KB auf 6 KB geschrumpft.
 
 ---
 
@@ -60,8 +59,9 @@ Seither läuft das Kit im Feldprojekt `team-kit_project_platformer`: **33 Kaskad
 157 Stufen, 93 Red-Team-Funde `HM-1`…`HM-93`, 49 `vollautomatik.sh`-Läufe,
 rund 1265 USD Abo-Gegenwert — vollständig geledgert** (Stand 2026-08-11). Aus
 diesem Betrieb und aus Einzügen in fremde Codebasen kommen die Backlog-Einträge
-`BL-1`…`BL-56`; was davon behoben ist, steht im [CHANGELOG](CHANGELOG.md), der
-Rest in [plans/backlog.md](plans/backlog.md).
+`BL-1`…`BL-61`; was davon behoben ist, steht im [CHANGELOG](CHANGELOG.md) und
+in [plans/backlog-archiv.md](plans/backlog-archiv.md), der Rest in
+[plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors
 (`../llm-wiki/wiki/vorlagen/claude-md-ki-team.md`) — ein privates
@@ -205,7 +205,7 @@ team/                   Team-Namensraum — landet als team/ im Zielprojekt
 ├── redteam.sh          Gemeinsame Sweep-Logik von Harry und Marv
 ├── tools/              kosten.py (1569 Z), beutebuch.py (286 Z)
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-└── tests/              46 Testdateien, 281 Testfälle
+└── tests/              54 Testdateien, 362 Testfälle
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
 install.sh              Der Installer
@@ -255,6 +255,7 @@ Grund für den eigenen Plan-Ordner — siehe `BL-51` oben.
 | `./team-test.sh` | Regressionstests der Team-Infrastruktur (pytest) |
 | `bash <kit>/install.sh . --update` | Auf eine neue Kit-Version heben, ohne Projektdaten anzufassen |
 | `python3 team/tools/beutebuch.py list` | Alle Funde mit Status |
+| `python3 team/tools/zitat_lint.py` | Plandateien, die einen erledigten Backlog-Eintrag noch als offene Frage zitieren (`BL-50`) |
 
 **Exit-Codes**: `0` = durchgelaufen · `1` = echter Fehler · `3` = nichts zu tun ·
 `42` = Session-Limit, Lauf pausiert (kein Fehler, kein Datenverlust) ·
@@ -285,7 +286,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 - **Noch nie gelaufen: Axel.** Der Forensiker hat in 33 Kaskaden keine einzige
   Ledgerzeile — sein Pfad ist getestet, aber nicht im Feld belegt.
 - **Selbstverifikation**: `./kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 281 Tests — **zweimal**: einmal mit den
+  Wegwerf-Repo und fährt dort die 362 Tests — **zweimal**: einmal mit den
   Auslieferungswerten, einmal mit angepasster `team.config.sh` (Caps,
   Commit-Präfixe, zwei Domänen). Der zweite Lauf ist die Lehre aus `BL-58`: In
   einer frischen Installation stehen dieselben Werte wie in `team/lib.sh`, ein
