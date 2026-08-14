@@ -544,7 +544,7 @@ def _befund(code, schwere, text):
 
 
 def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
-                    team_logs=".team-logs", aktuelle_kaskade=None):
+                    team_logs=".team-logs", aktuelle_kaskade=None, repo="."):
     """Prueft das Ledger auf Vollstaendigkeit und liefert eine Liste von
     Befunden (Dicts mit code/schwere/text). schwere ist "warnung" (sehr
     wahrscheinlich verlorenes Geld -- der Aufrufer sollte Exit != 0 setzen)
@@ -638,6 +638,46 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
                     "der Architekt fuer diese Kaskade nichts abzurechnen "
                     "hatte") + " -- sonst fehlt der Abschluss."))
 
+    # --- P1b (BL-27) --------------------------------------------------------
+    # P1 winkt jede Kaskade ohne ralph/roles-Zeile als "geplant, aber nie
+    # gelaufen" durch. Eine GEBAUTE Kaskade mit vergessenem Rollenabschluss
+    # sieht genauso aus — im Feld lagen so 33,89 USD ungebucht in den
+    # gitignorierten Logordnern, und der Waechter meldete null Warnungen.
+    # Das Unterscheidungsmerkmal lag daneben: Eine geplante Kaskade hat KEINE
+    # unarchivierten Rohlogs, eine vergessene hat welche.
+    #
+    # Das ALTER der Logs ist das Merkmal, nicht ihre blosse Anwesenheit:
+    # Unarchivierte Logs waehrend eines laufenden Baus sind der Normalzustand
+    # (dafuer steht die Gegenprobe in test_bl13) — eine Warnung darauf waere
+    # die Falle aus BL-14 und erschiene bei jedem --budget mitten im Lauf.
+    # Ein Log, das AELTER ist als der Beginn der aktuellen Kaskade, kann
+    # dagegen nicht zu ihr gehoeren: Es stammt aus einem Durchgang, den
+    # niemand abgeschlossen hat. Genau so lag der Feldfall — beim Closeout der
+    # Kaskade 13 lagen die Logs der Kaskade 12 noch da.
+    #
+    # Ist der Beginn nicht ermittelbar (keine Plandatei, kein Git), wird NICHT
+    # geraten: kein Befund. Ersatzzettel und unlesbare Dateien zaehlen nicht
+    # mit (BL-46) — sonst kehrt der Dauer-Fehlalarm durch die Hintertuer
+    # zurueck, den P2 dort abgestellt hat.
+    if aktuelle_kaskade is not None and \
+            not je_kaskade.get(aktuelle_kaskade, set()) & {"ralph", "roles"}:
+        beleg_offen = [f for f in team_log_dateien([ralph_logs, team_logs])
+                       if not _ist_verworfener_versuch(f)
+                       and _datei_kosten(f)[1]]
+        _, zu_alt = logs_vor_kaskadenbeginn(beleg_offen, aktuelle_kaskade, repo)
+        if zu_alt:
+            summe_offen = sum(_datei_kosten(f)[0] for f, _ in zu_alt)
+            befunde.append(_befund(
+                "abschluss-fehlt", "warnung",
+                f"{len(zu_alt)} unarchivierte(s) Log(s) ueber "
+                f"{summe_offen:.4f} USD in {ralph_logs}/{team_logs} sind "
+                f"AELTER als der Beginn der Kaskade {aktuelle_kaskade} — sie "
+                f"gehoeren zu einem frueheren Durchgang, fuer den kein "
+                f"Rollenabschluss gebucht ist. Eine geplante Kaskade hat keine "
+                f"Rohlogs; hier wurde gebaut und nicht abgeschlossen "
+                f"(BL-27-Muster). Nachtragen mit `./team-status.sh "
+                f"--rollen-abschluss <jene Kaskade> <domaene>`."))
+
     # --- P2 -----------------------------------------------------------------
     if aktuelle_kaskade is not None and aktuelle_kaskade in je_kaskade:
         alle_offen = team_log_dateien([ralph_logs, team_logs])
@@ -713,6 +753,62 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
                 f"aber nie gebucht. So sahen BL-4 (Zeile fehlte ganz) und "
                 f"BL-5 (Altwert ueberschrieben) im Feld aus."))
     return befunde
+
+
+def kaskade_beginn(kaskade, repo="."):
+    """Epoch-Zeitstempel des Commits, der die PLANDATEI der Kaskade angelegt
+    hat — der maschinell verfuegbare Beginn eines Laufs. None, wenn keine
+    Plandatei oder kein Git-Repo gefunden wird.
+
+    Warum die Plandatei und nicht der erste Stufen-Commit: Sie entsteht bei
+    der Scharfschaltung, also VOR der ersten Stufe, und traegt die Nummer im
+    Namen. Ein Stufen-Commit ist an nichts erkennbar, was ein Werkzeug lesen
+    koennte.
+
+    BL-45: Gebraucht wird das fuer den Zeitraum-Abgleich beim Buchen —
+    `--rollen-abschluss` bucht schlicht ALLES, was im Logordner liegt, unter
+    der genannten Nummer. Im Feld lag dort ein Axel-Lauf ueber 4,2560 USD aus
+    einer Out-of-Loop-Fixrunde, die NACH dem Abschluss der Kaskade 27 und VOR
+    dem ersten Commit der Kaskade 28 stattfand — er gehoert zu keiner der
+    beiden und waere still falsch beschriftet in die K28-Zeile gelaufen.
+    Auffallen konnte das nur einem Menschen, der die Zeitstempel von Hand
+    gegen den Kaskadenbeginn haelt."""
+    if not kaskade:
+        return None
+    muster = os.path.join(repo, "plans", f"ralph-kaskade-{kaskade}-*.md")
+    treffer = sorted(glob.glob(muster))
+    if not treffer:
+        return None
+    relativ = os.path.relpath(treffer[0], repo)
+    try:
+        ergebnis = subprocess.run(
+            ["git", "-C", repo, "log", "--diff-filter=A", "--format=%ct",
+             "--", relativ],
+            capture_output=True, text=True, check=False)
+    except OSError:
+        return None
+    zeilen = [z for z in ergebnis.stdout.split() if z.isdigit()]
+    if not zeilen:
+        return None
+    return int(zeilen[-1])   # aeltester Add-Commit
+
+
+def logs_vor_kaskadenbeginn(files, kaskade, repo="."):
+    """(beginn, [(datei, mtime), …]) fuer alle Logs, die AELTER sind als der
+    Beginn der zu buchenden Kaskade (BL-45). Leere Liste, wenn der Beginn
+    nicht ermittelbar ist — dann wird nicht geraten."""
+    beginn = kaskade_beginn(kaskade, repo)
+    if beginn is None:
+        return None, []
+    zu_alt = []
+    for datei in files:
+        try:
+            mtime = os.path.getmtime(datei)
+        except OSError:
+            continue
+        if mtime < beginn:
+            zu_alt.append((datei, mtime))
+    return beginn, sorted(zu_alt, key=lambda p: p[1])
 
 
 def git_churn(seit, pfade, repo="."):
@@ -1287,7 +1383,7 @@ def _main(argv):
             kaskade = kaskade_aus_plan(repo)
         befunde = ledger_pruefen(ledger_pfad, ralph_logs=ralph_logs,
                                   team_logs=team_logs,
-                                  aktuelle_kaskade=kaskade)
+                                  aktuelle_kaskade=kaskade, repo=repo)
         warnungen = [b for b in befunde if b["schwere"] == "warnung"]
         if not befunde:
             print("Ledger konsistent: keine Befunde.")
@@ -1579,6 +1675,31 @@ def _main(argv):
         # in genau diesem Fall in die Irre fuehrt. Beim manuellen Durchlauf
         # aufgefallen. Nur im addieren-Modus: Ohne bestehende Zeile ist die
         # 0.0000-Buchung samt HM-43-Warnung weiterhin richtig.
+        # BL-45: Zeitraum-Abgleich VOR dem Buchen. Kein Abbruch — der Mensch
+        # entscheidet, ob er trennt (`--kaskade` fuer einen eigenen
+        # Out-of-Loop-Eintrag) oder die Notiz anpasst. Nur Sichtbarkeit, wo
+        # bisher geschwiegen wurde; dieselbe Bauart wie die Startwarnung aus
+        # BL-27. Deckt zugleich den zweiten Befund aus BL-27 ab: Logs aus
+        # mehr als einem Lauf werden hier benannt, statt still der falschen
+        # Kaskade zugeschlagen zu werden.
+        _beginn, _zu_alt = logs_vor_kaskadenbeginn(files, kaskade, repo)
+        if _zu_alt:
+            from datetime import datetime as _dt
+            print(f"Hinweis: {len(_zu_alt)} Log(s) sind AELTER als der Beginn "
+                  f"der Kaskade {kaskade} "
+                  f"({_dt.fromtimestamp(_beginn).isoformat(timespec='minutes')}) "
+                  f"und werden trotzdem unter dieser Nummer gebucht:",
+                  file=sys.stderr)
+            for datei, mtime in _zu_alt[:5]:
+                print(f"  {datei} ({_dt.fromtimestamp(mtime).isoformat(timespec='minutes')})",
+                      file=sys.stderr)
+            if len(_zu_alt) > 5:
+                print(f"  … und {len(_zu_alt) - 5} weitere", file=sys.stderr)
+            print("  Gehoeren sie zu einer Out-of-Loop-Runde zwischen zwei "
+                  "Kaskaden, gehoeren sie unter eine eigene benannte Nummer "
+                  "(`--kaskade vor-N`) — sonst traegt diese Kaskade fremde "
+                  "Kosten (BL-45).", file=sys.stderr)
+
         if bestand == "addieren" and not files and abo == 0.0 and api == 0.0:
             print(f"{rolle_ziel.capitalize()}-Zeile Kaskade {kaskade} "
                   f"({domaene}) unveraendert: nichts hinzuzufuegen "

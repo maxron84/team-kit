@@ -206,7 +206,10 @@ den Fall, dass die alte Zeile schlicht falsch war.
 
 Sagt dir, ob für jede Kaskade alles gebucht ist: fehlt eine Zeile je Quelle
 (`ralph`/`roles`/`architekt`), liegen unarchivierte Logs herum, obwohl die
-Kaskade schon abgeschlossen ist, und — die eigentliche Probe — **ergeben die
+Kaskade schon abgeschlossen ist, **liegen Logs herum, die älter sind als die
+laufende Kaskade** (dann wurde ein früherer Durchgang gebaut und nie
+abgeschlossen — im Feld lagen so 33,89 USD ungebucht in den Logordnern, ohne
+dass irgendetwas rot wurde), und — die eigentliche Probe — **ergeben die
 archivierten Rohlogs mehr, als im Ledger steht?** Diese letzte Frage stellt die
 Gegenkennzahl aus einer **anderen** Quelle als das Ledger selbst. Genau daran
 hakte es dreimal: Die schwersten Kostenfehler des Kits (`BL-1`, `BL-4`, `BL-5`)
