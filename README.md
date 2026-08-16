@@ -43,6 +43,43 @@ stehen in [plans/backlog-archiv.md](plans/backlog-archiv.md) (63 Stück).
 
 ---
 
+## Inhalt
+
+> **Zum ersten Mal hier? → [doku/einrichtung.md](doku/einrichtung.md).**
+> Klonen, Maschine einrichten, in ein Projekt einbinden — für **Linux** und für
+> **Windows mit WSL**, mit IDE- und Werkzeug-Beispielen, einer Gegenprobe und
+> elf Fehlerbildern. Dort steht auch die Trennlinie, die für dieses Kit
+> tragend ist: **was Pflicht ist und was nur Beispiel.**
+
+**Diese Seite:**
+
+| Abschnitt | Worum es geht |
+|---|---|
+| [Was das T.E.A.M. ist](#was-das-team-ist) | Die sechs Rollen und das Prinzip *Finder ≠ Fixer* |
+| [Modelle](#modelle--agnostisch-aber-nicht-anspruchslos) | Zwei Stufen statt Modellnamen, sechs vorausgesetzte Fähigkeiten, Ziel lokal |
+| [Herkunft](#herkunft) | Woher der Code kommt und wo er scharf gelaufen ist |
+| [Installation](#installation) | `install.sh`, das Aufnahme-Interview, `--update` gegen `--force` |
+| [Nach der Installation](#nach-der-installation) | Die sechs Schritte bis zur ersten Kaskade |
+| [In ein bestehendes Projekt](#in-ein-bestehendes-projekt) | Schreibzone und Prüfumfang im Bestand (`BL-51`, `BL-52`) |
+| [Aufbau des Kits](#aufbau-des-kits) | Welche Datei wo liegt — im Kit und im Zielprojekt |
+| [Betrieb](#betrieb) | Befehle und Exit-Codes |
+| [Grenzen](#grenzen) | Was belegt ist und was ausdrücklich nicht |
+| [Lizenz](#lizenz) | MIT |
+
+**Die Dokumentation.** `doku/` bleibt im Kit und wird **nicht** mitinstalliert —
+die Bedienanleitung fürs Zielprojekt ist `TEAM.md`:
+
+| Datei | Für wen | Inhalt |
+|---|---|---|
+| **[doku/einrichtung.md](doku/einrichtung.md)** | **wer das Kit auf eine Maschine holt** | **Die Routine: Klonen, Bordmittel, WSL, IDE, Auth, Einbinden, Fehlerbilder, Belegstand** |
+| [doku/anhang-a.md](doku/anhang-a.md) | wer wissen will, *warum* es so gebaut ist | Die Warum-Schicht: Bauentscheide und Feld-Betriebslehren (A.0–A.12) |
+| [doku/regel-inventar.md](doku/regel-inventar.md) | wer eine Regel der Vorlage ändert | Jede Regel als NORM/HERLEITUNG/HISTORIE, mit Träger und wörtlichem Zitat |
+| [CHANGELOG.md](CHANGELOG.md) | wer eine bestehende Installation nachzieht | Jede Änderung mit Begründung und Feldbeleg |
+| [plans/backlog.md](plans/backlog.md) | wer am Kit mitbaut | Offene Punkte (Abgetragenes im [Archiv](plans/backlog-archiv.md)) |
+| `TEAM.md` | der Strippenzieher im Zielprojekt | Bedienanleitung — wird installiert und liegt danach im Projekt |
+
+---
+
 ## Was das T.E.A.M. ist
 
 Sechs KI-Rollen unter der Regie **eines** Menschen (des *Strippenziehers*):
@@ -287,8 +324,8 @@ kit-einrichten.sh       Vorflug-Prüfung zwischen Klon und Installation:
 kit-test.sh             Selbstverifikation in 9 Stufen: installiert in ein
                         Wegwerf-Repo, fährt dort die Tests zweimal (Ausliefe-
                         rungswerte und angepasste team.config.sh), prüft
-                        Update-Pfad, Bestandslage und Regel-Inventar — DAS Gate
-                        vor jedem Release
+                        Update-Pfad, Bestandslage, Regel-Inventar und die
+                        Einrichtungsroutine — DAS Gate vor jedem Push
 kit-regelinventar.py    Prüfer für das Regel-Inventar (Stufe 8). Kit-only —
                         bewacht die Vorlage, nicht die installierte CLAUDE.md
 plans/                  Roadmap und Backlog DES KITS (nicht die Vorlagen —

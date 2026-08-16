@@ -29,8 +29,9 @@ Fehlschläge von `pytest team/tests` **im Kit-Repo** bleiben bestehen und sind
 **erwartet** — damals 17, Stand 2.6.0 **21** von 280.
 
 **Offen geblieben:** Ob der Lauf zusätzlich in einen Git-Hook gehört, oder ob
-die Regel „vor jedem Release" reicht. Bisher reicht sie — es gibt genau einen
-Menschen im Prozess.
+die Regel „vor jedem Push" reicht. Bisher reicht sie — es gibt genau einen
+Menschen im Prozess. *(Die Regel hieß bis 2026-08-16 „vor jedem Release";
+das Kit veröffentlicht keine Releases mehr, ausgeliefert wird der Quellstand.)*
 
 ---
 

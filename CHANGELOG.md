@@ -60,8 +60,28 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   gemeinsamen Muster („sieht aus wie ein kaputtes Kit und ist keines"), der
   Entscheid für Proben statt Annahmen und der Belegstand.
 
+### Removed
+
+- **`doku/release-vorlage.md` entfernt.** Das Kit veröffentlicht keine
+  GitHub-Releases; ausgeliefert wird der **Quellstand**, und der Weg dorthin
+  ist `git clone` (siehe [doku/einrichtung.md](doku/einrichtung.md)). Eine
+  Vorlage für eine Seite, die niemand füllt, ist genau die Sorte Dokument, die
+  später als geltender Prozess gelesen wird. `CHANGELOG.md` bleibt der Ort, an
+  dem eine Änderung samt Begründung nachschlagbar ist — daran ändert sich
+  nichts. Mitgezogen: Die README nennt `kit-test.sh` jetzt „DAS Gate vor jedem
+  **Push**" statt „vor jedem Release", ebenso die Skizze in
+  [plans/roadmap-skizzen.md](plans/roadmap-skizzen.md).
+
 ### Changed
 
+- **README: Gliederung mit Inhaltsverzeichnis.** Die Seite ist auf 400 Zeilen
+  gewachsen und hatte keinen Einstieg — neu ist ein Abschnitt **Inhalt** direkt
+  unter dem Kopf: ein Verweiskasten auf
+  [doku/einrichtung.md](doku/einrichtung.md) für alle, die das Kit zum ersten
+  Mal auf eine Maschine holen, eine Tabelle der zehn Abschnitte dieser Seite,
+  und eine Tabelle **Die Dokumentation** — welche Datei in `doku/` für wen
+  gedacht ist, samt der Feststellung, dass `doku/` im Kit bleibt und `TEAM.md`
+  die Anleitung im Zielprojekt ist.
 - **README**: Der Einstieg beginnt jetzt beim `git clone` und führt über
   `kit-einrichten.sh`; die Auth-Voraussetzung zeigt auf `scripts/`, der Baum
   unter *Aufbau des Kits* führt `scripts/`, `kit-einrichten.sh` und
