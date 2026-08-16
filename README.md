@@ -10,11 +10,21 @@ Ein vollständiges KI-Rollenteam auf Knopfdruck in ein Software-Projekt —
 frisch angelegt **oder seit Jahren gewachsen**.
 
 ```bash
+git clone https://github.com/maxron84/team-kit.git ~/Source/team-kit
 cd ~/Source/team-kit
-bash install.sh ~/Source/mein-projekt
+bash kit-einrichten.sh ~/Source/mein-projekt
 ```
 
-*(Kurzform von überall: `bash ~/.claude/scripts/team-init.sh <zielpfad>`)*
+`kit-einrichten.sh` prüft die Maschine (Bordmittel, Zeilenenden, Dateisystem,
+Auth) und übergibt dann an `install.sh`. Wer die Maschine schon eingerichtet
+hat, ruft den Installer direkt auf: `bash install.sh ~/Source/mein-projekt` —
+oder, nach `--verknuepfen`, von überall mit
+`bash ~/.claude/scripts/team-init.sh <zielpfad>`.
+
+**Windows** geht denselben Weg, aber **in einer WSL2-Distro** und mit dem Repo
+im Linux-Dateisystem. Die ganze Routine für beide Plattformen, mit IDE (VS
+Codium bzw. VS Code) und Agenten-Werkzeug, steht in
+[doku/einrichtung.md](doku/einrichtung.md).
 
 Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 75 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
@@ -144,7 +154,9 @@ nachgezogen werden, sonst läuft die Doku der Mechanik hinterher.
 > `--force` ist nur für eine kaputte **Erst**installation gedacht.
 
 **Voraussetzungen**: Zielpfad ist ein Git-Repository, `claude` im PATH,
-Auth eingerichtet (`bash ~/.claude/scripts/team-auth-setup.sh`). Welche
+Auth eingerichtet (`bash scripts/team-auth-setup.sh`). Geprüft und erklärt
+werden sie von `kit-einrichten.sh`; die ausführliche Fassung — Linux und
+Windows mit WSL — steht in [doku/einrichtung.md](doku/einrichtung.md). Welche
 **Fähigkeiten** ein Modell mitbringen muss — und warum das Kit trotzdem keinen
 Modellnamen kennt — steht oben im Abschnitt **Modelle**.
 
@@ -265,8 +277,14 @@ team/                   Team-Namensraum — landet als team/ im Zielprojekt
 └── tests/              54 Testdateien, 362 Testfälle
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
+scripts/                Maschinen-Skripte, NICHT installiert
+├── team-auth-setup.sh  Auth der Agenten-CLI (Beispiel Claude Code)
+└── team-init.sh        Dünner Launcher, für ~/.claude/scripts/
 install.sh              Der Installer
-kit-test.sh             Selbstverifikation in 8 Stufen: installiert in ein
+kit-einrichten.sh       Vorflug-Prüfung zwischen Klon und Installation:
+                        Bordmittel, Zeilenenden, Dateisystem (WSL!), Auth —
+                        prüft mit Proben statt Annahmen, kostet nichts
+kit-test.sh             Selbstverifikation in 9 Stufen: installiert in ein
                         Wegwerf-Repo, fährt dort die Tests zweimal (Ausliefe-
                         rungswerte und angepasste team.config.sh), prüft
                         Update-Pfad, Bestandslage und Regel-Inventar — DAS Gate
@@ -276,7 +294,9 @@ kit-regelinventar.py    Prüfer für das Regel-Inventar (Stufe 8). Kit-only —
 plans/                  Roadmap und Backlog DES KITS (nicht die Vorlagen —
                         die liegen in bootstrap/ und werden installiert)
 doku/anhang-a.md        Die Warum-Schicht: Bauentscheide und Feld-Betriebs-
-                        lehren (A.0–A.10). Bleibt im Kit, wird nicht installiert
+                        lehren (A.0–A.12). Bleibt im Kit, wird nicht installiert
+doku/einrichtung.md     Klonen und Einbinden — Linux und Windows mit WSL,
+                        IDE- und Werkzeug-Beispiele, Fehlerbilder, Belegstand
 doku/regel-inventar.md  Jede Regel der Vorlage als NORM/HERLEITUNG/HISTORIE,
                         mit Träger und wörtlichem Zitat
 ```

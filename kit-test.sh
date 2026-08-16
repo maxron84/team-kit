@@ -24,6 +24,11 @@
 # Lehre aus BL-58 — eine frische Installation trägt dieselben Werte wie die
 # Bibliothek, dort fällt eine falsch gesetzte Messstelle nie auf.
 #
+# Schritt 9 prüft die Stufe DAVOR: die Einrichtungsroutine (kit-einrichten.sh,
+# scripts/, .gitattributes). Sie liegt vor install.sh — wer sie kaputt
+# ausliefert, blockiert den Einstieg, bevor die Schritte 1–8 überhaupt zum
+# Tragen kommen. Geprüft wird mit --nur-pruefen; das fasst nichts an.
+#
 # Das Zielrepo ist ein frisches mktemp-Verzeichnis — ein Wegwerf-Repo im Sinne
 # der README-Regel "Guard-Tests nie im echten Projekt". Es wird am Ende
 # gelöscht (außer bei --behalten). Dieses Skript ruft KEINE Agenten-CLI auf und
@@ -66,14 +71,14 @@ aufraeumen() {
 }
 trap aufraeumen EXIT
 
-kopf "1/8 — Wegwerf-Repo anlegen"
+kopf "1/9 — Wegwerf-Repo anlegen"
 git -C "$ZIEL" init -q
 # Lokale Identität, damit der Lauf auch ohne globale Git-Config committen kann.
 git -C "$ZIEL" config user.email "kit-test@localhost"
 git -C "$ZIEL" config user.name  "Kit-Selbsttest"
 gruen "  ✓ $ZIEL"
 
-kopf "2/8 — Kit installieren (nicht-interaktiv)"
+kopf "2/9 — Kit installieren (nicht-interaktiv)"
 # Ohne TEAM_INIT_*-Vorgaben: genau die Defaults, die ein Anwender bekäme.
 if ! bash "$KIT/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.log" 2>&1; then
     rot "  ✗ install.sh schlug fehl:"
@@ -82,7 +87,7 @@ if ! bash "$KIT/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.log" 2>
 fi
 gruen "  ✓ $(grep -oE 'Fertig — [0-9]+ Dateien geschrieben' "$ZIEL/.install.log" | head -1)"
 
-kopf "3/8 — Ungefüllte Platzhalter suchen"
+kopf "3/9 — Ungefüllte Platzhalter suchen"
 # Ein übrig gebliebenes {{...}} heißt: Der Installer kennt die Datei nicht oder
 # der Platzhalter wurde umbenannt. Beides fällt sonst erst im Feld auf, wo die
 # Briefings die Pfade des Ursprungsprojekts nennen würden — falsche Guard-Grenze.
@@ -95,7 +100,7 @@ if [ -n "$RESTE" ]; then
 fi
 gruen "  ✓ keine"
 
-kopf "4/8 — Regressionstests in der Installation (Auslieferungswerte)"
+kopf "4/9 — Regressionstests in der Installation (Auslieferungswerte)"
 # Vor dem Testlauf committen — dieselbe Reihenfolge, die TEAM.md dem Anwender
 # vorschreibt. Ein Test, der den Git-Zustand liest, sieht damit den echten.
 git -C "$ZIEL" add -A
@@ -134,7 +139,7 @@ fi
 # Caps ("lieber großzügig ansetzen"), Commit-Präfixe, mehrere Domänen. Pfade
 # und Ordner bleiben unangetastet: Die sind die Ablage, gegen die die Tests
 # gelten dürfen, nicht der Regler, an dem ein Projekt dreht.
-kopf "5/8 — Regressionstests unter angepasster team.config.sh (BL-58)"
+kopf "5/9 — Regressionstests unter angepasster team.config.sh (BL-58)"
 sed -i \
     -e 's|^TEAM_ROLE_BUDGET_USD=.*|TEAM_ROLE_BUDGET_USD="${TEAM_ROLE_BUDGET_USD:-10}"|' \
     -e 's|^TEAM_ROLE_HARDCAP_USD=.*|TEAM_ROLE_HARDCAP_USD="${TEAM_ROLE_HARDCAP_USD:-20}"|' \
@@ -176,7 +181,7 @@ fi
 # einmaliges Handprotokoll: Wir tun so, als sei das Projekt in Betrieb
 # (Ledger, Kaskadenstand, Beutebuch-Fund, eigener Smoke-Test), fahren das
 # Update und pruefen, dass davon NICHTS angefasst wurde.
-kopf "6/8 — Update-Pfad schuetzt Projektdaten"
+kopf "6/9 — Update-Pfad schuetzt Projektdaten"
 echo '2026-08-01 | 1 | 9.4204 | abo | produkt | roles | Lauf' >> "$ZIEL/.budget-ledger"
 echo '### HM-1 — echter Fund' >> "$ZIEL/plans/beutebuch.md"
 echo '5' > "$ZIEL/.ralph-state"
@@ -307,7 +312,7 @@ esac
 # BL-51/BL-52: Die beiden Bestandsprojekt-Befunde. Der Installer ist die einzige
 # Stelle, an der sie auffallen koennen — in der Installation liegt er nicht mehr,
 # also gehoert der Nachweis hierher und nicht in team/tests/.
-kopf "7/8 — Einzug in eine gewachsene Codebasis (BL-51, BL-52)"
+kopf "7/9 — Einzug in eine gewachsene Codebasis (BL-51, BL-52)"
 BESTAND_REPO="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-bestand.XXXXXX")"
 bestand_aufraeumen() { [ "$BEHALTEN" -eq 1 ] || rm -rf "$BESTAND_REPO"; }
 trap 'aufraeumen; bestand_aufraeumen' EXIT
@@ -388,7 +393,7 @@ b_pruefe "im leeren Repo schweigt auch das Update" \
     "$(grep -c 'Ungeprueft in der Wurzel' "$ZIEL/.update.log")" "0"
 [ "$BESTAND_FEHLER" -eq 0 ] || exit 1
 
-kopf "8/8 — Regel-Inventar gegen die Regeldatei (A.10, BL-56)"
+kopf "8/9 — Regel-Inventar gegen die Regeldatei (A.10, BL-56)"
 # Der Sicherheitsgurt vor dem Umbau der Regeldatei: Jedes NORM-Zitat muss
 # woertlich in bootstrap/CLAUDE.md.vorlage stehen, jeder Abschnitt im Inventar
 # vertreten sein. Prueft die VORLAGE, nicht die Installation — ein Feldprojekt
@@ -398,6 +403,80 @@ if ! python3 "$KIT/kit-regelinventar.py"; then
     rot "  ✗ Regel-Inventar und Regeldatei stehen auseinander."
     exit 1
 fi
+
+kopf "9/9 — Einrichtungsroutine (Klon → Maschine → Installer)"
+# kit-einrichten.sh steht VOR install.sh: Wer es kaputt ausliefert, blockiert
+# den Einstieg, noch bevor die Stufen 1–8 ueberhaupt zum Tragen kommen. Der
+# Weg wird deshalb hier durchgespielt — ohne Agenten-CLI und ohne Schreiben
+# ausserhalb des Wegwerf-Repos (--nur-pruefen fasst nichts an).
+E_FEHLER=0
+e_pruefe() {  # e_pruefe <beschreibung> <ist> <soll>
+    if [ "$2" = "$3" ]; then gruen "  ✓ $1"
+    else rot "  ✗ $1 — erwartet '$3', ist '$2'"; E_FEHLER=1; fi
+}
+
+for f in "$KIT/kit-einrichten.sh" "$KIT"/scripts/*.sh; do
+    if bash -n "$f" 2>/dev/null; then gruen "  ✓ Syntax: $(basename "$f")"
+    else rot "  ✗ Syntaxfehler: $(basename "$f")"; E_FEHLER=1; fi
+done
+
+# a) Die Maschine, auf der dieser Test laeuft, muss die Pruefung bestehen —
+#    sonst behauptet das Kit Lauffaehigkeit, die es gerade widerlegt.
+E_LOG="$ZIEL/.einrichten.log"
+E_EXIT=0
+bash "$KIT/kit-einrichten.sh" --nur-pruefen --nicht-interaktiv >"$E_LOG" 2>&1 || E_EXIT=$?
+e_pruefe "--nur-pruefen laeuft durch (Exit 0)" "$E_EXIT" "0"
+e_pruefe "und fasst nichts an (keine Verknuepfung angelegt)" \
+    "$(grep -c 'uebersprungen wegen --nur-pruefen\|übersprungen wegen --nur-pruefen' "$E_LOG")" "1"
+for pflicht in git python3 flock bash; do
+    e_pruefe "Bordmittel geprueft: $pflicht" \
+        "$(grep -cE "✓ $pflicht|✗ $pflicht" "$E_LOG")" "1"
+done
+e_pruefe "Exec-Bit wird PROBIERT, nicht vorausgesetzt" \
+    "$(grep -c 'chmod +x wirkt' "$E_LOG")" "1"
+e_pruefe "Dateisperre wird PROBIERT" \
+    "$(grep -c 'flock) funktionieren hier\|flock greift in diesem Ordner nicht' "$E_LOG")" "1"
+e_pruefe "keine Probendatei zurueckgelassen" \
+    "$(find "$KIT" -maxdepth 1 -name '.einrichten-probe.*' | wc -l)" "0"
+
+# b) Ein Zielpfad ohne Git ist ein harter Fehler — sonst laeuft der Installer
+#    in genau die Bedingung, die er selbst als erstes ablehnt (A.1).
+#    Das Verzeichnis muss AUSSERHALB des Wegwerf-Repos liegen: Ein Unterordner
+#    von $ZIEL liegt im dortigen Arbeitsbaum, `rev-parse --is-inside-work-tree`
+#    sagt dann korrekt "ja" — und der Test haette geprueft, dass eine Ablehnung
+#    ausbleibt, die gar nicht ausbleiben darf. (Genau so beim ersten Lauf
+#    dieses Schritts passiert.)
+E_OHNE_GIT="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-ohne-git.XXXXXX")"
+E_EXIT=0
+bash "$KIT/kit-einrichten.sh" "$E_OHNE_GIT" --nur-pruefen --nicht-interaktiv >"$E_LOG" 2>&1 || E_EXIT=$?
+rm -rf "$E_OHNE_GIT"
+e_pruefe "Zielpfad ohne Git wird abgelehnt (Exit 1)" "$E_EXIT" "1"
+e_pruefe "und der Ausweg steht dabei" "$(grep -c 'git -C .* init' "$E_LOG")" "1"
+
+# c) Der Launcher findet das Kit ueber den Symlink — genau so liegt er nach
+#    --verknuepfen unter ~/.claude/scripts/. Ohne Zielpfad muss er den
+#    Installer erreichen und dessen Aufruffehler (Exit 2) durchreichen.
+ln -sfn "$KIT/scripts/team-init.sh" "$ZIEL/team-init-link.sh"
+E_EXIT=0
+bash "$ZIEL/team-init-link.sh" >"$E_LOG" 2>&1 || E_EXIT=$?
+e_pruefe "Launcher erreicht den Installer ueber einen Symlink (Exit 2)" "$E_EXIT" "2"
+e_pruefe "und es ist der Installer, der sich meldet" \
+    "$(grep -c 'Kein Zielpfad angegeben' "$E_LOG")" "1"
+
+# d) Der CRLF-Riegel: .gitattributes muss LF erzwingen, sonst haengt der
+#    Windows-Weg wieder an der Git-Konfiguration der fremden Maschine.
+e_pruefe ".gitattributes erzwingt LF" \
+    "$(grep -c '^\* text=auto eol=lf' "$KIT/.gitattributes")" "1"
+
+# e) Die Anleitung darf nicht auf Dateien zeigen, die es nur auf der
+#    Autorenmaschine gibt — genau daran scheiterte der erste fremde Klon.
+for datei in scripts/team-auth-setup.sh scripts/team-init.sh doku/einrichtung.md kit-einrichten.sh; do
+    e_pruefe "ausgeliefert: $datei" "$([ -f "$KIT/$datei" ] && echo ja || echo nein)" "ja"
+done
+e_pruefe "README verweist nicht mehr auf den Pfad der Autorenmaschine" \
+    "$(grep -c 'claude/scripts/team-auth-setup.sh' "$KIT/README.md")" "0"
+
+[ "$E_FEHLER" -eq 0 ] || exit 1
 
 gruen "
 ✓ Kit-Selbstverifikation grün."

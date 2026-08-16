@@ -433,7 +433,8 @@ if [ -f "$HOME/.config/claude-team/api-key" ] || [ -f "$HOME/.config/claude-team
     gruen "  ✓ Auth-Konfiguration unter ~/.config/claude-team/"
 else
     gelb "  ! Keine Auth-Konfiguration gefunden. Vor dem ersten Lauf:"
-    gelb "    bash ~/.claude/scripts/team-auth-setup.sh"
+    gelb "    bash $KIT/scripts/team-auth-setup.sh"
+    gelb "    (oder gleich die ganze Maschine: bash $KIT/kit-einrichten.sh)"
 fi
 
 BESTEHENDER_LOOP=""

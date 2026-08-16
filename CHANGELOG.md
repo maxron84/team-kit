@@ -4,6 +4,76 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Klonen und Einbinden ist jetzt eine Routine — für Linux und für Windows
+  mit WSL.** Bis hierher begann jede Anleitung in dem Zustand, in dem die
+  Autorenmaschine ohnehin war. Neu ist [`kit-einrichten.sh`](kit-einrichten.sh):
+  die Vorflug-Prüfung zwischen `git clone` und `install.sh`. Fünf Abschnitte —
+  Umgebung (Linux/WSL1/WSL2), Bordmittel (`bash` ≥ 4, `git`, `python3` ≥ 3.8,
+  `flock` als Fehler; `pytest` und die Agenten-CLI als Hinweis), Lage des
+  Klons, Auth, Kurzbefehl — und am Ende die Übergabe an `install.sh`, wenn ein
+  Zielpfad genannt wurde. Es ruft **keine** Agenten-CLI auf und kostet nichts.
+  Der Bauentscheid dahinter: **proben statt voraussetzen.** Das Skript schließt
+  nicht aus dem Pfad auf die Rechte, sondern legt eine temporäre Datei an,
+  ruft `chmod +x` auf und prüft, ob das Bit hält — danach `flock -n` auf
+  dieselbe Datei. Dieselbe Haltung wie A.5: Die Heuristik erklärt den
+  Regelfall, die Probe entscheidet den Einzelfall.
+- **[`doku/einrichtung.md`](doku/einrichtung.md)** — die Routine ausgeschrieben:
+  kurzer Weg je Plattform, Bordmittel je Distribution, WSL-Besonderheiten,
+  IDE-Beispiele (**VS Codium** unter Linux, **VS Code + WSL-Erweiterung** unter
+  Windows — der Grund ist die Lizenz der Remote-Erweiterungen, nicht der
+  Geschmack), Auth, Einbindung, Gegenprobe, elf Fehlerbilder mit Ursache und
+  Abhilfe, und ein Abschnitt **Belegstand**. Vorangestellt ist die Tabelle
+  *Was Pflicht ist und was Beispiel*: Pflicht sind `bash`/`git`/`python3`/
+  `flock`; IDE, Agenten-CLI und Modell sind Beispiele mit benanntem
+  Tauschpunkt.
+- **[`scripts/`](scripts/) — die Maschinen-Skripte liegen jetzt im Repo.**
+  README, `install.sh` und `TEAM.md` verwiesen auf
+  `~/.claude/scripts/team-auth-setup.sh`, eine Datei, die es nur auf der
+  Autorenmaschine gab: **Wer das öffentliche Repo klonte, bekam eine Anleitung,
+  deren erster Schritt ins Leere zeigte.** Neu ausgeliefert werden
+  `scripts/team-auth-setup.sh` und `scripts/team-init.sh`;
+  `kit-einrichten.sh --verknuepfen` legt dafür unter `~/.claude/scripts/` einen
+  **Symlink** an, nie eine Kopie (eine zweite Kopie läuft dem Kit unbemerkt
+  hinterher), und rührt eine dort vorhandene echte Datei nicht an, sondern
+  meldet sie.
+- **[`.gitattributes`](.gitattributes)** mit `* text=auto eol=lf`. Git for
+  Windows klont per Default mit `core.autocrlf=true`; der Shebang wird dann zu
+  `#!/usr/bin/env bash\r` und bash meldet `bad interpreter` — ein Fehlerbild,
+  das nach einer kaputten Installation aussieht und keines ist. Damit ist der
+  Fall nicht mehr dokumentiert, sondern erledigt. Die CRLF-Prüfung in
+  `kit-einrichten.sh` bleibt trotzdem: für Klone, die älter sind als die Datei.
+- **`kit-test.sh`: neuer Schritt 9/9 — Einrichtungsroutine.** Die Routine steht
+  **vor** `install.sh`; wer sie kaputt ausliefert, blockiert den Einstieg,
+  bevor die Schritte 1–8 überhaupt greifen. Geprüft werden Syntax aller neuen
+  Skripte, ein Durchlauf mit `--nur-pruefen` (Exit 0, nichts angefasst, keine
+  Probendatei zurückgelassen), die Ablehnung eines Zielpfads ohne Git samt
+  genanntem Ausweg, der Launcher **über einen Symlink**, der LF-Riegel in
+  `.gitattributes` und dass die README nicht mehr auf den Pfad der
+  Autorenmaschine zeigt. Beim ersten Lauf fiel der Schritt selbst durch: Das
+  „Verzeichnis ohne Git" lag im Wegwerf-Repo und war damit sehr wohl in einem
+  Arbeitsbaum — der Test hätte eine Ablehnung als ausbleibend geprüft, die
+  nicht ausbleiben darf.
+- **[`doku/anhang-a.md`](doku/anhang-a.md), A.12** — die Warum-Schicht dazu:
+  die Lücke, die der fremde Klon aufdeckte, die drei WSL-Fallen mit ihrem
+  gemeinsamen Muster („sieht aus wie ein kaputtes Kit und ist keines"), der
+  Entscheid für Proben statt Annahmen und der Belegstand.
+
+### Changed
+
+- **README**: Der Einstieg beginnt jetzt beim `git clone` und führt über
+  `kit-einrichten.sh`; die Auth-Voraussetzung zeigt auf `scripts/`, der Baum
+  unter *Aufbau des Kits* führt `scripts/`, `kit-einrichten.sh` und
+  `doku/einrichtung.md`. `install.sh` nennt im Auth-Hinweis den Pfad im Kit
+  statt den auf der Autorenmaschine.
+
+> **Belegstand dieses Eintrags:** Der Linux-Weg ist auf der
+> Entwicklungsmaschine durchlaufen. Der WSL-Weg ist **hergeleitet, nicht
+> durchlaufen** — die Regeln folgen aus den bekannten Eigenschaften von DrvFs
+> und Git for Windows; die Proben melden den Fall an der Maschine. Ein
+> vollständiger Durchlauf unter Windows steht aus.
+
 ## [2.10.0] — 2026-08-16
 
 **Der Loop hält nicht mehr an, wo er neunmal dasselbe gehört hat.** Der vierte

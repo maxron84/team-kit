@@ -130,7 +130,7 @@ Folge-Entscheid 2026-07-13 läuft auch Der Architekt Abo-first — damit ist
   `team_result_is_error`; unlesbares JSON zählt als Fehler).
 - **Genau ein Retry**: Scheitert der Abo-Aufruf, folgt ein einziger
   API-Versuch mit eigener Log-Datei; scheitert auch der → harter Abbruch.
-- **Maschinen-Einrichtung**: `~/.claude/scripts/team-auth-setup.sh` (idempotent;
+- **Maschinen-Einrichtung**: `scripts/team-auth-setup.sh` im Kit (idempotent;
   Key-Migration aus Shell-Profilen mit Backup, optionaler headless Abo-Test
   inklusive Erkennung der „takes precedence"-Warnung).
 
@@ -703,6 +703,50 @@ zeigen: ob das Modell das Protokoll durchhält, wenn niemand zusieht.
 **Stand:** Alle automatisierten Rollen laufen über Claude Code (`claude -p`),
 die Weiterentwicklung des Kits ebenfalls. Ein Lauf mit einem lokalen
 Open-Weights-Modell ist **nicht** belegt. Das ist Ziel, nicht Zustand.
+
+## A.12 Die Maschine vor dem Projekt — warum es `kit-einrichten.sh` gibt
+
+`install.sh` prüft, was das **Zielprojekt** braucht (A.1). Was die **Maschine**
+braucht, prüfte bis 2.11.0 niemand: Es stand in der README und galt
+stillschweigend, weil das Kit nur auf der Maschine lief, auf der es entstanden
+ist. Zwei Wege haben das aufgebrochen — der Klon aus GitHub durch jemand
+anderen, und Windows mit WSL.
+
+**Die Lücke, die der Klon aufdeckte.** README, `install.sh` und `TEAM.md`
+verwiesen auf `~/.claude/scripts/team-auth-setup.sh` — eine Datei, die es nur
+auf der Autorenmaschine gab. Wer klonte, bekam eine Anleitung, deren erster
+Schritt ins Leere zeigte. Deshalb liegen die beiden Maschinen-Skripte jetzt
+**im Repo** (`scripts/`), und `~/.claude/scripts/` bekommt auf Wunsch einen
+**Symlink** statt einer Kopie: Eine zweite Kopie läuft dem Kit hinterher, und
+zwar unbemerkt — dieselbe Klasse wie die Doku-Drift, gegen die A.10 arbeitet.
+
+**Die drei WSL-Fallen haben ein gemeinsames Muster: Sie sehen aus wie ein
+kaputtes Kit und sind keines.**
+
+| Falle | Was wirklich passiert | Wie es sich meldet |
+|---|---|---|
+| CRLF | Git for Windows klont mit `core.autocrlf=true`; der Shebang wird zu `#!/usr/bin/env bash\r` | `bad interpreter: No such file or directory` |
+| DrvFs (`/mnt/c`) | `chmod +x` verpufft ohne `metadata`-Mount; `flock` ohne Zusicherung; 9p ist langsam | `Permission denied` auf frisch installierten Entrypoints; nie sauberer Arbeitsbaum |
+| Fehlende Bordmittel | `python3`/`flock` sind Abhängigkeiten der **Infrastruktur**, nicht des Projekts | Abbruch mitten im ersten Lauf — also **nach** bezahlter Agentenzeit |
+
+Gegen die erste Falle hilft eine Datei statt einer Warnung: `.gitattributes`
+mit `* text=auto eol=lf` erzwingt LF im Arbeitsbaum, unabhängig von der
+Git-Konfiguration der Maschine. Die Prüfung bleibt trotzdem — für Klone, die
+älter sind als die Datei.
+
+**Der Bauentscheid, auf den es ankommt: proben statt voraussetzen.**
+`kit-einrichten.sh` fragt nicht „liegt der Pfad unter `/mnt`?" und schließt
+daraus auf die Rechte. Es legt eine temporäre Datei an, ruft `chmod +x` auf und
+prüft, ob das Bit **hält**; danach setzt es `flock -n` auf dieselbe Datei. Das
+ist derselbe Grundsatz wie A.5 (Faktencheck vor Annahme): Die Pfadheuristik
+erklärt den Regelfall, die Probe entscheidet den Einzelfall — und sie greift
+auch auf einem Netzlaufwerk, an das die Heuristik nicht gedacht hat.
+
+**Belegstand:** Der Linux-Weg läuft auf der Entwicklungsmaschine. Der WSL-Weg
+ist **hergeleitet, nicht durchlaufen** — die Regeln folgen aus den bekannten
+Eigenschaften von DrvFs und Git for Windows, und die Proben melden den Fall an
+der Maschine. Ein vollständiger Durchlauf unter Windows steht aus. Die Routine
+selbst steht in [einrichtung.md](einrichtung.md).
 
 ---
 

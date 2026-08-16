@@ -1,0 +1,18 @@
+# Zeilenenden — die Datei existiert wegen des WSL-Pfads.
+#
+# Das Kit besteht aus Shell-Skripten, die unter Windows regelmäßig mit Git for
+# Windows geklont werden. Dort ist `core.autocrlf=true` der Auslieferungswert:
+# Der Klon landet mit CRLF im Arbeitsbaum, und die erste Zeile jedes Skripts
+# wird zu `#!/usr/bin/env bash\r`. Bash sucht dann einen Interpreter, der
+# buchstäblich `bash\r` heißt, und meldet
+#
+#     bash: ./vollautomatik.sh: /usr/bin/env: bad interpreter: No such file or directory
+#
+# — ein Fehlerbild, das nach einer kaputten Installation aussieht und keines
+# ist. `eol=lf` erzwingt LF im Arbeitsbaum unabhängig von der Git-Konfiguration
+# der Maschine; damit ist der Fall nicht mehr dokumentiert, sondern erledigt.
+* text=auto eol=lf
+
+# Binärdateien: nie konvertieren, nie diffen.
+*.webp binary
+*.png  binary
