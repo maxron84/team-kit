@@ -12,7 +12,11 @@ Kaskaden aufgetreten und jedes Mal gleich ausgegangen; er prüft sich jetzt
 selbst, streng und in beide Richtungen. Dazu zwei Feldfunde am Rand des
 Betriebs: ein Kit-Test, der am Füllstand des Beutebuchs hing, und ein
 `.gitignore`, das der Installer für vollständig hielt, weil es den Block
-*überhaupt* trug. Damit ist der Backlog des Kits wieder leer.
+*überhaupt* trug. Damit ist der Backlog des Kits wieder leer. Dazu eine
+Festlegung, die bisher nur im Kopf des Autors stand: **Modellagnostik mit
+benanntem Anspruch** — das Kit kennt keine Modellnamen, sondern zwei Stufen und
+sechs vorausgesetzte Fähigkeiten; das Fernziel sind bezahlbare lokale Modelle,
+eingewechselt von unten nach oben.
 
 ### Added
 
@@ -28,6 +32,33 @@ Betriebs: ein Kit-Test, der am Füllstand des Beutebuchs hing, und ein
   gesprengter Soft-Cap schließt die Automatik aus; abschaltbar über
   `TEAM_QUITTUNG_AUTO=0`. Uncommittete Arbeit wird dabei gesichert, sonst liefe
   die nächste Stufe auf schmutzigem Baum.
+
+### Changed
+
+- **Die Modellhaltung des Kits steht jetzt in den Dokus — als Agnostik mit
+  benanntem Anspruch.** Bisher stand nirgends, warum die Rollen zwei Stufen
+  ansprechen (`TEAM_MODEL_LOOP`, `TEAM_MODEL_STRONG`) statt Modellnamen, und
+  „Opus" tauchte in der Anleitung wie eine Voraussetzung auf. Neu und
+  gleichlautend in [README.md](README.md) (Abschnitt **Modelle**),
+  [bootstrap/TEAM.md](bootstrap/TEAM.md) (*Welches Modell arbeitet wo*),
+  [entry/team.config.sh](entry/team.config.sh) (kommentierter Block an der
+  Stelle, wo man es verstellt) und [doku/anhang-a.md](doku/anhang-a.md) (**A.11**,
+  die Warum-Schicht): Das Kit bindet sich an **kein** Modell und keinen
+  Anbieter; `sonnet`/`opus` sind Defaults, keine Voraussetzung. Vorausgesetzt
+  werden **sechs Fähigkeiten** — große Regeldatei tragen, Werkzeuge zuverlässig
+  aufrufen, das `<promise>`-Protokoll bis zum Ende durchhalten, unerzwungene
+  Auflagen einhalten, ohne Rückfragen headless arbeiten, eine Stufe samt Tests
+  zu Ende bringen —, und das Niveau, auf dem sie heute nachweislich reichen,
+  ist Sonnet/Opus. **Langfristig lokal:** Sobald bezahlbare Open-Weights-Modelle
+  diese Fähigkeiten halten, werden sie **von unten nach oben** Standard — erst
+  die schwache Stufe (Masse der Aufrufe, billiger Irrtum), dann die starke.
+  A.11 benennt dazu drei Dinge ehrlich: Das Kit ist modellagnostisch, aber
+  **nicht CLI-agnostisch** (`team_claude()` ist die einzige Aufrufstelle, an ihr
+  hängen Ergebnis-JSON, Auth-Fallback und 429-Behandlung); der Guard wird durch
+  einen Modellwechsel **wichtiger**, nicht unwichtiger; und die Kostenmechanik
+  misst USD — im lokalen Betrieb wäre sie strukturell null und damit eine
+  Kennzahl, die zum Wegsehen erzieht (`BL-9`/`BL-14`-Falle). Ein Lauf mit einem
+  lokalen Modell ist **nicht** belegt: Ziel, nicht Zustand.
 
 ### Fixed
 

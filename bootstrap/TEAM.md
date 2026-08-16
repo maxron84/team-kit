@@ -102,6 +102,32 @@ Diese Wörter tauchen überall auf; hier stehen sie einmal an einem Ort.
 **Finder ≠ Fixer**: Wer einen Fehler findet, behebt ihn nicht selbst. Übergabe
 läuft über das Beutebuch ([`{{PLAN_ORDNER}}/beutebuch.md`]({{PLAN_ORDNER}}/beutebuch.md)).
 
+### Welches Modell arbeitet wo
+
+Die Skripte kennen **keine Modellnamen**, sondern zwei Stufen — du kannst sie
+pro Lauf überschreiben, ohne irgendetwas neu zu installieren:
+
+| Stufe | Variable | Default | Wer darauf läuft |
+|---|---|---|---|
+| schwach | `TEAM_MODEL_LOOP` | `sonnet` | Ralph, Harry, Marv, Frank |
+| stark | `TEAM_MODEL_STRONG` | `opus` | Axel — und deine Architekten-Sitzung |
+
+```bash
+TEAM_MODEL_LOOP=opus ./vollautomatik.sh     # eine Kaskade auf der starken Stufe
+```
+
+Die Defaults sind **Defaults, keine Voraussetzung**. Vorausgesetzt sind
+Fähigkeiten: eine große Regeldatei tragen (`CLAUDE.md` wird bei jedem
+Rollenaufruf geladen), Werkzeuge zuverlässig aufrufen, das `<promise>`-Protokoll
+bis zum Ende eines langen Laufs durchhalten, Auflagen einhalten, die niemand
+erzwingt, und ohne Rückfragen arbeiten — es sitzt niemand daneben. Heute
+erfüllen das Sonnet und Opus über Claude Code; das Kit ist so gebaut, dass sich
+das austauschen lässt (Hintergrund: `README.md`, Abschnitt **Modelle**).
+
+**Kosten sind der Grund für die Trennung.** Die schwache Stufe trägt die Masse
+der Aufrufe. Wer sie hochdreht, dreht die Rechnung mit hoch — deshalb steht der
+Kontostand in `./team-status.sh --budget` und nicht im Kleingedruckten.
+
 > **T.E.A.M. international** — für Projekte auf Englisch oder Italienisch bleiben
 > die Initialen **T-E-A-M** zwingend erhalten, ebenso die selbstironische Pointe
 > („die Arbeit macht — mit voller Absicht — ein anderer"):

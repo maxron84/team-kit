@@ -16,7 +16,7 @@ Wer dort auf „Anhang A.7" stößt, liest hier nach.
 **Quellen:** Feldprojekt `website-maxron-de`, Kaskaden 1–22 (2026-07-10 bis
 2026-08-01); Feldprojekt `team-kit_project_platformer`, 33 Kaskaden (bis
 2026-08-11); Einzug in `Project-Family-ERP` (2026-08-13). Die Abschnitts-
-nummern **A.0–A.10 bleiben stabil** — Regeldatei, Regel-Inventar und
+nummern **A.0–A.11 bleiben stabil** — Regeldatei, Regel-Inventar und
 Backlog-Einträge verweisen darauf.
 
 ---
@@ -639,6 +639,70 @@ Zitate überleben Umformatierungen, die einen ganzen Absatz brechen würden.
 **Die Träger-Spalte** nennt die Datei, die eine Aussage **ausliefert**. Ohne
 sie ginge jede zwischen Regeldatei und Briefing verschobene Regel rot, und der
 Gurt würde den Umbau **blockieren**, statt ihn sichtbar zu machen.
+
+---
+
+## A.11 Modellwahl — agnostisch mit Anspruch, Ziel lokal
+
+**Entscheid:** Das Kit bindet sich an **kein** Modell und an keinen Anbieter.
+Die Rollen-Skripte kennen zwei Stufen — `TEAM_MODEL_LOOP` (Default `sonnet`)
+und `TEAM_MODEL_STRONG` (Default `opus`) —, und beide sind Variablen mit
+Default in `team/lib.sh`, keine Konstanten im Code.
+
+**Warum zwei Stufen und nicht sechs.** Eine Stufe je Rolle wäre feiner, aber
+niemand könnte sie begründen: Es gibt keine Messung, die Harry von Marv
+unterscheidet. Zwei Stufen dagegen trennen genau das, was sich unterscheiden
+lässt — *viele billige Aufrufe mit engem Auftrag* von *wenigen teuren mit
+offenem Auftrag*. Die Trennlinie fällt mit der Kostenlinie zusammen: Die
+schwache Stufe trägt die Masse der Läufe.
+
+**Warum Fähigkeiten statt Benchmarks.** Ein Modell taugt hier nicht, weil es
+eine Rangliste anführt, sondern weil es sechs Dinge durchhält: eine ~40 KB
+große Regeldatei bei **jedem** Aufruf tragen; Werkzeuge über viele Schritte
+zuverlässig aufrufen; das `<promise>`-Protokoll bis zum Ende eines langen Laufs
+einhalten; Auflagen befolgen, die technisch nicht erzwungen sind; ohne
+Rückfragen headless arbeiten; eine Stufe samt ihrer Tests zu Ende bringen.
+Jeder dieser Punkte ist im Feld schon einmal gerissen — Punkt drei ist die
+gesamte `BL-41`-Familie, Punkt sechs ist `BL-108`.
+
+**Warum von unten nach oben eingewechselt wird.** Unten sind die Aufträge enger
+umrissen, die Läufe zahlreicher und ein Fehlschlag billiger: Ein Ralph, der
+eine Stufe vergeigt, kostet eine Stufe. Oben entscheidet sich, ob der Plan
+überhaupt taugt — ein schwacher Architekt produziert Arbeit, die *korrekt
+ausgeführt* trotzdem wertlos ist, und das fällt erst Kaskaden später auf. Der
+billige Irrtum gehört deshalb an den Anfang der Umstellung, der teure ans Ende.
+
+**Warum ein Modellwechsel den Guard aufwertet, nicht abwertet.** Die
+Read-Only-Mechanik (A.4) ist der Grund, warum überhaupt mit einem schwächeren
+Modell experimentiert werden **darf**: Sie hängt nicht an der Einsicht der
+Rolle, sondern an Git und einer Whitelist. Je weniger man einem Modell
+zutraut, desto mehr trägt die Mechanik — wer die Stufe wechselt, hat den
+Guard-Test also nicht *auch* noch zu fahren, sondern **zuerst**.
+
+**Was ein Wechsel technisch berührt.** `team_claude()` in `team/lib.sh` ist die
+einzige Stelle, die die CLI aufruft. Daran hängen drei Verträge, die ein
+Ersatz mitbringen muss: das **Ergebnis-JSON** (`is_error`, `subtype`,
+`total_cost_usd`), der **Auth-Fallback** (A.3) und die 429-Behandlung (A.8).
+Modellagnostisch ist das Kit heute; CLI-agnostisch ist es **nicht**, und diese
+Unterscheidung gehört ehrlich benannt.
+
+**Der offene Punkt, den ein lokaler Betrieb aufwirft:** Die gesamte
+Kostenmechanik misst in **USD**. Läuft ein Modell lokal, ist dieser Wert null —
+und ein Konto, das strukturell null zeigt, erzieht dazu, den Block zu überlesen
+(dieselbe Falle wie `BL-9`/`BL-14`). Wer lokal fährt, braucht dort eine zweite
+Einheit (Laufzeit, Energie, belegte GPU-Zeit) oder eine ausdrückliche
+Kennzeichnung „nicht in USD gemessen". Bevor die erste lokale Stufe Standard
+wird, ist das zu entscheiden — nicht danach.
+
+**Prüfmaßstab für den Wechsel** (in dieser Reihenfolge): `kit-test.sh` grün ·
+Guard-Wirksamkeit gegen die neue Bindung erneut verifiziert (A.5, A.4) · eine
+vollständige Kaskade im Feld · und als Kennzahl die **Rate der Exit-`43`-Fälle
+und Guard-Verletzungen je Kaskade** — sie misst genau das, was Benchmarks nicht
+zeigen: ob das Modell das Protokoll durchhält, wenn niemand zusieht.
+
+**Stand:** Alle automatisierten Rollen laufen über Claude Code (`claude -p`),
+die Weiterentwicklung des Kits ebenfalls. Ein Lauf mit einem lokalen
+Open-Weights-Modell ist **nicht** belegt. Das ist Ziel, nicht Zustand.
 
 ---
 

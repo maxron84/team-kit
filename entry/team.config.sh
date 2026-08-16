@@ -117,6 +117,26 @@ TEAM_KOSTEN_TOOL="${TEAM_KOSTEN_TOOL:-python3 team/tools/kosten.py}"
 TEAM_REDTEAM_AUFTRAG_HARRY="${TEAM_REDTEAM_AUFTRAG_HARRY:-}"
 TEAM_REDTEAM_AUFTRAG_MARV="${TEAM_REDTEAM_AUFTRAG_MARV:-}"
 
+# --- Modellstufen -------------------------------------------------------------
+# Die Rollen-Skripte kennen KEINE Modellnamen, sondern zwei Stufen. Beide haben
+# ihren Default in team/lib.sh und sind hier bewusst NICHT gesetzt — wer sie
+# einträgt, überschreibt die Kit-Defaults dauerhaft für dieses Projekt:
+#
+#   TEAM_MODEL_LOOP="${TEAM_MODEL_LOOP:-sonnet}"    Ralph, Harry, Marv, Frank
+#   TEAM_MODEL_STRONG="${TEAM_MODEL_STRONG:-opus}"  Axel (und die Architekten-
+#                                                   Sitzung, die du selbst führst)
+#
+# Für einen einzelnen Lauf reicht die Umgebung:
+#   TEAM_MODEL_LOOP=opus ./vollautomatik.sh
+#
+# Die Stufen sind Absicht, nicht Zufall: Die schwache trägt die Masse der
+# Aufrufe und damit der Kosten. Sie ist zugleich die Stelle, an der ein anderes
+# Modell — künftig auch ein lokales — zuerst eingewechselt wird. Vorausgesetzt
+# wird kein bestimmtes Modell, sondern Fähigkeit: große Regeldatei tragen,
+# Werkzeuge zuverlässig aufrufen, das Promise-Protokoll bis zum Ende
+# durchhalten, ohne Rückfragen arbeiten. Näheres im README des Kits, Abschnitt
+# „Modelle".
+
 # --- Budget (Defaults aus dem Feld, HM-32/BL-30) ------------------------------
 # Soft-Cap gilt für alle Rollen (nur Hinweis bei Frank/Axel), Hard-Cap bricht ab.
 # Zu tiefe Pro-Fall-Caps VERVIELFACHEN die Kosten, statt zu sparen — sie werfen

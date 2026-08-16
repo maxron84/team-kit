@@ -26,8 +26,10 @@ Neu: Der vierte `BL-41`-Ausgang — Log meldet Erfolg, Quittung fehlt — prüft
 sich selbst, statt die Vollautomatik mitten in der Kaskade anzuhalten; im Feld
 war der Fall neunmal aufgetreten und neunmal gleich ausgegangen. Behoben: ein
 Kit-Test, der am Füllstand des Beutebuchs hing, und ein `install.sh --update`,
-das ein gewachsenes `.gitignore` nie nachzog. Abgetragene Einträge stehen in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (63 Stück).
+das ein gewachsenes `.gitignore` nie nachzog. Neu dokumentiert ist die
+**Modellhaltung** des Kits (Abschnitt unten): agnostisch, mit benannten
+Fähigkeitsanforderungen und lokalen Modellen als Fernziel. Abgetragene Einträge
+stehen in [plans/backlog-archiv.md](plans/backlog-archiv.md) (63 Stück).
 
 ---
 
@@ -47,6 +49,59 @@ Sechs KI-Rollen unter der Regie **eines** Menschen (des *Strippenziehers*):
 Tragendes Prinzip: **Finder ≠ Fixer.** Wer einen Fehler findet, behebt ihn nicht
 selbst — das macht Frank. Jede Übergabe läuft über das Beutebuch und bleibt
 nachvollziehbar.
+
+## Modelle — agnostisch, aber nicht anspruchslos
+
+**Das Kit legt sich auf kein Modell fest, weder heute noch künftig.** Die
+Rollen-Skripte kennen keine Modellnamen, sie kennen zwei **Stufen**:
+
+| Stufe | Variable | Default | Wer darauf läuft |
+|---|---|---|---|
+| schwach | `TEAM_MODEL_LOOP` | `sonnet` | Ralph (Bau-Loop), Harry und Marv (Sweep), Frank (Fixes) |
+| stark | `TEAM_MODEL_STRONG` | `opus` | Axel (Forensik) — und die Architekten-Sitzung, die du selbst startest |
+
+Beide stehen in [team/lib.sh](team/lib.sh) und lassen sich pro Lauf
+überschreiben (`TEAM_MODEL_LOOP=… ./vollautomatik.sh`). Es sind **Defaults,
+keine Voraussetzung**.
+
+Vorausgesetzt werden **Fähigkeiten**, nicht Anbieter. Das Niveau, auf dem sie
+heute nachweislich reichen, ist das von **Sonnet** (schwache Stufe) und **Opus**
+(starke Stufe). Ein Kandidat muss:
+
+1. **eine große Regeldatei tragen** — `CLAUDE.md` wird bei jedem Rollenaufruf
+   geladen (rund 40 KB) und ist die Grundlage jeder Auflage;
+2. **Werkzeuge zuverlässig aufrufen** — Dateien lesen und schreiben, Shell,
+   Tests starten, über viele Schritte hinweg;
+3. **ein Ausgabeprotokoll durchhalten** — jede Rolle quittiert mit einem
+   `<promise>`-Marker; wer ihn am Ende eines langen Laufs vergisst, produziert
+   genau die Klasse „Arbeit fertig, Quittung fehlt" (`BL-41`);
+4. **Auflagen einhalten, die niemand erzwingt** — die Read-Only-Rollen *könnten*
+   Produktivcode schreiben; dass sie es nicht tun, ist zuerst Prompt-Disziplin
+   und erst danach der Guard;
+5. **ohne Rückfragen arbeiten** — die Läufe sind headless, es sitzt niemand
+   daneben, der eine Zwischenfrage beantwortet;
+6. **mehrstufige Arbeit selbst zu Ende bringen** — eine Stufe umfasst
+   Produktivcode *und* die Tests, die sie beweisen.
+
+**Stand heute** laufen alle automatisierten Rollen über **Claude Code**
+(`claude -p`), die Weiterentwicklung des Kits selbst ebenfalls. Die eigentliche
+Bindung ist dabei nicht das Modell, sondern die **CLI**: `team_claude()` in
+`team/lib.sh` ist die **einzige** Stelle im Kit, die sie aufruft — dort hängen
+das JSON-Ergebnisformat (`is_error`, `subtype`, `total_cost_usd`), der
+Auth-Fallback und die Kostenmechanik dran. Wer das Kit auf eine andere Agenten-
+CLI setzt, tauscht diese eine Funktion, nicht die Rollen.
+
+**Das langfristige Ziel ist lokal.** Der Markt der Open-Weights-Modelle wird
+beobachtet; sobald dort bezahlbare Fassungen die obigen Fähigkeiten halten,
+werden sie **schrittweise von unten nach oben** zum Standard: erst die schwache
+Stufe (Bau-Loop, Sweeps, Fixes — die Masse der Aufrufe und der Kosten), später
+die starke (Forensik und Planung). Die Reihenfolge ist Absicht: Unten sind die
+Aufgaben enger umrissen, die Läufe zahlreicher und ein Fehlschlag billiger; oben
+entscheidet sich, ob ein Plan überhaupt taugt. Maßstab für den Wechsel sind
+**nicht Benchmark-Zahlen, sondern die Zusicherungen dieses Kits**: `kit-test.sh`
+grün, der Guard hält, das Promise-Protokoll wird durchgehalten, und der
+Smoke-Test des Feldprojekts bleibt es auch. Bis dahin läuft die Entwicklung mit
+den üblichen Cloud-Modellen weiter.
 
 ## Herkunft
 
@@ -89,7 +144,9 @@ nachgezogen werden, sonst läuft die Doku der Mechanik hinterher.
 > `--force` ist nur für eine kaputte **Erst**installation gedacht.
 
 **Voraussetzungen**: Zielpfad ist ein Git-Repository, `claude` im PATH,
-Auth eingerichtet (`bash ~/.claude/scripts/team-auth-setup.sh`).
+Auth eingerichtet (`bash ~/.claude/scripts/team-auth-setup.sh`). Welche
+**Fähigkeiten** ein Modell mitbringen muss — und warum das Kit trotzdem keinen
+Modellnamen kennt — steht oben im Abschnitt **Modelle**.
 
 **Das Aufnahme-Interview:**
 
@@ -136,7 +193,7 @@ git add -A && git commit -m "chore: T.E.A.M. eingerichtet"
 # 3. Team-Tests (prüft NUR die Infrastruktur, nicht dein Projekt)
 ./team-test.sh
 
-# 4. Erste Kaskade planen — Claude-Sitzung im Projektordner, Opus:
+# 4. Erste Kaskade planen — Sitzung im Projektordner, starke Stufe (Default Opus):
 #    "Du bist unser Architekt, lies team/prompts/rolle-architekt.md."
 
 # 5. Scharfschalten und starten
@@ -285,8 +342,15 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
   belegt, dass das Team dort **einzieht**, nicht, dass es dort **arbeitet**.
 - **Noch nie gelaufen: Axel.** Der Forensiker hat in 33 Kaskaden keine einzige
   Ledgerzeile — sein Pfad ist getestet, aber nicht im Feld belegt.
+- **Modellagnostisch ja, CLI-agnostisch nein.** Die Rollen sprechen zwei Stufen
+  an (`TEAM_MODEL_LOOP`/`TEAM_MODEL_STRONG`), keine Modellnamen — aber der
+  einzige erprobte Weg zu einem Modell führt heute über `claude -p`. Daran
+  hängen das Ergebnis-JSON, der Auth-Fallback und die gesamte Kostenmechanik.
+  Der Tausch findet in **einer** Funktion statt (`team_claude()` in
+  `team/lib.sh`); belegt ist er nicht. Ebenso wenig belegt ist bisher ein Lauf
+  mit einem lokalen Open-Weights-Modell — das ist Ziel, nicht Zustand.
 - **Selbstverifikation**: `./kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 362 Tests — **zweimal**: einmal mit den
+  Wegwerf-Repo und fährt dort die 369 Tests — **zweimal**: einmal mit den
   Auslieferungswerten, einmal mit angepasster `team.config.sh` (Caps,
   Commit-Präfixe, zwei Domänen). Der zweite Lauf ist die Lehre aus `BL-58`: In
   einer frischen Installation stehen dieselben Werte wie in `team/lib.sh`, ein
