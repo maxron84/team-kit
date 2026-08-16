@@ -189,6 +189,11 @@ printf 'def test_projekteigener_fund():\n    assert True\n' \
 # Eine lokal veraenderte Infrastruktur-Datei — der Fall, in dem ein noch nicht
 # zurueckgemeldeter Fix vom Update ueberschrieben wird.
 printf '\n# lokaler Fix, noch nicht ans Kit gemeldet\n' >> "$ZIEL/team/tools/beutebuch.py"
+# BL-109: Ein .gitignore auf dem Fragmentstand eines aelteren Kits — genau die
+# Lage jedes Projekts, das frueh installiert und seither nur --update gefahren
+# hat. Der Block ist vorhanden, zwei seither dazugekommene Zeilen fehlen. Der
+# Installer hat das bisher als "enthaelt den Block bereits" abgehakt.
+sed -i '/^\.team-focus-harry$/d; /^\.team-focus-marv$/d' "$ZIEL/.gitignore"
 
 if ! bash "$KIT/install.sh" "$ZIEL" --update > "$ZIEL/.update.log" 2>&1; then
     rot "  ✗ install.sh --update schlug fehl:"
@@ -258,6 +263,45 @@ case "$ABGLEICH_QUELLE" in
     */team-kit-abgleich-*/*) rm -rf "$(dirname "$ABGLEICH_QUELLE")" ;;
     *) gelb "  (kein Abgleich-Verzeichnis erkannt — nichts aufgeraeumt)" ;;
 esac
+
+# BL-109: Der zurueckgebliebene .gitignore-Block wird GEMELDET, nicht als
+# "enthaelt den Block bereits" abgehakt — und beide fehlenden Zeilen werden
+# namentlich genannt, sonst weiss niemand, was nachzutragen ist. Der stille
+# Fall ist der teure: Das Update meldete bisher Erfolg und liess das Projekt
+# trotzdem auf dem Fragmentstand seines Installationstages zurueck.
+pruefe "veraltetes .gitignore wird gemeldet" \
+       "$(grep -c 'hinter der Vorlage' "$ZIEL/.update.log")" "1"
+pruefe "mit der richtigen Zeilenzahl" \
+       "$(grep -c 'liegt 2 Zeile(n) hinter der Vorlage' "$ZIEL/.update.log")" "1"
+# Je zweimal: einmal in der Aufzaehlung, einmal im nachtragbaren Befehl.
+pruefe "erste fehlende Zeile namentlich genannt" \
+       "$(grep -c '\.team-focus-harry' "$ZIEL/.update.log")" "2"
+pruefe "zweite fehlende Zeile namentlich genannt" \
+       "$(grep -c '\.team-focus-marv' "$ZIEL/.update.log")" "2"
+# Nicht eigenmaechtig ergaenzen: Eine fehlende Zeile kann eine bewusst
+# entfernte sein. Die Meldung ist die risikofreie Haelfte.
+pruefe ".gitignore wird NICHT von selbst ergaenzt" \
+       "$(grep -c 'team-focus' "$ZIEL/.gitignore")" "0"
+# Gegenprobe: Eine Meldung, die immer erscheint, ist keine (Bauart BL-14).
+# Mit vollstaendigem Fragment muss derselbe Lauf schweigen.
+printf '.team-focus-harry\n.team-focus-marv\n' >> "$ZIEL/.gitignore"
+if ! bash "$KIT/install.sh" "$ZIEL" --update > "$ZIEL/.update2.log" 2>&1; then
+    rot "  ✗ zweiter install.sh --update (Gegenprobe) schlug fehl:"
+    tail -20 "$ZIEL/.update2.log" >&2
+    exit 1
+fi
+pruefe "vollstaendiges .gitignore wird nicht angemahnt" \
+       "$(grep -c 'hinter der Vorlage' "$ZIEL/.update2.log")" "0"
+pruefe "und ausdruecklich als vollstaendig quittiert" \
+       "$(grep -c 'enthält den Block vollständig' "$ZIEL/.update2.log")" "1"
+# Auch dieser Lauf legt eine Kit-Fassung zum Abgleich ab — mit aufraeumen,
+# sonst bleibt je Selbsttest ein Verzeichnis in /tmp liegen.
+ABGLEICH2="$(grep -oE 'diff -u "[^"]+"' "$ZIEL/.update2.log" | head -1 \
+             | sed -E 's/^diff -u "([^"]+)"/\1/')"
+case "$ABGLEICH2" in
+    */team-kit-abgleich-*/*) rm -rf "$(dirname "$ABGLEICH2")" ;;
+esac
+
 [ "$UPDATE_FEHLER" -eq 0 ] || exit 1
 
 # BL-51/BL-52: Die beiden Bestandsprojekt-Befunde. Der Installer ist die einzige

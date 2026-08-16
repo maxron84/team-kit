@@ -51,6 +51,51 @@ kopf() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 [ -n "$ZIEL" ] || { rot "FEHLER: Kein Zielpfad angegeben."; echo "Aufruf: bash install.sh <zielpfad>"; exit 2; }
 ZIEL="$(cd "$ZIEL" 2>/dev/null && pwd)" || { rot "FEHLER: Zielpfad existiert nicht: $ZIEL"; exit 2; }
 
+# BL-109: "Der Block ist da" heisst NICHT "der Block ist vollstaendig". Das
+# Fragment waechst mit dem Kit; wer frueh installiert und seither brav --update
+# gefahren hat, blieb bisher dauerhaft auf dem Fragmentstand seines
+# Installationstages — der Installer meldete dabei sogar Erfolg ("enthaelt den
+# Block bereits") und der --update-Pfad sah gar nicht erst hin. Im Feld
+# (team-kit_project_platformer) fehlten so .team-focus-harry und
+# .team-focus-marv: beide standen nach JEDEM Sweep als untracked im Baum, sahen
+# im Closeout wie unfertige Arbeit aus, und ein unachtsames `git add -A` haette
+# einen Fokus-String verewigt, der fuer genau einen Lauf galt.
+#
+# Ergaenzt wird nur bei der ERSTINSTALLATION und nur der ganze Block. Fehlende
+# Einzelzeilen werden ausschliesslich GEMELDET: Eine fehlende Zeile kann eine
+# bewusst entfernte sein, und --update fasst Projektdateien grundsaetzlich
+# nicht an. Der stille Fall ist der teure — die Meldung ist die risikofreie
+# Haelfte und loeste den Fall im Feld vollstaendig.
+gitignore_abgleich() {  # gitignore_abgleich <ergaenzen|melden>
+    local zeile z fehlende="" nachtrag="" fehlzahl=0
+    if [ "$1" = "ergaenzen" ] && \
+       ! grep -q "T.E.A.M.-Loop-Laufzeitartefakte" "$ZIEL/.gitignore" 2>/dev/null; then
+        cat "$KIT/bootstrap/gitignore.fragment" >> "$ZIEL/.gitignore"
+        gruen "  ✓ .gitignore ergänzt"
+        return 0
+    fi
+    # Verglichen wird Zeile fuer Zeile, nicht der Block als Ganzes: Der Block
+    # kann seit Jahren dastehen und trotzdem die Haelfte der Vorlage vermissen.
+    while IFS= read -r zeile || [ -n "$zeile" ]; do
+        case "$zeile" in ''|'#'*) continue ;; esac
+        if ! grep -Fxq -- "$zeile" "$ZIEL/.gitignore" 2>/dev/null; then
+            fehlende="$fehlende$zeile
+"
+            nachtrag="$nachtrag '$zeile'"
+            fehlzahl=$((fehlzahl + 1))
+        fi
+    done < "$KIT/bootstrap/gitignore.fragment"
+    if [ "$fehlzahl" -eq 0 ]; then
+        gruen "  ✓ .gitignore enthält den Block vollständig"
+        return 0
+    fi
+    gelb "  ! .gitignore liegt $fehlzahl Zeile(n) hinter der Vorlage — es fehlen:"
+    printf '%s' "$fehlende" | while IFS= read -r z; do gelb "      $z"; done
+    gelb "    Nicht automatisch ergänzt (eine fehlende Zeile kann eine bewusst"
+    gelb "    entfernte sein) — nachtragen mit:"
+    gelb "      printf '%s\\n'$nachtrag >> \"$ZIEL/.gitignore\""
+}
+
 if [ "$UPDATE" -eq 1 ] && [ "$FORCE" -eq 1 ]; then
     rot "FEHLER: --update und --force schliessen sich aus."
     echo "  --update hebt ein gelebtes Projekt sicher auf eine neue Kit-Version."
@@ -277,6 +322,13 @@ PY
              .gitignore "${PLAN_ORDNER}"; do
         [ -e "$ZIEL/$d" ] && echo "  · $d"
     done
+
+    # BL-109: .gitignore bleibt unangetastet — aber "unangetastet" darf nicht
+    # "ungeprueft" heissen. Bis hierher sah der Update-Pfad die Datei gar nicht
+    # an; ein Projekt blieb auf dem Fragmentstand seines Installationstages,
+    # waehrend der Installer Erfolg meldete. Gemeldet, nicht ergaenzt.
+    kopf ".gitignore gegen die Vorlage (BL-109)"
+    gitignore_abgleich melden
 
     # Doku-Dateien tragen Projektanpassungen (gefuellte TODOs, eigene
     # Abschnitte) und werden deshalb NICHT ueberschrieben. Der Mensch muss
@@ -703,12 +755,7 @@ for d in "$ZIEL"/team/prompts/*.md; do
 done
 
 # ---------------------------------------------------------------- .gitignore
-if ! grep -q "T.E.A.M.-Loop-Laufzeitartefakte" "$ZIEL/.gitignore" 2>/dev/null; then
-    cat "$KIT/bootstrap/gitignore.fragment" >> "$ZIEL/.gitignore"
-    gruen "  ✓ .gitignore ergänzt"
-else
-    gelb "  · .gitignore enthält den Block bereits"
-fi
+gitignore_abgleich ergaenzen
 
 # ---------------------------------------------------------------- Selbsttest
 kopf "Selbsttest"

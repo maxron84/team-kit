@@ -21,6 +21,22 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`install.sh --update` zog ein gewachsenes `.gitignore` nie nach**
+  (`BL-109`). Der Update-Pfad sah die Datei gar nicht an, und die
+  Erstinstallation prüfte nur, ob der Block **überhaupt** dasteht — nicht, ob
+  er vollständig ist. Ein Projekt, das früh installiert und seither brav
+  `--update` gefahren ist, blieb damit dauerhaft auf dem Fragmentstand seines
+  Installationstages, während der Installer Erfolg meldete. Im Feld
+  (platformer) fehlten so `.team-focus-harry` und `.team-focus-marv`: beide
+  standen nach **jedem** Sweep als untracked im Baum, sahen im Closeout wie
+  unfertige Arbeit aus, und ein unachtsames `git add -A` hätte einen
+  Fokus-String verewigt, der für genau einen Lauf galt. Beide Pfade vergleichen
+  jetzt **Zeile für Zeile** gegen `bootstrap/gitignore.fragment` und melden die
+  fehlenden namentlich, samt kopierbarem Nachtrag-Befehl. **Ergänzt wird
+  nichts** — eine fehlende Zeile kann eine bewusst entfernte sein, und
+  `--update` fasst Projektdateien grundsätzlich nicht an. Der stille Fall ist
+  der teure; die Meldung ist die risikofreie Hälfte.
+
 - **`test_bl47_sweep_ergebnis.py` hing an einem leeren Beutebuch** (`BL-62`).
   Die Gegenproben hängten Funde mit **fest verdrahteten** Nummern an, während
   `_fixture()` das echte Beutebuch des Zielprojekts hereinkopiert und
