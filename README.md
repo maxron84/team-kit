@@ -19,15 +19,15 @@ bash install.sh ~/Source/mein-projekt
 Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 75 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
-`TEAM.md` und 362 Regressionstests.
+`TEAM.md` und 369 Regressionstests.
 
-**Stand: Version 2.9.0** (2026-08-14). Der komplette Backlog des Kits ist
-abgearbeitet: 26 offene Feld-Rückmeldungen aus `BL-20`…`BL-61` — drei
-Buchungsverluste am Kostenwerkzeug, ein Guard-Rollback ohne Vollzug, ein
-Substanz-Anker, der den falschen Beleg prüfte, stack-neutrale Red-Team-Aufträge,
-ein Fokus mit Verfallsdatum und zwölf Feld-Betriebslehren. Abgetragene Einträge
-stehen jetzt in [plans/backlog-archiv.md](plans/backlog-archiv.md); der aktive
-Backlog ist von 154 KB auf 6 KB geschrumpft.
+**Stand: Version 2.10.0** (2026-08-16). Der Backlog des Kits ist wieder leer.
+Neu: Der vierte `BL-41`-Ausgang — Log meldet Erfolg, Quittung fehlt — prüft
+sich selbst, statt die Vollautomatik mitten in der Kaskade anzuhalten; im Feld
+war der Fall neunmal aufgetreten und neunmal gleich ausgegangen. Behoben: ein
+Kit-Test, der am Füllstand des Beutebuchs hing, und ein `install.sh --update`,
+das ein gewachsenes `.gitignore` nie nachzog. Abgetragene Einträge stehen in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (63 Stück).
 
 ---
 

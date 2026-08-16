@@ -4,6 +4,16 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+## [2.10.0] — 2026-08-16
+
+**Der Loop hält nicht mehr an, wo er neunmal dasselbe gehört hat.** Der vierte
+`BL-41`-Ausgang — Log meldet Erfolg, Quittung fehlt — ist im Feld in neun
+Kaskaden aufgetreten und jedes Mal gleich ausgegangen; er prüft sich jetzt
+selbst, streng und in beide Richtungen. Dazu zwei Feldfunde am Rand des
+Betriebs: ein Kit-Test, der am Füllstand des Beutebuchs hing, und ein
+`.gitignore`, das der Installer für vollständig hielt, weil es den Block
+*überhaupt* trug. Damit ist der Backlog des Kits wieder leer.
+
 ### Added
 
 - **Der vierte Ausgang prüft sich selbst** (`BL-110`, schließt `BL-108` mit).
