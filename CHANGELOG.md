@@ -19,6 +19,18 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   `TEAM_QUITTUNG_AUTO=0`. Uncommittete Arbeit wird dabei gesichert, sonst liefe
   die nächste Stufe auf schmutzigem Baum.
 
+### Fixed
+
+- **`test_bl47_sweep_ergebnis.py` hing an einem leeren Beutebuch** (`BL-62`).
+  Die Gegenproben hängten Funde mit **fest verdrahteten** Nummern an, während
+  `_fixture()` das echte Beutebuch des Zielprojekts hereinkopiert und
+  `redteam.sh` neue Funde über `next-id` vorher/nachher zählt. Ein `HM-1`, den
+  es dort längst gibt, erhöht die nächste freie Nummer nicht — der Sweep meldet
+  korrekt „keine neuen Funde", und der Test fällt um, obwohl die Mechanik
+  stimmt. Die Nummer kommt jetzt aus dem kopierten Beutebuch. Im Feld
+  (platformer, Beutebuch bis `HM-100`) sind daran zwei Gegenproben unmittelbar
+  nach einem Kit-Update rot geworden.
+
 ## [2.9.0] — 2026-08-14
 
 **Der Backlog ist abgearbeitet.** 26 offene Rückmeldungen aus dem Feld —

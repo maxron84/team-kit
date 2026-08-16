@@ -42,6 +42,20 @@ FUND_BLOCK = """
 """
 
 
+def _fund(feld):
+    """Fundblock, dessen Nummer ERST im Fixture eingesetzt wird (BL-62).
+
+    Fest verdrahtete Nummern machten diesen Test davon abhaengig, dass das
+    Beutebuch des ZIELPROJEKTS leer ist: `_fixture()` kopiert das echte
+    Beutebuch herein, und `redteam.sh` zaehlt neue Funde ueber `next-id`
+    vorher/nachher. Ein angehaengter `HM-1`, den es dort laengst gibt, erhoeht
+    die naechste freie Nummer nicht — der Sweep meldet korrekt "keine neuen
+    Funde", und der Test faellt um, obwohl die Mechanik stimmt. Im Feld
+    (platformer, Beutebuch bis HM-100) sind daran zwei Gegenproben nach einem
+    Kit-Update rot geworden."""
+    return FUND_BLOCK.replace("{nr}", "{" + feld + "}")
+
+
 def _konfig(schluessel):
     """Liest einen Wert aus der INSTALLIERTEN team.config.sh — die Ordnernamen
     bestimmt das Zielprojekt, nicht dieser Test."""
@@ -79,9 +93,16 @@ def _fixture(tmp_path, stub_body):
     ergebnis = json.dumps({
         "subtype": "success", "is_error": False, "total_cost_usd": 3.1418,
         "result": "fertig <promise>REDTEAM_SWEEP_COMPLETE</promise>"})
+    # BL-62: Die Fundnummern kommen aus dem kopierten Beutebuch, nicht aus
+    # dem Test — sonst haengt er an der Annahme "Zielprojekt hat keine Funde".
+    naechste = subprocess.run(
+        [sys.executable, "team/tools/beutebuch.py", "next-id"],
+        cwd=repo, capture_output=True, text=True).stdout.strip()
+    nr1 = int(naechste.split("-")[-1] or 1)
     stub.write_text("#!/usr/bin/env bash\n"
                     + stub_body.format(tests=_konfig("TEAM_TEST_ORDNER"),
-                                       beutebuch=beutebuch)
+                                       beutebuch=beutebuch,
+                                       nr1=nr1, nr2=nr1 + 1)
                     + f"\ncat <<'JSON'\n{ergebnis}\nJSON\n", encoding="utf-8")
     stub.chmod(0o755)
     return repo, bin_dir
@@ -121,14 +142,14 @@ def test_echter_fund_wird_gezaehlt(tmp_path):
     sonst haette dieser Fix den Normalfall stumm gemacht."""
     ergebnis, botschaft = _sweep(
         tmp_path,
-        "cat >> {beutebuch} <<'EOF'\n" + FUND_BLOCK.format(nr=1) + "\nEOF")
+        "cat >> {beutebuch} <<'EOF'\n" + _fund("nr1") + "\nEOF")
     assert ergebnis.returncode == 0, ergebnis.stderr
     assert "1 neuer Fund" in botschaft, f"Botschaft: {botschaft!r}"
     assert "Übergabe an Frank" in ergebnis.stdout
 
 
 def test_zwei_funde_werden_gezaehlt(tmp_path):
-    doppelt = FUND_BLOCK.format(nr=1) + FUND_BLOCK.format(nr=2)
+    doppelt = _fund("nr1") + _fund("nr2")
     ergebnis, botschaft = _sweep(
         tmp_path, "cat >> {beutebuch} <<'EOF'\n" + doppelt + "\nEOF")
     assert ergebnis.returncode == 0, ergebnis.stderr
