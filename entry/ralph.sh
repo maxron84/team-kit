@@ -135,6 +135,36 @@ Regeln:
         # von der Stufe SELBST geschriebenen Tests drei Aufbaufehler hatten.
         # Gleiches Modell, gleicher Prompt, gleiche Stufe: Der Neubau hätte sie
         # mit hoher Wahrscheinlichkeit erneut erzeugt.
+        #
+        # Vor der Meldung an den Menschen: die Prüfliste SELBST fahren
+        # (team_quittung_selbstpruefung). Sie ist neunmal im Feld mit demselben
+        # Ergebnis ausgegangen; besteht sie, quittiert der Loop selbst und
+        # läuft weiter, statt die Vollautomatik mitten in der Kaskade
+        # anzuhalten. Der gesprengte Cap schließt das aus — dort gilt
+        # unverändert "Stopp VOR dem Weiterschalten", die Automatik darf eine
+        # Budget-Entscheidung des Menschen nicht überschreiben.
+        if [ "$CAP_GESPRENGT" -eq 0 ] \
+            && team_result_meldet_erfolg "$TEAM_LAST_OUT" \
+            && team_quittung_selbstpruefung ralph "$STUFE"; then
+            # Committen, falls die Stufe ihre Arbeit uncommittet liegen ließ:
+            # Ohne Commit liefe die nächste Stufe auf einem schmutzigen Baum,
+            # und der Read-Only-Guard der Sweep-Phase sähe fremde Änderungen.
+            if [ -n "$(git status --porcelain)" ]; then
+                git add -A
+                git commit -q -m "${TEAM_FEAT_PRAEFIX:-feat}(stufe$STUFE): Arbeit der Stufe $STUFE, automatisch gesichert
+
+Die Sitzung endete als subtype=success ohne <promise> (BL-41, vierter
+Ausgang) und ohne eigenen Commit. Die Selbstpruefung des Loops hat
+Arbeit, Zusicherung (BL-135) und gruenen Smoke-Test bestaetigt und
+quittiert die Stufe deshalb selbst. Betreff bewusst generisch: Der
+Loop kennt den Inhalt der Stufe nicht - der Plan tut es."
+                echo "Ralph: Stufe $STUFE war uncommittet — automatisch gesichert."
+            fi
+            NEXT=$((STUFE + 1))
+            echo "$NEXT" > "$STATE_FILE"
+            echo "Ralph: Quittung fehlte (BL-41), Selbstprüfung bestanden — Stufe $STUFE abgeschlossen, weiter mit $NEXT."
+            continue
+        fi
         if team_quittung_fehlt_melden ralph "$TEAM_LAST_OUT" \
             "Stufe $STUFE hat kein <promise>STUFE_${STUFE}_COMPLETE</promise> gegeben." \
             "git log -1 && git status — hat Ralph committet?" \

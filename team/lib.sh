@@ -517,6 +517,99 @@ team_quittung_fehlt_melden() {
     return 0
 }
 
+# --- Der vierte Ausgang, selbst geprüft (BL-41 automatisiert) -----------------
+# team_quittung_selbstpruefung <rolle> <stufe>
+#
+# WARUM ES SIE GIBT: Die Erkennung oben ist richtig, aber sie hält den Lauf an
+# und legt einem Menschen eine Prüfliste vor, deren drei Schritte IMMER
+# dieselben sind. Im Feld (Projekt platformer) ist der Fall in neun Kaskaden
+# aufgetreten — K27, K28, K29, K33, K34, K35 (dort dreimal), K36, K37 — und
+# JEDES Mal lautete das Ergebnis "Arbeit fertig, nur die Quittung fehlt". Eine
+# Prüfliste, die neunmal dasselbe ergibt, ist eine Funktion, die noch niemand
+# geschrieben hat. Der Stopp kostet dabei mehr als nur Wartezeit: Er
+# unterbricht die Vollautomatik mitten in der Kaskade, und der Mensch muss den
+# Lauf von Hand fortsetzen.
+#
+# WAS SIE NICHT TUT: Sie quittiert NICHT auf Verdacht. Sie prüft genau das,
+# was der Mensch geprüft hätte — plus den Punkt, an dem die Prüfliste selbst
+# blind war (BL-135: Commit und grüner Baum unterscheiden eine HALB gebaute
+# Stufe nicht von einer fertigen; sie fragen nicht nach der Existenz der
+# Zusicherungen). Fällt auch nur eine Prüfung durch, gibt sie 1 zurück und der
+# Aufrufer meldet unverändert an den Menschen. Der teure Fehler wäre, eine
+# unfertige Stufe durchzuwinken — deshalb ist jede Prüfung ein UND, keine
+# Mehrheit, und im Zweifel gilt "nicht bestanden".
+#
+# Rückgabe 0 = alle Prüfungen bestanden, der Aufrufer darf selbst quittieren.
+#          1 = mindestens eine Prüfung offen (Grund steht auf stderr).
+#
+# Abschaltbar über TEAM_QUITTUNG_AUTO=0 (Default an). Aus bleibt die alte
+# Prüflisten-Meldung, unverändert.
+team_quittung_selbstpruefung() {
+    local rolle="$1" stufe="$2"
+    local test_ordner="${TEAM_TEST_ORDNER:-tests/}"
+    local smoke="${TEAM_SMOKE_TEST:-}"
+
+    if [ "${TEAM_QUITTUNG_AUTO:-1}" != "1" ]; then
+        return 1
+    fi
+
+    echo "[$rolle] Selbstprüfung des vierten Ausgangs (BL-41) für Stufe $stufe:" >&2
+
+    # (1) Hat die Sitzung überhaupt etwas hinterlassen? Ohne Arbeit gibt es
+    #     nichts zu quittieren — dann ist es kein "fertig ohne Quittung",
+    #     sondern eine Stufe, die nie angefangen hat.
+    local uncommittet betreff hat_arbeit=0
+    uncommittet="$(git status --porcelain 2>/dev/null)"
+    betreff="$(git log -1 --pretty=%s 2>/dev/null)"
+    [ -n "$uncommittet" ] && hat_arbeit=1
+    case "$betreff" in *"stufe$stufe"*|*"Stufe $stufe"*) hat_arbeit=1 ;; esac
+    if [ "$hat_arbeit" -eq 0 ]; then
+        echo "    ✗ Kein Commit für Stufe $stufe und keine uncommitteten Änderungen." >&2
+        echo "      Die Sitzung hat nichts hinterlassen — das ist NICHT der vierte Ausgang." >&2
+        return 1
+    fi
+    echo "    ✓ Arbeit vorhanden (uncommittet und/oder Commit der Stufe)." >&2
+
+    # (2) BL-135: Gibt es eine ZUSICHERUNG? Genau der Punkt, an dem die
+    #     Prüfliste für den Menschen blind war. Eine Stufe, die Produktivcode
+    #     baut und keine einzige Testdatei berührt, ist nach den
+    #     Verifikationsregeln dieses Projekts nicht fertig — egal wie grün der
+    #     Baum ist, denn der bestehende Bestand deckt das Neue nicht ab.
+    local dateien
+    if [ -n "$uncommittet" ]; then
+        dateien="$(printf '%s\n' "$uncommittet" | sed 's/^...//')"
+    else
+        dateien="$(git show --name-only --pretty=format: HEAD 2>/dev/null)"
+    fi
+    if ! printf '%s\n' "$dateien" | grep -q "^\"\?${test_ordner}"; then
+        echo "    ✗ Keine Datei unter ${test_ordner} berührt (BL-135)." >&2
+        echo "      Die Stufe hat keine nachweisbare Zusicherung — grüner Baum beweist hier" >&2
+        echo "      nichts, weil der Bestand das Neue nicht prüft. Das gehört an den Menschen." >&2
+        return 1
+    fi
+    echo "    ✓ Zusicherung vorhanden — mindestens eine Datei unter ${test_ordner} berührt (BL-135)." >&2
+
+    # (3) Ist der Baum grün? Der teuerste, aber unverzichtbare Schritt — er
+    #     ist derselbe Befehl, den die Prüfliste dem Menschen nennt.
+    if [ -z "$smoke" ]; then
+        echo "    ✗ Kein TEAM_SMOKE_TEST konfiguriert — ohne Verifikationsbefehl wird nicht" >&2
+        echo "      automatisch quittiert." >&2
+        return 1
+    fi
+    echo "    … Smoke-Test läuft ($smoke) …" >&2
+    if ! $smoke >/dev/null 2>&1; then
+        echo "    ✗ $smoke ist ROT." >&2
+        echo "      Das gehört an den Menschen: Erst prüfen, WO — sind ausschließlich die von" >&2
+        echo "      DIESER Stufe neu angelegten Testdateien rot, ist der Testaufbau der" >&2
+        echo "      wahrscheinlichere Schuldige als der Produktivcode (BL-61)." >&2
+        return 1
+    fi
+    echo "    ✓ $smoke ist grün." >&2
+
+    echo "[$rolle] Alle drei Prüfungen bestanden — Stufe $stufe wird automatisch quittiert." >&2
+    return 0
+}
+
 # --- Rollen-Briefings (Stufe 90) ----------------------------------------------
 # team_briefing <rolle>: gibt den Inhalt von team/prompts/rolle-<rolle>.md aus —
 # ersetzt die frühere Prompt-Zeile "Rolle siehe CLAUDE.md — lies sie zuerst.",

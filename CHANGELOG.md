@@ -2,6 +2,23 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **Der vierte Ausgang prüft sich selbst** (`BL-110`, schließt `BL-108` mit).
+  Fehlt die Quittung, während das Log sich selbst für erfolgreich erklärt
+  (`BL-41`), fährt `team_quittung_selbstpruefung` die Prüfliste jetzt selbst,
+  statt den Lauf anzuhalten und einen Menschen dieselben drei Schritte gehen zu
+  lassen. Im Feld ist der Fall in **neun** Kaskaden aufgetreten und **jedes
+  Mal** gleich ausgegangen: Arbeit fertig, nur die Quittung fehlt.
+  Drei Bedingungen im UND, im Zweifel „nicht bestanden": Arbeit vorhanden,
+  **mindestens eine Datei unter `TEAM_TEST_ORDNER` berührt** (die Blindstelle,
+  die Commit und grüner Baum nicht sehen — `BL-108`), Smoke-Test grün. Ein
+  gesprengter Soft-Cap schließt die Automatik aus; abschaltbar über
+  `TEAM_QUITTUNG_AUTO=0`. Uncommittete Arbeit wird dabei gesichert, sonst liefe
+  die nächste Stufe auf schmutzigem Baum.
+
 ## [2.9.0] — 2026-08-14
 
 **Der Backlog ist abgearbeitet.** 26 offene Rückmeldungen aus dem Feld —
