@@ -201,6 +201,15 @@ if [ "$UPDATE" -eq 1 ]; then
             case "$(basename "$f")" in
                 ralph.sh|frank.sh|axel.sh|harry.sh|marv.sh) ;;
                 vollautomatik.sh|halbautomatik.sh|team-status.sh|team-test.sh|team.config.sh) ;;
+                # Der Windows-Zweig: eigene Entrypoints des Kits, kein
+                # Projektcode. Ohne diese Zeilen meldete der Installer die
+                # eigenen Dateien als "ungeprueft in der Wurzel" — eine
+                # Warnung, die bei jedem Aufruf erscheint, erzieht zum
+                # Wegsehen (BL-14).
+                ralph.ps1|frank.ps1|axel.ps1|harry.ps1|marv.ps1) ;;
+                vollautomatik.ps1|halbautomatik.ps1|team-status.ps1|team-test.ps1|team.config.ps1) ;;
+                ralph.cmd|frank.cmd|axel.cmd|harry.cmd|marv.cmd) ;;
+                vollautomatik.cmd|halbautomatik.cmd|team-status.cmd|team-test.cmd) ;;
                 *.md|LICENSE*|Makefile|*.toml|*.cfg|*.ini|*.txt|*.json|*.yaml|*.yml) ;;
                 *.*) WURZEL_CODE="$WURZEL_CODE $(basename "$f")" ;;
             esac
@@ -275,10 +284,13 @@ PY
     }
     fuelle() { fuelle_abs "$ZIEL/$1"; }
 
-    # Entrypoints — team.config.sh ist AUSGENOMMEN: sie traegt die
-    # Projektwerte (Smoke-Test!) und ist damit Projektdatum, nicht Infrastruktur.
-    for f in "$KIT"/entry/*.sh; do
-        [ "$(basename "$f")" = "team.config.sh" ] && continue
+    # Entrypoints — team.config.sh UND team.config.ps1 sind AUSGENOMMEN: sie
+    # tragen die Projektwerte (Smoke-Test!) und sind damit Projektdatum, nicht
+    # Infrastruktur. Beide Zweige werden aktualisiert; ein Projekt soll nach
+    # einem Update nicht auf einer Haelfte veralten.
+    for f in "$KIT"/entry/*.sh "$KIT"/entry/*.ps1 "$KIT"/entry/*.cmd; do
+        [ -e "$f" ] || continue
+        case "$(basename "$f")" in team.config.sh|team.config.ps1) continue ;; esac
         kopiere "$f" "$(basename "$f")" 755
     done
     kopiere "$KIT/team/lib.sh"     "team/lib.sh"     755
@@ -324,7 +336,11 @@ PY
     fi
 
     kopf "Unangetastet geblieben (Projektdaten)"
-    for d in team.config.sh CLAUDE.md CHANGELOG.md .budget-ledger .ralph-state \
+    # team.config.ps1 steht hier aus demselben Grund wie team.config.sh: Sie
+    # traegt die Projektwerte (Smoke-Test!) und ist damit Projektdatum, nicht
+    # Infrastruktur. Beide werden vom Installer erzeugt, aber nur bei der
+    # ERSTINSTALLATION — ein Update darf sie so wenig anfassen wie das Ledger.
+    for d in team.config.sh team.config.ps1 CLAUDE.md CHANGELOG.md .budget-ledger .ralph-state \
              .gitignore "${PLAN_ORDNER}"; do
         [ -e "$ZIEL/$d" ] && echo "  · $d"
     done
@@ -488,6 +504,10 @@ kandidaten_ausserhalb() {
             docs|doku|data|assets|static|media|.*)                      continue ;;
             ralph.sh|frank.sh|harry.sh|marv.sh|axel.sh|install.sh)      continue ;;
             vollautomatik.sh|halbautomatik.sh|team-*.sh|team.config.sh) continue ;;
+            ralph.ps1|frank.ps1|harry.ps1|marv.ps1|axel.ps1)            continue ;;
+            vollautomatik.ps1|halbautomatik.ps1|team-*.ps1|team.config.ps1) continue ;;
+            ralph.cmd|frank.cmd|harry.cmd|marv.cmd|axel.cmd|team-*.cmd) continue ;;
+            vollautomatik.cmd|halbautomatik.cmd)                        continue ;;
             test_*|*_test.*|*.md|*.txt|*.json|*.toml|*.yaml|*.yml)      continue ;;
             *.cfg|*.ini|*.lock|LICENSE*|Makefile)                       continue ;;
         esac
@@ -709,6 +729,11 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{TECH_STACK}}", stack), ("{{DEPLOY}}", deploy),
              ("{{DEPLOY_AUSNAHMEN}}", ausn), ("{{DOMAENEN}}", domaenen),
              ("{{COMMIT_ENTSCHEID}}", commit),
+             # Nur in team.config.ps1: Unter Windows heisst der Interpreter je
+             # nach Installation python/py. Dieser Installer laeuft unter
+             # Linux, also steht hier python3; install.ps1 traegt ein, was es
+             # auf der Maschine gefunden hat.
+             ("{{PYTHON}}", "python3"),
              # BL-52/BL-51: leer ist der Normalfall — die Platzhalter stehen nur
              # in team.config.sh, damit eine leere Ersetzung nirgends Prosa
              # zerreisst.
@@ -722,7 +747,17 @@ PY
 
 # Entrypoints in die Repo-Wurzel — der Strippenzieher tippt sie direkt
 # (Ablage-Konvention aus dem Feld: Einstiegspunkte sichtbar oben).
-for f in "$KIT"/entry/*.sh; do
+# BEIDE Zweige werden installiert, auch wenn dieser Installer unter Linux
+# laeuft und den Windows-Teil hier niemand braucht. Der Grund ist die
+# Zusicherung, auf der der Windows-Zweig ruht: team.config.sh und
+# team.config.ps1 sind ZWEI GENERATE EINER QUELLE (denselben neun Antworten),
+# keine zwei gepflegten Dateien. Installierte nur install.ps1 den
+# PowerShell-Teil, haette ein auf Linux eingerichtetes Projekt unter Windows
+# keine Konfiguration — und jemand schriebe sie von Hand. Genau dort faengt
+# Drift an. Das Projekt ist damit von beiden Systemen aus bedienbar, ohne dass
+# irgendwer nachinstalliert.
+for f in "$KIT"/entry/*.sh "$KIT"/entry/*.ps1 "$KIT"/entry/*.cmd; do
+    [ -e "$f" ] || continue
     kopiere "$f" "$(basename "$f")" 755
 done
 # Alles Aufgerufene in den team/-Namensraum. Damit berührt das Kit die
@@ -754,7 +789,7 @@ gruen "  ✓ CLAUDE.md, CHANGELOG, Beutebuch (mit Vorlage-Block), Roadmap, Backl
 
 # Platzhalter füllen — auch in den Briefings: sie sind selbst Prompts und
 # nennen sonst die Pfade des Ursprungsprojekts (falsche Guard-Grenze!).
-for d in CLAUDE.md TEAM.md team.config.sh CHANGELOG.md \
+for d in CLAUDE.md TEAM.md team.config.sh team.config.ps1 CHANGELOG.md \
          "${PLAN_ORDNER}roadmap-skizzen.md" "${PLAN_ORDNER}backlog.md" \
          "${PLAN_ORDNER}beutebuch.md"; do
     fuelle "$d"

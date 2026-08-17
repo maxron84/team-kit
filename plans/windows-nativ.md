@@ -410,6 +410,55 @@ das ist der Zweck, nicht ein Mangel.
 `set -o pipefail`. Bewusst **nicht** in dieser Stufe gefixt: Stufe 1 sichert
 zu, den Bash-Zweig nicht anzutasten.
 
+### Stufe 2 — erledigt (2026-08-17)
+
+| Was | Wo | Stand |
+|---|---|---|
+| Installer | [`install.ps1`](../install.ps1) | **neu**, 640 Zeilen. Erstinstallation, `-Update`, `-Force`, Aufnahme-Interview, BL-51-Bestandsprüfung, BL-109-`.gitignore`-Abgleich, Selbsttest |
+| Vorflug-Prüfung | [`kit-einrichten.ps1`](../kit-einrichten.ps1) | **neu.** Fünf Abschnitte wie die Bash-Fassung — aber ohne `flock`-Abhaken und mit Zwei-Prozess-Sperrprobe |
+| Auth | [`scripts/team-auth-setup.ps1`](../scripts/team-auth-setup.ps1) | **neu.** `%APPDATA%\claude-team`, `Set-Acl` **mit Nachprüfung** statt wirkungslosem `chmod` |
+| Launcher | [`scripts/team-init.ps1`](../scripts/team-init.ps1) | **neu** (im Plan nicht aufgeführt, aber ohne ihn hat `-Verknuepfen` kein Ziel) |
+| Konfiguration | [`entry/team.config.ps1`](../entry/team.config.ps1) | **neu.** Vorlage mit denselben Platzhaltern; `Team-Wert` bildet Bashs `${VAR:-vorgabe}` ab |
+| Beide Zweige aus einer Quelle | [`install.sh`](../install.sh) | **geändert.** Kopiert jetzt `entry/*.sh`, `*.ps1` und `*.cmd` und füllt **beide** Konfigurationen |
+| Gleichstands-Nachweis | [`kit-test.sh`](../kit-test.sh) Schritt 10/10 | **neu** (war für Stufe 5 vorgesehen — vorgezogen, weil die Zusicherung sonst ungeprüft bliebe) |
+
+**Abnahme erfüllt, und zwar schärfer als geplant.** Der Plan verlangte „auf
+einer frischen W11-Maschine führt `kit-einrichten.ps1` zu einem installierten
+Projekt". Belegt ist mehr: **`install.sh` und `install.ps1` erzeugen aus
+denselben Antworten byte-identische Bäume** — 155 Dateien, `diff -r` ohne
+Ausgabe. Das ist der Unterschied zwischen „beide funktionieren" und „beide
+tun dasselbe".
+
+Weiter belegt (pwsh 7.4.6 unter Linux):
+
+- `install.ps1` frisch: 89 Dateien, in der Installation 369 passed, 0 failed —
+  dieselbe Zahl wie bei `install.sh`.
+- `install.ps1 -Update` gegen eine **mit `install.sh` erzeugte** Installation:
+  78 Infrastruktur-Dateien ersetzt, Ledger-Zeile, Kaskadenstand `7` und ein
+  von Hand eingetragener Smoke-Test **unverändert**. Die beiden Zweige können
+  einander also updaten, ohne Projektdaten zu verlieren.
+- `kit-einrichten.ps1 -NurPruefen`: alle fünf Abschnitte, Exit 0.
+- `kit-test.sh`: 10/10 grün — **mit** pwsh (Gleichstand geprüft) und **ohne**
+  pwsh (laut übersprungen, kein Fehler).
+
+**Was der Windows-Zweig hier besser macht als der Bash-Zweig:**
+
+| | Bash | PowerShell |
+|---|---|---|
+| Platzhalter füllen | eingebettetes `python3`-Here-Doc in `install.sh` | `.NET`-Bordmittel, kein Fremdkörper |
+| Sperre vor `--update` | `flock -n` (kooperativ) | `FileShare::None` (OS-durchgesetzt) |
+| Schutz des API-Keys | `chmod 600` | ACL **plus Nachprüfung** — `chmod` wäre hier wirkungslos und liefe ohne Fehler durch |
+| Sperrprobe in der Einrichtung | ein `flock -n` im eigenen Prozess | Zwei-Prozess-Gegenprobe |
+
+**Und was schlechter ist, ausdrücklich benannt:** Der Selbsttest von
+`install.ps1` kann die `.sh`-Entrypoints nicht syntaktisch prüfen — unter
+Windows liegt keine `bash`. Er sagt das in seiner Ausgabe, statt Vollzug zu
+melden.
+
+**Auf Windows unbelegt.** Alles oben ist gegen pwsh 7.4.6 **unter Linux**
+gefahren. `Get-CimInstance`, `Set-Acl`, die Benutzer-Umgebungsvariablen und
+das `.cmd`-Verhalten sind dort nicht prüfbar und bleiben offen.
+
 ### Torbedingung — weiterhin offen
 
 R1 ist unbeantwortet, bis `pruefe-windows.ps1 -MitEchtemAufruf` auf der

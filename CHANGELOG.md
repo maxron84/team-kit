@@ -6,6 +6,44 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **Der Bootstrap des Windows-Zweigs — und der Nachweis, dass beide Installer
+  dasselbe tun.** Neu sind [`install.ps1`](install.ps1),
+  [`kit-einrichten.ps1`](kit-einrichten.ps1),
+  [`scripts/team-auth-setup.ps1`](scripts/team-auth-setup.ps1),
+  [`scripts/team-init.ps1`](scripts/team-init.ps1) und die Konfigurationsvorlage
+  [`entry/team.config.ps1`](entry/team.config.ps1). Ohne sie ließe sich das Kit
+  auf einer Windows-Maschine ohne WSL gar nicht erst einrichten — deshalb steht
+  der Bootstrap **vor** dem Kern und nicht danach.
+  **Die Zusicherung ist nicht „beide funktionieren", sondern „beide tun
+  dasselbe":** `install.sh` und `install.ps1` erzeugen aus denselben neun
+  Antworten **byte-identische Bäume** (155 Dateien, `diff -r` ohne Ausgabe).
+  Festgenagelt in [`kit-test.sh`](kit-test.sh) als Schritt 10/10 — ein
+  Vergleich statt einer Liste von Einzelprüfungen, denn eine Liste prüft nur,
+  woran jemand gedacht hat. Fehlt `pwsh`, sagt der Schritt **laut**, dass die
+  halbe Zusicherung des Windows-Zweigs hier ungeprüft blieb; ein
+  übersprungener Nachweis, den niemand sieht, liest sich am Ende wie ein
+  bestandener.
+- **`team.config.sh` und `team.config.ps1` sind zwei Generate einer Quelle.**
+  Beide Installer schreiben **beide** Konfigurationen — auch `install.sh` unter
+  Linux, wo die PowerShell-Fassung niemand braucht. Der Grund ist die
+  Driftfreiheit: Schriebe nur `install.ps1` die `.ps1`-Fassung, hätte ein auf
+  Linux eingerichtetes Projekt unter Windows keine Konfiguration, und jemand
+  schriebe sie von Hand. Genau dort fängt Drift an. Belegt ist außerdem, dass
+  die Zweige einander **updaten** können: `install.ps1 -Update` gegen eine mit
+  `install.sh` erzeugte Installation ersetzte 78 Infrastruktur-Dateien und ließ
+  Ledger, Kaskadenstand und den von Hand eingetragenen Smoke-Test unberührt.
+- **Drei Stellen, an denen der Windows-Zweig strenger ist als der Bash-Zweig.**
+  Die Platzhalter-Ersetzung braucht kein eingebettetes `python3`-Here-Doc mehr,
+  sondern .NET-Bordmittel. Die Sperrprüfung vor einem Update ist eine vom
+  Betriebssystem **durchgesetzte** Sperre (`FileShare::None`) statt des
+  kooperativen `flock`, und `kit-einrichten.ps1` probt sie mit **zwei
+  Prozessen** statt mit einem. Und der API-Key wird nicht mit `chmod 600`
+  geschützt — das läuft unter Windows ohne Fehler durch und bewirkt **nichts**,
+  der Schlüssel läge danach lesbar da, mit einem grünen Haken daneben —,
+  sondern über eine ACL, die anschließend **nachgeprüft** wird.
+  Umgekehrt ausdrücklich benannt: Der Selbsttest von `install.ps1` kann die
+  `.sh`-Entrypoints nicht syntaktisch prüfen, weil unter Windows keine `bash`
+  vorliegt. Er sagt das, statt Vollzug zu melden.
 - **Die Doppelbahn: eine Testsuite, zwei Shells.** Das Kit bekommt einen
   nativen Windows-Zweig in PowerShell, während Bash die Linux-Implementierung
   bleibt ([`plans/windows-nativ.md`](plans/windows-nativ.md)). Der nahe

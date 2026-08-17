@@ -71,14 +71,14 @@ aufraeumen() {
 }
 trap aufraeumen EXIT
 
-kopf "1/9 — Wegwerf-Repo anlegen"
+kopf "1/10 — Wegwerf-Repo anlegen"
 git -C "$ZIEL" init -q
 # Lokale Identität, damit der Lauf auch ohne globale Git-Config committen kann.
 git -C "$ZIEL" config user.email "kit-test@localhost"
 git -C "$ZIEL" config user.name  "Kit-Selbsttest"
 gruen "  ✓ $ZIEL"
 
-kopf "2/9 — Kit installieren (nicht-interaktiv)"
+kopf "2/10 — Kit installieren (nicht-interaktiv)"
 # Ohne TEAM_INIT_*-Vorgaben: genau die Defaults, die ein Anwender bekäme.
 if ! bash "$KIT/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.log" 2>&1; then
     rot "  ✗ install.sh schlug fehl:"
@@ -87,7 +87,7 @@ if ! bash "$KIT/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.log" 2>
 fi
 gruen "  ✓ $(grep -oE 'Fertig — [0-9]+ Dateien geschrieben' "$ZIEL/.install.log" | head -1)"
 
-kopf "3/9 — Ungefüllte Platzhalter suchen"
+kopf "3/10 — Ungefüllte Platzhalter suchen"
 # Ein übrig gebliebenes {{...}} heißt: Der Installer kennt die Datei nicht oder
 # der Platzhalter wurde umbenannt. Beides fällt sonst erst im Feld auf, wo die
 # Briefings die Pfade des Ursprungsprojekts nennen würden — falsche Guard-Grenze.
@@ -100,7 +100,7 @@ if [ -n "$RESTE" ]; then
 fi
 gruen "  ✓ keine"
 
-kopf "4/9 — Regressionstests in der Installation (Auslieferungswerte)"
+kopf "4/10 — Regressionstests in der Installation (Auslieferungswerte)"
 # Vor dem Testlauf committen — dieselbe Reihenfolge, die TEAM.md dem Anwender
 # vorschreibt. Ein Test, der den Git-Zustand liest, sieht damit den echten.
 git -C "$ZIEL" add -A
@@ -139,7 +139,7 @@ fi
 # Caps ("lieber großzügig ansetzen"), Commit-Präfixe, mehrere Domänen. Pfade
 # und Ordner bleiben unangetastet: Die sind die Ablage, gegen die die Tests
 # gelten dürfen, nicht der Regler, an dem ein Projekt dreht.
-kopf "5/9 — Regressionstests unter angepasster team.config.sh (BL-58)"
+kopf "5/10 — Regressionstests unter angepasster team.config.sh (BL-58)"
 sed -i \
     -e 's|^TEAM_ROLE_BUDGET_USD=.*|TEAM_ROLE_BUDGET_USD="${TEAM_ROLE_BUDGET_USD:-10}"|' \
     -e 's|^TEAM_ROLE_HARDCAP_USD=.*|TEAM_ROLE_HARDCAP_USD="${TEAM_ROLE_HARDCAP_USD:-20}"|' \
@@ -181,7 +181,7 @@ fi
 # einmaliges Handprotokoll: Wir tun so, als sei das Projekt in Betrieb
 # (Ledger, Kaskadenstand, Beutebuch-Fund, eigener Smoke-Test), fahren das
 # Update und pruefen, dass davon NICHTS angefasst wurde.
-kopf "6/9 — Update-Pfad schuetzt Projektdaten"
+kopf "6/10 — Update-Pfad schuetzt Projektdaten"
 echo '2026-08-01 | 1 | 9.4204 | abo | produkt | roles | Lauf' >> "$ZIEL/.budget-ledger"
 echo '### HM-1 — echter Fund' >> "$ZIEL/plans/beutebuch.md"
 echo '5' > "$ZIEL/.ralph-state"
@@ -312,7 +312,7 @@ esac
 # BL-51/BL-52: Die beiden Bestandsprojekt-Befunde. Der Installer ist die einzige
 # Stelle, an der sie auffallen koennen — in der Installation liegt er nicht mehr,
 # also gehoert der Nachweis hierher und nicht in team/tests/.
-kopf "7/9 — Einzug in eine gewachsene Codebasis (BL-51, BL-52)"
+kopf "7/10 — Einzug in eine gewachsene Codebasis (BL-51, BL-52)"
 BESTAND_REPO="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-bestand.XXXXXX")"
 bestand_aufraeumen() { [ "$BEHALTEN" -eq 1 ] || rm -rf "$BESTAND_REPO"; }
 trap 'aufraeumen; bestand_aufraeumen' EXIT
@@ -393,7 +393,7 @@ b_pruefe "im leeren Repo schweigt auch das Update" \
     "$(grep -c 'Ungeprueft in der Wurzel' "$ZIEL/.update.log")" "0"
 [ "$BESTAND_FEHLER" -eq 0 ] || exit 1
 
-kopf "8/9 — Regel-Inventar gegen die Regeldatei (A.10, BL-56)"
+kopf "8/10 — Regel-Inventar gegen die Regeldatei (A.10, BL-56)"
 # Der Sicherheitsgurt vor dem Umbau der Regeldatei: Jedes NORM-Zitat muss
 # woertlich in bootstrap/CLAUDE.md.vorlage stehen, jeder Abschnitt im Inventar
 # vertreten sein. Prueft die VORLAGE, nicht die Installation — ein Feldprojekt
@@ -404,7 +404,7 @@ if ! python3 "$KIT/kit-regelinventar.py"; then
     exit 1
 fi
 
-kopf "9/9 — Einrichtungsroutine (Klon → Maschine → Installer)"
+kopf "9/10 — Einrichtungsroutine (Klon → Maschine → Installer)"
 # kit-einrichten.sh steht VOR install.sh: Wer es kaputt ausliefert, blockiert
 # den Einstieg, noch bevor die Stufen 1–8 ueberhaupt zum Tragen kommen. Der
 # Weg wird deshalb hier durchgespielt — ohne Agenten-CLI und ohne Schreiben
@@ -477,6 +477,78 @@ e_pruefe "README verweist nicht mehr auf den Pfad der Autorenmaschine" \
     "$(grep -c 'claude/scripts/team-auth-setup.sh' "$KIT/README.md")" "0"
 
 [ "$E_FEHLER" -eq 0 ] || exit 1
+
+kopf "10/10 — Windows-Zweig: Gleichstand der beiden Installer"
+# Die Zusicherung, auf der der ganze Windows-Zweig ruht: install.sh und
+# install.ps1 erzeugen aus DENSELBEN Antworten DASSELBE Projekt. Nicht
+# "aehnlich", nicht "funktional gleichwertig" — Byte fuer Byte dasselbe.
+#
+# Warum das hier steht und nicht in team/tests/: Die Installer liegen nicht in
+# der Installation. Dieselbe Ueberlegung wie bei BL-109.
+#
+# Warum ein Vergleich und keine Liste von Einzelpruefungen: Eine Liste prueft,
+# woran jemand gedacht hat. Der Vergleich prueft auch, woran niemand gedacht
+# hat — er faellt bei jeder Datei, die nur einer der beiden schreibt.
+W_FEHLER=0
+w_pruefe() {  # w_pruefe <beschreibung> <ist> <soll>
+    if [ "$2" = "$3" ]; then gruen "  ✓ $1"
+    else rot "  ✗ $1 — erwartet '$3', ist '$2'"; W_FEHLER=1; fi
+}
+
+# a) CRLF fuer Batch-Dateien. Ohne diese Regel verhalten sich .cmd-Dateien
+#    sporadisch falsch — ein Fehlerbild, das nach einem Logikfehler aussieht.
+w_pruefe ".gitattributes erzwingt CRLF fuer *.cmd" \
+    "$(grep -c '^\*\.cmd text eol=crlf' "$KIT/.gitattributes")" "1"
+
+# b) Ausgeliefert werden muss der ganze Bootstrap, nicht die Haelfte.
+for datei in install.ps1 kit-einrichten.ps1 entry/team.config.ps1 \
+             scripts/team-auth-setup.ps1 scripts/team-init.ps1 pruefe-windows.ps1; do
+    w_pruefe "ausgeliefert: $datei" "$([ -f "$KIT/$datei" ] && echo ja || echo nein)" "ja"
+done
+
+if ! command -v pwsh >/dev/null 2>&1; then
+    # KEIN Fehler, aber auch kein Schweigen: Der Gleichstand ist auf dieser
+    # Maschine UNGEPRUEFT, und das gehoert in die Ausgabe. Ein uebersprungener
+    # Nachweis, den niemand sieht, liest sich am Ende wie ein bestandener.
+    gelb "  ! pwsh fehlt — der Gleichstand der Installer ist hier UNGEPRUEFT."
+    echo  "      Das ist die halbe Zusicherung des Windows-Zweigs. Nachholen auf"
+    echo  "      einer Maschine mit PowerShell 7:  ./kit-test.sh"
+else
+    gruen "  ✓ pwsh $(pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()' 2>/dev/null)"
+    # c) Syntax aller PowerShell-Dateien — das Gegenstueck zu `bash -n`.
+    W_SYNTAX="$(pwsh -NoProfile -Command "
+        \$schlecht = @()
+        foreach (\$f in (Get-ChildItem -Path '$KIT' -Filter *.ps1 -Recurse -File)) {
+            \$e = \$null
+            [System.Management.Automation.Language.Parser]::ParseFile(\$f.FullName, [ref]\$null, [ref]\$e) | Out-Null
+            if (\$e) { \$schlecht += \$f.Name }
+        }
+        \$schlecht -join ' '" 2>&1)"
+    w_pruefe "Syntax aller *.ps1" "${W_SYNTAX:-sauber}" "sauber"
+
+    # d) Der Gleichstand selbst.
+    W_A="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-gleich-a-XXXXXX")"
+    W_B="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-gleich-b-XXXXXX")"
+    # Gleicher Basename in beiden Baeumen: Der Projektname leitet sich aus dem
+    # Ordner ab und wuerde sonst als Unterschied durchschlagen, der keiner ist.
+    mkdir -p "$W_A/projekt" "$W_B/projekt"
+    for d in "$W_A/projekt" "$W_B/projekt"; do
+        git -C "$d" init -q .
+        git -C "$d" config user.email t@l
+        git -C "$d" config user.name T
+    done
+    bash "$KIT/install.sh" "$W_A/projekt" --nicht-interaktiv >/dev/null 2>&1 || true
+    pwsh -NoProfile -File "$KIT/install.ps1" "$W_B/projekt" -NichtInteraktiv >/dev/null 2>&1 || true
+    # __pycache__ ist ein Artefakt der Testlaeufe beider Installer, kein Erzeugnis.
+    find "$W_A/projekt" "$W_B/projekt" -name __pycache__ -type d -exec rm -rf {} + 2>/dev/null || true
+    W_DIFF="$(diff -r --exclude=.git "$W_A/projekt" "$W_B/projekt" 2>&1 | head -20)"
+    w_pruefe "install.sh und install.ps1 erzeugen denselben Baum" "${W_DIFF:-identisch}" "identisch"
+    w_pruefe "beide schreiben team.config.sh UND team.config.ps1" \
+        "$([ -f "$W_B/projekt/team.config.sh" ] && [ -f "$W_A/projekt/team.config.ps1" ] && echo ja || echo nein)" "ja"
+    rm -rf "$W_A" "$W_B"
+fi
+
+[ "$W_FEHLER" -eq 0 ] || exit 1
 
 gruen "
 ✓ Kit-Selbstverifikation grün."
