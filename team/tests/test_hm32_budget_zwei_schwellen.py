@@ -22,24 +22,25 @@ import re
 import subprocess
 from pathlib import Path
 
+from conftest import RufCode, Variable
+
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 TEAM_LIB = REPO_ROOT / "team" / "lib.sh"
 
 
-def _budget_check(kosten, soft, hard=None):
-    """Ruft team_budget_check auf und gibt (returncode, stdout) zurück."""
-    args = f'"{kosten}" "{soft}" "test"'
-    if hard is not None:
-        args += f' "{hard}"'
-    cmd = f'source "{TEAM_LIB}"; team_budget_check {args}'
-    result = subprocess.run(
-        ["bash", "-c", cmd], cwd=REPO_ROOT,
-        capture_output=True, text=True,
-    )
-    return result.returncode, result.stdout
+def _budget_check(schale, kosten, soft, hard=None):
+    """Ruft team_budget_check auf und gibt (returncode, stdout) zurück.
+
+    RufCode statt Ruf: Die Funktion staffelt 0/1/2/3 (ok, Warnschwelle,
+    Soft-Cap, Hard-Cap). Ein auf 0/1 eingedampfter Code waere hier still
+    falsch — Soft- und Hard-Cap saehen gleich aus.
+    """
+    args = [kosten, soft, "test"] + ([hard] if hard is not None else [])
+    ergebnis = schale.lauf(RufCode("team_budget_check", *args), cwd=REPO_ROOT)
+    return ergebnis.returncode, ergebnis.stdout
 
 
-def _lib_default(name):
+def _lib_default(schale, name):
     """Liest den BIBLIOTHEKS-Default aus team/lib.sh — die Zeile
     `NAME="${NAME:-wert}"` statt des aufgeloesten Wertes.
 
@@ -56,30 +57,30 @@ def _lib_default(name):
     behauptete. Die Zusicherung selbst bleibt richtig und wird hier
     unveraendert weitergefuehrt; nur die Messstelle war die falsche.
     """
-    quelle = TEAM_LIB.read_text(encoding="utf-8")
-    treffer = re.search(rf'^{name}="\$\{{{name}:-([^}}]*)\}}"', quelle, re.M)
-    assert treffer, f"{name} nicht als Default-Zeile in team/lib.sh gefunden"
+    quelle = schale.kit_lib.read_text(encoding="utf-8")
+    treffer = re.search(schale.default_muster(name), quelle, re.M)
+    assert treffer, \
+        f"{name} nicht als Default-Zeile in {schale.lib_name} gefunden"
     return treffer.group(1)
 
 
 # --- Zentrale Defaults --------------------------------------------------------
 
-def test_zentrale_defaults():
-    assert _lib_default("TEAM_ROLE_BUDGET_USD") == "5", "Soft-Cap-Default muss 5 sein"
-    assert _lib_default("TEAM_ROLE_HARDCAP_USD") == "10", "Hard-Cap-Default muss 10 sein"
+def test_zentrale_defaults(schale):
+    assert _lib_default(schale, "TEAM_ROLE_BUDGET_USD") == "5", "Soft-Cap-Default muss 5 sein"
+    assert _lib_default(schale, "TEAM_ROLE_HARDCAP_USD") == "10", "Hard-Cap-Default muss 10 sein"
 
 
-def test_projektwert_haelt_das_hard_groesser_soft_verhaeltnis():
+def test_projektwert_haelt_das_hard_groesser_soft_verhaeltnis(schale):
     """Der Hard-Cap MUSS ueber dem Soft-Cap liegen — sonst prueft
     team_budget_check ihn nie (`hard > soft`) und Frank/Axel verlieren ihren
     harten Abbruch still. Diese Pruefung gilt fuer die AUFGELOESTEN Werte,
     also inklusive der Projektanpassung in team.config.sh — anders als
     test_zentrale_defaults, das den Bibliotheks-Default prueft."""
-    cmd = ('source "%s"; printf "%%s %%s" "$TEAM_ROLE_BUDGET_USD" '
-           '"$TEAM_ROLE_HARDCAP_USD"' % TEAM_LIB)
-    result = subprocess.run(["bash", "-c", cmd], cwd=REPO_ROOT,
-                            capture_output=True, text=True)
-    soft, hard = (float(v) for v in result.stdout.split())
+    ergebnis = schale.lauf(
+        Variable("TEAM_ROLE_BUDGET_USD", "TEAM_ROLE_HARDCAP_USD"),
+        cwd=REPO_ROOT)
+    soft, hard = (float(v) for v in ergebnis.stdout.split())
     assert hard > soft, (
         f"Hard-Cap {hard} muss groesser als Soft-Cap {soft} sein — bei "
         f"hard == soft ist der harte Abbruch fuer Frank/Axel wirkungslos")
@@ -87,48 +88,48 @@ def test_projektwert_haelt_das_hard_groesser_soft_verhaeltnis():
 
 # --- Zwei-Zustand-Modus (ohne hard-limit): Ralph/Harry/Marv -------------------
 
-def test_ok_unter_warnschwelle():
-    rc, _ = _budget_check("2.00", "5")
+def test_ok_unter_warnschwelle(schale):
+    rc, _ = _budget_check(schale, "2.00", "5")
     assert rc == 0
 
 
-def test_warnschwelle_80_prozent():
-    rc, out = _budget_check("4.00", "5")  # 4 >= 0.8*5
+def test_warnschwelle_80_prozent(schale):
+    rc, out = _budget_check(schale, "4.00", "5")  # 4 >= 0.8*5
     assert rc == 1
     assert "WARNSCHWELLE" in out
 
 
-def test_soft_ueberschritten_ohne_hard_ist_rc2():
+def test_soft_ueberschritten_ohne_hard_ist_rc2(schale):
     # Ohne hard-limit ist RC 2 der "harte" Fall für Ralph/Harry/Marv.
-    rc, out = _budget_check("5.50", "5")
+    rc, out = _budget_check(schale, "5.50", "5")
     assert rc == 2
     assert "SOFT-CAP" in out
 
 
 # --- Drei-Zustand-Modus (mit hard-limit): Frank/Axel --------------------------
 
-def test_soft_ueberschritten_mit_hard_bleibt_rc2():
+def test_soft_ueberschritten_mit_hard_bleibt_rc2(schale):
     # HM-32-Fall: 5,50 USD zwischen Soft (5) und Hard (10) → nur Hinweis (RC 2),
     # KEIN Abbruch. Genau das, was den 1,44-USD-Fehlversuch verhindert hätte.
-    rc, out = _budget_check("5.50", "5", "10")
+    rc, out = _budget_check(schale, "5.50", "5", "10")
     assert rc == 2
     assert "SOFT-CAP" in out
 
 
-def test_der_reale_hm32_fall_unter_neuem_soft_ist_ok():
+def test_der_reale_hm32_fall_unter_neuem_soft_ist_ok(schale):
     # Der konkrete Auslöser: 1,44 USD ist unter dem neuen Soft-Cap 5 → RC 0.
-    rc, _ = _budget_check("1.44", "5", "10")
+    rc, _ = _budget_check(schale, "1.44", "5", "10")
     assert rc == 0
 
 
-def test_hard_ueberschritten_ist_rc3():
-    rc, out = _budget_check("10.50", "5", "10")
+def test_hard_ueberschritten_ist_rc3(schale):
+    rc, out = _budget_check(schale, "10.50", "5", "10")
     assert rc == 3
     assert "HARD-CAP" in out
 
 
-def test_genau_am_hard_cap_ist_rc3():
-    rc, _ = _budget_check("10.00", "5", "10")
+def test_genau_am_hard_cap_ist_rc3(schale):
+    rc, _ = _budget_check(schale, "10.00", "5", "10")
     assert rc == 3
 
 

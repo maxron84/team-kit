@@ -22,6 +22,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from conftest import Ausgabe, Ruf, Schale
+
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 TEAM_LIB = REPO_ROOT / "team" / "lib.sh"
 
@@ -35,46 +37,36 @@ def _write_log(payload):
     return Path(fh.name)
 
 
-def _run(func, logpath, env_overrides=None):
-    env = {"HOME": str(Path.home()), "PATH": "/usr/bin:/bin"}
-    if env_overrides:
-        env.update(env_overrides)
-    return subprocess.run(
-        ["bash", "-c", f'source "{TEAM_LIB}"; {func} "{logpath}"'],
-        cwd=REPO_ROOT,
-        env=env,
-        capture_output=True,
-        text=True,
-    )
+def _is_429(schale, logpath):
+    """Urteil ohne Nutzlast — nur der Exit-Code zaehlt."""
+    return schale.lauf(Ruf("team_result_is_429", logpath),
+                       cwd=REPO_ROOT).returncode == 0
 
 
-def _is_429(logpath):
-    return _run("team_result_is_429", logpath).returncode == 0
-
-
-def _reset_epoch(logpath):
-    r = _run("team_429_reset_epoch", logpath)
+def _reset_epoch(schale, logpath):
+    """Nutzlast auf stdout (die Epoch) plus Exit-Code."""
+    r = schale.lauf(Ausgabe("team_429_reset_epoch", logpath), cwd=REPO_ROOT)
     return r.returncode, r.stdout.strip()
 
 
-def test_volle_stunde_wird_als_429_erkannt():
+def test_volle_stunde_wird_als_429_erkannt(schale):
     p = _write_log(
         {"result": "You've hit your session limit · resets 3pm (Europe/Berlin)"}
     )
     try:
-        assert _is_429(p), (
+        assert _is_429(schale, p), (
             "'resets 3pm' (volle Stunde ohne :MM) muss als 429 erkannt werden (BL-32)"
         )
     finally:
         p.unlink()
 
 
-def test_volle_stunde_reset_epoch_parst_und_ist_15_uhr():
+def test_volle_stunde_reset_epoch_parst_und_ist_15_uhr(schale):
     p = _write_log(
         {"result": "You've hit your session limit · resets 3pm (Europe/Berlin)"}
     )
     try:
-        rc, out = _reset_epoch(p)
+        rc, out = _reset_epoch(schale, p)
         assert rc == 0 and out.isdigit(), (
             "team_429_reset_epoch muss 'resets 3pm' parsen (Epoch ausgeben), "
             "nicht mit 'Reset unbekannt' scheitern (BL-32)"
@@ -98,13 +90,13 @@ def test_volle_stunde_reset_epoch_parst_und_ist_15_uhr():
         p.unlink()
 
 
-def test_mit_minuten_weiter_korrekt():
+def test_mit_minuten_weiter_korrekt(schale):
     p = _write_log(
         {"result": "You've hit your session limit · resets 3:30pm (Europe/Berlin)"}
     )
     try:
-        assert _is_429(p), "'resets 3:30pm' (mit Minuten) muss weiter als 429 gelten"
-        rc, out = _reset_epoch(p)
+        assert _is_429(schale, p), "'resets 3:30pm' (mit Minuten) muss weiter als 429 gelten"
+        rc, out = _reset_epoch(schale, p)
         assert rc == 0 and out.isdigit(), "'resets 3:30pm' muss weiter parsen"
         check = subprocess.run(
             [
@@ -122,19 +114,19 @@ def test_mit_minuten_weiter_korrekt():
         p.unlink()
 
 
-def test_api_error_status_feld_erkannt():
+def test_api_error_status_feld_erkannt(schale):
     p = _write_log(
         {"api_error_status": 429, "result": "irgendein anderer text ohne muster"}
     )
     try:
-        assert _is_429(p), (
+        assert _is_429(schale, p), (
             "das starke Feld api_error_status==429 muss unabhängig vom Text greifen"
         )
     finally:
         p.unlink()
 
 
-def test_fliesstext_zitat_bleibt_negativ():
+def test_fliesstext_zitat_bleibt_negativ(schale):
     # HM-21-Schutz: ein bloßes Zitat der CLI-Meldung MITTEN in längerem Text
     # (z. B. Doku-/Beutebuch-Zitat) darf NICHT als echtes 429 durchgehen.
     p = _write_log(
@@ -144,7 +136,7 @@ def test_fliesstext_zitat_bleibt_negativ():
         }
     )
     try:
-        assert not _is_429(p), (
+        assert not _is_429(schale, p), (
             "ein eingebettetes Zitat (Fließtext drumherum) darf NICHT als 429 "
             "gelten — re.fullmatch-Schutz aus HM-21 muss erhalten bleiben"
         )
@@ -157,7 +149,7 @@ if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):
             try:
-                fn()
+                fn(Schale("bash"))
                 print(f"OK   {name}")
             except AssertionError as e:
                 failures.append(name)

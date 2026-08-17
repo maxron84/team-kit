@@ -25,25 +25,29 @@ lokaler Fix ueber 12,00 USD verloren ging). Dieser Test ist die Gegenprobe
 dazu — er faellt, sobald die Auflage aus dem Kit verschwindet.
 """
 
-import subprocess
 from pathlib import Path
 
 import pytest
+
+from conftest import Variable
 
 WURZEL = Path(__file__).resolve().parents[2]
 LIB = WURZEL / "team" / "lib.sh"
 
 
-def _smoke_zeile(smoke_test="./smoke.sh"):
-    """Wertet lib.sh aus wie eine Rolle und liefert die fertige SMOKE_ZEILE."""
-    if not LIB.is_file():
-        pytest.skip(f"team/lib.sh nicht gefunden unter {LIB}")
-    fertig = subprocess.run(
-        ["bash", "-c", f'source "{LIB}" 2>/dev/null; printf "%s" "$SMOKE_ZEILE"'],
-        capture_output=True, text=True,
-        env={"PATH": "/usr/bin:/bin", "TEAM_SMOKE_TEST": smoke_test},
-    )
-    assert fertig.returncode == 0, f"lib.sh nicht sourcebar: {fertig.stderr}"
+def _smoke_zeile(schale, smoke_test="./smoke.sh"):
+    """Wertet die Bibliothek aus wie eine Rolle und liefert die SMOKE_ZEILE.
+
+    Die Warnung ueber die fehlende team.config.sh (im Kit-Repo erwartet) geht
+    nach stderr und stoert die Auswertung nicht mehr — frueher musste sie mit
+    `2>/dev/null` weggeworfen werden, was auch echte Fehler verschluckt haette.
+    """
+    if not schale.kit_lib.is_file():
+        pytest.skip(f"{schale.lib_name} nicht gefunden unter {schale.kit_lib}")
+    fertig = schale.lauf(Variable("SMOKE_ZEILE"), cwd=WURZEL,
+                         env={"TEAM_SMOKE_TEST": smoke_test})
+    assert fertig.returncode == 0, \
+        f"{schale.lib_name} nicht ladbar: {fertig.stderr}"
     return fertig.stdout
 
 
@@ -56,8 +60,8 @@ def _smoke_zeile(smoke_test="./smoke.sh"):
     ("Wakeup", "die Variante aus K28/133 - Rueckfallebene, die auch nie feuert"),
     ("headless", "die Begruendung; ohne sie liest sich die Regel als willkuerlich"),
 ])
-def test_smoke_zeile_traegt_die_notbremse(brocken, warum):
-    zeile = _smoke_zeile()
+def test_smoke_zeile_traegt_die_notbremse(brocken, warum, schale):
+    zeile = _smoke_zeile(schale)
     assert brocken in zeile, (
         f"'{brocken}' fehlt in SMOKE_ZEILE ({warum}).\n"
         f"Ist:\n{zeile}")

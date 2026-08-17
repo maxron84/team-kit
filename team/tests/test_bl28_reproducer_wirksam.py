@@ -30,6 +30,8 @@ from pathlib import Path
 
 import pytest
 
+from conftest import Ruf
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TEAM_LIB = REPO_ROOT / "team" / "lib.sh"
 BEUTEBUCH_PY = REPO_ROOT / "team" / "tools" / "beutebuch.py"
@@ -131,50 +133,50 @@ def test_reproducer_verb_liefert_genau_den_reservierten_pfad(tmp_path):
         "nicht die Produktivdatei, sondern die reservierte Testdatei"
 
 
-def _lib_repo(tmp_path):
+def _lib_repo(tmp_path, schale):
     repo = tmp_path / "repo"
     (repo / "team" / "tools").mkdir(parents=True)
     (repo / "tests").mkdir()
     (repo / "plans").mkdir()
-    shutil.copy(TEAM_LIB, repo / "team" / "lib.sh")
+    schale.lib_kopieren(repo)
     shutil.copy(BEUTEBUCH_PY, repo / "team" / "tools" / "beutebuch.py")
-    (repo / "team.config.sh").write_text(
-        'TEAM_BEUTEBUCH_TOOL="python3 team/tools/beutebuch.py"\n'
-        'TEAM_KOSTEN_TOOL="python3 team/tools/kosten.py"\n'
-        'TEAM_DOMAENEN="produkt"\nexport TEAM_DOMAENEN\n', encoding="utf-8")
+    schale.config_schreiben(repo, {
+        "TEAM_BEUTEBUCH_TOOL": "python3 team/tools/beutebuch.py",
+        "TEAM_KOSTEN_TOOL": "python3 team/tools/kosten.py",
+        "TEAM_DOMAENEN": "produkt",
+    })
     (repo / "plans" / "beutebuch.md").write_text(
         "# Beutebuch\n\n" + VOLLSTAENDIG, encoding="utf-8")
     return repo
 
 
-def _reproducer_liegt_vor(repo, hm="HM-30"):
-    return subprocess.run(
-        ["bash", "-c",
-         f'source ./team/lib.sh; team_reproducer_liegt_vor {hm}'],
-        cwd=repo, capture_output=True, text=True).returncode
+def _reproducer_liegt_vor(schale, repo, hm="HM-30"):
+    """Nur der Exit-Code zaehlt — der Anker meldet nichts, er urteilt."""
+    return schale.lauf(Ruf("team_reproducer_liegt_vor", hm), cwd=repo,
+                       lib=repo / "team" / schale.lib_name).returncode
 
 
-def test_anker_faellt_wenn_die_reservierte_datei_fehlt(tmp_path):
+def test_anker_faellt_wenn_die_reservierte_datei_fehlt(tmp_path, schale):
     """Der Feldfall: Der Fix beruehrte Produktivdatei und CHANGELOG, die
     reservierte Testdatei entstand nie."""
-    repo = _lib_repo(tmp_path)
-    assert _reproducer_liegt_vor(repo) == 1
+    repo = _lib_repo(tmp_path, schale)
+    assert _reproducer_liegt_vor(schale, repo) == 1
 
 
-def test_anker_besteht_wenn_sie_angelegt_wurde(tmp_path):
-    repo = _lib_repo(tmp_path)
+def test_anker_besteht_wenn_sie_angelegt_wurde(tmp_path, schale):
+    repo = _lib_repo(tmp_path, schale)
     (repo / "tests" / "test_hm30_parser.py").write_text("def test_x(): pass\n")
-    assert _reproducer_liegt_vor(repo) == 0
+    assert _reproducer_liegt_vor(schale, repo) == 0
 
 
-def test_fund_ohne_reproducer_zeile_blockiert_nicht(tmp_path):
+def test_fund_ohne_reproducer_zeile_blockiert_nicht(tmp_path, schale):
     """Kein falscher Blocker: Ohne Zeile ist der Lint zustaendig (vor dem
     Lauf), nicht dieser Anker (nach dem Lauf)."""
-    repo = _lib_repo(tmp_path)
+    repo = _lib_repo(tmp_path, schale)
     (repo / "plans" / "beutebuch.md").write_text(
         "# Beutebuch\n\n### HM-40 — X\n- **Status**: an Frank übergeben\n"
         "- **Fundstelle**: `src/a.py`\n", encoding="utf-8")
-    assert _reproducer_liegt_vor(repo, "HM-40") == 0
+    assert _reproducer_liegt_vor(schale, repo, "HM-40") == 0
 
 
 # --- BL-22: die ausgelieferte Regel -----------------------------------------

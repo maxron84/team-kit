@@ -351,17 +351,67 @@ eigenständiges Artefakt und liegt bereit, sobald der Zugriff besteht.
 
 ---
 
-## 9. Offene Entscheide
+## 9. Entschiedenes
 
-1. **Was passiert bei `nur-bash`-Markierungen (R4)?** Der Plan sieht vor, jede
-   in den Backlog zu schreiben. Ab welcher Zahl gilt der Windows-Zweig als
-   *nicht* gleichwertig, und was steht dann in der Doku?
-2. **PowerShell 5.1 oder 7?** Der Plan geht von **pwsh 7** aus (`ConvertFrom-Json`
-   ist dort verlässlicher, `Set-Acl` und `FileStream` funktionieren in beiden).
-   5.1 ist auf W11 vorinstalliert, 7 muss nachinstalliert werden — ein Schritt
-   mehr in `kit-einrichten.ps1`, dafür deutlich weniger Eigenheiten. Zu
-   bestätigen.
-3. **Reihenfolge Stufe 2 vs. 3.** Der Plan zieht den Bootstrap vor, weil man
+1. **Gleichwertigkeit wird gemessen, nicht geschwellt.** *(entschieden
+   2026-08-17)* Eine Zahl wie „ab fünf Markierungen gilt der Zweig als nicht
+   gleichwertig" wäre willkürlich und würde sofort verhandelt. Stattdessen
+   berichtet **jeder** Testlauf die **Doppelbahn-Quote**: wie viele Tests auf
+   beiden Bahnen liefen, wie viele die pwsh-Bahn übersprangen und wie viele
+   bewusst mit `@pytest.mark.nur_bash` geführt werden. Wer einen Test nur für
+   eine Bahn führt, muss den Marker setzen und begründen — und die Markierung
+   taucht danach in jedem Lauf auf, statt still zu bleiben. Gleichwertigkeit
+   lässt sich nicht zusichern, ohne sie zu messen; die Quote ist die Zusage in
+   prüfbarer Form. Jede Markierung gehört zusätzlich in den Backlog.
+2. **pwsh 7.** *(entschieden 2026-08-17)* Zielsystem ist eine **Windows 11
+   Enterprise**-VM; gefahren wird die jeweils neueste Fassung. W11 bringt 5.1
+   mit, 7 wird **daneben** installiert (nicht darüber) — ein Schritt mehr in
+   `kit-einrichten.ps1`, dafür `ConvertFrom-Json` ohne Eigenheiten und
+   `Set-StrictMode -Version Latest` als brauchbares Gegenstück zu `set -u`.
+   `pruefe-windows.ps1` meldet eine ältere Fassung als **Fehler**, nicht als
+   Warnung.
+
+## 10. Noch offen
+
+1. **Reihenfolge Stufe 2 vs. 3.** Der Plan zieht den Bootstrap vor, weil man
    sonst nichts installieren kann. Alternative: Kern zuerst und in Stufe 2
    manuell installieren, um früher zu wissen, ob R1 im echten Betrieb hält.
-   Entfällt, wenn `pruefe-windows.ps1` R1 bereits beantwortet.
+   Entfällt, sobald `pruefe-windows.ps1 -MitEchtemAufruf` R1 beantwortet hat.
+
+---
+
+## 11. Baustand
+
+### Stufe 1 — erledigt (2026-08-17)
+
+| Was | Wo | Stand |
+|---|---|---|
+| Doppelbahn-Harnisch | [`team/tests/conftest.py`](../team/tests/conftest.py) | **neu.** `Schale` (bash \| pwsh), acht Schritt-Bausteine, Idiom-Tabelle, Konfig- und Stub-Erzeugung je Bahn, Doppelbahn-Quote im Testbericht |
+| Aufrufkonvention für PowerShell | ebenda, Kopfkommentar | **festgelegt** — sieben Punkte. Stufe 3 muss sie einhalten, sonst laufen die Tests dort ins Leere |
+| Kern-Tests auf neutrale Aufrufform | `test_bl18`, `test_bl24`, `test_bl28`, `test_bl32`, `test_bl41`, `test_hm32` | **umgestellt.** Kein Testkörper enthält mehr Shell-Syntax |
+| CRLF für Batch-Dateien | [`.gitattributes`](../.gitattributes) | **ergänzt** — `*.cmd`/`*.bat` auf `eol=crlf`, `.ps1` bleibt bei LF |
+| Vorflug-Probe | [`pruefe-windows.ps1`](../pruefe-windows.ps1) | **neu.** Eigenständig, ohne Kit-Abhängigkeit. Beantwortet R2 und R3 kostenlos, R1 nur mit `-MitEchtemAufruf` |
+
+**Abnahme erfüllt.** `pytest team/tests` vor der Stufe: 21 failed, 329 passed,
+19 skipped. Danach: **21 failed, 329 passed**, 47 skipped. Bestandene und
+erwartet fehlschlagende Zahl unverändert; die 28 zusätzlichen Skips sind die
+neuen pwsh-Varianten, die bis Stufe 3 übersprungen werden.
+
+**Belegstand der Probe.** `pruefe-windows.ps1` ist gegen **pwsh 7.4.6 unter
+Linux** geparst und gefahren worden — dabei fielen vier Fehler auf, darunter
+einer, der auch unter Windows zugeschlagen hätte: `claude --version` lief
+erfolgreich durch und wurde als Fehler gemeldet, weil
+`… | Select-Object -First 1` die Pipeline abbricht, bevor `$LASTEXITCODE`
+gesetzt ist. Alle vier sind behoben. **Auf Windows ist das Skript unbelegt** —
+das ist der Zweck, nicht ein Mangel.
+
+**Nebenbefund:** [`BL-111`](backlog.md) — die `head -1`-Absicherung in
+`team_architekt_kaskade` trägt gegen `set -e`, aber nicht gegen
+`set -o pipefail`. Bewusst **nicht** in dieser Stufe gefixt: Stufe 1 sichert
+zu, den Bash-Zweig nicht anzutasten.
+
+### Torbedingung — weiterhin offen
+
+R1 ist unbeantwortet, bis `pruefe-windows.ps1 -MitEchtemAufruf` auf der
+Zielmaschine gelaufen ist. Bis dahin bleiben die Stufen 3–5 auf einer Annahme
+gebaut.

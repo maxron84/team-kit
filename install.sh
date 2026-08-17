@@ -291,6 +291,12 @@ PY
     # exklusiv Kit-Gebiet, sobald ein Projekt eine Luecke im Team selbst
     # schliesst. Jetzt wird nichts geloescht; Unbekanntes wird gemeldet.
     for f in "$KIT"/team/tests/test_*.py; do kopiere "$f" "team/tests/$(basename "$f")"; done
+    # conftest.py ist KEIN Test, aber ohne sie laeuft keiner der Tests, die den
+    # Doppelbahn-Harnisch nehmen (`from conftest import …`). Sie faellt durch
+    # das test_*.py-Muster und muss ausdruecklich mitkopiert werden — sonst
+    # bricht die Installation an einem ModuleNotFoundError, den niemand mit
+    # dem Installer in Verbindung bringt.
+    kopiere "$KIT/team/tests/conftest.py" "team/tests/conftest.py"
     FREMDE_TESTS=""
     for f in "$ZIEL"/team/tests/test_*.py; do
         [ -e "$f" ] || continue
@@ -727,6 +733,8 @@ kopiere "$KIT/team/redteam.sh" "team/redteam.sh" 755
 for f in "$KIT"/team/tools/*.py;      do kopiere "$f" "team/tools/$(basename "$f")" 755; done
 for f in "$KIT"/team/prompts/*.md;    do kopiere "$f" "team/prompts/$(basename "$f")"; done
 for f in "$KIT"/team/tests/test_*.py; do kopiere "$f" "team/tests/$(basename "$f")"; done
+# Siehe Begruendung im Update-Pfad: kein Test, aber Voraussetzung mehrerer.
+kopiere "$KIT/team/tests/conftest.py" "team/tests/conftest.py"
 gruen "  ✓ Entrypoints (Wurzel) + team/ (lib, tools, prompts, $(ls "$KIT"/team/tests/test_*.py | wc -l) Tests)"
 
 # ---------------------------------------------------------------- A.0 Bootstrap

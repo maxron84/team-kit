@@ -33,6 +33,8 @@ from pathlib import Path
 
 import pytest
 
+from conftest import Ausgabe, FangUndMelde
+
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 KOSTEN_PY = REPO_ROOT / "team" / "tools" / "kosten.py"
 TEAM_LIB = REPO_ROOT / "team" / "lib.sh"
@@ -66,7 +68,7 @@ LEDGER_ECHT = KOPF + ZEILEN_OHNE_ARCHITEKT_K3 + ARCHITEKT_K3
 LEDGER_GESCHAETZT = KOPF + ZEILEN_OHNE_ARCHITEKT_K3
 
 
-def _repo(tmp_path, ledger_inhalt):
+def _repo(tmp_path, ledger_inhalt, schale=None):
     """Minimales Wegwerf-Projekt, in dem `--budget` laufen kann. Bewusst OHNE
     git: team_architekt_schaetzung faellt dann auf 0.0000 zurueck, der
     geschaetzte Modus wird dadurch deterministisch."""
@@ -92,6 +94,17 @@ def _repo(tmp_path, ledger_inhalt):
     ziel = repo / "team-status.sh"
     shutil.copy(TEAM_STATUS, ziel)
     ziel.chmod(0o755)
+    # Die Bash-Artefakte oben bleiben immer liegen: In dieser Datei starten
+    # mehrere Tests `./team-status.sh` und brauchen sie unabhaengig von der
+    # geprueften Bahn. Die pwsh-Fassung kommt additiv dazu, statt sie zu
+    # ersetzen.
+    if schale is not None and not schale.ist_bash:
+        schale.lib_kopieren(repo)
+        schale.config_schreiben(repo, {
+            "TEAM_DOMAENEN": "produkt",
+            "TEAM_KOSTEN_TOOL": "python3 team/tools/kosten.py",
+            "TEAM_BEUTEBUCH_TOOL": "python3 team/tools/beutebuch.py",
+        })
     return repo
 
 
@@ -228,31 +241,36 @@ def test_beide_ansichten_beschriften_die_kennzahl_wortgleich(tmp_path):
         assert _betrag(aus_budget) == pytest.approx(_betrag(aus_status))
 
 
-def _bash(skript, cwd):
-    return subprocess.run(
-        ["bash", "-c", skript], cwd=cwd, capture_output=True, text=True,
-        env={"HOME": str(Path.home()), "PATH": "/usr/local/bin:/usr/bin:/bin"},
-    )
+def _lib(schale, repo):
+    return repo / "team" / schale.lib_name
 
 
-def test_team_architekt_kaskade_liest_die_nummer_aus_der_plan_datei(tmp_path):
-    repo = _repo(tmp_path, LEDGER_ECHT)
-    ergebnis = _bash(
-        'source ./team/lib.sh; team_architekt_kaskade "$@"', str(repo))
+def test_team_architekt_kaskade_liest_die_nummer_aus_der_plan_datei(tmp_path, schale):
+    repo = _repo(tmp_path, LEDGER_ECHT, schale)
+    ergebnis = schale.lauf(Ausgabe("team_architekt_kaskade"), cwd=repo,
+                           lib=_lib(schale, repo))
     assert ergebnis.returncode == 0, ergebnis.stderr
     assert ergebnis.stdout.strip() == "3"
 
 
-def test_team_architekt_kaskade_bleibt_ohne_nummer_leer_und_still(tmp_path):
+def test_team_architekt_kaskade_bleibt_ohne_nummer_leer_und_still(tmp_path, schale):
     """Benannte Kaskaden ("post-20") und frische Projekte haben keine Nummer.
-    Die Funktion muss dann leer ausgeben und darf den Aufrufer unter set -e
-    NICHT wegreissen — die Beschriftung laesst den Rahmen dann einfach weg."""
-    repo = _repo(tmp_path, LEDGER_ECHT)
+    Die Funktion muss dann leer ausgeben und darf den Aufrufer unter `set -e`
+    NICHT wegreissen — die Beschriftung laesst den Rahmen dann einfach weg.
+
+    Warum hier `strikt="abbruch"` und nicht die volle Strenge steht: Die
+    Absicherung in lib.sh (`| head -1`) traegt gegen `set -e`, aber NICHT
+    gegen `set -o pipefail` — dort schlaegt der leere `grep` durch und reisst
+    den Aufrufer doch weg. Die Zusicherung gilt also genau fuer diese Stufe,
+    und der Test nennt sie, statt eine breitere zu behaupten. Der Rest ist
+    ein eigener Befund und gehoert in den Backlog, nicht in eine stille
+    Verschaerfung dieses Tests.
+    """
+    repo = _repo(tmp_path, LEDGER_ECHT, schale)
     (repo / ".ralph-plan").write_text("plans/roles-post-k13.md\n",
                                       encoding="utf-8")
-    ergebnis = _bash(
-        'set -e; source ./team/lib.sh; k="$(team_architekt_kaskade)"; '
-        'echo "rc=$? wert=[$k]"', str(repo))
+    ergebnis = schale.lauf(FangUndMelde("team_architekt_kaskade"), cwd=repo,
+                           lib=_lib(schale, repo), strikt="abbruch")
     assert ergebnis.returncode == 0, ergebnis.stderr
     assert "rc=0 wert=[]" in ergebnis.stdout
 

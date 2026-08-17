@@ -6,6 +6,42 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **Die Doppelbahn: eine Testsuite, zwei Shells.** Das Kit bekommt einen
+  nativen Windows-Zweig in PowerShell, während Bash die Linux-Implementierung
+  bleibt ([`plans/windows-nativ.md`](plans/windows-nativ.md)). Der nahe
+  liegende Weg wäre eine zweite Testsuite gewesen — und das wäre der eine
+  Fehler, der das Vorhaben zum Scheitern bringt: Zwei Suiten driften genauso
+  wie zwei Implementierungen, nur unbemerkt. Neu ist deshalb
+  [`team/tests/conftest.py`](team/tests/conftest.py) mit der `Schale`: Ein
+  Test formuliert nur noch **Schritte**, und wie ein Schritt in der jeweiligen
+  Shell ausgesprochen wird, weiß allein der Harnisch. Damit wird eine künftige
+  Feldlehre auf der anderen Bahn **automatisch rot**, bis sie nachgezogen ist
+  — Drift ist nicht verboten, sondern sichtbar. Sechs Tests (`BL-18`, `BL-24`,
+  `BL-28`, `BL-32`, `BL-41`, `HM-32`) tragen keine Shell-Syntax mehr im
+  Testkörper. Die Schritte einer Folge bleiben dabei in **einem** Prozess,
+  weil `team_guard_begin` seinen Schnappschuss in einer Shell-Variablen
+  ablegt: Ein `verify` im zweiten Prozess sähe einen leeren Schnappschuss und
+  spräche jede Rolle frei — grün und wertlos. Der Kopf der Datei legt zugleich
+  die **Aufrufkonvention** für den PowerShell-Zweig fest (sieben Punkte),
+  damit Stufe 3 nicht gegen einen unausgesprochenen Vertrag baut.
+- **Die Doppelbahn-Quote steht in jedem Testlauf.** Gleichwertigkeit lässt
+  sich nicht zusichern, ohne sie zu messen, und eine Schwelle („ab fünf
+  Ausnahmen gilt der Zweig als abgehängt") wäre willkürlich und sofort
+  verhandelbar. Der Bericht nennt stattdessen, wie viele Tests auf beiden
+  Bahnen liefen, wie viele die pwsh-Bahn übersprangen und wie viele bewusst
+  mit `@pytest.mark.nur_bash` geführt werden. Jede Markierung braucht eine
+  Begründung und gehört zusätzlich in den Backlog.
+- **[`pruefe-windows.ps1`](pruefe-windows.ps1)** — die Vorflug-Probe für den
+  nativen Zweig, **eigenständig** und ohne jede Kit-Abhängigkeit, damit sie
+  einzeln auf die Zielmaschine kopiert werden kann. Sie beantwortet, was der
+  Bauplan bisher nur annimmt: ob PowerShell die Agenten-CLI findet und startet
+  (unter Windows ein `.cmd`-Shim — schlägt das fehl, **sieht das aus wie ein
+  Auth-Fehler und ist keiner**), ob `[System.IO.FileStream]` mit
+  `FileShare::None` über Prozessgrenzen sperrt (der Ersatz für `flock`,
+  geprüft mit einer Zwei-Prozess-Gegenprobe statt mit einer Erwartung), und
+  wie die Auth-Lage aussieht. Der Standardlauf **kostet nichts**; die
+  abschließende Antwort auf die Abo-Frage braucht `-MitEchtemAufruf` und sagt
+  das vorher. Erfolgskriterium ist der Exit-Code, nicht die Schlusszeile.
 - **Klonen und Einbinden ist jetzt eine Routine — für Linux und für Windows
   mit WSL.** Bis hierher begann jede Anleitung in dem Zustand, in dem die
   Autorenmaschine ohnehin war. Neu ist [`kit-einrichten.sh`](kit-einrichten.sh):
