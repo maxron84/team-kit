@@ -427,7 +427,13 @@ class Schale:
                 kopf = "$ErrorActionPreference = 'Stop'\n"
             if voll:
                 kopf += "Set-StrictMode -Version Latest\n"
-            skript = (kopf + f"Import-Module {_zitat_pwsh(lib)} -Force\n"
+            # -DisableNameChecking: Die Bibliothek fuehrt die Funktionsnamen des
+            # Bash-Zweigs weiter (team_guard_verify statt Verify-TeamGuard).
+            # PowerShell warnt darueber bei JEDEM Import. Die Namensgleichheit
+            # ist Absicht — sie ist es, was EINE Testsuite fuer beide Bahnen
+            # ueberhaupt moeglich macht; also wird die Warnung abgestellt und
+            # nicht der Name geaendert.
+            skript = (kopf + f"Import-Module {_zitat_pwsh(lib)} -Force -DisableNameChecking\n"
                       + "$script:TeamRc = 0\n"
                       + "".join(s.pwsh() for s in schritte)
                       + "exit $script:TeamRc\n")

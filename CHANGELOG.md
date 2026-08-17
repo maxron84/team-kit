@@ -6,6 +6,59 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **Der Kern des Windows-Zweigs — [`team/lib.psm1`](team/lib.psm1), und die 28
+  schlafenden Tests wachen auf.** Alle 42 Funktionen aus
+  [`team/lib.sh`](team/lib.sh) sind portiert: Werkzeug-Hüllen, Sperre, Auth,
+  `team_claude` samt Abo→API-Fallback und 429-Logik, die sieben `team_guard_*`,
+  Promise, Quittung, Bewertung. Die Funktionsnamen bleiben **zeichengleich**
+  (`team_guard_verify`, nicht `Verify-TeamGuard`) — PowerShell warnt darüber bei
+  jedem Import, und die Warnung wird abgestellt statt der Name geändert: Die
+  Namensgleichheit ist es, was **eine** Testsuite für beide Bahnen möglich
+  macht. Ergebnis: `pytest team/tests` meldet ohne `pwsh` 332 passed, mit
+  `pwsh` **363 passed** — die Differenz von 31 sind exakt die bis dahin
+  übersprungenen Varianten, bei **unveränderten** 21 erwarteten Fehlschlägen.
+  Damit laufen auch die fünf Guard-Tests aus `BL-24` auf beiden Bahnen und
+  weisen dort einen echten chirurgischen Rollback nach.
+- **Die 13 eingebetteten `python3 -c`-Blöcke entfallen ersatzlos.**
+  `ConvertFrom-Json`, `[regex]` und `[DateTimeOffset]` ersetzen sie; in
+  `lib.psm1` kommt `python3 -c` nur noch in zwei Kommentaren vor. Und
+  `team_lock` nimmt eine vom Betriebssystem **durchgesetzte** Sperre
+  (`FileShare::None`) statt des kooperativen `flock` — über zwei echte Prozesse
+  geprüft: Elternprozess sperrt, Kindprozess wird abgewiesen, nach `team_unlock`
+  bekommt das Kind die Sperre.
+
+### Fixed
+
+- **Die Kodierung der Kostenlogs hing an einer PowerShell-Voreinstellung — und
+  ihr Bruch wäre still gewesen.** Der naheliegende Weg `& claude … > $Out`
+  schreibt mit der Standardkodierung der Sitzung: unter pwsh 7 heute UTF8NoBOM,
+  unter Windows PowerShell 5.1 UTF-16LE, und ein `$PSDefaultParameterValues` im
+  Benutzerprofil kann es jederzeit umstellen. Python bricht an einem BOM ab —
+  aber [`team/tools/kosten.py`](team/tools/kosten.py) **fängt das ab und zählt
+  die Datei still als `0.0000`**. Das ist exakt die Fehlerklasse aus `BL-46`
+  (Log von 0 Byte nach 47 Minuten Laufzeit) und `BL-55` (Pro-Stufe-Cap
+  umgehbar): Eine bezahlte Stufe erscheint als die **billigste** der Kaskade,
+  der Deckel bekommt auf sie keinen Griff, und auffallen würde es erst, wenn
+  jemand die Kostentabelle als Vergleichsband liest. `Team-ClaudeSchreiben`
+  legt die Kodierung jetzt ausdrücklich fest;
+  [`test_stufe3_kostenlog_kodierung.py`](team/tests/test_stufe3_kostenlog_kodierung.py)
+  pinnt sie auf beiden Bahnen, inklusive Umlaut-Rundlauf — reines ASCII sähe in
+  UTF-8 und Latin-1 gleich aus und bewiese nichts.
+- **`install.sh` kannte den PowerShell-Kern nicht.** Sie kopiert `team/lib.sh`
+  und `team/redteam.sh` namentlich; `team/lib.psm1` wäre durch das Raster
+  gefallen, und ein Projekt liefe nach `--update` auf einer Hälfte veraltet
+  weiter. Gefunden von der Gleichstandsprüfung in `kit-test.sh` (10/10) —
+  genau dafür ist sie da.
+
+### Changed
+
+- **`kit-test.sh` braucht mit `pwsh` auf dem PATH rund 11 Minuten statt gut
+  vier.** Die eingebetteten pytest-Läufe fahren jetzt beide Bahnen. Das ist der
+  Preis der Doppelbahn und kein Fehler — aber er gehört genannt, damit niemand
+  einen Hänger vermutet.
+
+### Added (Fortsetzung)
+
 - **Der Bootstrap des Windows-Zweigs — und der Nachweis, dass beide Installer
   dasselbe tun.** Neu sind [`install.ps1`](install.ps1),
   [`kit-einrichten.ps1`](kit-einrichten.ps1),

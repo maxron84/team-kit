@@ -295,6 +295,11 @@ PY
     done
     kopiere "$KIT/team/lib.sh"     "team/lib.sh"     755
     kopiere "$KIT/team/redteam.sh" "team/redteam.sh" 755
+    # Der PowerShell-Kern gehoert zur Infrastruktur wie lib.sh. Faende er hier
+    # keine Erwaehnung, liefe ein Projekt nach `--update` auf einer Haelfte
+    # veraltet weiter — und die Gleichstandspruefung in kit-test.sh (10/10)
+    # meldete es erst hinterher.
+    for f in "$KIT"/team/*.psm1;       do [ -e "$f" ] || continue; kopiere "$f" "team/$(basename "$f")" 755; done
     for f in "$KIT"/team/tools/*.py;   do kopiere "$f" "team/tools/$(basename "$f")" 755; done
     for f in "$KIT"/team/prompts/*.md; do kopiere "$f" "team/prompts/$(basename "$f")"; done
     # BL-12: Hier stand einmal ein pauschales rm auf team/tests/test_*.py, um
@@ -765,6 +770,8 @@ done
 # und kein stack-fremder Code landet in deinen Ordnern.
 kopiere "$KIT/team/lib.sh"     "team/lib.sh"     755
 kopiere "$KIT/team/redteam.sh" "team/redteam.sh" 755
+# Siehe Begruendung im Update-Pfad: der PowerShell-Kern ist Infrastruktur.
+for f in "$KIT"/team/*.psm1;          do [ -e "$f" ] || continue; kopiere "$f" "team/$(basename "$f")" 755; done
 for f in "$KIT"/team/tools/*.py;      do kopiere "$f" "team/tools/$(basename "$f")" 755; done
 for f in "$KIT"/team/prompts/*.md;    do kopiere "$f" "team/prompts/$(basename "$f")"; done
 for f in "$KIT"/team/tests/test_*.py; do kopiere "$f" "team/tests/$(basename "$f")"; done

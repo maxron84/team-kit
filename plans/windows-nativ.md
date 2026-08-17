@@ -459,6 +459,61 @@ melden.
 gefahren. `Get-CimInstance`, `Set-Acl`, die Benutzer-Umgebungsvariablen und
 das `.cmd`-Verhalten sind dort nicht prüfbar und bleiben offen.
 
+### Stufe 3 — erledigt (2026-08-17)
+
+[`team/lib.psm1`](../team/lib.psm1) — 1.257 Zeilen, davon 934 Code. **Alle 42
+Funktionen** aus [`lib.sh`](../team/lib.sh) sind portiert, dazu vier
+PowerShell-eigene Helfer (`Team-Default`, `Team-Werkzeug`, `Team-JsonLesen`,
+`Team-ClaudeSchreiben`) und `team_unlock`.
+
+**Die Funktionsnamen bleiben zeichengleich** (`team_guard_verify`, nicht
+`Verify-TeamGuard`). PowerShell warnt darüber bei jedem Import; die Warnung
+wird abgestellt, nicht der Name geändert. Die Namensgleichheit ist es, was
+**eine** Testsuite für beide Bahnen überhaupt möglich macht.
+
+**Abnahme erfüllt.**
+
+| | ohne `pwsh` | mit `pwsh` |
+|---|---|---|
+| `pytest team/tests` | 21 failed, **332 passed**, 50 skipped | 21 failed, **363 passed**, 19 skipped |
+
+363 − 332 = 31 = die 28 bis dahin übersprungenen pwsh-Varianten plus die drei
+neuen. Die 21 erwarteten Fehlschläge sind in **beiden** Läufen unverändert.
+Alle sechs Kern-Testdateien laufen jetzt auf beiden Bahnen — einschließlich
+der fünf Guard-Tests aus BL-24, die einen echten chirurgischen Rollback
+nachweisen.
+
+**Die 13 eingebetteten `python3 -c`-Blöcke sind ersatzlos entfallen**
+(`ConvertFrom-Json`, `[regex]`, `[DateTimeOffset]`). In `lib.psm1` kommt
+`python3 -c` nur noch in zwei Kommentaren vor.
+
+**Die Plattform-Naht, über zwei echte Prozesse geprüft:** Elternprozess nimmt
+`team_lock`, Kindprozess wird abgewiesen (Exit 42, korrekte Meldung), nach
+`team_unlock` bekommt das Kind die Sperre. `FileShare::None` ist vom
+Betriebssystem durchgesetzt — anders als `flock`, das nur wirkt, solange alle
+mitspielen. Genau diese Problemklasse hat den Windows-Zweig ausgelöst.
+
+**Nebenbefund, behoben und unter Test gestellt.** Der naheliegende Weg,
+`& claude … > $Out`, hängt die Kodierung der Kostenlogs an die
+Standardeinstellung der Sitzung. Unter pwsh 7 ist das heute UTF8NoBOM, unter
+5.1 war es UTF-16LE, und ein Benutzerprofil kann es umstellen. Python bricht
+an einem BOM ab — und [`kosten.py`](../team/tools/kosten.py) **fängt das ab
+und zählt die Datei still als `0.0000`**. Das ist exakt die Fehlerklasse aus
+BL-46 und BL-55: Eine bezahlte Stufe erscheint als die billigste der Kaskade,
+der Pro-Stufe-Deckel bekommt auf sie keinen Griff. `Team-ClaudeSchreiben` legt
+die Kodierung deshalb ausdrücklich fest;
+[`test_stufe3_kostenlog_kodierung.py`](../team/tests/test_stufe3_kostenlog_kodierung.py)
+pinnt sie auf beiden Bahnen, inklusive Umlaut-Rundlauf.
+
+**Ein Posten geht auf die Rechnung dieser Stufe:** `kit-test.sh` braucht mit
+`pwsh` auf dem PATH **11m18s** statt gut vier Minuten — die eingebetteten
+pytest-Läufe fahren jetzt beide Bahnen. Das ist der Preis der Doppelbahn und
+kein Fehler, aber er gehört genannt.
+
+**Auf Windows unbelegt.** Alles gegen pwsh 7.4.6 unter Linux gefahren.
+`Team-ClaudeBefehl` (die `.cmd`-Auflösung) ist damit **nicht** erprobt — sie
+ist genau die Stelle, deren Fehlschlag wie ein Auth-Fehler aussieht.
+
 ### Torbedingung — weiterhin offen
 
 R1 ist unbeantwortet, bis `pruefe-windows.ps1 -MitEchtemAufruf` auf der
