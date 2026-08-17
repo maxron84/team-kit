@@ -316,6 +316,19 @@ class Schale:
         """'ralph' -> 'ralph.sh' bzw. 'ralph.ps1'."""
         return rumpf + self.endung
 
+    @property
+    def wechsel_ins_skriptverzeichnis(self):
+        """Das Idiom, mit dem ein Entrypoint ins eigene Verzeichnis wechselt.
+
+        Die BL-3-Invariante, auf der ALLE relativen Werkzeugpfade ruhen: Ohne
+        sie haengt jede Kostenzahl davon ab, aus welchem Verzeichnis der Mensch
+        das Skript gestartet hat, und `kosten.py` meldet still 0.0000 statt zu
+        scheitern. Beide Zweige sichern dasselbe zu, nur anders geschrieben —
+        das ist die Idiom-Tabelle aus plans/windows-nativ.md in ihrer
+        einfachsten Form.
+        """
+        return 'cd "$(dirname "$0")"' if self.ist_bash else 'Set-Location $PSScriptRoot'
+
     def default_muster(self, name):
         """Regex fuer die Zeile, in der die Bibliothek ihren EIGENEN Default setzt.
 

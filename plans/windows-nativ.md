@@ -514,6 +514,75 @@ kein Fehler, aber er gehört genannt.
 `Team-ClaudeBefehl` (die `.cmd`-Auflösung) ist damit **nicht** erprobt — sie
 ist genau die Stelle, deren Fehlschlag wie ein Auth-Fehler aussieht.
 
+### Stufe 4 — erledigt (2026-08-17)
+
+Zehn Rollen-Einstiege plus die gemeinsame Sweep-Logik, je mit `.cmd`-Shim:
+[`ralph.ps1`](../entry/ralph.ps1), [`frank.ps1`](../entry/frank.ps1),
+[`axel.ps1`](../entry/axel.ps1), [`harry.ps1`](../entry/harry.ps1),
+[`marv.ps1`](../entry/marv.ps1), [`vollautomatik.ps1`](../entry/vollautomatik.ps1),
+[`halbautomatik.ps1`](../entry/halbautomatik.ps1),
+[`team-status.ps1`](../entry/team-status.ps1),
+[`team-test.ps1`](../entry/team-test.ps1),
+[`team/redteam.ps1`](../team/redteam.ps1). 17 PowerShell-Dateien insgesamt,
+alle syntaktisch geprüft.
+
+**Der Trockenlauf, den der Plan verlangt hat**, geht durch: Ralph baut Stufe 1,
+erhält das Promise, schaltet weiter, erreicht `RALPH_CAP` und macht Feierabend;
+Harry und Marv sweepen; Frank findet nichts; der Abschlussbericht erkennt
+Kaskade **K1**, liest den Sperr-Status und die Kostenaufteilung und zitiert die
+letzten Zeilen des Lauf-Logs. Exit 0, `TEAM_DRY_RUN=1`, keine CLI-Kosten.
+
+**Die BL-3-Invariante läuft jetzt auf beiden Bahnen.** Das war laut Plan die
+schwierigste Testklasse (24 statische Quelltextprüfungen). Der erste Fall ist
+umgestellt: `schale.wechsel_ins_skriptverzeichnis` liefert
+`cd "$(dirname "$0")"` bzw. `Set-Location $PSScriptRoot`, der Test prüft
+dasselbe Versprechen gegen zwei Schreibweisen. Die Zuordnung steht in der
+Schale, nicht im Test — sonst führte jeder statische Test seine eigene
+Übersetzungstabelle, und die erste vergessene wäre eine stille Lücke.
+
+**Drei Funde, alle behoben:**
+
+1. **`team/redteam.ps1` wurde von KEINEM der beiden Installer kopiert.** Beide
+   kannten unter `team/` nur `.sh` und `.psm1`; die Rollen starteten mit
+   *„term './team/redteam.ps1' is not recognized"*. Die Gleichstandsprüfung aus
+   Stufe 2 sieht so etwas **nicht** — beide Installer waren gleich falsch.
+   Gefunden hat es der Trockenlauf, und genau dafür steht er im Plan.
+2. **Eine PowerShell-Falle im Formatoperator.** In
+   `[Console]::Out.WriteLine('{0} {1}' -f $a, $b)` ist das Komma der
+   **Argumenttrenner der Methode**, nicht der Array-Operator — der Ausdruck
+   wird zu `WriteLine(('{0} {1}' -f $a), $b)`, und `-f` bekommt ein Argument
+   für zwei Platzhalter. Fällt erst zur Laufzeit auf, mitten im Bericht, und
+   sieht aus wie ein Datenfehler statt wie ein Syntaxproblem. Fünf Stellen in
+   `team-status.ps1`, alle geklammert und einmal kommentiert.
+3. **`$rc:` in einer Zeichenkette** liest PowerShell als
+   Namensraum-Qualifizierer — `${rc}:` gebraucht.
+
+**Nebenbefund [`BL-112`](backlog.md), offen und ausdrücklich benannt:** Die
+Aussage aus Abschnitt 3, die driftgefährlichste Fläche sei bereits geteilt,
+gilt für die **Briefings** (340 Zeilen, `team_briefing` ist ein `cat`) — aber
+**nicht** für den zusammengesetzten Prompt. Der entsteht erst im
+Einstiegsskript: 35 Zeilen in `redteam.sh`, je ~20 in `ralph.sh`, `frank.sh`,
+`axel.sh`. Diese ~140 Zeilen agentensteuernde Prosa liegen seit dieser Stufe
+**doppelt**. Wer eine Feldlehre nur in einer Fassung nachschärft, bekommt zwei
+Zweige, die verschiedene Agenten steuern — und **kein Test schlägt an**. Das
+ist die einzige verbliebene Stelle, an der Drift unsichtbar wäre. Die
+Fix-Skizze steht im Backlog: ein Gleichstands-Test über einen `claude`-Stub,
+der seinen Prompt mitschreibt, statt zu arbeiten.
+
+**Ein Fehler in der Durchführung, der Geld gekostet hat.** Beim ersten
+Rollen-Durchlauf war `TEAM_DRY_RUN` **nicht** gesetzt, und `claude` liegt auf
+dem PATH der Entwicklungsmaschine. Harry und Marv haben deshalb zwei echte
+Aufrufe gemacht — **0,5512 und 0,4438 USD, zusammen 0,9950 USD**
+Abo-Gegenwert (`Auth-Modus: abo`, also Kontingent, keine API-Rechnung). Der
+Plan schreibt für diese Stufe ausdrücklich einen Trockenlauf *„ohne echte
+CLI-Kosten"* vor. Die Wiederholung lief korrekt mit `TEAM_DRY_RUN=1`.
+Nebenbei belegen die beiden Läufe allerdings mehr als der Trockenlauf: die
+volle Kette gegen eine echte CLI, inklusive Auth-Auflösung, Guard,
+Budget-Prüfung und Beutebuch-Auswertung.
+
+**Auf Windows unbelegt.** Wie in den Stufen zuvor: alles gegen pwsh 7.4.6
+unter Linux.
+
 ### Torbedingung — weiterhin offen
 
 R1 ist unbeantwortet, bis `pruefe-windows.ps1 -MitEchtemAufruf` auf der

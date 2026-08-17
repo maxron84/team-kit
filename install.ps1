@@ -247,8 +247,16 @@ function Kopiere-Infrastruktur {
     }
     Kopiere (Join-Path $KIT 'team\lib.sh')     'team/lib.sh'     -Immer:$Immer
     Kopiere (Join-Path $KIT 'team\redteam.sh') 'team/redteam.sh' -Immer:$Immer
-    foreach ($f in (Get-ChildItem (Join-Path $KIT 'team') -Filter '*.psm1' -File -ErrorAction SilentlyContinue)) {
-        Kopiere $f.FullName "team/$($f.Name)" -Immer:$Immer
+    # *.psm1 UND *.ps1: team/redteam.ps1 ist die gemeinsame Sweep-Logik von
+    # Harry und Marv. Sie fiel zuerst durch das Raster, weil unter team/ nur
+    # nach lib-Modulen gesucht wurde — die Rollen starteten dann mit
+    # "term './team/redteam.ps1' is not recognized". Die Gleichstandspruefung
+    # in kit-test.sh sieht so etwas NICHT: Beide Installer waren gleich falsch.
+    # Gefunden hat es der Trockenlauf, und genau dafuer steht er im Plan.
+    foreach ($muster in @('*.psm1', '*.ps1')) {
+        foreach ($f in (Get-ChildItem (Join-Path $KIT 'team') -Filter $muster -File -ErrorAction SilentlyContinue)) {
+            Kopiere $f.FullName "team/$($f.Name)" -Immer:$Immer
+        }
     }
     foreach ($f in (Get-ChildItem (Join-Path $KIT 'team\tools') -Filter '*.py' -File)) {
         Kopiere $f.FullName "team/tools/$($f.Name)" -Immer:$Immer

@@ -29,10 +29,9 @@ LEDGER_ZEILE = "2026-01-01 | 1 | 2.5000 | abo | produkt | roles | Fixture\n"
 # unter entry/. redteam.sh ist kein Entrypoint des Menschen, wechselt aber
 # ebenfalls und wird deshalb mitgeprueft.
 ENTRYPOINTS = (
-    "ralph.sh", "frank.sh", "axel.sh", "harry.sh", "marv.sh",
-    "vollautomatik.sh", "halbautomatik.sh", "team-status.sh", "team-test.sh",
+    "ralph", "frank", "axel", "harry", "marv",
+    "vollautomatik", "halbautomatik", "team-status", "team-test",
 )
-CD_ZEILE = 'cd "$(dirname "$0")"'
 
 
 def _finde(name):
@@ -43,24 +42,34 @@ def _finde(name):
     return None
 
 
-def test_jeder_entrypoint_wechselt_ins_skriptverzeichnis():
+def test_jeder_entrypoint_wechselt_ins_skriptverzeichnis(schale):
     """Die Invariante, auf der die relativen Default-Pfade von kosten.py ruhen.
 
     Ohne sie haengt jede Kostenzahl davon ab, aus welchem Verzeichnis der
-    Mensch das Skript gestartet hat.
+    Mensch das Skript gestartet hat — und kosten.py meldet dann still 0.0000
+    statt zu scheitern.
+
+    Der Test laeuft auf BEIDEN Bahnen gegen dasselbe Versprechen, aber gegen
+    zwei Schreibweisen: `cd "$(dirname "$0")"` bzw. `Set-Location $PSScriptRoot`.
+    Die Zuordnung steht in der Schale (schale.wechsel_ins_skriptverzeichnis),
+    nicht hier — sonst muesste jeder statische Test seine eigene
+    Uebersetzungstabelle fuehren, und die erste, die jemand vergisst, ist eine
+    stille Luecke im Windows-Zweig.
     """
+    idiom = schale.wechsel_ins_skriptverzeichnis
     gefunden = 0
-    for name in ENTRYPOINTS:
-        pfad = _finde(name)
+    for rumpf in ENTRYPOINTS:
+        pfad = _finde(schale.entrypoint(rumpf))
         if pfad is None:
             continue
         gefunden += 1
-        assert CD_ZEILE in pfad.read_text(encoding="utf-8"), (
-            f"{name} wechselt nicht ins Skriptverzeichnis — relative "
-            f"Werkzeug-Pfade werden damit vom Aufrufort abhaengig"
+        assert idiom in pfad.read_text(encoding="utf-8"), (
+            f"{schale.entrypoint(rumpf)} wechselt nicht ins Skriptverzeichnis "
+            f"({idiom!r} fehlt) — relative Werkzeug-Pfade werden damit vom "
+            f"Aufrufort abhaengig"
         )
     assert gefunden >= len(ENTRYPOINTS) - 1, (
-        f"nur {gefunden} Entrypoints gefunden — Ablage geaendert?"
+        f"nur {gefunden} Entrypoints ({schale.name}) gefunden — Ablage geaendert?"
     )
 
 

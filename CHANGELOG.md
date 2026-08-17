@@ -6,6 +6,50 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **Die Rollen laufen unter Windows — der Zweig ist bedienbar.** Zehn
+  Einstiege plus die gemeinsame Sweep-Logik, je mit `.cmd`-Shim:
+  [`ralph.ps1`](entry/ralph.ps1), [`frank.ps1`](entry/frank.ps1),
+  [`axel.ps1`](entry/axel.ps1), [`harry.ps1`](entry/harry.ps1),
+  [`marv.ps1`](entry/marv.ps1), [`vollautomatik.ps1`](entry/vollautomatik.ps1),
+  [`halbautomatik.ps1`](entry/halbautomatik.ps1),
+  [`team-status.ps1`](entry/team-status.ps1),
+  [`team-test.ps1`](entry/team-test.ps1),
+  [`team/redteam.ps1`](team/redteam.ps1). Die `.cmd`-Dateien sind Einzeiler auf
+  die `.ps1` — kein Symlink, denn der braucht unter Windows
+  Administratorrechte, und ein Einrichtungsschritt, der an Rechten scheitert,
+  hat sein Versprechen gebrochen.
+  **Belegt durch einen Trockenlauf der ganzen Kette** (`TEAM_DRY_RUN=1`, keine
+  CLI-Kosten): Ralph baut Stufe 1, erhält das Promise, schaltet weiter,
+  erreicht `RALPH_CAP`; Harry und Marv sweepen; Frank findet nichts; der
+  Abschlussbericht erkennt Kaskade K1, liest Sperr-Status und
+  Kostenaufteilung und zitiert die letzten Zeilen des Lauf-Logs.
+- **Die BL-3-Invariante wird jetzt auf beiden Bahnen geprüft.** Sie ist die
+  Zusicherung, auf der **alle** relativen Werkzeugpfade ruhen — ohne sie hängt
+  jede Kostenzahl davon ab, aus welchem Verzeichnis gestartet wurde, und
+  `kosten.py` meldet still `0.0000`. Beide Zweige sichern dasselbe zu, nur
+  anders geschrieben (`cd "$(dirname "$0")"` bzw. `Set-Location $PSScriptRoot`).
+  Die Zuordnung steht in `Schale.wechsel_ins_skriptverzeichnis`, **nicht** im
+  Test: Sonst führte jede der 24 statischen Quelltextprüfungen ihre eigene
+  Übersetzungstabelle, und die erste vergessene wäre eine stille Lücke im
+  Windows-Zweig.
+
+### Fixed (Windows-Zweig)
+
+- **`team/redteam.ps1` wurde von KEINEM der beiden Installer kopiert.** Beide
+  kannten unter `team/` nur `.sh` und `.psm1`; die Rollen starteten mit *„term
+  './team/redteam.ps1' is not recognized"*. Bemerkenswert daran: Die
+  Gleichstandsprüfung aus Schritt 10/10 sieht so etwas **nicht** — beide
+  Installer waren gleich falsch, die Bäume also identisch. Gefunden hat es der
+  Trockenlauf, und genau dafür steht er im Plan.
+- **Eine PowerShell-Falle im Formatoperator, fünfmal.** In
+  `[Console]::Out.WriteLine('{0} {1}' -f $a, $b)` ist das Komma der
+  **Argumenttrenner der Methode**, nicht der Array-Operator: Der Ausdruck wird
+  zu `WriteLine(('{0} {1}' -f $a), $b)`, und `-f` bekommt ein Argument für zwei
+  Platzhalter. Das fällt erst zur Laufzeit auf, mitten im Statusbericht, und
+  sieht aus wie ein Datenfehler statt wie ein Syntaxproblem.
+
+### Added (Fortsetzung)
+
 - **Der Kern des Windows-Zweigs — [`team/lib.psm1`](team/lib.psm1), und die 28
   schlafenden Tests wachen auf.** Alle 42 Funktionen aus
   [`team/lib.sh`](team/lib.sh) sind portiert: Werkzeug-Hüllen, Sperre, Auth,
