@@ -742,6 +742,16 @@ ist derselbe Grundsatz wie A.5 (Faktencheck vor Annahme): Die Pfadheuristik
 erklärt den Regelfall, die Probe entscheidet den Einzelfall — und sie greift
 auch auf einem Netzlaufwerk, an das die Heuristik nicht gedacht hat.
 
+**Wo die Probe selbst an ihre Grenze kommt: WSL 1.** Die Sperrprobe ist
+`flock -n <datei> true` — *ein* Prozess. Auf einem echten Kernel belegt das
+mit dem gelungenen Aufruf auch den wechselseitigen Ausschluss; auf einer
+Syscall-Übersetzung ist das eine Annahme, keine Herleitung. Genau deshalb steht
+in [einrichtung.md](einrichtung.md) für den WSL-1-Fall eine **Zwei-Prozess**-
+Gegenprobe: Wo die eingebaute Probe nur die schwächere Aussage trifft, muss die
+stärkere von Hand nachgereicht werden — statt die Lücke unbenannt zu lassen.
+WSL 1 wird darum gewarnt, nicht abgebrochen: Wer in einer VM ohne nested
+virtualization sitzt, hat die Wahl nicht.
+
 **Belegstand:** Der Linux-Weg läuft auf der Entwicklungsmaschine. Der WSL-Weg
 ist **hergeleitet, nicht durchlaufen** — die Regeln folgen aus den bekannten
 Eigenschaften von DrvFs und Git for Windows, und die Proben melden den Fall an

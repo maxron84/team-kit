@@ -27,7 +27,12 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Abhilfe, und ein Abschnitt **Belegstand**. Vorangestellt ist die Tabelle
   *Was Pflicht ist und was Beispiel*: Pflicht sind `bash`/`git`/`python3`/
   `flock`; IDE, Agenten-CLI und Modell sind Beispiele mit benanntem
-  Tauschpunkt.
+  Tauschpunkt. Eigener Unterabschnitt für den Fall **„nur WSL 1 möglich"**
+  (VM ohne nested virtualization, gesperrte Firmware): erst der Schalter am
+  Hypervisor je Produkt, dann — weil die eingebaute Sperrprobe einprozessig ist
+  und auf einer Syscall-Übersetzung nur die schwächere Aussage trifft — eine
+  **Zwei-Prozess-Gegenprobe für `flock`**, und die Regeln, die dort strenger
+  gelten (`/mnt/c` doppelt verboten, obwohl WSL 1 dort *schneller* ist).
 - **[`scripts/`](scripts/) — die Maschinen-Skripte liegen jetzt im Repo.**
   README, `install.sh` und `TEAM.md` verwiesen auf
   `~/.claude/scripts/team-auth-setup.sh`, eine Datei, die es nur auf der

@@ -110,7 +110,10 @@ case "$(uname -s)" in
                 warnung "Linux unter WSL, aber nicht erkennbar WSL2 ($(uname -r))." \
                         "WSL1 übersetzt Syscalls statt sie auszuführen; für Dateisperren" \
                         "(flock) und Rechte gibt das Kit dort keine Zusicherung." \
-                        "Prüfen und umstellen (in PowerShell):  wsl -l -v  /  wsl --set-version <Distro> 2"
+                        "Prüfen und umstellen (in PowerShell):  wsl -l -v  /  wsl --set-version <Distro> 2" \
+                        "Geht WSL2 nicht (VM ohne nested virtualization)? Kein Abbruch — aber die" \
+                        "Sperrprobe unten ist einprozessig und belegt hier weniger als auf einem" \
+                        "echten Kernel. Zwei-Prozess-Gegenprobe: doku/einrichtung.md, 'Wenn nur WSL 1 geht'"
             fi
         else
             ok "Linux — $(uname -r)"

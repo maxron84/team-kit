@@ -21,7 +21,7 @@ Produktnamen niemanden zum Laufen bringt. Die Trennlinie:
 
 | Schicht | Pflicht | Beispiel in dieser Anleitung | Warum die Pflicht Pflicht ist |
 |---|---|---|---|
-| Betriebssystem | POSIX-Umgebung mit `bash` ≥ 4 | Linux; Windows über WSL2 | Das Kit ist eine Sammlung von Bash-Skripten und nutzt indirekte Expansion (`${!var}`) |
+| Betriebssystem | POSIX-Umgebung mit `bash` ≥ 4 | Linux; Windows über WSL2 (WSL1 nur mit [Gegenprobe](#wenn-nur-wsl-1-geht--vm-gesperrte-firmware-verwalteter-rechner)) | Das Kit ist eine Sammlung von Bash-Skripten und nutzt indirekte Expansion (`${!var}`) |
 | Bordmittel | `git`, `python3` ≥ 3.8, `flock` | — | Git trägt Commit, Rollback und Guard; `team/tools/` ist Python; `flock` serialisiert Ledger und Kaskadenstand |
 | Testrunner | `pytest` (nur für `team-test.sh`/`kit-test.sh`) | — | Die Rollen selbst brauchen ihn nicht |
 | **IDE** | **keine** | VS Codium (Linux), VS Code + WSL-Erweiterung (Windows) | Das Kit wird im Terminal bedient. Ein Editor ist Komfort |
@@ -106,7 +106,9 @@ bash kit-einrichten.sh --nur-pruefen   # gar nichts anfassen
 
 Fünf Abschnitte, in dieser Reihenfolge:
 
-1. **Umgebung** — Linux oder WSL, und ob es WSL2 ist.
+1. **Umgebung** — Linux oder WSL, und ob es WSL2 ist. WSL1 ist eine Warnung,
+   kein Abbruch — was dann zu tun ist, steht unter
+   [Wenn nur WSL 1 geht](#wenn-nur-wsl-1-geht--vm-gesperrte-firmware-verwalteter-rechner).
 2. **Werkzeuge** — `bash` ≥ 4, `git`, `python3` ≥ 3.8, `flock` sind Fehler,
    wenn sie fehlen; `pytest` und die Agenten-CLI nur Hinweise.
 3. **Lage des Klons** — Zeilenenden, Dateisystem, und zwei **Proben** statt
@@ -166,13 +168,72 @@ Siehe [Die Einbindung](#die-einbindung--auf-beiden-plattformen-gleich).
 
 ```powershell
 wsl --install -d Ubuntu       # PowerShell als Administrator, danach Neustart
-wsl -l -v                     # Kontrolle: VERSION muss 2 sein
+wsl -l -v                     # Kontrolle: VERSION soll 2 sein
 wsl --set-version Ubuntu 2    # falls dort 1 steht
 ```
 
 WSL**1** übersetzt Linux-Syscalls, statt sie auszuführen. Für Dateisperren und
 Rechte — also für genau die zwei Mechaniken, an denen das Kit hängt — gibt es
 dort keine Zusicherung. `kit-einrichten.sh` warnt, wenn es WSL2 nicht erkennt.
+
+#### Wenn nur WSL 1 geht — VM, gesperrte Firmware, verwalteter Rechner
+
+Das Kit **blockt WSL 1 nicht**. Die Meldung in `kit-einrichten.sh` ist eine
+Warnung, kein Fehler; abgebrochen wird nur bei Ablage unter `/mnt/…` und bei
+fehlgeschlagenen Proben. Der Weg in drei Schritten:
+
+**a) Erst prüfen, ob WSL 2 wirklich ausgeschlossen ist.** In einer VM scheitert
+WSL 2 fast immer an fehlender *nested virtualization*, und die ist meist am
+**Hypervisor** einschaltbar — nicht im Gast:
+
+| Host | Schalter (VM ausgeschaltet) |
+|---|---|
+| Hyper-V | `Set-VMProcessor -VMName <VM> -ExposeVirtualizationExtensions $true`; dynamischen Speicher aus |
+| VMware Workstation / ESXi | VM-Einstellungen → Prozessoren → *Virtualize Intel VT-x/EPT bzw. AMD-V/RVI* |
+| VirtualBox 7 | `VBoxManage modifyvm <VM> --nested-hw-virt on` |
+| KVM / Proxmox | CPU-Typ `host`, Modul mit `nested=1` |
+| Cloud | Azure ab Dv3/Ev3 ja · GCP mit Lizenz-Flag · AWS nur `*.metal` |
+
+Im Gast danach *Virtual Machine Platform* aktivieren und
+`wsl --set-version <Distro> 2`.
+
+**b) Bleibt es bei WSL 1: proben statt glauben.** Die Erwartung ist gut —
+WSL 1 legt `~/` auf VolFs ab und trägt die Linux-Metadaten in NTFS-Attribute
+ein, `chmod +x` hält also, und `flock()` ist implementiert. Aber die Probe in
+`kit-einrichten.sh` ist `flock -n <datei> true`, also **ein** Prozess: Sie
+belegt, dass der Aufruf gelingt, nicht dass zwei Prozesse sich wirklich
+ausschließen. Auf einem echten Kernel ist das dasselbe, auf einer
+Syscall-Übersetzung nicht zwingend. Deshalb auf dem Zielrechner zusätzlich:
+
+```bash
+bash kit-einrichten.sh --nur-pruefen     # Warnung „nicht erkennbar WSL2" ist hier erwartet
+
+L=~/probe.lock                            # Zwei-Prozess-Gegenprobe für die Sperre
+bash -c 'exec 9>"$0"; flock -x 9; echo "A: Sperre gehalten"; sleep 2' "$L" &
+sleep 0.5
+bash -c 'exec 9>"$0"; if flock -n 9; then echo "B: bekam sie AUCH -> flock greift NICHT"; else echo "B: abgewiesen -> flock greift"; fi' "$L"
+wait; rm -f "$L"
+```
+
+„B: abgewiesen" heißt: Ledger und Kaskadenstand sind serialisiert, und
+[`vollautomatik.sh`](../entry/vollautomatik.sh) — sequenziell, hält das Lock über
+den ganzen Lauf — steht auf sicherem Grund. Kommt „B: bekam sie AUCH", gilt
+genau die Warnung: Zwei Rollen können unbemerkt gleichzeitig schreiben. Dann
+ist die Disziplin die Sperre: **immer nur ein Lauf**, und während eines Laufs
+kein zweites Terminal auf dasselbe Projekt.
+
+**c) Was auf WSL 1 strenger gilt als auf WSL 2:**
+
+| Punkt | Auf WSL 1 |
+|---|---|
+| `/mnt/c` | doppelt verboten — DrvFs *und* Syscall-Übersetzung. Der Köder: WSL 1 ist auf `/mnt/c` **schneller** als WSL 2. Die Rechte- und Sperrprobleme bleiben trotzdem, siehe [Die eine Regel](#2-die-eine-regel-linux-dateisystem) |
+| Tempo unter `~/` | spürbar langsamer als WSL 2 auf ext4, weil jeder Datei-Syscall übersetzt wird. Das Kit committet und testet pro Stufe — das schlägt in Wartezeit durch, nicht in Kosten |
+| Kein echter Kernel | `inotify`, cgroups und Teile von `/proc` sind unvollständig. Für `bash`, `git` und `python3` unkritisch; für Node-Werkzeuge in aller Regel auch, aber unbelegt |
+
+Und die ehrliche Reihenfolge, falls die Wahl offensteht: Bei einer VM ist
+**Linux direkt als Gast** der kürzere Weg — das Kit ist dort erprobt, der
+WSL-Weg ist hergeleitet (siehe [Belegstand](#belegstand)) und WSL 1 liegt noch
+eine Stufe darunter.
 
 ### 2. Die eine Regel: Linux-Dateisystem
 
@@ -342,6 +403,7 @@ Modell führt heute über `claude -p`.
 | `./vollautomatik.sh: Permission denied` | Exec-Bit greift nicht (DrvFs unter `/mnt/c`) | Repo ins Linux-Dateisystem verlegen; notfalls `chmod +x *.sh` |
 | Alles quälend langsam unter WSL | Repo liegt unter `/mnt/c` (9p) | dito |
 | `flock: … not implemented` oder Lauf hängt an der Sperre | Netz- oder Windows-Laufwerk | Repo auf ein lokales Linux-Dateisystem |
+| `kit-einrichten.sh`: „nicht erkennbar WSL2" | Distro läuft unter WSL1 — in VMs meist fehlende nested virtualization | Warnung, kein Abbruch: [Wenn nur WSL 1 geht](#wenn-nur-wsl-1-geht--vm-gesperrte-firmware-verwalteter-rechner) — erst Hypervisor prüfen, sonst Zwei-Prozess-Gegenprobe für `flock` |
 | `python3: command not found` mitten im Lauf | Bordmittel fehlt | `sudo apt install python3` — die Team-Werkzeuge sind Python |
 | CLI meldet „takes precedence" | `ANTHROPIC_API_KEY` im Profil oder in der Umgebung | `scripts/team-auth-setup.sh`, dann `unset ANTHROPIC_API_KEY` — **und die IDE neu starten** (geerbte Umgebung) |
 | `install.sh`: „ist kein Git-Repository" | Zielprojekt ohne Git | `git -C <ziel> init` |
@@ -364,6 +426,12 @@ verifiziert bezeichnet — der Rest nicht.
   von DrvFs und Git for Windows, und `kit-einrichten.sh` prüft jede davon
   **an der Maschine** statt sie vorauszusetzen (Proben für `chmod +x` und
   `flock`). Ein vollständiger Durchlauf auf einer Windows-Maschine steht aus.
+- **WSL 1: nicht zugesichert, aber nicht verboten.** Die Eigenschaften von
+  VolFs (Metadaten in NTFS-Attributen) und die Implementierung von `flock()`
+  in WSL 1 sprechen dafür, dass beide Proben grün werden — belegt ist das
+  nicht, und die eingebaute Probe ist einprozessig. Deshalb steht dort die
+  Zwei-Prozess-Gegenprobe: Sie entscheidet den Einzelfall an der Maschine,
+  wie es A.12 für den ganzen WSL-Weg beschreibt.
 - **IDEs: nicht Teil der Zusicherungen.** VS Codium und VS Code sind Beispiele.
   Das Kit kennt keine IDE.
 - **Agenten-Werkzeug: ein erprobter Weg.** Claude Code. Alles andere ist als
