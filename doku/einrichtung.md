@@ -208,12 +208,23 @@ Syscall-Übersetzung nicht zwingend. Deshalb auf dem Zielrechner zusätzlich:
 ```bash
 bash kit-einrichten.sh --nur-pruefen     # Warnung „nicht erkennbar WSL2" ist hier erwartet
 
-L=~/probe.lock                            # Zwei-Prozess-Gegenprobe für die Sperre
+L=~/probe.lock                           # Zwei-Prozess-Gegenprobe für die Sperre
 bash -c 'exec 9>"$0"; flock -x 9; echo "A: Sperre gehalten"; sleep 2' "$L" &
 sleep 0.5
 bash -c 'exec 9>"$0"; if flock -n 9; then echo "B: bekam sie AUCH -> flock greift NICHT"; else echo "B: abgewiesen -> flock greift"; fi' "$L"
 wait; rm -f "$L"
 ```
+
+**Das Erfolgskriterium ist der Exit-Code, nicht die Farbe.** Unter WSL 1 endet
+`kit-einrichten.sh` nicht mit „Alles grün", sondern mit
+
+```
+0 Fehler, 1 Warnungen — lauffähig, aber lies sie.
+```
+
+und **Exit `0`**. Das ist der Erfolgsfall. Erst `1` bedeutet, dass die Maschine
+nicht bereit ist. Prüfbar mit `echo $?` oder
+`bash kit-einrichten.sh --nur-pruefen && echo BEREIT`.
 
 „B: abgewiesen" heißt: Ledger und Kaskadenstand sind serialisiert, und
 [`vollautomatik.sh`](../entry/vollautomatik.sh) — sequenziell, hält das Lock über
@@ -363,7 +374,7 @@ Ein bestehendes Projekt auf eine neue Kit-Version heben: `--update`. Nie
 
 ```bash
 # auf der Maschine
-bash ~/Source/team-kit/kit-einrichten.sh --nur-pruefen   # → "Alles grün", Exit 0
+bash ~/Source/team-kit/kit-einrichten.sh --nur-pruefen   # → "Alles grün", Exit 0 *
 cd ~/Source/team-kit && ./kit-test.sh                    # → 9/9, dauert ein paar Minuten
 
 # im Zielprojekt
@@ -373,6 +384,12 @@ cd ~/Source/team-kit && ./kit-test.sh                    # → 9/9, dauert ein p
 # das Agenten-Werkzeug, headless und ohne Key in der Umgebung
 env -u ANTHROPIC_API_KEY claude -p 'Antworte nur mit: pong'
 ```
+
+\* **Maßgeblich ist der Exit-Code, nicht die Schlusszeile.** Wer legitime
+Warnungen hat — allen voran WSL 1 — bekommt statt „Alles grün" die Bilanz
+`0 Fehler, N Warnungen — lauffähig, aber lies sie.` und trotzdem **Exit `0`**.
+Auch das ist bereit. Siehe
+[Wenn nur WSL 1 geht](#wenn-nur-wsl-1-geht--vm-gesperrte-firmware-verwalteter-rechner).
 
 `kit-test.sh` ruft **keine** Agenten-CLI auf und kostet daher nichts. Der letzte
 Befehl kostet einen Mini-Anteil und ist der einzige Beweis, dass Auth wirklich
