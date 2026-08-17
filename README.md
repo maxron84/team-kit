@@ -172,8 +172,21 @@ Schwester-Repo, nicht Teil dieses Kits.
 ## Installation
 
 ```bash
+# Linux und WSL
 bash install.sh <zielpfad> [--nicht-interaktiv] [--update|--force]
 ```
+
+```powershell
+# Windows nativ (PowerShell 7, ohne WSL)
+pwsh -File install.ps1 <zielpfad> [-NichtInteraktiv] [-Update|-Force]
+```
+
+> **Beide Installer erzeugen aus denselben neun Antworten byte-identische
+> Bäume** — festgenagelt in `kit-test.sh`, Schritt 10/10. Sie schreiben auch
+> **beide** Konfigurationen (`team.config.sh` *und* `team.config.ps1`), damit
+> ein auf Linux eingerichtetes Projekt unter Windows nicht ohne Konfiguration
+> dasteht. Der Windows-Zweig ist **gebaut, aber noch nicht auf Windows
+> abgenommen** — siehe [doku/einrichtung.md, *Belegstand*](doku/einrichtung.md#belegstand).
 
 **Ein bestehendes Projekt auf eine neue Kit-Version heben:** `--update`. Es
 fasst **nur** die Infrastruktur an (Entrypoints außer `team.config.sh`,
@@ -192,8 +205,9 @@ nachgezogen werden, sonst läuft die Doku der Mechanik hinterher.
 
 **Voraussetzungen**: Zielpfad ist ein Git-Repository, `claude` im PATH,
 Auth eingerichtet (`bash scripts/team-auth-setup.sh`). Geprüft und erklärt
-werden sie von `kit-einrichten.sh`; die ausführliche Fassung — Linux und
-Windows mit WSL — steht in [doku/einrichtung.md](doku/einrichtung.md). Welche
+werden sie von `kit-einrichten.sh` bzw. `kit-einrichten.ps1`; die ausführliche
+Fassung — Linux, Windows mit WSL und Windows nativ — steht in
+[doku/einrichtung.md](doku/einrichtung.md). Welche
 **Fähigkeiten** ein Modell mitbringen muss — und warum das Kit trotzdem keinen
 Modellnamen kennt — steht oben im Abschnitt **Modelle**.
 
@@ -358,18 +372,24 @@ Grund für den eigenen Plan-Ordner — siehe `BL-51` oben.
 
 ## Betrieb
 
-| Befehl | Wirkung |
-|---|---|
-| `./vollautomatik.sh` | Ganze Kaskade automatisch durchfahren |
-| `./halbautomatik.sh <rolle>` | Einzelnen Schritt, Entscheidung beim Menschen |
-| `./team-status.sh` | Pipeline, Beutebuch, Kaskadenstand |
-| `./team-status.sh --budget` | Kontostand, API vs. Abo getrennt |
-| `./team-status.sh --ledger-pruefen` | Ist für jede Kaskade alles gebucht? Gegenprobe gegen die archivierten Rohlogs (Exit `4` = Warnbefunde) |
-| `./team-status.sh --altlast [N]` | Produktivdateien, die seit N Kaskaden in keinem Diff lagen — die Auswahlhilfe für einen Altlast-Sweep (`BL-40`) |
-| `./team-test.sh` | Regressionstests der Team-Infrastruktur (pytest) |
-| `bash <kit>/install.sh . --update` | Auf eine neue Kit-Version heben, ohne Projektdaten anzufassen |
-| `python3 team/tools/beutebuch.py list` | Alle Funde mit Status |
-| `python3 team/tools/zitat_lint.py` | Plandateien, die einen erledigten Backlog-Eintrag noch als offene Frage zitieren (`BL-50`) |
+| Linux / WSL | Windows nativ | Wirkung |
+|---|---|---|
+| `./vollautomatik.sh` | `.\vollautomatik.cmd` | Ganze Kaskade automatisch durchfahren |
+| `./halbautomatik.sh <rolle>` | `.\halbautomatik.cmd <rolle>` | Einzelnen Schritt, Entscheidung beim Menschen |
+| `./team-status.sh` | `.\team-status.cmd` | Pipeline, Beutebuch, Kaskadenstand |
+| `./team-status.sh --budget` | `.\team-status.cmd --budget` | Kontostand, API vs. Abo getrennt |
+| `./team-status.sh --ledger-pruefen` | `.\team-status.cmd --ledger-pruefen` | Ist für jede Kaskade alles gebucht? Gegenprobe gegen die archivierten Rohlogs (Exit `4` = Warnbefunde) |
+| `./team-status.sh --altlast [N]` | `.\team-status.cmd --altlast [N]` | Produktivdateien, die seit N Kaskaden in keinem Diff lagen — die Auswahlhilfe für einen Altlast-Sweep (`BL-40`) |
+| `./team-test.sh` | `.\team-test.cmd` | Regressionstests der Team-Infrastruktur (pytest) |
+| `bash <kit>/install.sh . --update` | `pwsh -File <kit>\install.ps1 . -Update` | Auf eine neue Kit-Version heben, ohne Projektdaten anzufassen |
+| `python3 team/tools/beutebuch.py list` | *(gleich)* | Alle Funde mit Status |
+| `python3 team/tools/zitat_lint.py` | *(gleich)* | Plandateien, die einen erledigten Backlog-Eintrag noch als offene Frage zitieren (`BL-50`) |
+
+Die `.cmd`-Dateien sind Einzeiler auf die gleichnamige `.ps1`. Die beiden
+letzten Zeilen stehen bewusst als *(gleich)* da: Die Python-Werkzeuge werden
+**nicht** portiert — Ledger, Beutebuch und Kostenrechnung liegen auf beiden
+Wegen in denselben Dateien. Der PowerShell-Zweig ist eine zweite
+**Orchestrierung**, kein zweiter Zustandscode.
 
 **Exit-Codes**: `0` = durchgelaufen · `1` = echter Fehler · `3` = nichts zu tun ·
 `42` = Session-Limit, Lauf pausiert (kein Fehler, kein Datenverlust) ·

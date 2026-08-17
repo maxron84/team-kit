@@ -1,7 +1,8 @@
 # Einrichtung — vom `git clone` bis zum ersten Lauf
 
-Diese Seite ist die Routine für zwei Maschinen: **Linux** und **Windows mit
-WSL**. Sie beschreibt zwei Vorgänge, die gern verwechselt werden:
+Diese Seite ist die Routine für **drei Wege**: **Linux**, **Windows mit WSL**
+und **Windows nativ** (PowerShell, ohne WSL). Sie beschreibt zwei Vorgänge, die
+gern verwechselt werden:
 
 | Vorgang | Was passiert | Wie oft |
 |---|---|---|
@@ -21,9 +22,9 @@ Produktnamen niemanden zum Laufen bringt. Die Trennlinie:
 
 | Schicht | Pflicht | Beispiel in dieser Anleitung | Warum die Pflicht Pflicht ist |
 |---|---|---|---|
-| Betriebssystem | POSIX-Umgebung mit `bash` ≥ 4 | Linux; Windows über WSL2 (WSL1 nur mit [Gegenprobe](#wenn-nur-wsl-1-geht--vm-gesperrte-firmware-verwalteter-rechner)) | Das Kit ist eine Sammlung von Bash-Skripten und nutzt indirekte Expansion (`${!var}`) |
-| Bordmittel | `git`, `python3` ≥ 3.8, `flock` | — | Git trägt Commit, Rollback und Guard; `team/tools/` ist Python; `flock` serialisiert Ledger und Kaskadenstand |
-| Testrunner | `pytest` (nur für `team-test.sh`/`kit-test.sh`) | — | Die Rollen selbst brauchen ihn nicht |
+| Betriebssystem | **entweder** POSIX mit `bash` ≥ 4 **oder** PowerShell ≥ 7 | Linux; Windows über WSL2 (WSL1 nur mit [Gegenprobe](#wenn-nur-wsl-1-geht--vm-gesperrte-firmware-verwalteter-rechner)); Windows nativ | Das Kit hat **zwei Orchestrierungen** — Bash und PowerShell — die dieselben Python-Werkzeuge und dieselben Rollen-Briefings benutzen. Siehe [Windows nativ](#der-kurze-weg--windows-nativ-ohne-wsl) |
+| Bordmittel | `git`, `python3` ≥ 3.8; auf dem Bash-Weg zusätzlich `flock` | — | Git trägt Commit, Rollback und Guard; `team/tools/` ist Python. Die Serialisierung von Ledger und Kaskadenstand macht auf dem Bash-Weg `flock`, auf dem PowerShell-Weg `[System.IO.FileStream]` — dort braucht es **kein** `flock` |
+| Testrunner | `pytest` (nur für `team-test.sh`/`kit-test.sh`/`kit-test.ps1`) | — | Die Rollen selbst brauchen ihn nicht |
 | **IDE** | **keine** | VS Codium (Linux), VS Code + WSL-Erweiterung (Windows) | Das Kit wird im Terminal bedient. Ein Editor ist Komfort |
 | **Agenten-Werkzeug** | **eine** CLI, die headless arbeitet und ein maschinenlesbares Ergebnis liefert | Claude Code (`claude -p`) | Die einzige Aufrufstelle ist `team_claude()` in [team/lib.sh](../team/lib.sh) |
 | **Modell** | zwei Stufen: schwach und stark | `sonnet` / `opus` als Default | Die Rollen sprechen `TEAM_MODEL_LOOP`/`TEAM_MODEL_STRONG` an, keine Modellnamen — siehe [README, Abschnitt *Modelle*](../README.md#modelle--agnostisch-aber-nicht-anspruchslos) |
@@ -66,6 +67,40 @@ drei Schritte wie oben.
 > Distro.** Klonen, Installieren, Laufenlassen, und das Repo liegt im
 > **Linux**-Dateisystem (`~/Source/…`), nicht unter `/mnt/c/…`. Warum, steht
 > unter [Die eine Regel](#2-die-eine-regel-linux-dateisystem).
+
+## Der kurze Weg — Windows nativ (ohne WSL)
+
+```powershell
+# 1. Bordmittel
+winget install --id Microsoft.PowerShell --source winget   # PowerShell 7
+winget install --id Git.Git --source winget
+winget install --id Python.Python.3.12 --source winget
+
+# 2. Klonen — in einer NEUEN pwsh-Sitzung (PATH!)
+git clone https://github.com/maxron84/team-kit.git $HOME\Source\team-kit
+cd $HOME\Source\team-kit
+
+# 3. Maschine prüfen und einrichten — und gleich in ein Projekt einbinden
+pwsh -File .\kit-einrichten.ps1 $HOME\Source\mein-projekt
+```
+
+**Wann dieser Weg der richtige ist:** Wenn WSL2 nicht zur Verfügung steht — in
+einer VM ohne *nested virtualization*, auf einem verwalteten Rechner, bei
+gesperrter Firmware. Steht WSL2 zur Verfügung, ist der WSL-Weg der erprobtere
+(siehe [Belegstand](#belegstand)).
+
+**Was hier anders ist als unter WSL — und warum es kein Kompromiss ist:**
+
+| | WSL-Weg | nativer Weg |
+|---|---|---|
+| Sperre | `flock` — **kooperativ**, wirkt nur solange alle mitspielen | `[System.IO.FileStream]` mit `FileShare::None` — vom **Betriebssystem durchgesetzt** |
+| Dateisystem-Falle | Klon unter `/mnt/c` (DrvFs) | Klon auf Netzlaufwerk oder in einem Sync-Ordner (OneDrive) |
+| Was ein Skript am Start hindert | fehlendes Exec-Bit | die **Ausführungsrichtlinie** |
+| Selbstprüfung | `./kit-test.sh` (10/10) | `pwsh -File .\kit-test.ps1` (6 Schritte) |
+
+`kit-einrichten.ps1` prüft genau diese Punkte — und zwar **proben statt
+voraussetzen**: Die Sperre wird mit zwei echten Prozessen belegt, nicht
+behauptet.
 
 ---
 
@@ -337,15 +372,169 @@ Windows. Ein aus Windows geerbter `ANTHROPIC_API_KEY` (etwa über
 
 ---
 
-## Die Einbindung — auf beiden Plattformen gleich
+## Windows nativ im Detail
 
-Ab hier gibt es keinen Plattformunterschied mehr.
+### 1. PowerShell 7 — nicht 5.1
+
+Windows 11 bringt **PowerShell 5.1** mit. Das Kit setzt **7** voraus, und 7
+wird **daneben** installiert, nicht darüber: Beide Fassungen existieren
+parallel, `powershell` startet weiter die alte, `pwsh` die neue.
+
+```powershell
+winget install --id Microsoft.PowerShell --source winget
+```
+
+Warum 7 Pflicht ist: `ConvertFrom-Json` verhält sich dort verlässlich (es
+ersetzt im PowerShell-Zweig die eingebetteten Python-Aufrufe der Bash-Fassung),
+und `Set-StrictMode -Version Latest` ist das brauchbare Gegenstück zu Bashs
+`set -u`. Dazu kommt eine unauffällige, aber teure Eigenschaft: **5.1 schreibt
+Umlenkungen als UTF-16**, 7 als UTF-8 ohne BOM. Die Kostenlogs des Kits liest
+anschließend Python — und `json.load` bricht an einem BOM ab, während
+`kosten.py` diesen Fehler abfängt und die Datei still als `0.0000` zählt.
+
+> Das Kit legt die Kodierung seiner Kostenlogs deshalb **ausdrücklich** fest
+> und verlässt sich nicht auf die Voreinstellung
+> ([`team/lib.psm1`](../team/lib.psm1), `Team-ClaudeSchreiben`). Der Punkt steht
+> hier trotzdem, weil er erklärt, warum 5.1 nicht „auch irgendwie geht".
+
+### 2. Die Ausführungsrichtlinie
+
+Das Gegenstück zum fehlenden Exec-Bit unter Linux. Steht sie auf `Restricted`
+oder `AllSigned`, startet **keine** `.ps1`-Datei.
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+`RemoteSigned` lässt lokale Skripte zu und verlangt für heruntergeladene eine
+Signatur. Das Kit klonst du selbst — es zählt als lokal. Administratorrechte
+braucht es dafür nicht (`-Scope CurrentUser`).
+
+### 3. Die eine Regel: lokales Laufwerk
+
+Das Gegenstück zu `/mnt/c` unter WSL. Nicht zugesichert sind:
+
+- **gemappte Netzlaufwerke** und UNC-Pfade (`\\server\freigabe\…`),
+- **Synchronisationsordner** — OneDrive, Dropbox, Google Drive, iCloud.
+
+Der Grund ist derselbe wie bei DrvFs: Die Dateisperre ist dort nicht
+zugesichert, und ein Sync-Client schreibt in Dateien, während eine Rolle sie
+liest. Besonders tückisch unter Windows 11 Enterprise: Das Benutzerprofil kann
+per Richtlinie **nach OneDrive umgeleitet** sein, ohne dass es im Pfad
+auffällt. `kit-einrichten.ps1` erkennt beide Fälle heuristisch **und** probt
+die Sperre danach mit zwei Prozessen — die Heuristik erklärt den Regelfall, die
+Probe entscheidet den Einzelfall.
+
+Richtig ist ein lokales Laufwerk, z. B. `C:\Source\…`.
+
+### 4. Zeilenenden
+
+Umgekehrt zum WSL-Fall: Hier ist nicht CRLF das Problem, sondern **fehlendes**
+CRLF. `.cmd`-Dateien werden vom Kommandozeileninterpreter *während der
+Ausführung* zeilenweise gelesen; bei reinem LF verhalten sich Labels und `goto`
+unzuverlässig — sporadisch, also besonders schwer zuzuordnen.
+[`.gitattributes`](../.gitattributes) erzwingt deshalb `eol=crlf` für `*.cmd`
+und `*.bat`, während `.ps1` bei LF bleibt (PowerShell liest die Datei am
+Stück).
+
+### 5. Bordmittel
+
+```powershell
+git --version
+python --version      # oder python3 / py — der Installer trägt ein, was er findet
+pytest --version      # nur für die Selbstprüfung
+```
+
+> **Die Store-Falle:** Windows legt Platzhalter namens `python.exe` ab, die
+> beim Aufruf nur den Microsoft Store öffnen. Sie tragen den Namen und
+> beantworten keine Versionsfrage. Gegenprobe: `python -c "print(1)"`.
+> `kit-einrichten.ps1` und `install.ps1` prüfen genau so und akzeptieren nur
+> einen Interpreter, der wirklich antwortet.
+
+**Kein `flock`.** Es gibt das unter Windows nicht, und der PowerShell-Zweig
+braucht es auch nicht. An seine Stelle tritt `[System.IO.FileStream]` mit
+`FileShare::None` — eine vom Betriebssystem **durchgesetzte** Sperre, während
+`flock` nur wirkt, solange alle Beteiligten mitspielen. Genau diese
+Problemklasse hat den nativen Zweig ausgelöst: Unter WSL 1 gibt es für
+Dateisperren keine Zusicherung.
+
+### 6. Agenten-Werkzeug
+
+```powershell
+npm install -g @anthropic-ai/claude-code
+```
+
+Danach **eine neue Sitzung öffnen** — PATH-Änderungen erreichen laufende
+Shells nicht.
+
+> **Der teuerste Fehlschluss auf diesem Weg:** Unter Windows ist `claude` kein
+> Programm, sondern ein **`.cmd`-Shim**. Scheitert seine Auflösung, sieht das
+> Ergebnis **aus wie ein Auth-Fehler** und ist keiner. Das Kit löst den Befehl
+> deshalb über `Get-Command` auf und meldet den Fall mit eigenem Wortlaut
+> ([`team/lib.psm1`](../team/lib.psm1), `Team-ClaudeBefehl`).
+
+### 7. Auth
+
+```powershell
+pwsh -File .\scripts\team-auth-setup.ps1
+```
+
+Ablage ist `%APPDATA%\claude-team\` mit denselben zwei Dateien wie unter Linux
+(`auth-mode`, `api-key`). Zwei Unterschiede, die keine Pfadanpassungen sind:
+
+- **`chmod 600` ist unter Windows wirkungslos.** Es läuft ohne Fehler durch und
+  bewirkt **nichts** — der Schlüssel läge danach für jeden lesbar da, mit einem
+  grünen Haken daneben. Stattdessen wird die Vererbung abgeschaltet und genau
+  ein Berechtigter eingetragen. Das Skript **prüft das anschließend nach**,
+  statt es zu glauben.
+- **Ein verdrängender Key steht hier selten in einem Profil.** Unter Linux ist
+  `.bashrc` der Normalfall; unter Windows ist es die
+  **Benutzer-Umgebungsvariable** (`setx`, Systemsteuerung). Wer nur Profile
+  durchsucht, meldet „sauber", während das Abo verdrängt bleibt — deshalb
+  prüft `team-auth-setup.ps1` beides, die Umgebungsvariable zuerst.
+
+### 8. Bedienung
+
+Zwei Aufrufformen, dieselbe Sache darunter:
+
+```powershell
+.\ralph.cmd                     # Bequemlichkeit
+pwsh -File .\ralph.ps1          # dasselbe, ohne Shim
+```
+
+Die `.cmd`-Dateien sind Einzeiler auf die `.ps1` — bewusst **kein Symlink**:
+Der braucht unter Windows Administratorrechte oder den Entwicklermodus, und ein
+Einrichtungsschritt, der an Rechten scheitert, hat sein Versprechen gebrochen.
+
+---
+
+## Die Einbindung — auf allen Wegen dieselbe
+
+Ab hier gibt es keinen inhaltlichen Plattformunterschied mehr, nur eine andere
+Schreibweise.
 
 ```bash
+# Linux und WSL
 bash ~/Source/team-kit/install.sh ~/Source/mein-projekt
 # oder, nach --verknuepfen, von überall:
 bash ~/.claude/scripts/team-init.sh ~/Source/mein-projekt
 ```
+
+```powershell
+# Windows nativ
+pwsh -File $HOME\Source\team-kit\install.ps1 $HOME\Source\mein-projekt
+# oder, nach -Verknuepfen, von überall:
+& "$env:USERPROFILE\.claude\scripts\team-init.cmd" $HOME\Source\mein-projekt
+```
+
+> **Beide Installer schreiben BEIDE Konfigurationen** — `team.config.sh` *und*
+> `team.config.ps1`, aus denselben neun Antworten. Das gilt auch für
+> `install.sh` unter Linux, wo die PowerShell-Fassung niemand braucht: Ein
+> Projekt, das auf Linux eingerichtet und später unter Windows bedient wird,
+> hätte sonst dort keine Konfiguration, und jemand schriebe sie von Hand.
+> Genau dort fängt Drift an. Belegt ist außerdem, dass beide Installer aus
+> denselben Antworten **byte-identische Bäume** erzeugen
+> (`kit-test.sh`, Schritt 10/10).
 
 1. **Zielprojekt muss ein Git-Repo sein** — `git init` reicht. Neu oder seit
    Jahren gewachsen ist beides in Ordnung; für den Bestand siehe
@@ -373,9 +562,9 @@ Ein bestehendes Projekt auf eine neue Kit-Version heben: `--update`. Nie
 ## Gegenprobe — läuft es wirklich?
 
 ```bash
-# auf der Maschine
+# Linux und WSL — auf der Maschine
 bash ~/Source/team-kit/kit-einrichten.sh --nur-pruefen   # → "Alles grün", Exit 0 *
-cd ~/Source/team-kit && ./kit-test.sh                    # → 9/9, dauert ein paar Minuten
+cd ~/Source/team-kit && ./kit-test.sh                    # → 10/10, dauert ein paar Minuten
 
 # im Zielprojekt
 ./team-test.sh                                           # Infrastruktur-Tests
@@ -384,6 +573,27 @@ cd ~/Source/team-kit && ./kit-test.sh                    # → 9/9, dauert ein p
 # das Agenten-Werkzeug, headless und ohne Key in der Umgebung
 env -u ANTHROPIC_API_KEY claude -p 'Antworte nur mit: pong'
 ```
+
+```powershell
+# Windows nativ — auf der Maschine
+pwsh -File .\kit-einrichten.ps1 -NurPruefen              # → Exit 0 *
+pwsh -File .\kit-test.ps1                                # → 6 Schritte, 15 Prüfungen
+
+# im Zielprojekt
+.\team-test.cmd
+.\team-status.cmd
+
+# das Agenten-Werkzeug, headless und ohne Key in der Umgebung
+$env:ANTHROPIC_API_KEY = $null; claude -p 'Antworte nur mit: pong'
+```
+
+> **`kit-test.ps1` ist kein Ersatz für `kit-test.sh`, und es behauptet das auch
+> nicht.** Es schließt die Lücke, dass eine Windows-Maschine ohne WSL gar keine
+> Selbstprüfung hätte — und **sagt am Ende ausdrücklich, was es nicht geprüft
+> hat**: den Bash-Zweig (dort liegt keine `bash`), den Gleichstand beider
+> Installer (der braucht beide Shells nebeneinander) und das Regel-Inventar.
+> Ein übersprungener Nachweis, den niemand sieht, liest sich sonst wie ein
+> bestandener.
 
 \* **Maßgeblich ist der Exit-Code, nicht die Schlusszeile.** Wer legitime
 Warnungen hat — allen voran WSL 1 — bekommt statt „Alles grün" die Bilanz
@@ -428,6 +638,19 @@ Modell führt heute über `claude -p`.
 | `pytest team/tests` im **Kit-Repo** ist rot | Erwartet: Die Tests setzen die installierte Ablage voraus | Stattdessen `./kit-test.sh` |
 | Lauf endet mit Exit `42` oder `43` | Kein Einrichtungsproblem: Session-Limit bzw. „Stufe fertig, Quittung fehlt" | [README, Exit-Codes](../README.md#betrieb) |
 
+**Nur auf dem nativen Windows-Weg:**
+
+| Symptom | Ursache | Abhilfe |
+|---|---|---|
+| `… cannot be loaded because running scripts is disabled` | Ausführungsrichtlinie `Restricted`/`AllSigned` | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` — kein Administrator nötig |
+| `The term 'claude' is not recognized` | `claude` ist ein `.cmd`-Shim; PATH-Änderung hat die laufende Shell nicht erreicht | **Neue** pwsh-Sitzung öffnen. **Das ist KEIN Auth-Fehler** — nicht verwechseln |
+| `python` öffnet den Microsoft Store | Store-Platzhalter statt Interpreter | Echtes Python installieren; Gegenprobe `python -c "print(1)"` |
+| `Could not find file '…'` bei einem relativen Pfad | Ein Skript hat `Set-Location` gesetzt, aber `[System.IO.File]` folgt dem **Prozess**-Arbeitsverzeichnis, nicht der PowerShell-Position | Im Kit behoben (`Team-Pfad` in [`team/lib.psm1`](../team/lib.psm1)); tritt eigener Code darauf, dieselbe Auflösung nutzen |
+| `.cmd` verhält sich sporadisch falsch (Labels, `goto`) | Batch-Datei mit reinem LF | `.gitattributes` erzwingt CRLF; ein Klon von vor dieser Regel: `git rm --cached -r .` und `git reset --hard` |
+| Sperre greift nicht / Lauf hängt | Klon auf Netzlaufwerk oder in einem Sync-Ordner (OneDrive) | Auf ein lokales Laufwerk verlegen. Unter Windows 11 Enterprise kann das Benutzerprofil per Richtlinie nach OneDrive umgeleitet sein |
+| Kosten stehen auf `0.0000`, obwohl ein Lauf lief | Kostenlog mit BOM oder UTF-16 — `kosten.py` fängt den Lesefehler ab und zählt still null | Mit `pwsh` **7** fahren, nicht mit `powershell` (5.1) |
+| Statusbericht bricht mit „Error formatting a string" ab | In `[Console]::Out.WriteLine('{0} {1}' -f $a, $b)` ist das Komma der Argumenttrenner der **Methode** | Format-Ausdruck in eigene Klammern setzen. Im Kit behoben |
+
 ---
 
 ## Belegstand
@@ -443,6 +666,19 @@ verifiziert bezeichnet — der Rest nicht.
   von DrvFs und Git for Windows, und `kit-einrichten.sh` prüft jede davon
   **an der Maschine** statt sie vorauszusetzen (Proben für `chmod +x` und
   `flock`). Ein vollständiger Durchlauf auf einer Windows-Maschine steht aus.
+- **Windows nativ (PowerShell): gebaut und gefahren, aber NICHT auf Windows.**
+  Der ganze Zweig — `kit-einrichten.ps1`, `install.ps1`, `team/lib.psm1`, die
+  zehn Rollen-Einstiege, `kit-test.ps1` — ist gegen **pwsh 7.4.6 unter Linux**
+  geprüft: Syntax, Einrichtung, Installation, ein `-Update` gegen eine mit
+  `install.sh` erzeugte Installation, ein Trockenlauf der ganzen Kette, und die
+  Zusicherung, dass beide Installer **byte-identische Bäume** erzeugen.
+  Was das **nicht** belegt und dort auch nicht belegbar ist: `Get-CimInstance`,
+  `Set-Acl`, die Benutzer-Umgebungsvariablen, das `.cmd`-Verhalten — und vor
+  allem die tragende Frage, **ob `claude -p --output-format json` unter nativem
+  Windows headless mit dem Abo läuft**. Dafür liegt
+  [`pruefe-windows.ps1`](../pruefe-windows.ps1) bereit; sie beantwortet genau
+  diese drei Punkte und kostet im Standardlauf nichts. Solange sie nicht
+  gefahren ist, gilt der native Weg als **gebaut, nicht abgenommen**.
 - **WSL 1: nicht zugesichert, aber nicht verboten.** Die Eigenschaften von
   VolFs (Metadaten in NTFS-Attributen) und die Implementierung von `flock()`
   in WSL 1 sprechen dafür, dass beide Proben grün werden — belegt ist das

@@ -583,6 +583,45 @@ Budget-Prüfung und Beutebuch-Auswertung.
 **Auf Windows unbelegt.** Wie in den Stufen zuvor: alles gegen pwsh 7.4.6
 unter Linux.
 
+### Stufe 5 — erledigt (2026-08-17)
+
+| Was | Wo | Stand |
+|---|---|---|
+| Selbstprüfung für Windows | [`kit-test.ps1`](../kit-test.ps1) | **neu.** Sechs Schritte, 15 Einzelprüfungen — inklusive Trockenlauf der ganzen Kette |
+| Der dritte Weg | [`doku/einrichtung.md`](../doku/einrichtung.md) | **neu**, 691 statt 455 Zeilen: kurzer Weg, acht Detailabschnitte, acht eigene Fehlerbilder, Belegstand |
+| Richtigstellung `${!var}` | [`kit-einrichten.sh`](../kit-einrichten.sh), `doku/einrichtung.md` | **korrigiert** |
+| Plattformspalte | [`README.md`](../README.md), [`bootstrap/TEAM.md`](../bootstrap/TEAM.md) | **ergänzt** |
+| Auslieferungs- und Doku-Prüfung | [`kit-test.sh`](../kit-test.sh) Schritt 9+10 | **erweitert** um `kit-test.ps1`, `team/lib.psm1`, `team/redteam.ps1` und zwei Prüfungen, dass die Doku den dritten Weg wirklich nennt |
+
+**Warum `kit-test.ps1` einen anderen Zuschnitt hat als `kit-test.sh`:** Der
+Gleichstand der Installer ist bereits durch Schritt 10/10 belegt, und der
+braucht beide Shells nebeneinander. Was auf einer Windows-Maschine **ohne
+bash** fehlte, war die Selbstprüfung überhaupt — ein Anwender dort hatte gar
+keine Möglichkeit, seine Installation zu prüfen. Das Skript sagt am Ende
+ausdrücklich, was es nicht geprüft hat.
+
+**Drei Funde beim Bau, alle behoben** (siehe Commit `e1481f7`):
+
+1. **Ein echter Defekt in `lib.psm1`.** `Set-Location` ändert nur die Position
+   der PowerShell-Sitzung, **nicht** das Arbeitsverzeichnis des Prozesses.
+   Cmdlets folgen der Position, `[System.IO.File]` folgt dem Prozess — sechs
+   Stellen betroffen. Der Fehler fällt nur auf, wenn beide auseinanderliegen,
+   also **nicht** beim Handstart aus dem Projektordner und **genau dann**, wenn
+   ein anderes Skript aufruft. Er wartete auf den Selbsttest und auf die
+   Vollautomatik. Behoben mit `Team-Pfad`.
+2. **`[Console]::Out.WriteLine` ist von `*>` nicht einfangbar.** Das Lauf-Log
+   der Vollautomatik hätte nur die Zeilen des Orchestrators enthalten — und
+   `team-status.ps1` zeigt genau dessen letzte drei. Die Rollen laufen jetzt in
+   einem eigenen Prozess, was ohnehin die treue Übersetzung ist.
+3. **`kit-test.ps1` hat in seiner ersten Fassung einen Absturz überlebt und
+   „grün" gemeldet.** Behoben mit einem `trap` und einer Soll-Zahl der
+   Einzelprüfungen.
+
+**Die Abnahme aus dem Plan bleibt offen.** Sie lautet: *„Ein echter, bezahlter
+Lauf einer Rolle auf der Zielmaschine, mit Ledger-Zeile."* Ohne Zugriff auf die
+W11-Maschine ist das nicht einlösbar. Damit ist der Windows-Zweig **gebaut,
+aber nicht abgenommen** — und genau so steht er im Belegstand der Doku.
+
 ### Torbedingung — weiterhin offen
 
 R1 ist unbeantwortet, bis `pruefe-windows.ps1 -MitEchtemAufruf` auf der

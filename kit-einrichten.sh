@@ -132,8 +132,16 @@ esac
 # ---------------------------------------------------------------- 2/5 Werkzeuge
 kopf "2/5 — Werkzeuge"
 
-# bash 4 aufwärts: Das Kit nutzt durchgehend indirekte Expansion (${!var}) und
-# assoziative Konstrukte, die bash 3.2 nicht kennt.
+# bash 4 aufwärts. Die Begründung stand hier bis 2026-08-17 falsch: "Das Kit
+# nutzt DURCHGEHEND indirekte Expansion (${!var})". Nachgemessen kommt sie in
+# der LAUFZEIT — team/lib.sh, entry/*.sh, team/redteam.sh — genau NULL Mal vor.
+# Alle sechs Fundstellen liegen in install.sh (dazu `printf -v` und
+# `unset "${!TEAM_@}"`), also im INSTALLER.
+#
+# Die Anforderung bleibt trotzdem bestehen, nur mit dem richtigen Grund: Der
+# Installer braucht bash 4, und ohne ihn kommt niemand zu einer Laufzeit. Die
+# alte Formulierung war keine Kleinigkeit — sie hätte jeden, der die Laufzeit
+# portiert oder prüft, an der falschen Stelle suchen lassen.
 if [ "${BASH_VERSINFO[0]}" -ge 4 ]; then
     ok "bash ${BASH_VERSION%%(*}"
 else

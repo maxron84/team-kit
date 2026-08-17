@@ -266,14 +266,20 @@ Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 
 ## Befehle im Überblick
 
-| Befehl | Wirkung |
-|---|---|
-| `./vollautomatik.sh` | ganze Kaskade automatisch |
-| `./halbautomatik.sh [rolle]` | ein Schritt, Entscheidung bei dir |
-| `./team-status.sh` | Pipeline, Beutebuch, Kaskadenstand |
-| `./team-status.sh --budget` | Kontostand, API vs. Abo getrennt |
-| `./team-test.sh` | Regressionstests der **Team-Infrastruktur** |
-| `python3 team/tools/beutebuch.py list` | alle Funde mit Status |
+| Linux / WSL | Windows | Wirkung |
+|---|---|---|
+| `./vollautomatik.sh` | `.\vollautomatik.cmd` | ganze Kaskade automatisch |
+| `./halbautomatik.sh [rolle]` | `.\halbautomatik.cmd [rolle]` | ein Schritt, Entscheidung bei dir |
+| `./team-status.sh` | `.\team-status.cmd` | Pipeline, Beutebuch, Kaskadenstand |
+| `./team-status.sh --budget` | `.\team-status.cmd --budget` | Kontostand, API vs. Abo getrennt |
+| `./team-test.sh` | `.\team-test.cmd` | Regressionstests der **Team-Infrastruktur** |
+| `python3 team/tools/beutebuch.py list` | *(gleich)* | alle Funde mit Status |
+
+**Welche Spalte für dich gilt:** die linke, wenn du unter Linux oder in einer
+WSL-Distro arbeitest; die rechte, wenn du Windows **ohne** WSL benutzt. Beide
+Spalten tun dasselbe — es sind zwei Schreibweisen, kein Funktionsunterschied.
+Die letzte Zeile steht bewusst als *(gleich)* da: Die Werkzeuge sind Python und
+werden auf beiden Wegen identisch aufgerufen.
 
 `./team-test.sh` prüft **nicht** dein Projekt. Dein Testbefehl ist:
 `{{SMOKE_TEST}}`
@@ -348,13 +354,20 @@ Kit-Pfad ist der Ordner, aus dem installiert wurde (typisch
 `~/Source/team-kit`):
 
 ```bash
+# Linux und WSL
 git add -A && git commit -m "chore: vor Kit-Update"   # erst committen!
 bash <kit-pfad>/install.sh . --update
 ```
 
+```powershell
+# Windows ohne WSL
+git add -A; git commit -m "chore: vor Kit-Update"     # erst committen!
+pwsh -File <kit-pfad>\install.ps1 . -Update
+```
+
 **`--update` fasst nur die Infrastruktur an** — Entrypoints, `team/lib.sh`,
 die Werkzeuge, die Rollen-Briefings, die Team-Tests. **Unangetastet bleiben**
-deine Projektdaten: `team.config.sh`, `CLAUDE.md`, `CHANGELOG.md`,
+deine Projektdaten: `team.config.sh`, `team.config.ps1`, `CLAUDE.md`, `CHANGELOG.md`,
 `.budget-ledger`, `.ralph-state` und der ganze Plan-Ordner. Der Lauf listet am
 Ende beides auf.
 

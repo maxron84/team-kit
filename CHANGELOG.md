@@ -6,6 +6,46 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **[`doku/einrichtung.md`](doku/einrichtung.md) beschreibt jetzt DREI Wege**
+  statt zwei: Linux, Windows mit WSL und **Windows nativ** (PowerShell, ohne
+  WSL). Der neue Abschnitt sagt zuerst, **wann** er der richtige ist — nämlich
+  wenn WSL2 ausfällt (VM ohne *nested virtualization*, verwalteter Rechner,
+  gesperrte Firmware) — und stellt die vier echten Unterschiede
+  gegenüber: kooperatives `flock` gegen die vom Betriebssystem **durchgesetzte**
+  `FileShare::None`-Sperre, `/mnt/c` gegen Netzlaufwerk und OneDrive,
+  fehlendes Exec-Bit gegen die Ausführungsrichtlinie, `kit-test.sh` gegen
+  `kit-test.ps1`. Dazu acht Detailabschnitte, darunter drei Fallen, die alle
+  dasselbe Muster haben — sie sehen nach etwas anderem aus, als sie sind:
+  ein `claude`, das nicht aufgelöst wird, **sieht aus wie ein Auth-Fehler**;
+  ein Store-Platzhalter **trägt den Namen** `python.exe` und ist keiner; ein
+  nach OneDrive umgeleitetes Benutzerprofil **fällt im Pfad nicht auf**.
+- **Acht neue Fehlerbilder für den nativen Weg** — von der
+  Ausführungsrichtlinie über die BOM-Falle bis zur `Set-Location`-Falle
+  (PowerShell-Position und Prozess-Arbeitsverzeichnis sind zwei verschiedene
+  Dinge). Und im **Belegstand** steht der neue Zweig mit dem Status, den er
+  wirklich hat: *gebaut und gefahren, aber nicht auf Windows* — samt
+  ausdrücklicher Liste dessen, was unter Linux gar nicht prüfbar ist.
+- **Befehlstabellen mit Plattformspalte** in [README.md](README.md) und
+  [bootstrap/TEAM.md](bootstrap/TEAM.md). Die Python-Werkzeuge stehen dort
+  bewusst als *(gleich)*: Sie werden **nicht** portiert — Ledger, Beutebuch und
+  Kostenrechnung liegen auf beiden Wegen in denselben Dateien. Der
+  PowerShell-Zweig ist eine zweite **Orchestrierung**, kein zweiter
+  Zustandscode.
+
+### Fixed
+
+- **Die Begründung für `bash` ≥ 4 stand falsch in
+  [`kit-einrichten.sh`](kit-einrichten.sh) und in der Doku.** Dort hieß es, das
+  Kit nutze *durchgehend* indirekte Expansion (`${!var}`). Nachgemessen kommt
+  sie in der **Laufzeit** — `team/lib.sh`, `entry/*.sh`, `team/redteam.sh` —
+  genau **null** Mal vor; alle sechs Fundstellen liegen im **Installer**. Die
+  Anforderung bleibt bestehen, nur mit dem richtigen Grund: Ohne Installer
+  kommt niemand zu einer Laufzeit. Keine Kleinigkeit — die alte Formulierung
+  hätte jeden, der die Laufzeit portiert oder prüft, an der falschen Stelle
+  suchen lassen. (Gefunden beim Vermessen für den Windows-Zweig, Stufe 1.)
+
+### Added (Fortsetzung)
+
 - **Die Rollen laufen unter Windows — der Zweig ist bedienbar.** Zehn
   Einstiege plus die gemeinsame Sweep-Logik, je mit `.cmd`-Shim:
   [`ralph.ps1`](entry/ralph.ps1), [`frank.ps1`](entry/frank.ps1),

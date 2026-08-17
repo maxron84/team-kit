@@ -476,6 +476,14 @@ done
 e_pruefe "README verweist nicht mehr auf den Pfad der Autorenmaschine" \
     "$(grep -c 'claude/scripts/team-auth-setup.sh' "$KIT/README.md")" "0"
 
+# f) Der dritte Weg muss in der Anleitung stehen. Ein Zweig, den die Doku nicht
+#    nennt, existiert fuer den Anwender nicht — und der native Weg ist genau
+#    fuer die Maschinen da, auf denen der WSL-Weg ausfaellt.
+e_pruefe "einrichtung.md nennt den nativen Windows-Weg" \
+    "$(grep -c '^## Der kurze Weg — Windows nativ' "$KIT/doku/einrichtung.md")" "1"
+e_pruefe "einrichtung.md fuehrt ihn im Belegstand" \
+    "$(grep -c 'Windows nativ (PowerShell): gebaut und gefahren' "$KIT/doku/einrichtung.md")" "1"
+
 [ "$E_FEHLER" -eq 0 ] || exit 1
 
 kopf "10/10 — Windows-Zweig: Gleichstand der beiden Installer"
@@ -501,8 +509,9 @@ w_pruefe ".gitattributes erzwingt CRLF fuer *.cmd" \
     "$(grep -c '^\*\.cmd text eol=crlf' "$KIT/.gitattributes")" "1"
 
 # b) Ausgeliefert werden muss der ganze Bootstrap, nicht die Haelfte.
-for datei in install.ps1 kit-einrichten.ps1 entry/team.config.ps1 \
-             scripts/team-auth-setup.ps1 scripts/team-init.ps1 pruefe-windows.ps1; do
+for datei in install.ps1 kit-einrichten.ps1 kit-test.ps1 entry/team.config.ps1 \
+             scripts/team-auth-setup.ps1 scripts/team-init.ps1 pruefe-windows.ps1 \
+             team/lib.psm1 team/redteam.ps1; do
     w_pruefe "ausgeliefert: $datei" "$([ -f "$KIT/$datei" ] && echo ja || echo nein)" "ja"
 done
 
