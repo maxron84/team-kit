@@ -51,15 +51,16 @@ function Naechster-Schritt {
 }
 
 function Schritt-Ausfuehren {
+    # Eigener Prozess je Rolle — dieselbe Begruendung wie in
+    # vollautomatik.ps1 (Rolle-Starten): treue Uebersetzung des Bash-Subprozesses,
+    # und TEAM_LOCK_HELD wird ueber die Umgebung vererbt.
     param([string]$Schritt)
-    switch ($Schritt) {
-        'ralph' { & ./ralph.ps1; return $LASTEXITCODE }
-        'harry' { & ./harry.ps1; return $LASTEXITCODE }
-        'marv'  { & ./marv.ps1;  return $LASTEXITCODE }
-        'frank' { & ./frank.ps1; return $LASTEXITCODE }
-        'axel'  { & ./axel.ps1;  return $LASTEXITCODE }
-        default { Team-Fehler "Unbekannter Schritt: $Schritt"; return 2 }
+    if ($Schritt -notin @('ralph', 'harry', 'marv', 'frank', 'axel')) {
+        Team-Fehler "Unbekannter Schritt: $Schritt"
+        return 2
     }
+    & pwsh -NoProfile -File "./$Schritt.ps1"
+    return $LASTEXITCODE
 }
 
 function Deute-Exit {
@@ -79,7 +80,7 @@ function Deckel-Dialog-Ralph {
     # brauchen keinen Dialog. Der Einzelschritt-Modus ruft ihn NICHT auf und
     # bleibt damit ohne Dialog lauffaehig.
     [Console]::Out.WriteLine('  ── Deckel-Check vor dem Bau-Schritt ──')
-    foreach ($z in @(& ./team-status.ps1 --budget)) { [Console]::Out.WriteLine("  $z") }
+    foreach ($z in @(& pwsh -NoProfile -File ./team-status.ps1 --budget)) { [Console]::Out.WriteLine("  $z") }
     $empfehlung = team_budget_empfehlung
     if ($empfehlung) {
         $eingabe = Read-Host "  Architekten-Empfehlung: $empfehlung USD. [Enter]=übernehmen, oder Zahl eingeben"
@@ -94,7 +95,7 @@ function Deckel-Dialog-Ralph {
 # --- Einzelschritt-Modus (nicht-interaktiv) -----------------------------------
 if ($args.Count -ge 1) {
     switch ($args[0]) {
-        'status' { & ./team-status.ps1; exit 0 }
+        'status' { & pwsh -NoProfile -File ./team-status.ps1; exit $LASTEXITCODE }
         'next'   { [Console]::Out.WriteLine((Naechster-Schritt)); exit 0 }
         { $_ -in @('ralph', 'harry', 'marv', 'frank', 'axel') } {
             if (-not (team_lock 'halbautomatik')) { exit 1 }
@@ -146,7 +147,7 @@ while ($true) {
         '^(m|marv)$'  { $rc = Schritt-Ausfuehren 'marv';  Deute-Exit 'marv'  $rc; break }
         '^(f|frank)$' { $rc = Schritt-Ausfuehren 'frank'; Deute-Exit 'frank' $rc; break }
         '^(a|axel)$'  { $rc = Schritt-Ausfuehren 'axel';  Deute-Exit 'axel'  $rc; break }
-        '^(s|status)$' { & ./team-status.ps1; break }
+        '^(s|status)$' { & pwsh -NoProfile -File ./team-status.ps1; break }
         '^(q|quit|exit)$' {
             [Console]::Out.WriteLine('  Halbautomatik beendet. Der Rest wartet geduldig.')
             return

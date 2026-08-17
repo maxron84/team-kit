@@ -40,6 +40,11 @@
 # Zuerst gelesen, damit die Team-Default-Zuweisungen unten sie stehen lassen.
 # Fehlt die Datei, laufen die Rollen mit den Defaults dieser Bibliothek weiter —
 # so bricht ein Lauf nie an einer fehlenden Konfigdatei ab.
+# Position und Arbeitsverzeichnis beim Laden angleichen (siehe Team-Pfad).
+# Die Entrypoints setzen ihre Position VOR dem Import, hier stimmt sie also
+# schon. Das ist der Guertel; Team-Pfad ist der Hosentraeger.
+[Environment]::CurrentDirectory = (Get-Location).ProviderPath
+
 $_konfig = Join-Path (Split-Path -Parent $PSScriptRoot) 'team.config.ps1'
 if (Test-Path $_konfig) {
     . $_konfig
@@ -86,6 +91,31 @@ function Team-Werkzeug {
     $rest = @()
     if ($teile.Count -gt 1) { $rest = $teile[1..($teile.Count - 1)] }
     & $befehl @($rest + $Argumente)
+}
+
+function Team-Pfad {
+    <#
+      Macht einen relativen Pfad absolut — gegen die POWERSHELL-Position, nicht
+      gegen das .NET-Arbeitsverzeichnis.
+
+      WARUM ES DIESE FUNKTION GIBT: `Set-Location` (das Gegenstueck zu `cd`,
+      und die BL-3-Invariante jedes Entrypoints) aendert NUR die Position der
+      PowerShell-Sitzung. Das Arbeitsverzeichnis des Prozesses bleibt, wo es
+      war. Cmdlets wie Get-Content und Test-Path folgen der Position;
+      [System.IO.File] folgt dem Prozess. Beide nebeneinander zu benutzen
+      heisst: `Test-Path 'plans/x.md'` sagt ja, und `ReadAllText('plans/x.md')`
+      im naechsten Ausdruck wirft "Could not find file".
+
+      Der Fehler faellt nur auf, wenn Position und Arbeitsverzeichnis
+      auseinanderliegen — also NICHT, wenn man das Skript aus seinem eigenen
+      Ordner startet, und GENAU DANN, wenn ein anderes Skript es aufruft. Er
+      wartet also auf den Selbsttest und auf die Vollautomatik, nicht auf den
+      Handstart.
+    #>
+    param([string]$Pfad)
+    if (-not $Pfad) { return $Pfad }
+    if ([System.IO.Path]::IsPathRooted($Pfad)) { return $Pfad }
+    return (Join-Path (Get-Location).ProviderPath $Pfad)
 }
 
 function Team-JsonLesen {
@@ -411,7 +441,7 @@ function team_versuch_sichern {
         is_error = $true; result = ""; total_cost_usd = $null
         team_versuch = "verworfen"; team_dauer_s = $Dauer
     }
-    [System.IO.File]::WriteAllText($Datei, ($zettel | ConvertTo-Json -Compress),
+    [System.IO.File]::WriteAllText((Team-Pfad $Datei), ($zettel | ConvertTo-Json -Compress),
         (New-Object System.Text.UTF8Encoding($false)))
     return $true
 }
@@ -554,7 +584,7 @@ function team_ralph_cap {
     param([string]$PlanDatei = $null)
     if (-not $PlanDatei) { $PlanDatei = (team_plan_datei) }
     if (-not $PlanDatei -or -not (Test-Path $PlanDatei)) { return }
-    $m = [regex]::Match([System.IO.File]::ReadAllText($PlanDatei), '(?m)^\s*RALPH_CAP=(.*)$')
+    $m = [regex]::Match([System.IO.File]::ReadAllText((Team-Pfad $PlanDatei)), '(?m)^\s*RALPH_CAP=(.*)$')
     if (-not $m.Success) { return }
     Write-Output ($m.Groups[1].Value -replace '\s', '')
 }
@@ -566,7 +596,7 @@ function team_budget_empfehlung {
     param([string]$PlanDatei = $null)
     if (-not $PlanDatei) { $PlanDatei = (team_plan_datei) }
     if (-not $PlanDatei -or -not (Test-Path $PlanDatei)) { return }
-    $m = [regex]::Match([System.IO.File]::ReadAllText($PlanDatei), '(?m)^\s*BUDGET_EMPFEHLUNG_USD=(.*)$')
+    $m = [regex]::Match([System.IO.File]::ReadAllText((Team-Pfad $PlanDatei)), '(?m)^\s*BUDGET_EMPFEHLUNG_USD=(.*)$')
     if (-not $m.Success) { return }
     Write-Output ($m.Groups[1].Value -replace '\s', '')
 }
@@ -732,7 +762,7 @@ function team_briefing {
     param([string]$Rolle)
     $datei = "team/prompts/rolle-$Rolle.md"
     if ((Test-Path $datei -PathType Leaf) -and (Get-Item $datei).Length -gt 0) {
-        Write-Output ([System.IO.File]::ReadAllText($datei))
+        Write-Output ([System.IO.File]::ReadAllText((Team-Pfad $datei)))
     } else {
         Write-Output "Rolle siehe CLAUDE.md — lies sie zuerst."
     }
@@ -1103,7 +1133,7 @@ function Team-ClaudeSchreiben {
           [string[]]$Weitere = @())
     $roh = & $Claude -p $Prompt --model $Modell --output-format json @Weitere
     $code = $LASTEXITCODE
-    [System.IO.File]::WriteAllText($Out, (($roh -join "`n")),
+    [System.IO.File]::WriteAllText((Team-Pfad $Out), (($roh -join "`n")),
         (New-Object System.Text.UTF8Encoding($false)))
     return $code
 }
@@ -1136,7 +1166,7 @@ function team_claude {
     if ($env:TEAM_DRY_RUN -eq '1') {
         $stub = [ordered]@{ result = [string]$env:TEAM_DRY_RESULT
                             total_cost_usd = 0.01; is_error = $false }
-        [System.IO.File]::WriteAllText($Out, ($stub | ConvertTo-Json -Compress),
+        [System.IO.File]::WriteAllText((Team-Pfad $Out), ($stub | ConvertTo-Json -Compress),
             (New-Object System.Text.UTF8Encoding($false)))
         $script:TEAM_LAST_COST = '0.01'
         $script:TEAM_LAST_OUT = $Out

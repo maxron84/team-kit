@@ -66,10 +66,28 @@ function Log {
 }
 
 function Rolle-Starten {
-    # Startet ein Rollen-Skript und spiegelt seine Ausgabe ins Lauf-Log.
-    # Gibt den Exit-Code zurueck.
+    <#
+      Startet ein Rollen-Skript in einem EIGENEN PROZESS und spiegelt seine
+      Ausgabe ins Lauf-Log. Gibt den Exit-Code zurueck.
+
+      WARUM EIN EIGENER PROZESS UND NICHT `& ./ralph.ps1`:
+      Zwei Gruende, und der zweite ist der zwingende.
+
+      1. Es ist die treue Uebersetzung. In Bash ist `./ralph.sh` ein
+         Subprozess; TEAM_LOCK_HELD wird ueber die Umgebung vererbt, und genau
+         darauf beruht, dass die Rollen sich unter der Vollautomatik nicht
+         selbst aussperren.
+      2. Die Rollen schreiben ihre Meldungen mit [Console]::Out.WriteLine —
+         das muss so sein, weil eine Bibliotheksfunktion sonst ihre Diagnose in
+         den eigenen Rueckgabewert schreibt. Diese Ausgabe geht am
+         PowerShell-Ausgabestrom VORBEI, direkt auf den Prozess-Stdout, und ist
+         mit `&` und `2>&1` NICHT einzufangen. Das Lauf-Log haette dann nur die
+         Zeilen des Orchestrators enthalten — und team-status.ps1 zeigt genau
+         dessen letzte drei Zeilen an. Bei einem externen Prozess faengt
+         PowerShell den Stdout dagegen vollstaendig.
+    #>
     param([string]$Skript, [string[]]$Argumente = @())
-    $ausgabe = & $Skript @Argumente 2>&1
+    $ausgabe = & pwsh -NoProfile -File $Skript @Argumente 2>&1
     $code = $LASTEXITCODE
     foreach ($z in $ausgabe) {
         $text = [string]$z
