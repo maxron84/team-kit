@@ -1,4 +1,4 @@
-<#
+﻿<#
   team-test.ps1 — fuehrt die Regressionstests der TEAM-INFRASTRUKTUR aus.
 
   Bewusst getrennt vom Testlauf des Projekts: Die Team-Tests sind pytest und

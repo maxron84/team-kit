@@ -1,4 +1,4 @@
-<#
+﻿<#
   team-auth-setup.ps1 — Maschinen-Einrichtung fuer den nativen Windows-Zweig:
   Abo als Prio 1, API-Key nur als geschuetzter Fallback.
 

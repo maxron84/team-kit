@@ -1,4 +1,4 @@
-<#
+﻿<#
   axel.ps1 — Axel Foley, Read-Only Forensiker, automatisch gerufen.
   Nimmt EINEN Fall mit Status 'an Axel übergeben', erstellt eine
   Ermittlungsakte (Root-Cause + Fix-Plan) und gibt an Frank zurueck

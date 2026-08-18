@@ -18,8 +18,8 @@ Funde ab `BL-6`. Verweise auf den Backlog eines **anderen** Projekts werden
 > Begründung jedes erledigten Punktes — sie wird nachgeschlagen, nicht
 > mitgelesen. Diese Datei trägt nur, woran noch Arbeit hängt (`BL-53`).
 
-**Stand 2026-08-17: zwei offene Einträge** (`BL-111`, `BL-112`). Die zuletzt abgetragenen
-(`BL-53`, `BL-62`, `BL-108`, `BL-109`, `BL-110`) stehen mit voller Begründung
+**Stand 2026-08-18: zwei offene Einträge** (`BL-111`, `BL-112`). Die zuletzt abgetragenen
+(`BL-62`, `BL-108`, `BL-109`, `BL-110`, `BL-113`) stehen mit voller Begründung
 im Archiv.
 
 | Nr | Was | Woher | Status |

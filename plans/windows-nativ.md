@@ -627,3 +627,74 @@ aber nicht abgenommen** — und genau so steht er im Belegstand der Doku.
 R1 ist unbeantwortet, bis `pruefe-windows.ps1 -MitEchtemAufruf` auf der
 Zielmaschine gelaufen ist. Bis dahin bleiben die Stufen 3–5 auf einer Annahme
 gebaut.
+
+---
+
+## 12. Erster Kontakt mit der Zielmaschine (2026-08-18) — BL-113
+
+Der Zweig ist zum ersten Mal auf einer echten Windows-11-Enterprise-VM
+angefasst worden. Ergebnis in einem Satz: **Er hat es nicht bis zur ersten
+ausgeführten Zeile geschafft.**
+
+```
+PS C:\…\team-kit> .\kit-einrichten.ps1 C:\…\duke-itam-2026\
+At …\kit-einrichten.ps1:113 char:39
++         "Windows 11 bringt 5.1 mit; 7 wird DANEBEN installiert, nicht ...
++                                       ~~~~
+Unexpected token 'wird' in expression or statement.
+```
+
+Zehn solche Fehler, **keiner davon echt**. Windows PowerShell 5.1 liest eine
+Datei ohne BOM in der ANSI-Codepage; `—` (UTF-8 `E2 80 94`) wird dabei zu
+`â€"`, dessen letztes Zeichen U+201D ist — für PowerShell eine gültige
+Stringgrenze. 443 Gedankenstriche im Zweig, jeder eine Sollbruchstelle.
+Behoben, begründet und unter Test: **BL-113** im
+[Backlog-Archiv](backlog-archiv.md).
+
+### Was dieser Fund über die Testbahn sagt
+
+Er ist der erste Messwert für die Frage, die dieser Plan seit Stufe 1 offen
+mitführt: **Wie weit trägt eine Zusicherung, die unter Linux gemessen wurde?**
+
+Die Antwort ist unangenehm konkret. Zum Zeitpunkt des Fehlschlags war:
+
+- `kit-test.sh` grün, 10/10, einschließlich `diff -r` beider Installerbäume,
+- `kit-test.ps1` grün, 15/15, einschließlich Trockenlauf der ganzen Kette,
+- die Doppelbahn grün, 364 bestandene Tests, 29 davon auf beiden Bahnen,
+- der pwsh-Syntaxcheck über **alle** `.ps1` grün.
+
+Und auf dem Ziel parste keine einzige Datei. Der Grund ist kein Loch in der
+Abdeckung, sondern eine Kategorie: Alle diese Prüfungen fahren Code **unter
+pwsh 7**, und pwsh 7 liest UTF-8 ohne BOM auf jeder Plattform korrekt. Sie
+konnten den Fehler nicht sehen, weil sie ihn nicht sehen **können**.
+
+Die Lehre für die weiteren Stufen ist deshalb nicht „mehr testen", sondern eine
+zweite Sorte Prüfung: **Was die Zielmaschine anders LIEST statt anders TUT,
+prüft man an den Bytes, nicht am Verhalten.** `test_bl113_bom_regel.py` sieht
+sich Dateianfänge an und läuft ohne PowerShell — deshalb greift es auch dort,
+wo der Zweig gar nicht laufen kann.
+
+Kandidaten derselben Bauart, noch ungeprüft: die OEM-Codepage der Konsole
+(Kästchenzeichen und `✓` in der Ausgabe), `$OutputEncoding` bei Pipes zwischen
+Prozessen, und die Frage, welche Kodierung `claude.cmd` auf seiner Standardein-
+und -ausgabe erwartet.
+
+### Reihenfolge für den nächsten Anlauf
+
+R1 bleibt die Torbedingung. Die Reihenfolge ist so gewählt, dass jeder Schritt
+außer dem letzten nichts kostet:
+
+1. `pwsh -File .\pruefe-windows.ps1` — R2, R3, kostenlos.
+2. `pwsh -File .\pruefe-windows.ps1 -MitEchtemAufruf` — **R1**, Bruchteile
+   eines Cent. Fällt der Schritt, ist es eine Auth- und keine Plattformfrage,
+   und die Stufen 3–5 stehen weiter auf einer Annahme.
+3. `pwsh -File .\kit-einrichten.ps1 -NurPruefen` — Maschine, kostenlos.
+4. `pwsh -File .\kit-test.ps1` — Wegwerf-Repo, Installation, Testlauf,
+   Trockenlauf der Kette. Setzt `TEAM_DRY_RUN=1` selbst; kostenlos.
+5. Erst dann ein echtes Projekt und ein bezahlter Rollenlauf — **das** ist die
+   ausstehende Abnahme.
+
+> **Kostenwarnung, aus eigenem Schaden.** Beim Bau von Stufe 4 sind `harry.ps1`
+> und `marv.ps1` **ohne** `TEAM_DRY_RUN=1` gestartet worden, während `claude`
+> im PATH lag: zwei echte Aufrufe, 0,9950 USD Abo-Gegenwert, für nichts. Ein
+> Rollenskript ruft die CLI **immer** wirklich auf, wenn die Variable fehlt.

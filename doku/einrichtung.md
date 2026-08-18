@@ -384,6 +384,31 @@ parallel, `powershell` startet weiter die alte, `pwsh` die neue.
 winget install --id Microsoft.PowerShell --source winget
 ```
 
+**Woran du merkst, dass versehentlich 5.1 läuft.** Startest du ein Kit-Skript
+aus einem `powershell`-Fenster statt aus `pwsh`, siehst du keinen Hinweis,
+sondern eine Wand aus Syntaxfehlern, die auf harmlose deutsche Prosa zeigen:
+
+```
+At kit-einrichten.ps1:113 char:39
++         "Windows 11 bringt 5.1 mit; 7 wird DANEBEN installiert, nicht ...
++                                       ~~~~
+Unexpected token 'wird' in expression or statement.
+```
+
+Keiner dieser Fehler ist echt. 5.1 liest eine Datei ohne Byte-Order-Mark nicht
+als UTF-8, sondern in der ANSI-Codepage; aus dem Gedankenstrich `—` wird dabei
+`â€"`, und dessen letztes Zeichen hält PowerShell für ein Anführungszeichen.
+Jeder Gedankenstrich schließt damit seine Zeichenkette mitten im Satz.
+
+Das Kit versieht seine `.ps1`-Dateien deshalb mit einem BOM (**BL-113**), womit
+auch 5.1 die Datei sauber liest — und dann die Versionsprüfung erreicht, die
+dir sagt, dass hier `pwsh` hingehört. Siehst du die Fehler oben trotzdem, ist
+der Klon älter als diese Regel: `git pull`, dann erneut.
+
+> Merksatz: **`pwsh`, nie `powershell`.** Die `.cmd`-Aufrufer im Projekt tun
+> das von sich aus — `.\ralph.cmd` startet immer `pwsh`. Der Fehler entsteht
+> nur beim direkten Aufruf einer `.ps1`.
+
 Warum 7 Pflicht ist: `ConvertFrom-Json` verhält sich dort verlässlich (es
 ersetzt im PowerShell-Zweig die eingebetteten Python-Aufrufe der Bash-Fassung),
 und `Set-StrictMode -Version Latest` ist das brauchbare Gegenstück zu Bashs
@@ -642,6 +667,7 @@ Modell führt heute über `claude -p`.
 
 | Symptom | Ursache | Abhilfe |
 |---|---|---|
+| Wand aus `Unexpected token '…'` / `Missing argument in parameter list`, die auf deutsche Prosa zeigt | Kein Syntaxfehler: Windows PowerShell **5.1** liest eine `.ps1` ohne BOM in der ANSI-Codepage, `—` endet auf U+201D und schließt die Zeichenkette (BL-113) | Mit `pwsh` starten, nicht mit `powershell`. Zeigt der Klon die Fehler trotzdem, ist er älter als die BOM-Regel: `git pull` |
 | `… cannot be loaded because running scripts is disabled` | Ausführungsrichtlinie `Restricted`/`AllSigned` | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` — kein Administrator nötig |
 | `The term 'claude' is not recognized` | `claude` ist ein `.cmd`-Shim; PATH-Änderung hat die laufende Shell nicht erreicht | **Neue** pwsh-Sitzung öffnen. **Das ist KEIN Auth-Fehler** — nicht verwechseln |
 | `python` öffnet den Microsoft Store | Store-Platzhalter statt Interpreter | Echtes Python installieren; Gegenprobe `python -c "print(1)"` |
@@ -679,6 +705,16 @@ verifiziert bezeichnet — der Rest nicht.
   [`pruefe-windows.ps1`](../pruefe-windows.ps1) bereit; sie beantwortet genau
   diese drei Punkte und kostet im Standardlauf nichts. Solange sie nicht
   gefahren ist, gilt der native Weg als **gebaut, nicht abgenommen**.
+- **Erster Kontakt mit einer echten Windows-Maschine (18.08.2026): rot.**
+  `kit-einrichten.ps1` brach auf einer Windows-11-Enterprise-VM mit zehn
+  Syntaxfehlern ab, ohne eine Zeile auszuführen — Ursache war die fehlende
+  Kodierungsangabe, nicht der Code (**BL-113**, oben in den Fehlerbildern).
+  Der Befund ist behoben und steht unter Test
+  ([`team/tests/test_bl113_bom_regel.py`](../team/tests/test_bl113_bom_regel.py),
+  `kit-test.sh` Schritt 10). Er ist zugleich das Maß für den Rest dieses
+  Abschnitts: Ein gegen pwsh 7 unter Linux vollständig grüner Zweig hat auf
+  dem Ziel **an der ersten Datei** gescheitert. Was hier als „gefahren" steht,
+  heißt weiterhin *unter Linux gefahren*.
 - **WSL 1: nicht zugesichert, aber nicht verboten.** Die Eigenschaften von
   VolFs (Metadaten in NTFS-Attributen) und die Implementierung von `flock()`
   in WSL 1 sprechen dafür, dass beide Proben grün werden — belegt ist das

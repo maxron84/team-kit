@@ -508,6 +508,39 @@ w_pruefe() {  # w_pruefe <beschreibung> <ist> <soll>
 w_pruefe ".gitattributes erzwingt CRLF fuer *.cmd" \
     "$(grep -c '^\*\.cmd text eol=crlf' "$KIT/.gitattributes")" "1"
 
+# a2) BL-113 — das BOM vor PowerShell-Quelltext. Kein Schoenheitspunkt: Ohne
+#     BOM liest Windows PowerShell 5.1 die Datei in der ANSI-Codepage, jeder
+#     Geviertstrich endet auf U+201D, PowerShell haelt das fuer eine
+#     Stringgrenze, und die Datei stirbt beim Parsen — noch bevor die
+#     Versionspruefung sagen kann, dass hier pwsh 7 hingehoert.
+#
+#     Warum eine Pruefung und kein Kommentar: Unter pwsh 7 ist der Fehler
+#     UNSICHTBAR. Der ganze Windows-Zweig ist gegen pwsh 7 gebaut worden und
+#     blieb gruen, waehrend keine einzige Datei auf der Zielmaschine startete.
+OHNE_BOM=""
+for f in $(cd "$KIT" && ls *.ps1 entry/*.ps1 team/*.ps1 team/*.psm1 scripts/*.ps1 2>/dev/null); do
+    [ "$(head -c 3 "$KIT/$f" | od -An -tx1 | tr -d ' ')" = "efbbbf" ] || OHNE_BOM="$OHNE_BOM $f"
+done
+w_pruefe "alle .ps1/.psm1 tragen ein UTF-8-BOM" "${OHNE_BOM:-keine}" "keine"
+
+# a3) Die Kehrseite derselben Regel. Ein BOM vor einer Shebang-Zeile macht aus
+#     ihr Zeichensalat, und json.load bricht darueber ab — kosten.py hat eine so
+#     verdorbene Datei stillschweigend als 0.0000 gezaehlt.
+MIT_BOM=""
+for f in $(cd "$KIT" && ls *.sh entry/*.sh team/*.sh team/tools/*.py scripts/*.sh 2>/dev/null); do
+    [ "$(head -c 3 "$KIT/$f" | od -An -tx1 | tr -d ' ')" = "efbbbf" ] && MIT_BOM="$MIT_BOM $f"
+done
+w_pruefe "kein .sh/.py traegt ein BOM" "${MIT_BOM:-keine}" "keine"
+
+# a4) .cmd wird vom Kommandozeileninterpreter in der OEM-Codepage gelesen
+#     (850/437), nicht in 1252 und erst recht nicht in UTF-8. Dort ist reines
+#     ASCII das einzige, was auf jeder Maschine dasselbe bedeutet.
+NICHT_ASCII=""
+for f in $(cd "$KIT" && ls entry/*.cmd 2>/dev/null); do
+    tr -d '\r' < "$KIT/$f" | LC_ALL=C grep -q '[^ -~	]' && NICHT_ASCII="$NICHT_ASCII $f"
+done
+w_pruefe "alle .cmd sind reines ASCII" "${NICHT_ASCII:-keine}" "keine"
+
 # b) Ausgeliefert werden muss der ganze Bootstrap, nicht die Haelfte.
 for datei in install.ps1 kit-einrichten.ps1 kit-test.ps1 entry/team.config.ps1 \
              scripts/team-auth-setup.ps1 scripts/team-init.ps1 pruefe-windows.ps1 \

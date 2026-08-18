@@ -26,6 +26,24 @@
 *.cmd text eol=crlf
 *.bat text eol=crlf
 
+# Nicht hier geregelt, aber hier zu suchen — die KODIERUNG (BL-113):
+#
+#     .ps1 / .psm1  ->  UTF-8 MIT BOM
+#     alles andere  ->  UTF-8 OHNE BOM
+#
+# Git kennt dafür keine Direktive; das BOM ist Inhalt und steht in den Dateien
+# selbst. Durchgesetzt wird die Regel von `team/tests/test_bl113_bom_regel.py`
+# und von kit-test.sh, Schritt 10.
+#
+# Der Grund ist derselbe wie oben: eine Windows-Eigenheit, die unter Linux
+# unsichtbar bleibt. Windows PowerShell 5.1 liest eine Datei ohne BOM in der
+# ANSI-Codepage statt in UTF-8. Aus dem Geviertstrich `—` wird dabei `â€"`,
+# und dessen letztes Zeichen ist U+201D — für PowerShell eine gültige
+# Stringgrenze. Jeder Gedankenstrich schließt dann seine Zeichenkette mitten
+# im Satz, und die Datei stirbt beim Parsen, bevor irgendein Hinweis greifen
+# kann. pwsh 7 liest UTF-8 ohne BOM korrekt; der Fehler ist deshalb nur auf
+# dem Ziel sichtbar.
+
 # Binärdateien: nie konvertieren, nie diffen.
 *.webp binary
 *.png  binary

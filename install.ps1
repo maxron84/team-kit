@@ -1,4 +1,4 @@
-<#
+﻿<#
   install.ps1 — installiert das T.E.A.M. in ein Zielprojekt (Windows, nativ).
 
   Aufruf:  pwsh -File install.ps1 <zielpfad> [-NichtInteraktiv] [-Force|-Update]
@@ -85,24 +85,63 @@ if ($Update -and $Force) {
 # nicht versehentlich halb weitergeben.
 $script:Werte = @{}
 
+function Team-Kodierung {
+    <#
+      BL-113 — die Kodierungsregel des Kits, an EINER Stelle:
+
+          .ps1 / .psm1  ->  UTF-8 MIT BOM
+          alles andere  ->  UTF-8 OHNE BOM
+
+      Beide Haelften sind aus dem Feld bezahlt, und sie widersprechen sich nur
+      scheinbar.
+
+      OHNE BOM, weil ein BOM am Anfang einer .sh-Datei aus der Shebang-Zeile
+      Zeichensalat macht — dasselbe Fehlerbild wie CRLF, nur seltener und
+      deshalb schwerer zuzuordnen. Und weil Pythons json.load ueber einem BOM
+      abbricht: kosten.py hat eine so verdorbene Datei stillschweigend als
+      0.0000 gezaehlt.
+
+      MIT BOM fuer PowerShell-Quelltext, weil Windows PowerShell 5.1 eine Datei
+      ohne BOM NICHT als UTF-8 liest, sondern in der ANSI-Codepage (bei uns
+      1252). Ein Geviertstrich (U+2014, in UTF-8 E2 80 94) wird dabei zu
+      `â€"` — und das letzte Zeichen davon ist U+201D, ein typografisches
+      Anfuehrungszeichen. PowerShell akzeptiert die als echte Stringgrenze.
+      Jeder Gedankenstrich in einer Zeichenkette SCHLIESST sie also mitten im
+      Satz, der Rest der Zeile zerfaellt in nackte Bezeichner, und die Datei
+      stirbt beim Parsen:
+
+          Unexpected token 'wird' in expression or statement.
+          Missing argument in parameter list.
+
+      Das Fehlerbild ist besonders teuer, weil es VOR jeder Zeile Code
+      auftritt: Die Versionspruefung in kit-einrichten.ps1, die genau diesen
+      Fall erklaeren wuerde ("PowerShell 5.1 ist zu alt, nimm pwsh"), wird nie
+      erreicht. Der Anwender sieht zehn Syntaxfehler statt eines Hinweises.
+
+      Unter Linux ist das nicht messbar: pwsh 7 liest UTF-8 ohne BOM korrekt.
+      Der ganze Windows-Zweig ist gegen pwsh 7 gefahren worden und blieb
+      trotzdem gruen. Deshalb ist die Regel jetzt eine Pruefung (kit-test.sh
+      Schritt 10) und nicht nur ein Kommentar.
+    #>
+    param([string]$Pfad)
+    $mitBom = [System.IO.Path]::GetExtension($Pfad) -in @('.ps1', '.psm1')
+    return (New-Object System.Text.UTF8Encoding($mitBom))
+}
+
 function Fuelle-Datei {
     <#
       Ersetzt die {{PLATZHALTER}} in einer Datei. In install.sh macht das ein
       eingebettetes Python-Here-Doc; hier reichen Bordmittel.
-
-      Gelesen und geschrieben wird mit UTF-8 OHNE BOM: Set-Content -Encoding utf8
-      schreibt unter Windows PowerShell 5.1 ein BOM, und ein BOM am Anfang einer
-      .sh-Datei macht aus der Shebang-Zeile Zeichensalat — dasselbe Fehlerbild
-      wie CRLF, nur seltener und deshalb schwerer zuzuordnen.
     #>
     param([string]$Pfad)
     if (-not (Test-Path $Pfad -PathType Leaf)) { return }
+    # ReadAllText erkennt ein vorhandenes BOM und entfernt es aus dem Text;
+    # welche Kodierung beim Schreiben gilt, entscheidet allein Team-Kodierung.
     $text = [System.IO.File]::ReadAllText($Pfad)
     foreach ($schluessel in $script:Werte.Keys) {
         $text = $text.Replace($schluessel, [string]$script:Werte[$schluessel])
     }
-    [System.IO.File]::WriteAllText($Pfad, $text,
-        (New-Object System.Text.UTF8Encoding($false)))
+    [System.IO.File]::WriteAllText($Pfad, $text, (Team-Kodierung $Pfad))
 }
 
 function Setze-Werte {
@@ -227,8 +266,7 @@ function Schreibe {
     $ordner = Split-Path -Parent $zielDatei
     if ($ordner) { New-Item -ItemType Directory -Force -Path $ordner | Out-Null }
     if ((Test-Path $zielDatei) -and -not $Force) { $script:Uebersprungen++; return }
-    [System.IO.File]::WriteAllText($zielDatei, $Inhalt,
-        (New-Object System.Text.UTF8Encoding($false)))
+    [System.IO.File]::WriteAllText($zielDatei, $Inhalt, (Team-Kodierung $zielDatei))
     $script:Geschrieben++
 }
 

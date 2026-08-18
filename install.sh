@@ -268,7 +268,11 @@ if [ "$UPDATE" -eq 1 ]; then
 import sys, pathlib
 (d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
  domaenen, commit) = sys.argv[1:12]
-p = pathlib.Path(d); t = p.read_text(encoding="utf-8")
+# BL-113: siehe die Begruendung bei fuelle() weiter unten. Die Regel steht
+# hier ein zweites Mal, weil der Update-Pfad eine eigene Fuell-Routine hat —
+# und ein Update, das die Kodierung verliert, ist genau der Fall, in dem ein
+# bisher laufendes Projekt ploetzlich nicht mehr startet.
+p = pathlib.Path(d); t = p.read_text(encoding="utf-8-sig")
 for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{TEST_ORDNER}}", test), ("{{PLAN_ORDNER}}", plan.rstrip("/")),
              ("{{BEUTEBUCH}}", plan.rstrip("/") + "/beutebuch.md"),
@@ -279,7 +283,8 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{DEPLOY_AUSNAHMEN}}", ausn), ("{{DOMAENEN}}", domaenen),
              ("{{COMMIT_ENTSCHEID}}", commit)]:
     t = t.replace(a, b)
-p.write_text(t, encoding="utf-8")
+p.write_text(t, encoding=("utf-8-sig" if p.suffix in (".ps1", ".psm1")
+                          else "utf-8"))
 PY
     }
     fuelle() { fuelle_abs "$ZIEL/$1"; }
@@ -724,7 +729,10 @@ fuelle() {
 import sys, pathlib
 (d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
  domaenen, commit, weiterer, test_bestand, plan_bestand) = sys.argv[1:15]
-p = pathlib.Path(d); t = p.read_text(encoding="utf-8")
+# BL-113: utf-8-sig liest ein vorhandenes BOM weg, statt es als ﻿ mitten
+# in den Text zu nehmen. Ob beim Schreiben wieder eines hinkommt, entscheidet
+# unten allein die Endung — nicht der Zufall, was in der Vorlage stand.
+p = pathlib.Path(d); t = p.read_text(encoding="utf-8-sig")
 for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{TEST_ORDNER}}", test), ("{{PLAN_ORDNER}}", plan.rstrip("/")),
              ("{{BEUTEBUCH}}", plan.rstrip("/") + "/beutebuch.md"),
@@ -746,7 +754,24 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{TEST_BESTAND}}", test_bestand),
              ("{{PLAN_BESTAND}}", plan_bestand)]:
     t = t.replace(a, b)
-p.write_text(t, encoding="utf-8")
+# BL-113 — die Kodierungsregel des Kits, zeichengleich mit Team-Kodierung in
+# install.ps1: PowerShell-Quelltext MIT BOM, alles andere OHNE.
+#
+# OHNE, weil ein BOM vor einer Shebang-Zeile aus ihr Zeichensalat macht und
+# weil Pythons json.load darueber abbricht (kosten.py zaehlte eine so
+# verdorbene Datei stillschweigend als 0.0000).
+#
+# MIT, weil Windows PowerShell 5.1 eine Datei OHNE BOM nicht als UTF-8 liest,
+# sondern in der ANSI-Codepage. Der Geviertstrich wird dabei zu â€", dessen
+# letztes Zeichen U+201D ist — fuer PowerShell eine echte Stringgrenze. Jeder
+# Gedankenstrich schliesst dann seine Zeichenkette mitten im Satz, und die
+# Datei stirbt beim Parsen, BEVOR die Versionspruefung erklaeren kann, dass
+# hier pwsh 7 gebraucht wird.
+#
+# Dass dieser Installer unter Linux laeuft, aendert daran nichts: Er schreibt
+# team.config.ps1 fuer eine Maschine, auf der er selbst nie sein wird.
+p.write_text(t, encoding=("utf-8-sig" if p.suffix in (".ps1", ".psm1")
+                          else "utf-8"))
 PY
 }
 

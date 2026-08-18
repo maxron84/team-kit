@@ -4,6 +4,40 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **BL-113 — der native Windows-Zweig startete auf der Zielmaschine nicht, und
+  zwar wegen einer fehlenden Kodierungsangabe.** Beim ersten Kontakt mit einer
+  echten Windows-11-Enterprise-VM brach `kit-einrichten.ps1` mit **zehn
+  Syntaxfehlern** ab, von denen **keiner echt war**. Windows PowerShell 5.1
+  liest eine Datei ohne Byte-Order-Mark nicht als UTF-8, sondern in der
+  ANSI-Codepage; der Geviertstrich `—` wird dabei zu `â€"`, und dessen letztes
+  Zeichen ist U+201D — für PowerShell eine **gültige Stringgrenze**. Jeder
+  Gedankenstrich schließt damit seine Zeichenkette mitten im Satz. Im Zweig
+  stehen 443 davon.
+
+  Neu ist deshalb eine Kodierungsregel an **einer** Stelle je Installer
+  (`Team-Kodierung` in [install.ps1](install.ps1), das `fuelle`-Here-Doc in
+  [install.sh](install.sh)): **`.ps1`/`.psm1` mit BOM, alles andere ohne.**
+  Die zweite Hälfte ist gleich teuer bezahlt — ein BOM vor einer Shebang-Zeile
+  macht aus ihr Zeichensalat, und `json.load` bricht darüber ab, worauf
+  `kosten.py` die Datei still als `0.0000` zählt. `.cmd` wurde auf reines
+  ASCII gezogen (der Kommandozeileninterpreter liest sie in der **OEM**-
+  Codepage, nicht in 1252). Als Nebenertrag erreicht 5.1 jetzt die
+  Versionsprüfung und **sagt**, dass `pwsh` gebraucht wird, statt zu zerfallen.
+
+  **Warum keine der bestehenden Prüfungen das finden konnte:** Sie fahren
+  alle unter pwsh 7, und pwsh 7 liest UTF-8 ohne BOM überall korrekt. Zum
+  Zeitpunkt des Fehlschlags waren `kit-test.sh` (10/10), `kit-test.ps1`
+  (15/15), die Doppelbahn (364 bestanden) und der Syntaxcheck über alle
+  `.ps1` grün. Die Lehre steckt in der Bauart der neuen Prüfung: Was die
+  Zielmaschine anders **liest** statt anders **tut**, prüft man an den Bytes.
+  [`team/tests/test_bl113_bom_regel.py`](team/tests/test_bl113_bom_regel.py)
+  sieht sich Dateianfänge an, braucht kein PowerShell und greift deshalb auch
+  dort, wo der Zweig gar nicht laufen kann; `kit-test.sh` Schritt 10 prüft
+  dieselben drei Regeln im Kit, und [.gitattributes](.gitattributes) trägt die
+  Begründung neben der CRLF-Regel — weil dort danach gesucht wird.
+
 ### Added
 
 - **[`doku/einrichtung.md`](doku/einrichtung.md) beschreibt jetzt DREI Wege**

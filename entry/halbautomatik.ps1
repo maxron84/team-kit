@@ -1,4 +1,4 @@
-<#
+﻿<#
   halbautomatik.ps1 — die T.E.A.M.-HALBAUTOMATIK.
   Wie die Vollautomatik, aber der Strippenzieher entscheidet zwischen JEDEM
   Schritt selbst. Nutzt dieselben Rollen-Skripte, haelt die Sperre ueber die

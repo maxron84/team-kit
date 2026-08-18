@@ -1,4 +1,4 @@
-<#
+﻿<#
   team-init.ps1 — Starter fuer das T.E.A.M.-Starterkit (Windows-Zweig).
 
   Duenner Launcher: findet das Kit-Repo und reicht alle Argumente durch.

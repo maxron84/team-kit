@@ -1,4 +1,4 @@
-<#
+﻿<#
   pruefe-windows.ps1 — Vorflug-Probe fuer den nativen Windows-Zweig.
 
   WAS DAS HIER IST

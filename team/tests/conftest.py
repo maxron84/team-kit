@@ -366,7 +366,13 @@ class Schale:
                 zeilen.append(f'${name} = "{wert}"')
                 if name in exportiert:
                     zeilen.append(f'$env:{name} = "{wert}"')
-        ziel.write_text("\n".join(zeilen) + "\n", encoding="utf-8")
+        # BL-113: dieselbe Kodierungsregel wie in beiden Installern — die
+        # Testbahn soll erzeugen, was im Feld erzeugt wird, nicht etwas
+        # Aehnliches. Unter pwsh 7 macht es keinen Unterschied; unter Windows
+        # PowerShell 5.1 entscheidet es darueber, ob die Datei ueberhaupt
+        # parst.
+        ziel.write_text("\n".join(zeilen) + "\n",
+                        encoding="utf-8" if self.ist_bash else "utf-8-sig")
         return ziel
 
     def claude_stub(self, ordner, ausgabe):

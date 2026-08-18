@@ -1,4 +1,4 @@
-<#
+﻿<#
   kit-test.ps1 — Selbstverifikation des Kits auf einer WINDOWS-Maschine.
 
   WAS DAS HIER IST UND WAS NICHT
