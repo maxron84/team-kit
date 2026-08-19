@@ -20,6 +20,13 @@ Aufrufe:
                                        aus dem Block dieses Funds, eine je Zeile
                                        (Substanz-Anker für Frank, siehe HM-29);
                                        --alle sucht bei Nicht-Fund auch im Archiv
+  beutebuch.py reproducer <HM-Nr> [--alle]
+                                     → Pfad aus der Reproducer-Test-Zeile
+  beutebuch.py lint <HM-Nr>         → prueft den Fundblock auf das, was die
+                                       Fixphase gleich auswertet: Statuszeile
+                                       parsbar UND ein Wert der Status-Kette,
+                                       Dateipfad in Backticks, Reproducer-Zeile
+                                       (Exit 3 = Maengel, auf stderr)
   beutebuch.py archiviere [--dry-run]
                                      → verschiebt jeden Block mit Status
                                        'erledigt'/'überholt' wörtlich ans Ende
@@ -65,6 +72,30 @@ DATEI_RE = re.compile(r"`([A-Za-z0-9_./-]+\.[A-Za-z0-9]+)(?:::[^`]*)?`")
 # BL-28, waehrend "irgendeine im Block genannte Datei" auch die Produktivdatei
 # treffen kann, die der Fix ohnehin anfasst.
 REPRODUCER_RE = re.compile(r"^-\s+\*\*Reproducer-Test\*\*:\s*(.+?)\s*$")
+# Die Status-Kette aus CLAUDE.md ("Status-Kette (Beutebuch/Backlog)"), also
+# genau die Werte, die die Rollen setzen und suchen. Sie steht hier, weil ein
+# Wert AUSSERHALB der Kette heute fuer jedes Werkzeug unsichtbar ist: `list`
+# zeigt ihn an, `first` findet ihn nicht, die Rolle meldet "nichts zu tun" —
+# und der bezahlte Lauf ist verbraucht, ohne dass irgendwo ein Widerspruch
+# auftaucht (BL-115, im Feld an HM-106 passiert). `passt()` deckt dabei die
+# Zusaetze ab, die Frank anhaengt ("erledigt (Frank-Fix, abc123)").
+STATUS_KETTE = (
+    "offen",
+    "an Frank übergeben",
+    "an Axel übergeben",
+    "Fix-Plan liegt vor",
+    "erledigt",
+    "überholt",
+    "an Mensch eskaliert",
+)
+# Nutzungszeile je Kommando mit Pflichtargument (BL-115).
+NUTZUNG = {
+    "first": "beutebuch.py first <status>",
+    "dateien": "beutebuch.py dateien <HM-Nr> [--alle]",
+    "reproducer": "beutebuch.py reproducer <HM-Nr> [--alle]",
+    "lint": "beutebuch.py lint <HM-Nr>",
+    "set": "beutebuch.py set <HM-Nr> <status>",
+}
 
 
 def _lies_zeilen(pfad):
@@ -239,10 +270,22 @@ def lint(hm_soll, pfad=BEUTEBUCH):
     if text is None:
         return None
     maengel = []
-    if not any(STATUS_RE.match(z) for z in text.splitlines()):
+    status_treffer = [STATUS_RE.match(z) for z in text.splitlines()]
+    status_treffer = [m for m in status_treffer if m]
+    if not status_treffer:
         maengel.append(
             "keine parsbare `- **Status**:`-Zeile — die Fixphase findet den "
             "Fund nicht und kann seinen Status nicht fortschreiben.")
+    else:
+        wert = status_treffer[0].group(2)
+        if not status_bekannt(wert):
+            maengel.append(
+                f"die Statuszeile traegt '{wert}' — das ist kein Wert der "
+                f"Status-Kette ({', '.join(STATUS_KETTE)}). `first` findet den "
+                f"Fund damit nicht, die Rolle meldet 'nichts zu tun', und der "
+                f"Lauf ist verbraucht. Haeufigster Fall: der UEBERGANG statt "
+                f"des Zielwerts eingetragen ('offen → an Frank übergeben' "
+                f"statt 'an Frank übergeben').")
     if not DATEI_RE.findall(text):
         maengel.append(
             "kein Dateipfad in Backticks — der Substanz-Anker "
@@ -259,6 +302,37 @@ def lint(hm_soll, pfad=BEUTEBUCH):
             "die `- **Reproducer-Test**:`-Zeile nennt keinen Pfad in "
             "Backticks — fuer ein Werkzeug ist sie damit leer.")
     return maengel
+
+
+def status_bekannt(wert: str) -> bool:
+    """Ist `wert` ein Wert der Status-Kette (mit erlaubtem Klammerzusatz)?
+
+    Bewusst STRENGER als `passt()`. `passt()` vergleicht mit `startswith`, und
+    genau daran waere die Pruefung vorbeigelaufen, fuer die sie gebaut ist:
+    'offen → an Frank übergeben' BEGINNT mit 'offen' und saehe damit gueltig
+    aus — waehrend `first 'an Frank übergeben'` den Fund nicht findet, was der
+    ganze Punkt von BL-115 ist. Erlaubt ist deshalb nur der blanke Wert oder
+    der Wert plus Klammerzusatz, wie Frank ihn schreibt:
+    'erledigt (Frank-Fix, abc1234)'."""
+    return any(wert == bekannt or wert.startswith(bekannt + " (")
+               for bekannt in STATUS_KETTE)
+
+
+def _arg(rest, idx, cmd):
+    """Pflichtargument holen — oder Nutzungshinweis und Exit 2.
+
+    BL-115(b): `beutebuch.py first` ohne Argument endete in `rest[0]`, also in
+    einem IndexError-Traceback. Der Aufruf steht ausgerechnet am Anfang der
+    Gegenprobe "ist mein Fund ueberhaupt auffindbar?" — dort sieht ein
+    Traceback wie ein kaputtes Werkzeug aus, waehrend nur ein Argument fehlt.
+    Exit 2 ist derselbe Code, den `_pop_flag` und das unbekannte Kommando
+    schon fuer Bedienfehler benutzen."""
+    if idx < len(rest):
+        return rest[idx]
+    print(f"FEHLER: Aufruf unvollstaendig. Nutzung: {NUTZUNG[cmd]}", file=sys.stderr)
+    if cmd in ("first", "set"):
+        print("  Statuswerte der Kette: " + ", ".join(STATUS_KETTE), file=sys.stderr)
+    sys.exit(2)
 
 
 def _pop_flag(argv, name):
@@ -289,7 +363,7 @@ def main() -> int:
         return 0
 
     if cmd == "first":
-        gesucht = rest[0]
+        gesucht = _arg(rest, 0, "first")
         for hm, status, _ in parse(aktiv_pfad):
             if passt(status, gesucht):
                 print(hm)
@@ -309,7 +383,7 @@ def main() -> int:
         return 0
 
     if cmd == "dateien":
-        hm_soll = rest[0]
+        hm_soll = _arg(rest, 0, "dateien")
         alle = "--alle" in rest
         text = block_text(hm_soll, aktiv_pfad)
         if text is None and alle:
@@ -324,7 +398,7 @@ def main() -> int:
     if cmd == "reproducer":
         # BL-28: Der Pfad aus der Reproducer-Test-Zeile, allein. Exit 1, wenn
         # der Fund fehlt oder die Zeile keinen Pfad in Backticks traegt.
-        hm_soll = rest[0]
+        hm_soll = _arg(rest, 0, "reproducer")
         text = block_text(hm_soll, aktiv_pfad)
         if text is None and "--alle" in rest:
             text = block_text(hm_soll, archiv_pfad)
@@ -340,10 +414,7 @@ def main() -> int:
     if cmd == "lint":
         # BL-29: Was die Fixphase gleich auswerten wird, wird VOR dem ersten
         # bezahlten Frank-Aufruf geprueft.
-        hm_soll = rest[0] if rest else None
-        if not hm_soll:
-            print("FEHLER: lint braucht eine HM-Nummer.", file=sys.stderr)
-            return 2
+        hm_soll = _arg(rest, 0, "lint")
         maengel = lint(hm_soll, aktiv_pfad)
         if maengel is None:
             print(f"FEHLER: {hm_soll} nicht im Beutebuch gefunden.", file=sys.stderr)
@@ -360,7 +431,7 @@ def main() -> int:
         return 0
 
     if cmd == "set":
-        hm_soll, status_neu = rest[0], rest[1]
+        hm_soll, status_neu = _arg(rest, 0, "set"), _arg(rest, 1, "set")
         for hm, _, zeilennr in parse(aktiv_pfad):
             if hm == hm_soll:
                 aktiv_pfad = Path(aktiv_pfad)

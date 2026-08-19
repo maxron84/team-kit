@@ -6,6 +6,34 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **BL-115 — die Vorlage lehrte eine Statuszeile, die das eigene Werkzeug nicht
+  findet, und das Werkzeug meldete den Fehlgriff nicht, sondern stürzte ab.**
+  Die Regeldatei schrieb *„Status auf `offen → an Frank übergeben` setzen"*.
+  Der Pfeil meint den **Übergang**, liest sich aber als **Feldwert**; von Hand
+  abgeschrieben entsteht `- **Status**: offen → an Frank übergeben`. `list`
+  zeigt den Fund weiter an, `first 'an Frank übergeben'` findet ihn **nicht**,
+  `frank.sh` meldet „nichts zu tun" — und der bezahlte Lauf ist verbraucht,
+  ohne dass irgendetwas auf den Widerspruch hinweist. Im Feld an `HM-106` genau
+  so passiert.
+
+  Drei Hälften desselben Fehlers, alle drei gefixt: Die Vorlage nennt jetzt den
+  **Zielwert** und den Pfeil ausdrücklich als Übergang (die Status-Kette selbst
+  bleibt und ist eigens abgesichert). `first`, `dateien`, `reproducer`, `lint`
+  und `set` geben bei fehlendem Pflichtargument eine **Nutzungszeile und
+  Exit 2** statt eines `IndexError`-Tracebacks — ausgerechnet auf dem Weg, den
+  man geht, wenn man gerade prüft, ob ein Fund auffindbar ist. Und
+  `beutebuch.py lint` meldet neu eine Statuszeile, die auf **keinen** Wert der
+  Kette passt (Exit 3), mit dem richtigen Wert in der Meldung.
+
+  **Der Fund beim Bauen:** Die naheliegende Prüfung wäre stumm grün gewesen.
+  `passt()` vergleicht per Präfix, und `offen → an Frank übergeben` **beginnt**
+  mit `offen` — der Wächter hätte seinen eigenen Anlassfall durchgelassen.
+  Deshalb `status_bekannt()`: exakter Kettenwert oder Wert plus Klammerzusatz
+  (`erledigt (Frank-Fix, abc1234)`), sonst nichts. Dieser String steht als
+  Gegenprobe im Test —
+  [`team/tests/test_bl115_statuszeile_und_nutzungshinweis.py`](team/tests/test_bl115_statuszeile_und_nutzungshinweis.py),
+  14 Fälle.
+
 - **BL-113 — der native Windows-Zweig startete auf der Zielmaschine nicht, und
   zwar wegen einer fehlenden Kodierungsangabe.** Beim ersten Kontakt mit einer
   echten Windows-11-Enterprise-VM brach `kit-einrichten.ps1` mit **zehn

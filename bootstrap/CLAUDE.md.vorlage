@@ -139,9 +139,18 @@ Plan-Ordner.
    `xpass`, und die Suite bleibt in beiden Fällen grün. Im Feld war ein so
    markierter Reproducer byte-identisch grün, nachdem der Fix
    **zurückgedreht** wurde — er hat nie etwas geprüft.
-3. **Übergabe an Frank**: Status auf `offen → an Frank übergeben` setzen. Frank
-   quittiert nach dem Fix mit `erledigt (Frank-Fix, <commit>)` und trägt den Fix in
-   den `[Unreleased]`-Block ein.
+3. **Übergabe an Frank**: Status von `offen` auf `an Frank übergeben` setzen —
+   am besten mit `beutebuch.py set <HM-Nr> 'an Frank übergeben'`, das schreibt
+   den **Feldwert** und sonst nichts. **In die Statuszeile gehört immer nur ein
+   Wert der Kette, nie der Übergang:** Der Pfeil unten beschreibt, was auf was
+   folgt. Von Hand abgeschrieben entsteht sonst
+   `- **Status**: offen → an Frank übergeben` — `beutebuch.py list` zeigt den
+   Fund weiter an, `first 'an Frank übergeben'` findet ihn **nicht**, und der
+   nächste Frank-Lauf meldet „nichts zu tun", ohne dass irgendetwas auf den
+   Widerspruch hinweist (`BL-115`, im Feld genau so passiert). `beutebuch.py
+   lint <HM-Nr>` meldet eine Statuszeile, die auf keinen Wert der Kette passt.
+   Frank quittiert nach dem Fix mit `erledigt (Frank-Fix, <commit>)` und trägt
+   den Fix in den `[Unreleased]`-Block ein.
 
 **Ausschlusskriterium für die Übergabe:** Ein Fund, dessen **Reproduktion
 selbst eine Messreihe ist** (Flaky-Test über N Läufe, Warten auf einen externen
