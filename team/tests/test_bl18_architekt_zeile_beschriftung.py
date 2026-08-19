@@ -258,19 +258,24 @@ def test_team_architekt_kaskade_bleibt_ohne_nummer_leer_und_still(tmp_path, scha
     Die Funktion muss dann leer ausgeben und darf den Aufrufer unter `set -e`
     NICHT wegreissen — die Beschriftung laesst den Rahmen dann einfach weg.
 
-    Warum hier `strikt="abbruch"` und nicht die volle Strenge steht: Die
-    Absicherung in lib.sh (`| head -1`) traegt gegen `set -e`, aber NICHT
-    gegen `set -o pipefail` — dort schlaegt der leere `grep` durch und reisst
-    den Aufrufer doch weg. Die Zusicherung gilt also genau fuer diese Stufe,
-    und der Test nennt sie, statt eine breitere zu behaupten. Der Rest ist
-    ein eigener Befund und gehoert in den Backlog, nicht in eine stille
-    Verschaerfung dieses Tests.
+    Hier stand bis BL-111 `strikt="abbruch"` statt der vollen Strenge, und
+    der Grund war ein echter: Die damalige Absicherung (`| head -1`) trug
+    gegen `set -e`, aber NICHT gegen `set -o pipefail` — dort schlug der leere
+    `grep` durch und riss den Aufrufer doch weg. Der Test nannte deshalb die
+    Stufe, fuer die die Zusicherung wirklich galt, statt eine breitere zu
+    behaupten; der Rest wurde ein eigener Backlog-Eintrag statt einer stillen
+    Verschaerfung.
+
+    Seit BL-111 haelt `{ … ; } || true` den Rueckgabewert auf 0, und zwar
+    unter jeder Stufe. Deshalb faehrt dieser Test jetzt `strikt=True` — das
+    ist die Gegenprobe zum Fix, nicht nur eine schaerfere Einstellung: Mit der
+    alten lib.sh faellt er.
     """
     repo = _repo(tmp_path, LEDGER_ECHT, schale)
     (repo / ".ralph-plan").write_text("plans/roles-post-k13.md\n",
                                       encoding="utf-8")
     ergebnis = schale.lauf(FangUndMelde("team_architekt_kaskade"), cwd=repo,
-                           lib=_lib(schale, repo), strikt="abbruch")
+                           lib=_lib(schale, repo), strikt=True)
     assert ergebnis.returncode == 0, ergebnis.stderr
     assert "rc=0 wert=[]" in ergebnis.stdout
 

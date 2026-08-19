@@ -1144,10 +1144,16 @@ team_akteur_abschluss() {
 # team-status.sh gleichzeitig). Eine Quelle fuer das Muster statt zwei.
 team_architekt_kaskade() {
     local plan_datei="${1:-$(team_plan_datei)}"
-    # head -1 haelt den RC auch bei leerem grep-Ergebnis auf 0 — unter set -e
-    # darf ein Projekt ohne erkennbare Kaskade den Aufrufer nicht wegreissen.
-    printf '%s' "$plan_datei" \
-        | grep -oE 'ralph-kaskade-[0-9]+' | grep -oE '[0-9]+' | head -1
+    # Ein Projekt OHNE erkennbare Kaskadennummer (benannte Kaskade, frisches
+    # Projekt) darf den Aufrufer nicht wegreissen. `| head -1` allein leistet
+    # das nur unter `set -e`: Unter `set -o pipefail` bestimmt der ERSTE
+    # fehlschlagende Teil den Status der Pipeline, also der leere grep (rc 1)
+    # — egal was head zurueckgibt. Gemessen (BL-111): `set -e` und `set -eu`
+    # gaben rc=0, `set -euo pipefail` riss den Aufrufer weg. Alle bauenden und
+    # pruefenden Rollen laufen mit voller Strenge; die Zusicherung muss also
+    # dort gelten, wo sie gebraucht wird, nicht nur eine Stufe darunter.
+    { printf '%s' "$plan_datei" \
+        | grep -oE 'ralph-kaskade-[0-9]+' | grep -oE '[0-9]+' | head -1; } || true
 }
 
 # team_bau_notiz [plan-datei]: Notiztext fuer die ralph-(Bau-)Ledgerzeile,
@@ -1250,7 +1256,11 @@ team_plan_datei() {
 team_ralph_cap() {
     local plan="${1:-$(team_plan_datei)}"
     [ -n "$plan" ] && [ -f "$plan" ] || return 0
-    grep -E '^[[:space:]]*RALPH_CAP=' "$plan" | head -1 | cut -d= -f2 | tr -d '[:space:]'
+    # `|| true` aus demselben Grund wie in team_architekt_kaskade (BL-111):
+    # Eine Plandatei OHNE RALPH_CAP-Zeile ist der dokumentierte Normalfall,
+    # unter `set -o pipefail` machte der leere grep daraus einen Abbruch.
+    { grep -E '^[[:space:]]*RALPH_CAP=' "$plan" \
+        | head -1 | cut -d= -f2 | tr -d '[:space:]'; } || true
 }
 
 # team_budget_empfehlung [plan-datei]: liest BUDGET_EMPFEHLUNG_USD aus der
@@ -1260,8 +1270,10 @@ team_ralph_cap() {
 team_budget_empfehlung() {
     local plan="${1:-$(team_plan_datei)}"
     [ -n "$plan" ] && [ -f "$plan" ] || return 0
-    grep -E '^[[:space:]]*BUDGET_EMPFEHLUNG_USD=' "$plan" \
-        | head -1 | cut -d= -f2 | tr -d '[:space:]'
+    # `|| true`: siehe team_architekt_kaskade (BL-111). Der Kommentar oben
+    # sagt "kein Abbruch" — unter `set -o pipefail` galt das bis dahin nicht.
+    { grep -E '^[[:space:]]*BUDGET_EMPFEHLUNG_USD=' "$plan" \
+        | head -1 | cut -d= -f2 | tr -d '[:space:]'; } || true
 }
 
 # team_kontostand_gesamt: kumulierter Kontostand wie `team-status.sh --budget`

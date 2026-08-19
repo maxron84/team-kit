@@ -548,11 +548,12 @@ function team_architekt_kaskade {
       ("plans/ralph-kaskade-13-…" -> "13"). Leer, wenn keine Nummer erkennbar
       ist (frisches Projekt, benannte Kaskade, fehlende .ralph-plan).
 
-      Anders als die Bash-Fassung reisst diese hier den Aufrufer AUCH UNTER
-      voller Strenge nicht weg: Es gibt keine Pipeline, deren Zwischenschritt
-      durchschlagen koennte. Der Bash-Zweig traegt an dieser Stelle BL-111 —
-      dort haelt `| head -1` den Rueckgabewert nur gegen `set -e`, nicht gegen
-      `set -o pipefail`.
+      Diese Fassung reisst den Aufrufer unter keiner Strenge weg: Es gibt
+      keine Pipeline, deren Zwischenschritt durchschlagen koennte. Der
+      Bash-Zweig hatte hier BL-111 — `| head -1` hielt den Rueckgabewert nur
+      gegen `set -e`, nicht gegen `set -o pipefail`; seit dem Fix haelt ihn
+      dort `{ … ; } || true` unter jeder Stufe. Beide Zweige sagen damit
+      dasselbe zu, und der Doppelbahn-Test faehrt beide unter voller Strenge.
     #>
     param([string]$PlanDatei = $null)
     if (-not $PlanDatei) { $PlanDatei = (team_plan_datei) }

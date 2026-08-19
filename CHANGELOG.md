@@ -6,6 +6,32 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **BL-111 — drei Ableitungen aus der Plan-Datei rissen den Aufrufer unter
+  `set -o pipefail` weg, und der Kommentar darüber sagte das Gegenteil zu.**
+  `team_architekt_kaskade` beendete seine Pipeline mit `| head -1` und
+  begründete das wörtlich damit, ein Projekt ohne erkennbare Kaskade dürfe den
+  Aufrufer *„unter set -e nicht wegreissen"*. Das stimmt für `set -e` und ist
+  unter `set -o pipefail` wirkungslos: Dort bestimmt der erste fehlschlagende
+  Teil den Status, also der leere `grep`. Gemessen: `set -e` → `rc=0`,
+  `set -euo pipefail` → **Abbruch**. Alle bauenden und prüfenden Rollen laufen
+  mit voller Strenge.
+
+  **Der Umfang war größer als der Befund.** Nachgemessen an allen fünf
+  Ableitungen sind **drei** betroffen — neben `team_architekt_kaskade` auch
+  `team_ralph_cap` und `team_budget_empfehlung`, gleiche Bauart
+  (`grep … | head -1 | cut`). Bei beiden ist der Fall, den sie nicht
+  überlebten, der **dokumentierte Normalfall**: eine Plandatei ohne diese
+  Zeile. Der Kommentar von `team_budget_empfehlung` sagte sogar „kein
+  Abbruch" zu. Alle drei halten ihren Rückgabewert jetzt mit `{ … ; } || true`
+  auf 0. Der PowerShell-Zweig war nie betroffen (keine Pipeline).
+
+  Gegenprobe zweifach: `test_bl18_architekt_zeile_beschriftung.py` fährt jetzt
+  `strikt=True` statt `strikt="abbruch"`, und
+  [`team/tests/test_bl111_ableitungen_unter_pipefail.py`](team/tests/test_bl111_ableitungen_unter_pipefail.py)
+  prüft je Funktion **beide** Pfade — leer unter voller Strenge **und** der
+  vorhandene Wert, sonst wäre `funktion() { :; }` ein grüner Weg. Mit der
+  alten `lib.sh` fallen genau die Leer-Fälle.
+
 - **BL-115 — die Vorlage lehrte eine Statuszeile, die das eigene Werkzeug nicht
   findet, und das Werkzeug meldete den Fehlgriff nicht, sondern stürzte ab.**
   Die Regeldatei schrieb *„Status auf `offen → an Frank übergeben` setzen"*.

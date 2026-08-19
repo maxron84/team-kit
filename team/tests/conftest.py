@@ -412,18 +412,23 @@ class Schale:
                         Set-StrictMode -Version Latest
 
         Warum die mittlere Stufe existiert: Sie ist nicht Bequemlichkeit,
-        sondern eine Messstelle. `team_architekt_kaskade` haelt seinen
-        Rueckgabewert mit `| head -1` auf 0 — der Kommentar in lib.sh nennt
-        ausdruecklich `set -e` als den Fall, den das abdeckt. Unter
-        `set -o pipefail` traegt die Absicherung NICHT: Der leere `grep`
-        schlaegt durch, und der Aufrufer wird weggerissen. Heute latent
-        (einziger Aufrufer ist team-status.sh, und die setzt keine strikten
-        Optionen), aber alle Rollen laufen mit `set -euo pipefail`.
+        sondern eine Messstelle. Sie entstand an `team_architekt_kaskade`,
+        deren Absicherung (`| head -1`) gegen `set -e` trug, aber NICHT gegen
+        `set -o pipefail` — dort schlaegt der leere `grep` durch und reisst
+        den Aufrufer weg. Der Test nannte deshalb die Stufe, fuer die die
+        Zusicherung wirklich galt, statt eine breitere zu behaupten: Sonst
+        prueft er etwas anderes als das Zugesicherte, und der Befund
+        verschwindet in einem roten Test, den jemand "anpasst".
 
-        Ein Test, der die dokumentierte Zusicherung prueft, muss deshalb die
-        Stufe nennen, fuer die sie behauptet wird — sonst prueft er etwas
-        anderes als das, was zugesichert ist, und der Befund verschwindet in
-        einem roten Test, den jemand "anpasst".
+        Seit BL-111 ist genau dieser Fall gefixt (`{ … ; } || true` in
+        team_architekt_kaskade, team_ralph_cap, team_budget_empfehlung), und
+        der zugehoerige Test faehrt `strikt=True`. Die mittlere Stufe bleibt
+        trotzdem: Sie ist die Sprache, in der eine Zusicherung ihre Reichweite
+        nennen kann — und der naechste Fund dieser Bauart braucht sie wieder.
+
+        Nebenbei mit BL-111 berichtigt: Hier stand, `team-status.sh` setze
+        "keine strikten Optionen". Sie setzt `set -uo pipefail`, und zwar seit
+        2026-08-01. Latent war der Fall allein wegen des fehlenden `-e`.
         """
         if isinstance(schritte, _Schritt):
             schritte = [schritte]
