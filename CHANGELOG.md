@@ -6,6 +6,33 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **BL-116 — ein Transkript, zwei Closeouts: der zweite bucht die Summe
+  beider Kaskaden.** Der Abo-Messweg misst das Sitzungstranskript. Wer zwei
+  Kaskaden in **derselben** Sitzung abschließt, misst beim zweiten Closeout
+  wieder das **ganze** Transkript — der bereits gebuchte Teil steckt darin und
+  wandert ein zweites Mal ins Ledger. Aus dem Feld zurückgespielt
+  (`team-kit_project_platformer`, dortiges `BL-120`).
+
+  **Der Befund ist die Unsichtbarkeit, nicht der Rechenfehler.** Keine
+  bestehende Absicherung schlägt an: Die vierte Eigenschaft aus `BL-33` („ein
+  Transkript je Aufruf") verbietet, **mehrere** Transkripte zu summieren, und
+  sagt nichts über **eines** mit zwei Buchungspunkten; die Deduplikation über
+  die Nachrichten-ID greift nicht, weil jede Antwort der ersten Hälfte genau
+  einmal vorkommt — nur eben bereits bezahlt; und der A1-Kollisionsschutz
+  schlägt bei **derselben Rolle + Kaskade** an, während hier zwei
+  Kaskadennummern entstehen, also zwei für sich plausible Zeilen.
+
+  Zuständigkeitslage und Entscheid wie bei `BL-33`: Das Messwerkzeug gehört
+  dem Kit nicht, also wird die **Eigenschaft** benannt statt der Datei. A.9
+  führt jetzt **fünf** Eigenschaften — neu „(5) Den bereits gebuchten
+  Abschnitt ausnehmen", mit einem eigenen Absatz dazu, **warum** sie nicht
+  schon in (1)–(4) steckte. Dazu die vermeidende Hälfte im Briefing des
+  Architekten, an der Stelle, an der gebucht wird: **„Ein Closeout je
+  Sitzung"**, samt Ausweg für den Ausnahmefall (Rohwert minus bereits gebucht,
+  Rechnung in den Notiztext). Geprüft nach Träger getrennt: A.9 über das
+  Regel-Inventar, das Briefing über
+  [`team/tests/test_bl116_ein_closeout_je_sitzung.py`](team/tests/test_bl116_ein_closeout_je_sitzung.py).
+
 - **BL-111 — drei Ableitungen aus der Plan-Datei rissen den Aufrufer unter
   `set -o pipefail` weg, und der Kommentar darüber sagte das Gegenteil zu.**
   `team_architekt_kaskade` beendete seine Pipeline mit `| head -1` und

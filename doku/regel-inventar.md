@@ -139,6 +139,8 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Kostenkontrolle | NORM | anhang-a | Reine Dateirotation zählt seit |
 | Kostenkontrolle | NORM | anhang-a | **(1) Modell je Antwort** |
 | Kostenkontrolle | NORM | anhang-a | **(2) Deduplikation über die Nachrichten-ID** |
+| Kostenkontrolle | NORM | anhang-a | **(5) Den bereits gebuchten Abschnitt ausnehmen** |
+| Kostenkontrolle | NORM | rolle-architekt | **Ein Closeout je Sitzung.** |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | anhang-a | bekommt **mindestens** den Ansatz der ersten |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | anhang-a | ab etwa drei gekoppelten Ansprüchen die |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | anhang-a | **Das Turn-Profil ist die Diagnose.** |

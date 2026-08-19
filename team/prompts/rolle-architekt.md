@@ -130,7 +130,19 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    dass der Löwenanteil auf das erneute Vorlegen des Kontexts entfällt, nicht auf
    den erzeugten Text — meine Sitzung ist teurer, als ihr Ergebnis vermuten lässt.
    Der Wert wird als **Abo-Gegenwert** gebucht und **nie** stillschweigend als
-   abgerechneter Betrag ausgegeben. Das Werkzeug ist rollen-agnostisch —
+   abgerechneter Betrag ausgegeben.
+   **Ein Closeout je Sitzung.** Das Transkript ist die Messgrundlage, und es
+   kennt keinen Schnitt: Schliesse ich eine zweite Kaskade in **derselben**
+   Sitzung ab, messe ich beim zweiten Mal wieder das **ganze** Transkript — der
+   erste, bereits gebuchte Betrag steckt darin und wandert ein zweites Mal ins
+   Ledger. Auffallen kann das nirgends: Es entstehen zwei Zeilen mit
+   **verschiedener** Kaskadennummer, also zwei fuer sich plausible Buchungen,
+   und der Kollisionsschutz von `--akteur-abschluss` schlaegt nur bei
+   **derselben** Rolle + Kaskade an. Deshalb: nach einem gebuchten Closeout
+   eine **neue** Sitzung fuer die naechste Kaskade. Geht das ausnahmsweise
+   nicht, buche ich **Rohwert minus bereits gebucht** und schreibe die Rechnung
+   in den Notiztext der Ledger-Zeile, damit sie nachvollziehbar bleibt
+   (`BL-116`, Feld-Fall `BL-120`). Das Werkzeug ist rollen-agnostisch —
    `--akteur-abschluss <rolle> <auth:abo|api> <USD> <domaene> ["<notiz>"]`
    deckt jede interaktiv arbeitende Rolle ab (auch Frank-im-Abo);
    `--architekt-abschluss` ist der dünne Alias dafür. Steht für **dieselbe

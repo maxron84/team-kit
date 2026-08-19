@@ -478,7 +478,7 @@ Bau-Details von `team/tools/kosten.py`:
   schlucken** (`BL-26`): Ein verschluckter `--kaskade` buchte im Feld auf die
   Nummer aus `.ralph-plan` — die nach jedem Closeout auf die **vorige** Kaskade
   zeigt — und ersetzte dort eine abgeschlossene Zeile über 8,4678 USD.
-- **Ein tauglicher Abo-Messweg hat vier Eigenschaften (`BL-33`).** Das Kit
+- **Ein tauglicher Abo-Messweg hat fünf Eigenschaften (`BL-33`, `BL-116`).** Das Kit
   besitzt das Messwerkzeug nicht, **verlässt sich aber darauf** — deshalb steht
   hier, was es können muss, statt einen Namen zu nennen:
   **(1) Modell je Antwort** aus dem Transkript (`message.model`), nicht als
@@ -490,6 +490,25 @@ Bau-Details von `team/tools/kosten.py`:
   **(3) Cache-Write nach Laufzeit getrennt.**
   **(4) Ein Transkript je Aufruf** — mehrere kommentarlos zu summieren macht
   die Messung in beiden Richtungen falsch.
+  **(5) Den bereits gebuchten Abschnitt ausnehmen** — wer zwei Kaskaden in
+  **derselben** Sitzung abschließt, misst beim zweiten Closeout wieder das
+  **ganze** Transkript, und der schon gebuchte Teil wandert ein zweites Mal ins
+  Ledger.
+- **Warum (5) nicht schon in (1)–(4) steckte (`BL-116`).** Der Fall sieht aus
+  wie (4) und ist es nicht: „Ein Transkript je Aufruf" verbietet, **mehrere**
+  Transkripte zu summieren, und sagt nichts über **ein** Transkript mit zwei
+  Buchungspunkten. Die Deduplikation über die Nachrichten-ID (2) greift
+  ebenfalls nicht — jede Antwort der ersten Hälfte kommt genau **einmal** vor,
+  nur eben bereits bezahlt. Und der A1-Kollisionsschutz greift nicht, weil er
+  bei **derselben Rolle + Kaskade** anschlägt: Hier entstehen **zwei**
+  Kaskadennummern und damit zwei Zeilen, die jede für sich plausibel sind. Der
+  Fall fällt also in **keiner** bestehenden Prüfung auf — im Feld gemerkt erst
+  beim Nachrechnen (`team-kit_project_platformer`, dortiges `BL-120`).
+  **Feld-Rezept, solange kein Werkzeug es kann:** Rohwert **minus bereits
+  gebucht**, mit der Rechnung im Notiztext der Ledger-Zeile, damit sie
+  nachvollziehbar bleibt. **Billiger ist die Vermeidung:** ein Closeout je
+  Sitzung — das steht im Briefing des Architekten, an der Stelle, an der
+  gebucht wird.
 - **Sanitisierung gilt für *jedes* interpolierte Feld (`HM-36`).** Nicht nur
   die Notiz, sondern **auch** `rolle` und `kaskade` müssen **vor** dem
   Idempotenz-Match gegen Trennzeichen und Zeilenumbrüche gesäubert werden —
