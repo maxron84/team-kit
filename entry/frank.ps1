@@ -68,6 +68,13 @@ if (Test-Path $attemptsFile) {
 [Console]::Out.WriteLine("=== Frank: $hm (Versuch $versuch/$maxVersuche, Budget $frankBudget USD) ===")
 $out = Join-Path $logDir "frank-$hm-v$versuch-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
 $startHash = (& git rev-parse HEAD).Trim()
+# BL-114: Frank ist eine SCHREIBENDE Rolle und hatte deshalb keinen Guard —
+# damit aber auch keinen Ausgangszustand des Arbeitsbaums, an dem sich fremde
+# uncommittete Arbeit von seiner eigenen unterscheiden liesse. Genau daran hing
+# der blanke Rollback: Wer nicht weiss, was ihm gehoert, wirft alles weg.
+# team_guard_begin schreibt nur den Schnappschuss und warnt bei unsauberem Baum
+# — es verifiziert nichts und schraenkt Franks Schreibrecht nicht ein.
+team_guard_begin | Out-Null
 
 # HM-29/BL-52: Fest "Code-Fix unter site/" vorzuschreiben ist fuer
 # Infra-Kaskaden sachlich falsch. Findet das Red Team etwas ausserhalb des
@@ -115,8 +122,7 @@ $rcClaude = team_claude 'frank' $TEAM_MODEL_LOOP $out $prompt '--permission-mode
 # also weder Rollback noch Versuchszaehler noch Axel-Eskalation.
 if ($rcClaude -eq 42) {
     Team-Fehler "[frank] Session-Limit — Fix pausiert (Reset: $(if ($TEAM_LAST_RESET) { $TEAM_LAST_RESET } else { 'unbekannt' })). Kein Fehlversuch, Zähler unverändert."
-    & git reset --hard $startHash | Out-Null
-    & git clean -fd | Out-Null
+    team_rollback_rolle 'frank' $startHash | Out-Null
     exit 42
 }
 
@@ -166,13 +172,14 @@ if ($budgetGesprengt -eq 0) {
     }
 }
 
-# Fehlversuch: aufraeumen, zaehlen, ggf. an Axel eskalieren. git clean OHNE
-# Pfad-Einschraenkung (HM-29): Frank laeuft mit bypassPermissions und kann auch
-# AUSSERHALB des Produktivcode-Ordners neue Dateien anlegen — ein verengter
-# Cleanup liess solche Altlasten einen gescheiterten Versuch ueberleben.
+# Fehlversuch: aufraeumen, zaehlen, ggf. an Axel eskalieren. Aufgeraeumt wird
+# CHIRURGISCH (BL-114) — jeder Pfad, den DIESER Lauf angefasst hat, einzeln;
+# fremde uncommittete Arbeit im selben Baum ueberlebt. Die Reichweite von HM-29
+# bleibt erhalten: Frank laeuft mit bypassPermissions und legt auch AUSSERHALB
+# des Produktivcode-Ordners neue Dateien an, und `git status --porcelain` meldet
+# jede nicht ignorierte davon — nur eben namentlich statt pauschal.
 Team-Fehler "[frank] $hm Versuch $versuch gescheitert (Budget/Promise/Commit/Dreisatz/Substanzbezug unvollständig) — Rollback."
-& git reset --hard $startHash | Out-Null
-& git clean -fd | Out-Null
+team_rollback_rolle 'frank' $startHash | Out-Null
 Set-Content -Path $attemptsFile -Value "$hm $versuch" -Encoding ascii
 
 if ($versuch -ge $maxVersuche) {

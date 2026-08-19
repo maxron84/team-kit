@@ -97,11 +97,17 @@ if [ "$RC" -eq 42 ]; then
     # HM-27: der Guard oben resettet nur Pfade AUSSERHALB der Whitelist — eine
     # bereits geschriebene, aber nie committete Ermittlungsakte/ein bereits
     # ausgeführter Statuswechsel INNERHALB plans/ blieben sonst als impliziter,
-    # nie verifizierter Fortschritt liegen. Analog zu frank.sh (Zeile 68) vor
-    # dem exit 42 verwerfen.
+    # nie verifizierter Fortschritt liegen. Analog zum Exit-42-Pfad in
+    # frank.sh vor dem exit 42 verwerfen. (Der Zeiger stand bis BL-114 als
+    # "frank.sh (Zeile 68)" hier und zeigte längst ins Leere — eine
+    # Zeilennummer in einem Kommentar altert bei jeder Einfügung darüber,
+    # ein Name nicht. Dieselbe Bauart wie BL-50.)
     echo "[axel] Session-Limit — Ermittlung pausiert (Reset: ${TEAM_LAST_RESET:-unbekannt}). Halbfertige ${TEAM_PLAN_ORDNER}-Seiteneffekte werden verworfen." >&2
-    git reset --hard "$START_HASH" >/dev/null
-    git clean -fd -- "$TEAM_PLAN_ORDNER" >/dev/null
+    # BL-114: Der `git clean` war schon auf den Plan-Ordner eingeschränkt —
+    # das `git reset --hard` daneben aber nicht, und es verwirft jede
+    # uncommittete Änderung an getrackten Dateien im ganzen Baum. Beides
+    # erledigt jetzt derselbe chirurgische Weg wie im Guard.
+    team_rollback_rolle axel "$START_HASH" || true
     exit 42
 elif [ "$RC" -ne 0 ]; then
     echo "[axel] Aufruf fehlgeschlagen." >&2

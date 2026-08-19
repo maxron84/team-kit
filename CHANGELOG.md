@@ -6,6 +6,42 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **BL-114 — der Rollback eines Rollenlaufs riss fremde uncommittete Arbeit
+  mit, und die Bibliothek verbot sich das zwei Zeilen weiter selbst.**
+  `frank.sh`/`frank.ps1` rollten auf **zwei** Pfaden (Session-Limit und
+  Fehlversuch) mit unbeschränktem `git reset --hard` + `git clean -fd` zurück;
+  `axel` und `redteam` hatten ihren `git clean` zwar eingeschränkt, ihr
+  `git reset --hard` daneben aber nicht. Der Kopf des Read-Only-Guards
+  beschreibt wörtlich die Gegenregel — *„niemals blanko `git reset --hard`/
+  `clean -fd`. (Lektion 2026-07-10: ein blindes reset+clean löschte einmal die
+  gesamte uncommittete Team-Infrastruktur. Nie wieder.)"* Die Lehre war am
+  **Guard** angewandt und am **Aufrufer** nicht.
+
+  Die chirurgische Schleife des Guards ist jetzt als
+  `team_pfade_zuruecksetzen` herausgelöst, darauf sitzt `team_rollback_rolle`,
+  und alle sechs Stellen rufen sie auf. HEAD wandert mit `--soft` zurück
+  (gestagte fremde Arbeit bleibt unberührt), die Pfade **dieser** Rolle holt
+  die Schleife einzeln. Frank bekommt dafür erstmals einen Startschnappschuss
+  (`team_guard_begin`) — als schreibende Rolle hatte er keinen und konnte
+  fremde Arbeit gar nicht von der eigenen unterscheiden. Reichweite von
+  `HM-29` und die Ausnahme für Laufzeitartefakte (`BL-4`/`BL-24`) bleiben.
+
+  **Beim Bauen aufgefallen, und es betraf auch den Guard:** `git status
+  --porcelain` meldet einen untracked **Ordner** als EINEN Eintrag (`plans/`).
+  Committet eine Rolle eine fremde Datei daraus versehentlich mit, taucht sie
+  danach als `plans/closeout.md` auf und passt auf keinen Eintrag der
+  Fremdliste mehr — ein reiner Zeichenvergleich hätte sie gelöscht. Der neue
+  gemeinsame Filter `team_fremd_ausfiltern` zählt einen Pfad auch dann als
+  fremd, wenn er **unter** einem fremden Ordnereintrag liegt.
+
+  Gegenprobe in
+  [`team/tests/test_bl114_rollback_verschont_fremde_arbeit.py`](team/tests/test_bl114_rollback_verschont_fremde_arbeit.py)
+  (21 Fälle): Schonung **und** Wirksamkeit je Bahn, dazu ein echter
+  `frank.sh`-Lauf mit gestubbter CLI. Mit dem alten Rollback verschwindet dort
+  `CHANGELOG.md` — genau die Datei aus dem Feldbericht —, mit dem Fix
+  überlebt sie. Der ursprüngliche Verlustfall (nach einem **erfolgreichen**
+  Lauf) ist damit **nicht** erklärt; sein Mechanismus war nie bewiesen.
+
 - **BL-116 — ein Transkript, zwei Closeouts: der zweite bucht die Summe
   beider Kaskaden.** Der Abo-Messweg misst das Sitzungstranskript. Wer zwei
   Kaskaden in **derselben** Sitzung abschließt, misst beim zweiten Closeout

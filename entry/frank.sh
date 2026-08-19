@@ -59,6 +59,13 @@ if [ "$gelesen_hm" = "$HM" ]; then VERSUCH=$((gelesen_n + 1)); else VERSUCH=1; f
 echo "=== Frank: $HM (Versuch $VERSUCH/$MAX_VERSUCHE, Budget $FRANK_BUDGET_USD USD) ==="
 OUT="$LOG_DIR/frank-${HM}-v${VERSUCH}-$(date +%Y%m%d-%H%M%S).json"
 START_HASH="$(git rev-parse HEAD)"
+# BL-114: Frank ist eine SCHREIBENDE Rolle und hatte deshalb keinen Guard —
+# damit aber auch keinen Ausgangszustand des Arbeitsbaums, an dem sich fremde
+# uncommittete Arbeit von seiner eigenen unterscheiden liesse. Genau daran hing
+# der blanke Rollback: Wer nicht weiss, was ihm gehoert, wirft alles weg.
+# team_guard_begin schreibt nur den Schnappschuss und warnt bei unsauberem Baum
+# — es verifiziert nichts und schraenkt Franks Schreibrecht nicht ein.
+team_guard_begin
 
 # Fokus-Zeile (HM-29): analog zu Harry/Marv (TEAM_REDTEAM_FOCUS, BL-15) fest
 # "Code-Fix unter site/" vorzuschreiben ist für Infra-Kaskaden (Team-Skripte
@@ -109,7 +116,7 @@ echo "Frank: $HM Versuch $VERSUCH kostete $TEAM_LAST_COST USD."
 # Pause wird unverändert an vollautomatik.sh durchgereicht.
 if [ "$RC_CLAUDE" -eq 42 ]; then
     echo "[frank] Session-Limit — Fix pausiert (Reset: ${TEAM_LAST_RESET:-unbekannt}). Kein Fehlversuch, Zähler unverändert." >&2
-    git reset --hard "$START_HASH" >/dev/null; git clean -fd >/dev/null
+    team_rollback_rolle frank "$START_HASH" || true
     exit 42
 fi
 
@@ -159,14 +166,16 @@ if [ "$BUDGET_GESPRENGT" -eq 0 ]; then
     fi
 fi
 
-# Fehlversuch: aufräumen, zählen, ggf. an Axel eskalieren. git clean OHNE
-# Pfad-Einschränkung (HM-29): Frank läuft mit bypassPermissions und kann daher
-# auch AUSSERHALB von site/ neue, nie committete Dateien anlegen — ein auf
-# "-- site/" verengter Cleanup ließ solche Altlasten bislang einen gescheiterten
-# Versuch überleben (respektiert .gitignore, .team-logs/.ralph-logs u. Ä. bleiben
-# unangetastet).
+# Fehlversuch: aufräumen, zählen, ggf. an Axel eskalieren. Aufgeräumt wird
+# CHIRURGISCH (BL-114) — jeder Pfad, den DIESER Lauf angefasst hat, einzeln;
+# fremde uncommittete Arbeit im selben Baum überlebt. Die Reichweite von HM-29
+# bleibt erhalten: Frank läuft mit bypassPermissions und legt auch AUSSERHALB
+# des Produktivordners neue Dateien an, und `git status --porcelain` meldet
+# jede nicht ignorierte davon — nur eben namentlich statt pauschal. Ein auf
+# "-- site/" verengter Cleanup ließ solche Altlasten früher einen gescheiterten
+# Versuch überleben.
 echo "[frank] $HM Versuch $VERSUCH gescheitert (Budget/Promise/Commit/Dreisatz/Substanzbezug unvollständig) — Rollback." >&2
-git reset --hard "$START_HASH" >/dev/null; git clean -fd >/dev/null
+team_rollback_rolle frank "$START_HASH" || true
 printf '%s %s\n' "$HM" "$VERSUCH" > "$ATTEMPTS_FILE"
 
 if [ "$VERSUCH" -ge "$MAX_VERSUCHE" ]; then

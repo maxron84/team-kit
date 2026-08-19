@@ -850,59 +850,64 @@ function team_guard_fremdpfade {
     Write-Output $treffer
 }
 
-function team_guard_verify {
+function team_fremd_ausfiltern {
     <#
-      Ermittelt geaenderte Pfade (committet seit Start + Arbeitsverzeichnis),
-      die NICHT auf die Whitelist passen. Bei Verletzung wird NUR jeder
-      einzelne Verletzer-Pfad zurueckgesetzt — NIEMALS blanko
-      `git reset --hard`/`clean -fd`. (Lektion 2026-07-10: ein blindes
-      reset+clean loeschte einmal die gesamte uncommittete Team-Infrastruktur.
-      Nie wieder.)
+      Entfernt aus der Pfadliste alles, was team_guard_fremdpfade als fremd
+      ausweist — mit einer Feinheit, die beim Bau von BL-114 aufgefallen ist
+      und die auch den Guard betraf:
 
-      $true = sauber · $false = Uebergriff
+      `git status --porcelain` meldet ein untracked VERZEICHNIS als EINEN
+      Eintrag mit Schraegstrich (`plans/`), nicht als Liste seiner Dateien —
+      dieselbe Eigenheit, an der BL-24 haengt. Der Startschnappschuss haelt
+      deshalb `plans/` fest. Committet eine Rolle eine fremde Datei aus so
+      einem Ordner versehentlich mit (`git add -A` ist bei bypassPermissions
+      der Normalfall), taucht sie danach als `plans/closeout.md` auf und passt
+      auf KEINEN Eintrag der Fremdliste mehr. Ein reiner Zeichenvergleich
+      haette sie geloescht — also genau die uncommittete Closeout-Ausgabe,
+      wegen der BL-114 geschrieben wurde. Deshalb gilt ein Pfad auch dann als
+      fremd, wenn er UNTER einem fremden Ordnereintrag liegt.
+
+      Bewusst in diese Richtung konservativ: Legt die Rolle eine eigene Datei
+      in einen bereits fremden Ordner, bleibt sie liegen. Ein Rest, der liegen
+      bleibt, ist sichtbar und behebbar; fremde Arbeit, die geloescht wurde,
+      ist weg.
     #>
-    param([string]$Rolle, [string]$Whitelist)
-
-    $roh = @()
-    foreach ($p in @(& git diff --name-only $script:TEAM_GUARD_HASH HEAD 2>$null)) {
-        if ($p) { $roh += $p }
-    }
-    foreach ($z in @(& git status --porcelain 2>$null)) {
-        if ($z -and $z.Length -ge 4) { $roh += $z.Substring(3) }
-    }
-    $roh = @($roh | Sort-Object -Unique |
-             Where-Object { $_ -notmatch $Whitelist -and $_ -notmatch $TEAM_GUARD_LAUFZEIT })
-    if (-not $roh.Count) { return $true }
+    param([string[]]$Pfade)
 
     $fremd = @(team_guard_fremdpfade)
-    $nichtAngelastet = @($roh | Where-Object { $fremd -contains $_ })
-    $verletzungen = @($roh | Where-Object { $fremd -notcontains $_ })
+    if (-not $fremd.Count) { return @($Pfade) }
+    return @(@($Pfade) | Where-Object {
+        $p = $_
+        $treffer = @($fremd | Where-Object {
+            $p -eq $_ -or ($_.EndsWith('/') -and $p.StartsWith($_))
+        })
+        -not $treffer.Count
+    })
+}
 
-    if (-not $verletzungen.Count) {
-        # Der Verdacht loest sich auf. Genau dieser Fall wurde im Feld einer
-        # Rolle angelastet, die ihn nicht verursacht hatte.
-        Team-Fehler "[$Rolle] Guard: Pfade außerhalb der Whitelist geändert, aber ALLE waren beim Rollenstart bereits geändert und sind es unverändert — nicht dieser Rolle zugeschrieben, kein Rollback:"
-        foreach ($p in $nichtAngelastet) { Team-Fehler "  $p" }
-        return $true
-    }
+function team_pfade_zuruecksetzen {
+    <#
+      Setzt JEDEN uebergebenen Pfad EINZELN auf den Stand von <Hash> zurueck:
+      beim Start getrackt -> `git checkout <Hash> -- <Pfad>`, neu entstanden ->
+      gezielt entfernen. Gibt die Pfade zurueck, die danach WEITERHIN abweichen
+      (leer = vollzogen).
 
-    # Die Meldung trennt die beiden Faelle ausdruecklich sprachlich. Im Feld
-    # wurde der Uebergriff zunaechst der falschen Rolle zugeschrieben, weil die
-    # Pfadliste im Log neben ihrem Namen stand — belegt war das nirgends.
-    Team-Fehler "[$Rolle] GUARD-VERLETZUNG — DIESE ROLLE hat die folgenden Pfade geändert:"
-    foreach ($p in $verletzungen) { Team-Fehler $p }
-    if ($nichtAngelastet.Count) {
-        Team-Fehler "[$Rolle] NICHT angelastet (beim Rollenstart bereits geändert, seither unverändert):"
-        foreach ($p in $nichtAngelastet) { Team-Fehler "  $p" }
-    }
+      Herausgeloest aus team_guard_verify (BL-114). Der Grund ist nicht
+      Aufraeumen: Die Einstiegsskripte rollten bis dahin mit einem blanken
+      `git reset --hard` + `git clean -fd` zurueck — also mit genau dem, was
+      der Kopf dieses Abschnitts sich seit dem 2026-07-10 verbietet. Die Lehre
+      war am Guard angewandt und am Aufrufer nicht. Eine gemeinsame Funktion
+      macht das Auseinanderlaufen unmoeglich, statt es nur zu verbieten.
+    #>
+    param([string]$Rolle, [string]$Hash, [string[]]$Pfade)
 
     $rest = @()
-    foreach ($pfad in $verletzungen) {
+    foreach ($pfad in @($Pfade)) {
         if (-not $pfad) { continue }
-        & git cat-file -e "$($script:TEAM_GUARD_HASH):$pfad" 2>$null | Out-Null
+        & git cat-file -e "$($Hash):$pfad" 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0) {
             # War beim Start getrackt -> auf Startstand zurueckholen.
-            & git checkout $script:TEAM_GUARD_HASH -- $pfad 2>$null | Out-Null
+            & git checkout $Hash -- $pfad 2>$null | Out-Null
         } else {
             # Neu entstanden -> gezielt entfernen. Die Plausibilitaetspruefung
             # steht davor, weil ein rekursives Entfernen auf einem Pfad aus
@@ -927,10 +932,113 @@ function team_guard_verify {
         # Der Erfolg wird GEPRUEFT, nicht angenommen. Sonst wiederholt sich die
         # eigentliche Lehre dieses Fundes bei der naechsten Ursache.
         if (Test-Path -LiteralPath $pfad) {
-            & git diff --quiet $script:TEAM_GUARD_HASH -- $pfad 2>$null | Out-Null
+            & git diff --quiet $Hash -- $pfad 2>$null | Out-Null
             if ($LASTEXITCODE -ne 0) { $rest += $pfad }
         }
     }
+    return $rest
+}
+
+function team_rollback_rolle {
+    <#
+      Verwirft den GESAMTEN Beitrag eines Rollenlaufs — Commits, Aenderungen an
+      getrackten Dateien und neu angelegte Dateien —, aber NUR seinen.
+
+      BL-114: Hier stand in frank.ps1, axel.ps1 und redteam.ps1 ein blankes
+      `git reset --hard $startHash` (in frank zusaetzlich `git clean -fd` ohne
+      Pfadeinschraenkung). Das trifft JEDE uncommittete Arbeit im Zielprojekt,
+      nicht nur die der Rolle: eine parallele Sitzung, eine Handaenderung, eine
+      noch nicht committete Closeout-Ausgabe des Architekten.
+
+      Drei Dinge bleiben ausdruecklich unangetastet:
+        * Pfade aus dem Startschnappschuss, die sich seither nicht veraendert
+          haben (team_guard_fremdpfade) — fremde Arbeit.
+        * Laufzeitartefakte (TEAM_GUARD_LAUFZEIT) — dort liegen die Kostenlogs
+          DIESES Aufrufs; sie zu loeschen waere ein selbstverschuldeter BL-4.
+        * Gestagte fremde Aenderungen: HEAD wandert mit `--soft` zurueck, der
+          Arbeitsbaum bleibt dabei unberuehrt.
+
+      `git clean -fd` deckte den Fall ab, dass Frank mit bypassPermissions auch
+      AUSSERHALB des Produktivordners Dateien anlegt (HM-29). Das leistet die
+      Pfadliste weiter: `git status --porcelain` meldet jede nicht ignorierte
+      neue Datei im ganzen Repo — nur eben namentlich statt pauschal.
+
+      $true = vollzogen · $false = Reste geblieben (gemeldet)
+    #>
+    param([string]$Rolle, [string]$StartHash)
+
+    $pfade = @()
+    foreach ($p in @(& git diff --name-only $StartHash HEAD 2>$null)) {
+        if ($p) { $pfade += $p }
+    }
+    foreach ($z in @(& git status --porcelain 2>$null)) {
+        if ($z -and $z.Length -ge 4) { $pfade += $z.Substring(3) }
+    }
+    $pfade = @($pfade | Sort-Object -Unique |
+               Where-Object { $_ -notmatch $TEAM_GUARD_LAUFZEIT })
+    $pfade = @(team_fremd_ausfiltern $pfade)
+    if ((& git rev-parse HEAD 2>$null) -ne $StartHash) {
+        & git reset --soft $StartHash 2>$null | Out-Null
+    }
+    $rest = @(team_pfade_zuruecksetzen $Rolle $StartHash $pfade)
+    if ($rest.Count) {
+        Team-Fehler "[$Rolle] ROLLBACK UNVOLLSTÄNDIG — diese Pfade stehen weiterhin abweichend im Baum:"
+        foreach ($p in $rest) { Team-Fehler "  $p" }
+        Team-Fehler "  Von Hand prüfen und zurücknehmen."
+        return $false
+    }
+    return $true
+}
+
+function team_guard_verify {
+    <#
+      Ermittelt geaenderte Pfade (committet seit Start + Arbeitsverzeichnis),
+      die NICHT auf die Whitelist passen. Bei Verletzung wird NUR jeder
+      einzelne Verletzer-Pfad zurueckgesetzt — NIEMALS blanko
+      `git reset --hard`/`clean -fd`. (Lektion 2026-07-10: ein blindes
+      reset+clean loeschte einmal die gesamte uncommittete Team-Infrastruktur.
+      Nie wieder.)
+
+      $true = sauber · $false = Uebergriff
+    #>
+    param([string]$Rolle, [string]$Whitelist)
+
+    $roh = @()
+    foreach ($p in @(& git diff --name-only $script:TEAM_GUARD_HASH HEAD 2>$null)) {
+        if ($p) { $roh += $p }
+    }
+    foreach ($z in @(& git status --porcelain 2>$null)) {
+        if ($z -and $z.Length -ge 4) { $roh += $z.Substring(3) }
+    }
+    $roh = @($roh | Sort-Object -Unique |
+             Where-Object { $_ -notmatch $Whitelist -and $_ -notmatch $TEAM_GUARD_LAUFZEIT })
+    if (-not $roh.Count) { return $true }
+
+    # BL-114: derselbe Filter wie im Rollback — er kennt auch den Fall, dass
+    # eine fremde Datei aus einem untracked ORDNER mitcommittet wurde und
+    # danach unter ihrem vollen Pfad auftaucht.
+    $verletzungen = @(team_fremd_ausfiltern $roh)
+    $nichtAngelastet = @($roh | Where-Object { $verletzungen -notcontains $_ })
+
+    if (-not $verletzungen.Count) {
+        # Der Verdacht loest sich auf. Genau dieser Fall wurde im Feld einer
+        # Rolle angelastet, die ihn nicht verursacht hatte.
+        Team-Fehler "[$Rolle] Guard: Pfade außerhalb der Whitelist geändert, aber ALLE waren beim Rollenstart bereits geändert und sind es unverändert — nicht dieser Rolle zugeschrieben, kein Rollback:"
+        foreach ($p in $nichtAngelastet) { Team-Fehler "  $p" }
+        return $true
+    }
+
+    # Die Meldung trennt die beiden Faelle ausdruecklich sprachlich. Im Feld
+    # wurde der Uebergriff zunaechst der falschen Rolle zugeschrieben, weil die
+    # Pfadliste im Log neben ihrem Namen stand — belegt war das nirgends.
+    Team-Fehler "[$Rolle] GUARD-VERLETZUNG — DIESE ROLLE hat die folgenden Pfade geändert:"
+    foreach ($p in $verletzungen) { Team-Fehler $p }
+    if ($nichtAngelastet.Count) {
+        Team-Fehler "[$Rolle] NICHT angelastet (beim Rollenstart bereits geändert, seither unverändert):"
+        foreach ($p in $nichtAngelastet) { Team-Fehler "  $p" }
+    }
+
+    $rest = @(team_pfade_zuruecksetzen $Rolle $script:TEAM_GUARD_HASH $verletzungen)
 
     if ($rest.Count) {
         Team-Fehler "[$Rolle] Guard: ROLLBACK UNVOLLSTÄNDIG — diese Pfade stehen weiterhin abweichend im Baum:"

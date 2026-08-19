@@ -102,8 +102,11 @@ if ($rc -eq 42) {
     # bereits geschriebene, nie committete Akte INNERHALB des Plan-Ordners
     # bliebe sonst als impliziter, nie verifizierter Fortschritt liegen.
     Team-Fehler "[axel] Session-Limit — Ermittlung pausiert (Reset: $(if ($TEAM_LAST_RESET) { $TEAM_LAST_RESET } else { 'unbekannt' })). Halbfertige $TEAM_PLAN_ORDNER-Seiteneffekte werden verworfen."
-    & git reset --hard $startHash | Out-Null
-    & git clean -fd -- $TEAM_PLAN_ORDNER | Out-Null
+    # BL-114: Der `git clean` war schon auf den Plan-Ordner eingeschraenkt —
+    # das `git reset --hard` daneben aber nicht, und es verwirft jede
+    # uncommittete Aenderung an getrackten Dateien im ganzen Baum. Beides
+    # erledigt jetzt derselbe chirurgische Weg wie im Guard.
+    team_rollback_rolle 'axel' $startHash | Out-Null
     exit 42
 } elseif ($rc -ne 0) {
     Team-Fehler '[axel] Aufruf fehlgeschlagen.'

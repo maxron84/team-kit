@@ -274,6 +274,44 @@ class Schreib(_Schritt):
                       f"{_zitat_pwsh(self.inhalt)}\n$script:TeamRc = 0\n")
 
 
+class Git(_Schritt):
+    """Ein git-Aufruf als Schritt IN der Shell.
+
+    Gebraucht seit BL-114: Der Rollback eines Rollenlaufs muss auch gegen
+    einen COMMIT der Rolle geprueft werden, und der muss zwischen
+    Schnappschuss und Rollback fallen — beides teilt sich einen Prozess
+    (siehe Kopf). Was VOR dem Lauf passieren kann, gehoert weiterhin nach
+    Python.
+    """
+
+    def __init__(self, *args):
+        self.args = args
+
+    def bash(self):
+        teile = " ".join(_zitat_bash(a) for a in self.args)
+        return f"git {teile} >/dev/null 2>&1\n_team_rc=0\n"
+
+    def pwsh(self):
+        teile = " ".join(_zitat_pwsh(a) for a in self.args)
+        return f"& git {teile} 2>$null | Out-Null\n$script:TeamRc = 0\n"
+
+
+class Loeschen(_Schritt):
+    """Datei entfernen — der Fall "die Rolle loescht etwas, das ihr nicht
+    gehoert". Ohne ihn liesse sich nicht pruefen, dass ein Rollback auch
+    WIEDERHERSTELLT und nicht nur wegnimmt."""
+
+    def __init__(self, pfad):
+        self.pfad = str(pfad)
+
+    def bash(self):
+        return f"rm -f -- {_zitat_bash(self.pfad)}\n_team_rc=0\n"
+
+    def pwsh(self):
+        return (f"Remove-Item -LiteralPath {_zitat_pwsh(self.pfad)} -Force "
+                f"-ErrorAction SilentlyContinue\n$script:TeamRc = 0\n")
+
+
 class Ordner(_Schritt):
     """Verzeichnis anlegen — der Fall BL-24 (untracked Ordner als EIN Eintrag)."""
 

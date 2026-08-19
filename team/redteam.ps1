@@ -180,8 +180,9 @@ if ($rc -eq 42) {
     # bereits geschriebener Beutebuch-Eintrag INNERHALB der Schreibzone bliebe
     # sonst als impliziter, nie verifizierter Fortschritt liegen.
     Team-Fehler "[$Rolle] Session-Limit — Sweep pausiert (Reset: $(if ($TEAM_LAST_RESET) { $TEAM_LAST_RESET } else { 'unbekannt' })). Kein Fehler, $stateFile bleibt unverändert; halbfertige $TEAM_TEST_ORDNER/$TEAM_PLAN_ORDNER-Seiteneffekte werden verworfen."
-    & git reset --hard $headHash | Out-Null
-    & git clean -fd -- $TEAM_TEST_ORDNER $TEAM_PLAN_ORDNER | Out-Null
+    # BL-114: wie in axel.ps1 — der `git clean` war eingeschraenkt, das
+    # `git reset --hard` daneben nicht. Jetzt derselbe chirurgische Weg.
+    team_rollback_rolle $Rolle $headHash | Out-Null
     exit 42
 } elseif ($rc -ne 0) {
     Team-Fehler "[$Rolle] Aufruf fehlgeschlagen."

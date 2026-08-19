@@ -713,23 +713,161 @@ team_guard_fremdpfade() {
 # `rm -f` an ihnen still; dass das gut ging, war Zufall, kein Entwurf.
 TEAM_GUARD_LAUFZEIT='^(\.team-logs/|\.ralph-logs/|\.team-loop\.lock$|\.ralph-state$|\.harry-state$|\.marv-state$|\.frank-attempts$|\.team-focus-[a-z]+$)'
 
+# team_fremd_ausfiltern <pfadliste>
+#   Entfernt aus <pfadliste> alles, was team_guard_fremdpfade als fremd
+#   ausweist — mit einer Feinheit, die beim Bau von BL-114 aufgefallen ist und
+#   die auch den Guard betraf:
+#
+#   `git status --porcelain` meldet ein untracked VERZEICHNIS als EINEN
+#   Eintrag mit Schrägstrich (`plans/`), nicht als Liste seiner Dateien —
+#   dieselbe Eigenheit, an der BL-24 haengt. Der Startschnappschuss haelt
+#   deshalb `plans/` fest. Committet eine Rolle eine fremde Datei aus so einem
+#   Ordner versehentlich mit (`git add -A` ist bei bypassPermissions der
+#   Normalfall), taucht sie danach als `plans/closeout.md` auf und passt auf
+#   KEINEN Eintrag der Fremdliste mehr. Ein reiner Zeichenvergleich haette sie
+#   geloescht — also genau die uncommittete Closeout-Ausgabe, wegen der
+#   BL-114 geschrieben wurde. Deshalb gilt ein Pfad auch dann als fremd, wenn
+#   er UNTER einem fremden Ordnereintrag liegt.
+#
+#   Bewusst in diese Richtung konservativ: Legt die Rolle eine eigene Datei in
+#   einen bereits fremden Ordner, bleibt sie liegen. Ein Rest, der liegen
+#   bleibt, ist sichtbar und behebbar; fremde Arbeit, die geloescht wurde, ist
+#   weg.
+team_fremd_ausfiltern() {
+    local liste="$1" fremd pfad eintrag behalten
+    [ -z "$liste" ] && return 0
+    fremd="$(team_guard_fremdpfade)"
+    if [ -z "$fremd" ]; then
+        printf '%s\n' "$liste"
+        return 0
+    fi
+    while IFS= read -r pfad; do
+        [ -z "$pfad" ] && continue
+        behalten=1
+        while IFS= read -r eintrag; do
+            [ -z "$eintrag" ] && continue
+            if [ "$pfad" = "$eintrag" ]; then
+                behalten=0
+            else
+                case "$eintrag" in
+                    */) [ "${pfad#"$eintrag"}" != "$pfad" ] && behalten=0 ;;
+                esac
+            fi
+        done <<< "$fremd"
+        [ "$behalten" -eq 1 ] && printf '%s\n' "$pfad"
+    done <<< "$liste"
+    return 0
+}
+
+# team_pfade_zuruecksetzen <rolle> <hash> <pfadliste>
+#   Setzt JEDEN uebergebenen Pfad EINZELN auf den Stand von <hash> zurueck:
+#   beim Start getrackt → `git checkout <hash> -- <pfad>`, neu entstanden →
+#   gezielt entfernen. Gibt auf STDOUT die Pfade aus, die danach WEITERHIN
+#   abweichen (leer = vollzogen); Meldungen gehen nach stderr.
+#
+#   Herausgeloest aus team_guard_verify (BL-114). Der Grund ist nicht
+#   Aufraeumen: Die Einstiegsskripte rollten bis dahin mit einem blanken
+#   `git reset --hard` + `git clean -fd` zurueck — also mit genau dem, was der
+#   Kopf dieses Abschnitts sich seit dem 2026-07-10 verbietet. Die Lehre war am
+#   Guard angewandt und am Aufrufer nicht. Eine gemeinsame Funktion macht das
+#   Auseinanderlaufen unmoeglich, statt es nur zu verbieten.
+team_pfade_zuruecksetzen() {
+    local rolle="$1" hash="$2" liste="$3" pfad rest=""
+    [ -z "$liste" ] && return 0
+    while IFS= read -r pfad; do
+        [ -z "$pfad" ] && continue
+        if git cat-file -e "$hash:$pfad" 2>/dev/null; then
+            # War beim Start getrackt → auf Startstand zurückholen.
+            git checkout "$hash" -- "$pfad" 2>/dev/null || true
+        else
+            # Neu entstanden (committet oder untracked) → gezielt entfernen.
+            #
+            # `-r` ist hier nötig (Verzeichnisse), und `-r` auf einem Pfad aus
+            # `git status` ist genau die Zeile, die man einmal richtig schreibt
+            # und nie wieder ansieht. Deshalb die Plausibilitätsprüfung davor:
+            # Der Pfad kommt ausschließlich aus `git status --porcelain`
+            # innerhalb des Repos, ist also relativ und ohne führenden
+            # Schrägstrich. Alles andere wird NICHT entfernt, sondern gemeldet.
+            case "$pfad" in
+                /*|*..*|"")
+                    echo "[$rolle] Guard: '$pfad' sieht nicht nach einem Repo-Pfad aus — NICHT entfernt." >&2
+                    rest="$rest$pfad"$'\n'
+                    continue ;;
+            esac
+            git rm -rf --cached -- "$pfad" >/dev/null 2>&1 || true
+            rm -rf -- "$pfad"
+        fi
+        # Der Erfolg wird GEPRÜFT, nicht angenommen. Sonst wiederholt sich die
+        # eigentliche Lehre dieses Fundes bei der nächsten Ursache.
+        if [ -e "$pfad" ] && ! git diff --quiet "$hash" -- "$pfad" 2>/dev/null; then
+            rest="$rest$pfad"$'\n'
+        fi
+    done <<< "$liste"
+    printf '%s' "$rest"
+}
+
+# team_rollback_rolle <rolle> <start-hash>
+#   Verwirft den GESAMTEN Beitrag eines Rollenlaufs — Commits, Aenderungen an
+#   getrackten Dateien und neu angelegte Dateien —, aber NUR seinen.
+#
+#   BL-114: Hier stand in frank.sh, axel.sh und redteam.sh ein blankes
+#   `git reset --hard "$START_HASH"` (in frank zusaetzlich `git clean -fd`
+#   ohne Pfadeinschraenkung). Das trifft JEDE uncommittete Arbeit im
+#   Zielprojekt, nicht nur die der Rolle: eine parallele Sitzung, eine
+#   Handaenderung, eine noch nicht committete Closeout-Ausgabe des
+#   Architekten. Der Guard nebenan arbeitet seit derselben Lehre chirurgisch
+#   und kennt ueber team_guard_begin sogar den Ausgangszustand des
+#   Arbeitsbaums (BL-16) — zwei Zeilen weiter warf der Aufrufer weg, was der
+#   Guard gerade sorgfaeltig geschont hatte.
+#
+#   Drei Dinge bleiben ausdruecklich unangetastet:
+#     * Pfade aus dem Startschnappschuss, die sich seither nicht veraendert
+#       haben (team_guard_fremdpfade) — fremde Arbeit.
+#     * Laufzeitartefakte (TEAM_GUARD_LAUFZEIT) — dort liegen die Kostenlogs
+#       DIESES Aufrufs; sie zu loeschen waere ein selbstverschuldeter BL-4.
+#     * Gestagte fremde Aenderungen: HEAD wandert mit `--soft` zurueck, der
+#       Arbeitsbaum bleibt dabei unberuehrt.
+#
+#   `git clean -fd` deckte den Fall ab, dass Frank mit bypassPermissions auch
+#   AUSSERHALB des Produktivordners Dateien anlegt (HM-29). Das leistet die
+#   Pfadliste weiter: `git status --porcelain` meldet jede nicht ignorierte
+#   neue Datei im ganzen Repo — nur eben namentlich statt pauschal.
+team_rollback_rolle() {
+    local rolle="$1" start="$2" pfade rest
+    pfade="$( { git diff --name-only "$start" HEAD 2>/dev/null;
+                git status --porcelain | cut -c4-; } | sort -u \
+              | grep -Ev "$TEAM_GUARD_LAUFZEIT" || true)"
+    pfade="$(team_fremd_ausfiltern "$pfade")"
+    if [ "$(git rev-parse HEAD)" != "$start" ]; then
+        git reset --soft "$start" >/dev/null 2>&1 || true
+    fi
+    rest="$(team_pfade_zuruecksetzen "$rolle" "$start" "$pfade")"
+    if [ -n "$rest" ]; then
+        echo "[$rolle] ROLLBACK UNVOLLSTÄNDIG — diese Pfade stehen weiterhin abweichend im Baum:" >&2
+        printf '%s' "$rest" | sed 's/^/  /' >&2
+        echo "  Von Hand prüfen und zurücknehmen." >&2
+        return 1
+    fi
+    return 0
+}
+
 team_guard_verify() {
-    local rolle="$1" whitelist="$2" roh fremd nicht_angelastet verletzungen pfad
+    local rolle="$1" whitelist="$2" roh nicht_angelastet verletzungen
     roh="$( { git diff --name-only "$TEAM_GUARD_HASH" HEAD 2>/dev/null;
               git status --porcelain | cut -c4-; } | sort -u \
             | grep -Ev "$whitelist" \
             | grep -Ev "$TEAM_GUARD_LAUFZEIT" || true)"
     [ -z "$roh" ] && return 0
 
-    fremd="$(team_guard_fremdpfade)"
-    if [ -n "$fremd" ]; then
+    # BL-114: derselbe Filter wie im Rollback — er kennt auch den Fall, dass
+    # eine fremde Datei aus einem untracked ORDNER mitcommittet wurde und
+    # danach unter ihrem vollen Pfad auftaucht.
+    verletzungen="$(team_fremd_ausfiltern "$roh")"
+    if [ -n "$verletzungen" ]; then
         nicht_angelastet="$(printf '%s\n' "$roh" \
-                            | grep -Fxf <(printf '%s\n' "$fremd") || true)"
-        verletzungen="$(printf '%s\n' "$roh" \
-                        | grep -Fxvf <(printf '%s\n' "$fremd") || true)"
+                            | grep -Fxvf <(printf '%s\n' "$verletzungen") || true)"
     else
-        nicht_angelastet=""
-        verletzungen="$roh"
+        nicht_angelastet="$roh"
     fi
 
     if [ -z "$verletzungen" ]; then
@@ -760,36 +898,8 @@ team_guard_verify() {
         echo "[$rolle] NICHT angelastet (beim Rollenstart bereits geändert, seither unverändert):" >&2
         printf '%s\n' "$nicht_angelastet" | sed 's/^/  /' >&2
     fi
-    local rest=""
-    while IFS= read -r pfad; do
-        [ -z "$pfad" ] && continue
-        if git cat-file -e "$TEAM_GUARD_HASH:$pfad" 2>/dev/null; then
-            # War beim Start getrackt → auf Startstand zurückholen.
-            git checkout "$TEAM_GUARD_HASH" -- "$pfad" 2>/dev/null || true
-        else
-            # Neu entstanden (committet oder untracked) → gezielt entfernen.
-            #
-            # `-r` ist hier nötig (Verzeichnisse), und `-r` auf einem Pfad aus
-            # `git status` ist genau die Zeile, die man einmal richtig schreibt
-            # und nie wieder ansieht. Deshalb die Plausibilitätsprüfung davor:
-            # Der Pfad kommt ausschließlich aus `git status --porcelain`
-            # innerhalb des Repos, ist also relativ und ohne führenden
-            # Schrägstrich. Alles andere wird NICHT entfernt, sondern gemeldet.
-            case "$pfad" in
-                /*|*..*|"")
-                    echo "[$rolle] Guard: '$pfad' sieht nicht nach einem Repo-Pfad aus — NICHT entfernt." >&2
-                    rest="$rest$pfad"$'\n'
-                    continue ;;
-            esac
-            git rm -rf --cached -- "$pfad" >/dev/null 2>&1 || true
-            rm -rf -- "$pfad"
-        fi
-        # Der Erfolg wird GEPRÜFT, nicht angenommen. Sonst wiederholt sich die
-        # eigentliche Lehre dieses Fundes bei der nächsten Ursache.
-        if [ -e "$pfad" ] && ! git diff --quiet "$TEAM_GUARD_HASH" -- "$pfad" 2>/dev/null; then
-            rest="$rest$pfad"$'\n'
-        fi
-    done <<< "$verletzungen"
+    local rest
+    rest="$(team_pfade_zuruecksetzen "$rolle" "$TEAM_GUARD_HASH" "$verletzungen")"
     if [ -n "$rest" ]; then
         echo "[$rolle] Guard: ROLLBACK UNVOLLSTÄNDIG — diese Pfade stehen weiterhin abweichend im Baum:" >&2
         printf '%s' "$rest" | sed 's/^/  /' >&2

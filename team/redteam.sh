@@ -175,10 +175,13 @@ if [ "$RC" -eq 42 ]; then
     # HM-27: der Guard oben resettet nur Pfade AUSSERHALB der Whitelist — ein
     # bereits geschriebener Beutebuch-Eintrag/Reproducer INNERHALB tests/|plans/
     # bliebe sonst als impliziter, nie verifizierter Fortschritt liegen. Analog
-    # zu frank.sh (Zeile 68) vor dem exit 42 verwerfen.
+    # zum Exit-42-Pfad in frank.sh vor dem exit 42 verwerfen. (Der Zeiger
+    # stand bis BL-114 als "frank.sh (Zeile 68)" hier und zeigte längst ins
+    # Leere — BL-50-Bauart: Ein Name altert nicht, eine Zeilennummer schon.)
     echo "[$ROLLE] Session-Limit — Sweep pausiert (Reset: ${TEAM_LAST_RESET:-unbekannt}). Kein Fehler, $STATE_FILE bleibt unverändert; halbfertige ${TEAM_TEST_ORDNER}/${TEAM_PLAN_ORDNER}-Seiteneffekte werden verworfen." >&2
-    git reset --hard "$HEAD_HASH" >/dev/null
-    git clean -fd -- "$TEAM_TEST_ORDNER" "$TEAM_PLAN_ORDNER" >/dev/null
+    # BL-114: wie in axel.sh — der `git clean` war eingeschränkt, das
+    # `git reset --hard` daneben nicht. Jetzt derselbe chirurgische Weg.
+    team_rollback_rolle "$ROLLE" "$HEAD_HASH" || true
     exit 42
 elif [ "$RC" -ne 0 ]; then
     echo "[$ROLLE] Aufruf fehlgeschlagen." >&2
