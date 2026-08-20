@@ -96,7 +96,7 @@ gesperrter Firmware. Steht WSL2 zur Verfügung, ist der WSL-Weg der erprobtere
 | Sperre | `flock` — **kooperativ**, wirkt nur solange alle mitspielen | `[System.IO.FileStream]` mit `FileShare::None` — vom **Betriebssystem durchgesetzt** |
 | Dateisystem-Falle | Klon unter `/mnt/c` (DrvFs) | Klon auf Netzlaufwerk oder in einem Sync-Ordner (OneDrive) |
 | Was ein Skript am Start hindert | fehlendes Exec-Bit | die **Ausführungsrichtlinie** |
-| Selbstprüfung | `bash bash/kit-test.sh` (10/10) | `pwsh -File .\pwsh\kit-test.ps1` (6 Schritte) |
+| Selbstprüfung | `bash bash/kit-test.sh` (11/11) | `pwsh -File .\pwsh\kit-test.ps1` (6 Schritte) |
 
 `kit-einrichten.ps1` prüft genau diese Punkte — und zwar **proben statt
 voraussetzen**: Die Sperre wird mit zwei echten Prozessen belegt, nicht
@@ -559,7 +559,7 @@ pwsh -File $HOME\Source\team-kit\install.ps1 $HOME\Source\mein-projekt
 > hätte sonst dort keine Konfiguration, und jemand schriebe sie von Hand.
 > Genau dort fängt Drift an. Belegt ist außerdem, dass beide Installer aus
 > denselben Antworten **byte-identische Bäume** erzeugen
-> (`kit-test.sh`, Schritt 10/10).
+> (`kit-test.sh`, Schritt 11/11).
 
 1. **Zielprojekt muss ein Git-Repo sein** — `git init` reicht. Neu oder seit
    Jahren gewachsen ist beides in Ordnung; für den Bestand siehe
@@ -589,7 +589,7 @@ Ein bestehendes Projekt auf eine neue Kit-Version heben: `--update`. Nie
 ```bash
 # Linux und WSL — auf der Maschine
 bash ~/Source/team-kit/kit-einrichten.sh --nur-pruefen   # → "Alles grün", Exit 0 *
-cd ~/Source/team-kit && bash bash/kit-test.sh                    # → 10/10, dauert ein paar Minuten
+cd ~/Source/team-kit && bash bash/kit-test.sh                    # → 11/11, dauert ein paar Minuten
 
 # im Zielprojekt
 ./team-test.sh                                           # Infrastruktur-Tests
@@ -693,7 +693,7 @@ verifiziert bezeichnet — der Rest nicht.
   **an der Maschine** statt sie vorauszusetzen (Proben für `chmod +x` und
   `flock`). Ein vollständiger Durchlauf auf einer Windows-Maschine steht aus.
 - **Windows nativ (PowerShell): gebaut und gefahren, aber NICHT auf Windows.**
-  Die ganze pwsh-Bahn — `kit-einrichten.ps1`, `install.ps1`, `team/lib.psm1`, die
+  Die ganze pwsh-Bahn — `kit-einrichten.ps1`, `install.ps1`, `pwsh/lib.psm1`, die
   zehn Rollen-Einstiege, `kit-test.ps1` — ist gegen **pwsh 7.4.6 unter Linux**
   geprüft: Syntax, Einrichtung, Installation, ein `-Update` gegen eine mit
   `install.sh` erzeugte Installation, ein Trockenlauf der ganzen Kette, und die
@@ -711,7 +711,7 @@ verifiziert bezeichnet — der Rest nicht.
   Kodierungsangabe, nicht der Code (**BL-113**, oben in den Fehlerbildern).
   Der Befund ist behoben und steht unter Test
   ([`team/tests/test_bl113_bom_regel.py`](../geteilt/tests/test_bl113_bom_regel.py),
-  `kit-test.sh` Schritt 10). Er ist zugleich das Maß für den Rest dieses
+  `kit-test.sh` Schritt 11). Er ist zugleich das Maß für den Rest dieses
   Abschnitts: Eine gegen pwsh 7 unter Linux vollständig grüne Bahn hat auf
   dem Ziel **an der ersten Datei** gescheitert. Was hier als „gefahren" steht,
   heißt weiterhin *unter Linux gefahren*.

@@ -4,7 +4,103 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Die Ablage trennt die beiden Bahnen — `bash/`, `pwsh/`, `geteilt/`.**
+  ⚠️ **Der Installer heißt jetzt [`bash/install.sh`](bash/install.sh) bzw.
+  [`pwsh/install.ps1`](pwsh/install.ps1).** In der Wurzel liegt kein Skript
+  mehr; `ls bash/` ist die vollständige Bash-Bahn. Vorher war die Zugehörigkeit
+  einer Datei nur an ihrer **Endung** abzulesen: `entry/` listete 29 Dateien
+  alphabetisch verschränkt (`axel.cmd`, `axel.ps1`, `axel.sh`, `frank.cmd`, …).
+
+  Drei Dinge sind dabei mehr als Optik geworden: `.gitattributes` hängt am
+  **Pfad** statt an der Endung (`pwsh/**/*.cmd text eol=crlf`) — und
+  `kit-test.sh` prüft nicht nur, dass die Regel dasteht, sondern per
+  `git check-attr`, dass git sie auf einer echten Datei anwendet. Das
+  **Gegenstück** einer Datei liegt in der *gespiegelten* Bahn
+  (`bash/entry/ralph.sh` ↔ `pwsh/entry/ralph.ps1`) und ist damit über den Pfad
+  prüfbar. Und die Übersetzung zwischen Kit-Ablage und Projekt-Ablage steht an
+  **einer** Stelle: `kit_pfad()` in
+  [`conftest.py`](geteilt/tests/conftest.py).
+
+  **Das Zielprojekt-Layout ändert sich nicht** — Entrypoints flach in der
+  Wurzel, alles Aufgerufene unter `team/`. `team-init.sh`/`.ps1` suchen den
+  Installer eine Ebene tiefer; der Kurzbefehl unter `~/.claude/scripts/`
+  bleibt bedienbar, muss aber **neu verknüpft** werden
+  (`bash bash/kit-einrichten.sh --verknuepfen`) — eine alte Kopie zeigt auf
+  `<kit>/install.sh` und findet nichts mehr.
+
+  Der Preis stand vorher fest und ist gemessen worden: Die Tests sprachen die
+  Kit-Ablage an 105 Stellen direkt an; ohne `kit_pfad()` fielen 281 Fälle um
+  und 24 Dateien ließen sich nicht einmal einsammeln. Maßstab war deshalb
+  nicht „grün", sondern **Befundgleichheit** — 21 Fehlschläge in der
+  Kit-Ablage, Datei für Datei identisch mit dem Stand davor (die Tests setzen
+  die installierte Ablage voraus). In der Installation: 431 grün, unverändert.
+  `BL-118`.
+
+- **Ein Begriffspaar für die zwei Bahnen: `Bash-Bahn` und `pwsh-Bahn`.** Der
+  Schnitt heißt **nicht** „Windows gegen Linux" — wer unter Windows in einer
+  WSL-Distro arbeitet, fährt die *Bash*-Bahn, und WSL ist im Feld der
+  Normalfall. Die Benennung nach Betriebssystem beschrieb damit ausgerechnet
+  den häufigsten Fall falsch. Vorher standen vier Paare nebeneinander
+  („Linux/WSL" gegen „Windows nativ" im README, „Bash-Zweig" gegen
+  „PowerShell-Zweig" im Bauplan, `feat(windows)` in den Commits, „Bahn" in
+  `conftest.py`). Angeglichen wurde an `conftest.py`, wo das Wort bereits
+  scharf definiert war. **Weg** bleibt der Installationsweg (Linux · WSL ·
+  Windows nativ); Commit-Scopes sind `(bash)`, `(pwsh)`, `(beide)`. Beide
+  Befehlstabellen tragen die Korrektur in der Kopfzeile. `A.13`.
+
 ### Added
+
+- **Die Bahn-Kennung — jede Skriptdatei sagt in Zeile 1, wo sie hingehört.**
+  48 Dateien tragen `# Bahn: bash | Gegenstueck: ralph.ps1` (in `.cmd`:
+  `rem …`). Reines ASCII und `|` statt Geviertstrich, weil dieselbe Zeile in
+  einer `.cmd` steht — die liest der Kommandozeileninterpreter in der
+  OEM-Codepage (`BL-113`). Ein Suchmuster findet sie damit in jeder Datei:
+  `grep -rlE '^(#|rem) Bahn: pwsh' .`
+
+  Damit ist dreierlei greppbar, das vorher nur Absicht war: welche Dateien zu
+  welcher Bahn gehören, dass `ralph.sh` ↔ `ralph.ps1` ↔ `ralph.cmd` ein Paar
+  sind (die Kopplung, auf der die Doppelbahn-Testbahn ruht — vorher eine
+  Absichtserklärung im Bauplan), und welcher Code **geteilt** ist:
+  `geteilt/tools/*.py` trägt `Bahn: beide`, denn die pwsh-Bahn ist eine zweite
+  *Orchestrierung*, kein zweiter Zustandscode. `keines` braucht einen Grund in
+  Klammern — übernommen von `@pytest.mark.nur_bash`, weil eine fehlende und
+  eine vergessene Portierung sonst gleich aussehen.
+
+  Durchgesetzt von
+  [`geteilt/tests/test_bahn_kopfzeile.py`](geteilt/tests/test_bahn_kopfzeile.py)
+  (8 Fälle): Vollständigkeit, Bahn passt zur Endung, Gegenstück existiert und
+  liegt auf der anderen Bahn, Paare sind wechselseitig, `keines` trägt einen
+  Grund, Kennung ist ASCII. Im Kit **rekursiv** — damit auch jede neue Datei
+  erfasst wird; im installierten Projekt nur die Namensliste des Kits, weil
+  dort fremder Code liegt. `A.13`.
+
+- **Bahn-Abwahl im Zielprojekt: `--nur-bash` / `--nur-pwsh`** (PowerShell:
+  `-NurBash` / `-NurPwsh`). Statt 29 Entrypoints landen nur die zehn der
+  gewählten Bahn im Projekt. **Default bleibt beides**, und das ist keine
+  Bequemlichkeit: `team.config.sh` und `team.config.ps1` sind zwei Generate
+  *einer* Quelle. Wer nur eine Bahn installiert, hat unter dem anderen System
+  keine Konfiguration — und schreibt sie irgendwann von Hand. Die Abwahl kommt
+  deshalb vom **Anwender**, nie vom Installer. Bewusst kein Ordner-Umzug im
+  Zielprojekt: Damit entfällt der `BL-3`-Konflikt vollständig.
+
+  **Der Rückweg ist der eigentliche Inhalt.** Ein `--update` ohne Schalter
+  macht das Projekt wieder vollständig. Beim ersten Bau ist genau das
+  gescheitert, an der Stelle, die man übersieht: Die Entrypoints kamen zurück,
+  die **Konfiguration** nicht — ein Update fasst `team.config.*` grundsätzlich
+  nicht an. Richtig, solange sie da ist; fehlt sie, ist „nicht anfassen" kein
+  Schutz mehr, sondern eine halbe Bahn. Beide Update-Pfade erzeugen eine
+  fehlende Bahn-Konfiguration jetzt neu, aus den Werten der *vorhandenen*.
+  Dabei kam ein zweiter Fund heraus: Der Update-Pfad in `install.sh` hat eine
+  **eigene** Füll-Routine, die nur 13 der 17 Platzhalter kannte — fürs
+  Nachrendern reichte das, fürs Erzeugen nicht.
+
+  In einem einbahnigen Projekt bleiben die Tests **grün**; die fehlende Bahn
+  erscheint als sichtbarer Vermerk in der Doppelbahn-Zusammenfassung
+  („einbahnige Ablage"), nicht als Fehlschlag und nicht als stiller
+  Übersprung. Nachweis: `kit-test.sh` **Stufe 8/11** mit zwölf Zusicherungen
+  über Abwahl *und* Rückweg. `BL-119`.
 
 - **BL-112 — ein Test, der meldet, wenn die beiden Zweige verschiedene Agenten
   steuern.** Die Rollen-Briefings sind single-source (`team_briefing` liest

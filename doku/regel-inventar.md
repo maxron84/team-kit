@@ -36,7 +36,7 @@ Die drei Träger tragen verschiedene Adressaten — der Zuschnitt aus `BL-56`:
 seiner Maschine tut, **`anhang-a`** = warum es so gebaut ist. `HERLEITUNG` und
 `HISTORIE` landen regulär in `anhang-a` (Doku-Hygiene-Regel 1).
 
-**Geprüft wird zweierlei** (Stufe 8 in `kit-test.sh`):
+**Geprüft wird zweierlei** (Stufe 9 in `kit-test.sh`):
 1. Jedes **NORM**-Zitat kommt wörtlich in **seinem Träger** vor.
 2. Jeder Abschnitt der Regeldatei ist hier vertreten — und kein Abschnitt hier,
    den es nicht mehr gibt.

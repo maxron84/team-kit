@@ -184,7 +184,7 @@ pwsh -File pwsh\install.ps1 <zielpfad> [-NichtInteraktiv] [-Update|-Force]
 ```
 
 > **Beide Installer erzeugen aus denselben neun Antworten byte-identische
-> Bäume** — festgenagelt in `kit-test.sh`, Schritt 10/10. Sie schreiben auch
+> Bäume** — festgenagelt in `kit-test.sh`, Schritt 11/11. Sie schreiben auch
 > **beide** Konfigurationen (`team.config.sh` *und* `team.config.ps1`), damit
 > ein auf Linux eingerichtetes Projekt unter Windows nicht ohne Konfiguration
 > dasteht. Die pwsh-Bahn ist **gebaut, aber noch nicht auf Windows
@@ -376,7 +376,7 @@ geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
 ├── tests/              62 Testdateien — der Doppelbahn-Harnisch fährt jeden
 │                       Fall gegen BEIDE Bahnen, aus EINEM Testkörper
-└── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 8). Kit-only —
+└── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
                         bewacht die Vorlage, nicht die installierte CLAUDE.md
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
@@ -496,8 +496,8 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
   Bibliothek, ist dort immer grün — und wird erst im Feldprojekt rot.
   `pytest team/tests` **im Kit-Repo** schlägt dagegen erwartungsgemäß fehl —
   die Tests setzen die installierte Ablage voraus (Entrypoints in der Wurzel
-  statt unter `entry/`).
-- **Regeln ändern heißt: Inventarzeile nachziehen.** Stufe 8 prüft jede
+  statt unter `bash/entry/` bzw. `pwsh/entry/`).
+- **Regeln ändern heißt: Inventarzeile nachziehen.** Stufe 9 prüft jede
   geltende Regel der Vorlage gegen `doku/regel-inventar.md` — wörtliches Zitat,
   und in welcher Datei es steht. Das verbietet keine Änderung, es macht sie
   sichtbar: Wer eine Regel umformuliert, verschiebt oder streicht, bekommt rot
