@@ -92,6 +92,24 @@ if ! bash "$KIT/bash/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.lo
 fi
 gruen "  ✓ $(grep -oE 'Fertig — [0-9]+ Dateien geschrieben' "$ZIEL/.install.log" | head -1)"
 
+# Die Zahl steht auch in der Doku — und stand dort jahrelang falsch (75 statt
+# 117). Eine Zahl, die niemand nachrechnet, veraltet lautlos und liest sich
+# trotzdem wie eine Zusicherung. Jetzt rechnet der Installer sie vor und der
+# README muss mitziehen.
+# Inline statt ueber pruefe(): Die Helfer sind hier noch nicht definiert.
+GESCHRIEBEN_IST="$(grep -oE 'Fertig — [0-9]+ Dateien' "$ZIEL/.install.log" \
+                   | head -1 | grep -oE '[0-9]+')"
+README_NENNT="$(grep -c "$GESCHRIEBEN_IST Dateien" "$KIT/README.md" || true)"
+if [ "$README_NENNT" = "2" ]; then
+    gruen "  ✓ README nennt dieselbe Dateizahl ($GESCHRIEBEN_IST) an beiden Stellen"
+else
+    rot "  ✗ README nennt nicht $GESCHRIEBEN_IST Dateien (gefunden: $README_NENNT von 2)"
+    echo "      Der Installer schreibt $GESCHRIEBEN_IST Dateien. Eine Zahl, die"
+    echo "      niemand nachrechnet, veraltet lautlos und liest sich trotzdem"
+    echo "      wie eine Zusicherung — sie stand jahrelang auf 75."
+    exit 1
+fi
+
 kopf "3/11 — Ungefüllte Platzhalter suchen"
 # Ein übrig gebliebenes {{...}} heißt: Der Installer kennt die Datei nicht oder
 # der Platzhalter wurde umbenannt. Beides fällt sonst erst im Feld auf, wo die

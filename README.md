@@ -26,7 +26,7 @@ im Linux-Dateisystem. Die ganze Routine für beide Plattformen, mit IDE (VS
 Codium bzw. VS Code) und Agenten-Werkzeug, steht in
 [doku/einrichtung.md](doku/einrichtung.md).
 
-Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 75 Dateien im
+Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 117 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
 `TEAM.md` und 369 Regressionstests.
@@ -521,7 +521,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 
 Benutzen, ändern, weitergeben und in eigene Projekte einziehen ist ausdrücklich
 erlaubt, kommerziell wie privat; es bleibt nur die Namensnennung. Das gilt
-**auch für die 75 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
+**auch für die 117 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
 lösen keine Lizenzpflicht für den Code des Zielprojekts aus. Der Code stammt aus
 einem eigenen Projekt des Autors; das Urheberrecht liegt vollständig bei ihm.
 

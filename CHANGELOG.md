@@ -149,6 +149,13 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **„75 Dateien" stimmte seit Jahren nicht — es sind 117.** Die Zahl stand in
+  README (zweimal) und `doku/einrichtung.md`. Eine Zahl, die niemand
+  nachrechnet, veraltet lautlos und liest sich trotzdem wie eine Zusicherung.
+  `kit-test.sh` Stufe 2 vergleicht sie jetzt mit dem, was der Installer
+  tatsächlich schreibt, und fällt bei Abweichung.
+
+
 - **BL-114 — der Rollback eines Rollenlaufs riss fremde uncommittete Arbeit
   mit, und die Bibliothek verbot sich das zwei Zeilen weiter selbst.**
   `frank.sh`/`frank.ps1` rollten auf **zwei** Pfaden (Session-Limit und
