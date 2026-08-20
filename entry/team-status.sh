@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: team-status.ps1
 # team-status.sh — Monitoring-Dashboard der T.E.A.M.-Vollautomatik.
 # Zeigt Kaskaden-Stand, Beutebuch-Zählung, Kosten, Lock-Status und letzte
 # Aktivität. Einmalig oder als Live-Ansicht.

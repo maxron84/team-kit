@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: kit-test.ps1
 # kit-test.sh — Selbstverifikation des Kits (BL-6).
 #
 # Aufruf:  ./kit-test.sh [--behalten] [weitere pytest-Argumente]

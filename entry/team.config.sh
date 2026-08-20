@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: team.config.ps1
 # team.config.sh — alle projektspezifischen Werte des T.E.A.M. an EINER Stelle.
 #
 # Wird von team/lib.sh gesourct, also von jedem Rollen-Skript. Änderungen hier

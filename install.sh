@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: install.ps1
 # install.sh — installiert das T.E.A.M. in ein Zielprojekt.
 #
 # Aufruf:  bash install.sh <zielpfad> [--nicht-interaktiv] [--force|--update]

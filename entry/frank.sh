@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: frank.ps1
 # frank.sh — Frank der Fixer als Event-Loop am Beutebuch.
 # Greift EINEN Fund mit Status 'an Frank übergeben', fixt ihn nach Franks
 # Dreisatz (Commit fix(uat) → CHANGELOG → Beutebuch-Status). Ein Fund pro Aufruf.

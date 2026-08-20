@@ -1,4 +1,5 @@
-﻿<#
+﻿# Bahn: pwsh | Gegenstueck: marv.sh
+<#
   marv.ps1 — Read-Only Red Team, Schwerpunkt Chaos/Regression.
   Duenner Wrapper: setzt Rolle + Auftrag, Rest macht team/redteam.ps1.
 

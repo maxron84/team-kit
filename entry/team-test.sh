@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: team-test.ps1
 # team-test.sh — führt die Regressionstests der TEAM-INFRASTRUKTUR aus.
 #
 # Bewusst getrennt vom Testlauf des Projekts: Die Team-Tests sind pytest und

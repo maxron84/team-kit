@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Bahn: beide | Gegenstueck: keines (geteilter Zustandscode, bewusst nicht portiert)
 """Beutebuch-Zustandsmaschine für die T.E.A.M.-Vollautomatik.
 
 Parst und setzt die `- **Status**:`-Zeilen der `### HM-<Nr>`-Blöcke in

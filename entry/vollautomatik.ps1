@@ -1,4 +1,5 @@
-﻿<#
+﻿# Bahn: pwsh | Gegenstueck: vollautomatik.sh
+<#
   vollautomatik.ps1 — der Vollautomatik-Orchestrator: faehrt eine komplette
   Kaskade durch. Ralph baut -> Red Team greift an -> Frank fixt -> Axel knackt
   die harten Faelle -> Abschlussbericht.

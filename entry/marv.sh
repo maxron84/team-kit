@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: marv.ps1
 # marv.sh — Read-Only Red Team, Schwerpunkt Chaos/Regression.
 # Duenner Wrapper: setzt Rolle + Auftrag, Rest macht redteam.sh.
 #

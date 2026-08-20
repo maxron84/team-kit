@@ -1,4 +1,5 @@
-﻿# team.config.ps1 — alle projektspezifischen Werte des T.E.A.M. an EINER Stelle.
+﻿# Bahn: pwsh | Gegenstueck: team.config.sh
+# team.config.ps1 — alle projektspezifischen Werte des T.E.A.M. an EINER Stelle.
 #
 # PowerShell-Fassung von team.config.sh. BEIDE werden vom Installer aus
 # DENSELBEN neun Antworten erzeugt — sie sind zwei Generate einer Quelle, keine

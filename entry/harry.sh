@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: harry.ps1
 # harry.sh — Read-Only Red Team, Schwerpunkt Security/Angriffsflaeche.
 # Duenner Wrapper: setzt Rolle + Auftrag, Rest macht redteam.sh.
 #

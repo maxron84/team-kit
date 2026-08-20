@@ -1,4 +1,5 @@
 @echo off
+rem Bahn: pwsh | Gegenstueck: axel.sh
 rem T.E.A.M. - Aufrufer fuer axel.ps1. Kein Symlink: der braucht unter
 rem Windows Administratorrechte. %~dp0 zeigt auf DIESEN Ordner, es entsteht
 rem also keine zweite Kopie, die auseinanderlaufen koennte.

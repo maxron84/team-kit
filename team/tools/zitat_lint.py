@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Bahn: beide | Gegenstueck: keines (geteilter Zustandscode, bewusst nicht portiert)
 """zitat_lint.py — meldet Plandateien, die einen ERLEDIGTEN Backlog-Eintrag
 als offene Frage zitieren (BL-50, Stufe 2).
 

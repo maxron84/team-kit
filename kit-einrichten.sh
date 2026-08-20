@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: kit-einrichten.ps1
 # kit-einrichten.sh — die Vorflug-Prüfung zwischen `git clone` und `install.sh`.
 #
 # Aufruf:  bash kit-einrichten.sh [zielpfad] [--verknuepfen] [--auth]

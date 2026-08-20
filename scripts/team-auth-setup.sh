@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: team-auth-setup.ps1
 # team-auth-setup.sh — Einmalige Maschinen-Einrichtung: Claude-Abo als Prio 1,
 # API-Key nur als geschützter Fallback (T.E.A.M.-Konvention, siehe Projekt-CLAUDE.md).
 #

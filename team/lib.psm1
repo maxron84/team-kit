@@ -1,4 +1,5 @@
-﻿<#
+﻿# Bahn: pwsh | Gegenstueck: lib.sh
+<#
   team/lib.psm1 — gemeinsame Bibliothek der T.E.A.M.-Rollen, PowerShell-Zweig.
 
   Gegenstueck zu team/lib.sh. Wird per `Import-Module` eingebunden, nicht

@@ -1,4 +1,5 @@
-﻿<#
+﻿# Bahn: pwsh | Gegenstueck: ralph.sh
+<#
   ralph.ps1 — der headless Bau-Loop (Rolle "Ralph", siehe CLAUDE.md).
   Arbeitet den aktiven Kaskaden-Plan Stufe fuer Stufe ab, ein Commit pro Stufe.
 

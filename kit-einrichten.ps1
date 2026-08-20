@@ -1,4 +1,5 @@
-﻿<#
+﻿# Bahn: pwsh | Gegenstueck: kit-einrichten.sh
+<#
   kit-einrichten.ps1 — die Vorflug-Pruefung zwischen `git clone` und
   `install.ps1`, fuer den nativen Windows-Zweig.
 

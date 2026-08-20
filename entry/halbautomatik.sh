@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: halbautomatik.ps1
 # halbautomatik.sh — die T.E.A.M.-HALBAUTOMATIK.
 # Wie die Vollautomatik (vollautomatik.sh), aber der Strippenzieher entscheidet
 # zwischen JEDEM Schritt selbst. Nutzt dieselben Rollen-Skripte

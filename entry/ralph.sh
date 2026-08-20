@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: ralph.ps1
 # ralph.sh — der headless Bau-Loop (Rolle "Ralph", siehe CLAUDE.md).
 # Arbeitet den aktiven Kaskaden-Plan Stufe für Stufe ab, ein Commit pro Stufe.
 #

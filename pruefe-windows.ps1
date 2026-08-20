@@ -1,4 +1,5 @@
-﻿<#
+﻿# Bahn: pwsh | Gegenstueck: keines (eigenstaendige Vorflug-Probe, laeuft allein auf der Zielmaschine)
+<#
   pruefe-windows.ps1 — Vorflug-Probe fuer den nativen Windows-Zweig.
 
   WAS DAS HIER IST

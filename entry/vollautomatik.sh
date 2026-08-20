@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: vollautomatik.ps1
 # vollautomatik.sh — der Vollautomatik-Orchestrator: fährt eine komplette
 # Kaskade vollautomatisch durch. Ralph baut → Red Team greift an → Frank fixt →
 # Axel knackt die harten Fälle → Abschlussbericht.

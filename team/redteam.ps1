@@ -1,4 +1,5 @@
-﻿<#
+﻿# Bahn: pwsh | Gegenstueck: redteam.sh
+<#
   redteam.ps1 — gemeinsame Sweep-Logik fuer Harry & Marv (Read-Only Red Team).
   Gegenstueck zu team/redteam.sh. Wird NICHT direkt aufgerufen, sondern von
   harry.ps1 / marv.ps1 mit -Rolle und -Auftrag.

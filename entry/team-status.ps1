@@ -1,4 +1,5 @@
-﻿<#
+﻿# Bahn: pwsh | Gegenstueck: team-status.sh
+<#
   team-status.ps1 — Monitoring-Dashboard der T.E.A.M.-Vollautomatik.
   Zeigt Kaskaden-Stand, Beutebuch-Zaehlung, Kosten, Sperr-Status und letzte
   Aktivitaet. Einmalig oder als Live-Ansicht.

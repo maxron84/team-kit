@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: redteam.ps1
 # redteam.sh — gemeinsame Sweep-Logik für Harry & Marv (Read-Only Red Team).
 # Wird NICHT direkt aufgerufen, sondern von harry.sh / marv.sh gesourct,
 # nachdem diese ROLLE und AUFTRAG gesetzt haben.

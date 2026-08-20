@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Bahn: beide | Gegenstueck: keines (Kit-Werkzeug, von beiden Bahnen aus aufrufbar)
 """Regel-Inventar gegen die Regeldatei-Vorlage prüfen (A.10, BL-56).
 
 Der Sicherheitsgurt vor dem Umbau: A.10 verlangt, JEDE Aussage der Regeldatei

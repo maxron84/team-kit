@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: lib.psm1
 # team/lib.sh — gemeinsame Bibliothek der T.E.A.M.-Rollen (siehe CLAUDE.md, Anhang A).
 # Wird per `source` eingebunden, nicht direkt ausgeführt.
 

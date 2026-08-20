@@ -1,4 +1,5 @@
 @echo off
+rem Bahn: pwsh | Gegenstueck: marv.sh
 rem T.E.A.M. - Aufrufer fuer marv.ps1. Kein Symlink: der braucht unter
 rem Windows Administratorrechte. %~dp0 zeigt auf DIESEN Ordner, es entsteht
 rem also keine zweite Kopie, die auseinanderlaufen koennte.

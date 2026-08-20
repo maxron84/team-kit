@@ -1,4 +1,5 @@
-﻿<#
+﻿# Bahn: pwsh | Gegenstueck: harry.sh
+<#
   harry.ps1 — Read-Only Red Team, Schwerpunkt Security/Angriffsflaeche.
   Duenner Wrapper: setzt Rolle + Auftrag, Rest macht team/redteam.ps1.
 

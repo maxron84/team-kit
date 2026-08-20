@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Bahn: beide | Gegenstueck: keines (geteilter Zustandscode, bewusst nicht portiert)
 """Zentrale Kosten-Summierung fuer die T.E.A.M.-Skripte (siehe CLAUDE.md,
 Anhang A). Wird von team/lib.sh (team_kosten_summe/team_kosten_split/
 team_ledger_summe) aufgerufen, um die frueher doppelt/dreifach gepflegte

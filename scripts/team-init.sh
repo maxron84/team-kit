@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: team-init.ps1
 # team-init.sh — Starter für das T.E.A.M.-Starterkit.
 #
 # Dünner Launcher: findet das Kit-Repo und reicht alle Argumente durch.

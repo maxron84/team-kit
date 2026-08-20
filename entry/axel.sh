@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Bahn: bash | Gegenstueck: axel.ps1
 # axel.sh — Axel Foley, Read-Only Forensiker, automatisch gerufen.
 # Nimmt EINEN Fall mit Status 'an Axel übergeben', erstellt eine Ermittlungsakte
 # unter plans/ermittlungsakten/ (Root-Cause + Fix-Plan) und gibt an Frank zurück

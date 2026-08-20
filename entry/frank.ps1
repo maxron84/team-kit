@@ -1,4 +1,5 @@
-﻿<#
+﻿# Bahn: pwsh | Gegenstueck: frank.sh
+<#
   frank.ps1 — Frank der Fixer als Event-Loop am Beutebuch.
   Greift EINEN Fund mit Status 'an Frank übergeben', fixt ihn nach Franks
   Dreisatz (Commit fix(uat) -> CHANGELOG -> Beutebuch-Status). Ein Fund pro

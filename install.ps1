@@ -1,4 +1,5 @@
-﻿<#
+﻿# Bahn: pwsh | Gegenstueck: install.sh
+<#
   install.ps1 — installiert das T.E.A.M. in ein Zielprojekt (Windows, nativ).
 
   Aufruf:  pwsh -File install.ps1 <zielpfad> [-NichtInteraktiv] [-Force|-Update]
