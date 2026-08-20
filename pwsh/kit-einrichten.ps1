@@ -366,9 +366,46 @@ function Verknuepfe {
     $ordner = Join-Path $env:USERPROFILE '.claude\scripts'
     New-Item -ItemType Directory -Force -Path $ordner | Out-Null
     $ziel = Join-Path $ordner $Zielname
-    $inhalt = "@echo off`r`npwsh -NoProfile -File `"$Quelle`" %*`r`n"
+    # BL-123: Auch dieser Aufrufer loest pwsh auf, statt es vorauszusetzen. Er
+    # liegt AUSSERHALB des Kits und wird von ueberall gestartet — also aus
+    # cmd-Sitzungen, deren PATH niemand kennt. Ein blankes `pwsh` meldete dort
+    # nur "is not recognized" und sah aus, als sei das Kit kaputt.
+    $zeilen = @(
+        '@echo off'
+        'setlocal'
+        'set "TEAM_PWSH="'
+        'for %%P in (pwsh.exe) do if not defined TEAM_PWSH set "TEAM_PWSH=%%~$PATH:P"'
+        'if not defined TEAM_PWSH if exist "%ProgramFiles%\PowerShell\7\pwsh.exe" set "TEAM_PWSH=%ProgramFiles%\PowerShell\7\pwsh.exe"'
+        'if not defined TEAM_PWSH if exist "%ProgramW6432%\PowerShell\7\pwsh.exe" set "TEAM_PWSH=%ProgramW6432%\PowerShell\7\pwsh.exe"'
+        'if not defined TEAM_PWSH if exist "%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe" set "TEAM_PWSH=%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe"'
+        'if not defined TEAM_PWSH goto :keinpwsh'
+        ('"%TEAM_PWSH%" -NoProfile -File "' + $Quelle + '" %*')
+        'exit /b %ERRORLEVEL%'
+        ''
+        ':keinpwsh'
+        'echo FEHLER: PowerShell 7 ^(pwsh^) ist nicht auffindbar.'
+        'echo   Windows PowerShell 5.1 genuegt NICHT. Das Kit braucht pwsh 7:'
+        'echo     winget install --id Microsoft.PowerShell --source winget'
+        'echo   Danach eine NEUE Sitzung oeffnen - PATH erreicht laufende Shells nicht.'
+        'exit /b 127'
+    )
+    $inhalt = ($zeilen -join "`r`n") + "`r`n"
     if (Test-Path $ziel) {
-        if ((Get-Content -Raw $ziel) -eq $inhalt) { Ok "Verknuepft: $ziel"; return }
+        $alt = Get-Content -Raw $ziel
+        if ($alt -eq $inhalt) { Ok "Verknuepft: $ziel"; return }
+        # BL-123, dieselbe Lehre wie A.12.1: Ein veralteter Aufrufer meldet sich
+        # nicht, er behauptet eines Tages, das Kit sei nicht da. Genau so ist der
+        # Umzug auf bash/ aufgefallen. Erkennbar an der Quelle, auf die er zeigt:
+        # Wer auf DIESE Kit-Datei zeigt, ist unsere eigene alte Fassung und wird
+        # nachgezogen — mit Sicherung daneben. Alles andere bleibt unberuehrt,
+        # denn ein fremdes Skript unter fremdem Namen gehoert uns nicht.
+        if ($alt -like "*$Quelle*") {
+            $sicherung = "$ziel.bak"
+            Set-Content -Path $sicherung -Value $alt -NoNewline -Encoding ascii
+            Set-Content -Path $ziel -Value $inhalt -NoNewline -Encoding ascii
+            Ok "Verknuepft: $ziel (veraltete Fassung nachgezogen, Sicherung: $sicherung)"
+            return
+        }
         Warnung "$ziel zeigt woandershin — nicht angefasst." @(
             "Sie laeuft dem Kit hinterher, sobald sich hier etwas aendert.",
             "Ersetzen: Datei loeschen und dieses Skript erneut fahren."

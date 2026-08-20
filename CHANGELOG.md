@@ -6,6 +6,43 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-123` — die neun `.cmd`-Aufrufer riefen `pwsh` blank auf.**
+  ⚠️ **Feldbefund, dieselbe Windows-Maschine wie `BL-122`.** Fehlt PowerShell 7
+  im PATH **genau dieser** cmd-Sitzung, war
+  `'pwsh' is not recognized as an internal or external command` die einzige
+  Auskunft, die der Anwender bekam — eine Meldung über `cmd`, nicht über das
+  Kit. Sie nennt weder Ursache noch Ausweg und sieht aus wie eine kaputte
+  Installation.
+
+  Das Kit kannte diese Falle bereits und hatte sie an anderer Stelle gelöst:
+  `Team-ClaudeBefehl` löst `claude` über `Get-Command` auf und meldet den
+  Fehlschlag mit eigenem Wortlaut, weil eine gescheiterte Auflösung sonst wie
+  ein Auth-Fehler aussieht. Für den Interpreter, der die **ganze Bahn** trägt,
+  galt dieselbe Lehre nicht — obwohl er die empfindlichere Stelle ist: Wer
+  `claude` nicht findet, hat ein Kit, das läuft und sich beschwert. Wer `pwsh`
+  nicht findet, hat gar nichts.
+
+  Alle neun `.cmd` lösen `pwsh` jetzt über den PATH und die üblichen
+  Installationsorte auf (`%ProgramFiles%`, `%ProgramW6432%`, `WindowsApps`).
+  Scheitert das, nennen sie die Ursache, dass Windows PowerShell **5.1 nicht
+  genügt**, den `winget`-Befehl und die Notwendigkeit einer **neuen** Sitzung —
+  und enden mit Exit 127 statt mit einer Fremdmeldung.
+
+  **Der generierte Launcher unter `~\.claude\scripts\` hatte dieselbe
+  Zeile** und ist mitbehandelt. Dazu ein Folgefund: Eine **veraltete** Fassung
+  davon wäre als „zeigt woandershin" abgelehnt worden und still kaputt
+  geblieben. Sie wird jetzt nachgezogen — mit Sicherung daneben und nur, wenn
+  sie erkennbar auf dieselbe Kit-Datei zeigt. Dieselbe Lehre wie `A.12.1`: Ein
+  veralteter Aufrufer meldet sich nicht, er behauptet eines Tages, das Kit sei
+  nicht da.
+
+  Unter Test: [`test_bl123_pwsh_aufloesung.py`](geteilt/tests/test_bl123_pwsh_aufloesung.py),
+  zwei Fälle — kein blanker Aufruf, **und** jede Auflösung nennt einen Ausweg
+  (eine Auflösung ohne Meldung wäre nur eine leisere Fassung desselben
+  Fehlers). Gegenprobe gefahren: alte Fassung von `marv.cmd` zurückgespielt,
+  Test fällt namentlich.
+
+
 - **`BL-121` — das Aufnahme-Interview fragte nach dem Produktivcode-Ordner,
   prüfte aber nie, ob es ihn gibt, und legte ihn nie an.**
   ⚠️ **Im Feld bestätigt**, auf einer Windows-Maschine: „die Ordner werden
