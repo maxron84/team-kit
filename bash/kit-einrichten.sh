@@ -334,8 +334,19 @@ verknuepfe() {  # verknuepfe <quelle> <zielname>
         # nicht trägt, hat jemand selbst geschrieben; das bleibt liegen und
         # wird gemeldet. Eine fremde Datei wegzuräumen wäre schlimmer als
         # jede veraltete Kopie.
-        if grep -q '^# Bahn: ' "$ziel" 2>/dev/null || \
-           grep -q 'T\.E\.A\.M\.-Starterkit' "$ziel" 2>/dev/null; then
+        # Woran eine Kit-Kopie erkannt wird: an der KOPFZEILE der Kit-Datei
+        # selbst (`# team-init.sh — …`). Sie steht in jeder Fassung, auch in
+        # denen von vor der Bahn-Kennung, und sie ist spezifisch genug, dass
+        # niemand sie zufaellig schreibt.
+        #
+        # Erster Versuch war eine Marke wie "T.E.A.M.-Starterkit" im Text —
+        # zu eng: Die Kopie von team-auth-setup.sh auf der Autorenmaschine
+        # sagt "T.E.A.M.-Konvention" und waere durchgefallen. Eine Erkennung,
+        # die echte Kopien nicht erkennt, ist schlimmer als keine: Sie meldet
+        # "stammt nicht vom Kit" und macht aus einem Fund eine Beruhigung.
+        local kopfzeile
+        kopfzeile="$(grep -m1 "^# $2 —" "$quelle" 2>/dev/null || true)"
+        if [ -n "$kopfzeile" ] && grep -qF "$kopfzeile" "$ziel" 2>/dev/null; then
             local sicherung="$ziel.vor-verknuepfung"
             cp "$ziel" "$sicherung"
             ln -sfn "$quelle" "$ziel"

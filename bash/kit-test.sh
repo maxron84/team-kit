@@ -579,6 +579,36 @@ e_pruefe "und schweigt beim aktuellen Launcher" \
     "$(grep -c 'ist eine KOPIE aus einer' "$E_LOG")" "0"
 rm -rf "$E_HOME" "$(dirname "$E_ZIEL")"
 
+# c4) Und die Reparatur selbst: --verknuepfen muss eine Kit-Kopie ERSETZEN
+#     (bis 2.10 hat es sie nur gemeldet und liegen gelassen — vorsichtig
+#     gedacht, im Ergebnis wirkungslos), eine FREMDE Datei aber nicht.
+#     Die zweite Haelfte ist die wichtigere: Eine Erkennung, die zu breit
+#     greift, raeumt jemandem sein eigenes Skript weg.
+E_HOME="$(mktemp -d)"
+mkdir -p "$E_HOME/.claude/scripts"
+# Eine ALTE Kit-Kopie: traegt die Kopfzeile der Kit-Datei, sonst nichts von heute.
+{ echo '#!/usr/bin/env bash'
+  grep -m1 '^# team-init.sh —' "$KIT/bash/scripts/team-init.sh"
+  echo 'exec bash "$HOME/Source/team-kit/install.sh" "$@"'
+} > "$E_HOME/.claude/scripts/team-init.sh"
+# Eine FREMDE Datei unter dem Namen des Auth-Skripts.
+printf '#!/bin/bash\n# mein eigenes Auth-Skript\necho hallo\n' \
+    > "$E_HOME/.claude/scripts/team-auth-setup.sh"
+
+HOME="$E_HOME" bash "$KIT/bash/kit-einrichten.sh" --verknuepfen --nicht-interaktiv \
+    >"$E_LOG" 2>&1 || true
+e_pruefe "--verknuepfen ersetzt die Kit-Kopie durch eine Verknuepfung" \
+    "$([ -L "$E_HOME/.claude/scripts/team-init.sh" ] && echo ja || echo nein)" "ja"
+e_pruefe "und legt die alte Fassung als Sicherung daneben" \
+    "$([ -f "$E_HOME/.claude/scripts/team-init.sh.vor-verknuepfung" ] && echo ja || echo nein)" "ja"
+e_pruefe "die FREMDE Datei bleibt unangetastet" \
+    "$([ -L "$E_HOME/.claude/scripts/team-auth-setup.sh" ] && echo ja || echo nein)" "nein"
+e_pruefe "und ihr Inhalt ist unveraendert" \
+    "$(grep -c 'mein eigenes Auth-Skript' "$E_HOME/.claude/scripts/team-auth-setup.sh")" "1"
+e_pruefe "und das wird gemeldet statt verschwiegen" \
+    "$(grep -c 'stammt nicht erkennbar vom Kit' "$E_LOG")" "1"
+rm -rf "$E_HOME"
+
 # d) Der CRLF-Riegel: .gitattributes muss LF erzwingen, sonst haengt der
 #    Windows-Weg wieder an der Git-Konfiguration der fremden Maschine.
 e_pruefe ".gitattributes erzwingt LF" \
