@@ -16,7 +16,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from conftest import kit_pfad
+from conftest import BASH, kit_pfad
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 TEAM_LIB = kit_pfad("lib.sh")
@@ -28,7 +28,7 @@ def _team_promise_in(var_name, out_datei, fallback_datei, promise_text):
         f'OUT="{out_datei}"; TEAM_LAST_OUT="{fallback_datei}"; '
         f'team_promise_in "${var_name}" "{promise_text}"'
     )
-    result = subprocess.run(["bash", "-c", cmd], cwd=REPO_ROOT)
+    result = subprocess.run([BASH, "-c", cmd], cwd=REPO_ROOT)
     return result.returncode == 0
 
 

@@ -19,7 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from conftest import kit_pfad
+from conftest import BASH, kit_pfad, werkzeug_wert
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 
@@ -51,8 +51,8 @@ def _fixture_repo(tmp_path):
                 tmp_path / "team" / "tools" / "kosten.py")
     # team.config.sh mit neutralen Werten — lib.sh sourct sie aus ../
     (tmp_path / "team.config.sh").write_text(
-        'TEAM_BEUTEBUCH_TOOL="python3 team/tools/beutebuch.py"\n'
-        'TEAM_KOSTEN_TOOL="python3 team/tools/kosten.py"\n'
+        'TEAM_BEUTEBUCH_TOOL="' + werkzeug_wert('team/tools/beutebuch.py') + '"\n'
+        'TEAM_KOSTEN_TOOL="' + werkzeug_wert('team/tools/kosten.py') + '"\n'
         f'TEAM_DOMAENEN="{DOMAENE} team"\nexport TEAM_DOMAENEN\n')
     (tmp_path / ".budget-ledger").write_text(
         "# datum | kaskade | usd | auth | domaene | rolle | notiz\n")
@@ -63,7 +63,7 @@ def _fixture_repo(tmp_path):
 
 def _run(tmp_path, *args):
     result = subprocess.run(
-        ["bash", "./team-status.sh", "--akteur-abschluss", *args],
+        [BASH, "./team-status.sh", "--akteur-abschluss", *args],
         cwd=tmp_path, capture_output=True, text=True,
     )
     return result.returncode, result.stdout.strip(), result.stderr.strip()

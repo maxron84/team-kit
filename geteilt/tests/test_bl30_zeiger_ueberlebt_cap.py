@@ -27,7 +27,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import kit_pfad
+from conftest import entrypoint_aufruf, kit_pfad, pfad_voran, werkzeug_wert
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -77,8 +77,8 @@ def _repo(tmp_path):
         'TEAM_PLAN_ORDNER="plans/"\n'
         'TEAM_BEUTEBUCH="plans/beutebuch.md"\n'
         'TEAM_ERMITTLUNGSAKTEN="plans/ermittlungsakten"\n'
-        'TEAM_BEUTEBUCH_TOOL="python3 team/tools/beutebuch.py"\n'
-        'TEAM_KOSTEN_TOOL="python3 team/tools/kosten.py"\n'
+        'TEAM_BEUTEBUCH_TOOL="' + werkzeug_wert('team/tools/beutebuch.py') + '"\n'
+        'TEAM_KOSTEN_TOOL="' + werkzeug_wert('team/tools/kosten.py') + '"\n'
         'TEAM_DOMAENEN="produkt"\nexport TEAM_DOMAENEN\n'
         'TEAM_WHITELIST_REDTEAM="^(tests/|plans/)"\n'
         'TEAM_WHITELIST_AXEL="^plans/"\n'
@@ -109,9 +109,9 @@ def _lauf(repo, kosten, mit_promise=True):
                     encoding="utf-8")
     stub.chmod(0o755)
     env = dict(os.environ)
-    env.update({"PATH": f"{bin_dir}:{env['PATH']}", "AUTH_MODE": "api",
+    env.update({"PATH": pfad_voran(bin_dir, env), "AUTH_MODE": "api",
                 "ANTHROPIC_API_KEY": "sk-ant-dummy", "TEAM_LOCK_HELD": "1"})
-    return subprocess.run(["./harry.sh"], cwd=repo, env=env,
+    return subprocess.run(entrypoint_aufruf("./harry.sh"), cwd=repo, env=env,
                           capture_output=True, text=True)
 
 

@@ -34,7 +34,8 @@ from pathlib import Path
 
 import pytest
 
-from conftest import Git, Loeschen, Ordner, Ruf, Schreib
+from conftest import (BASH, Git, Loeschen, Ordner, Ruf, Schreib,
+                      entrypoint_aufruf, pfad_voran)
 
 FREMD_INHALT = "Arbeit einer parallelen Sitzung\n"
 ORIGINAL = "original\n"
@@ -273,7 +274,7 @@ def test_frank_lauf_verschont_fremde_arbeit(tmp_path):
 
     def konfig(schluessel):
         return subprocess.run(
-            ["bash", "-c",
+            [BASH, "-c",
              f'source "{wurzel}/team.config.sh"; printf "%s" "${schluessel}"'],
             capture_output=True, text=True).stdout
 
@@ -316,9 +317,9 @@ def test_frank_lauf_verschont_fremde_arbeit(tmp_path):
     stub.chmod(0o755)
 
     env = dict(os.environ)
-    env.update({"PATH": f"{bin_dir}:{env['PATH']}", "AUTH_MODE": "api",
+    env.update({"PATH": pfad_voran(bin_dir, env), "AUTH_MODE": "api",
                 "ANTHROPIC_API_KEY": "sk-ant-dummy", "TEAM_LOCK_HELD": "1"})
-    lauf = subprocess.run(["./frank.sh"], cwd=repo, env=env,
+    lauf = subprocess.run(entrypoint_aufruf("./frank.sh"), cwd=repo, env=env,
                           capture_output=True, text=True)
 
     assert lauf.returncode == 1, (

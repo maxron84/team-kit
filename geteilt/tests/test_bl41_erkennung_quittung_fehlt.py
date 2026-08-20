@@ -31,7 +31,8 @@ from pathlib import Path
 
 import pytest
 
-from conftest import kit_pfad, kopiere_team_namensraum
+from conftest import (BASH, entrypoint_aufruf, kit_pfad,
+                      kopiere_team_namensraum, pfad_voran)
 
 WURZEL = Path(__file__).resolve().parents[2]
 TEAM_LIB = kit_pfad("lib.sh")
@@ -45,7 +46,7 @@ K33_RESULT = ("The smoke test (compileall + full pytest suite, headless) is "
 def _lib(script, env_extra=None):
     env = {"HOME": str(Path.home()), "PATH": "/usr/bin:/bin"}
     env.update(env_extra or {})
-    return subprocess.run(["bash", "-c", f'source "{TEAM_LIB}"\n{script}'],
+    return subprocess.run([BASH, "-c", f'source "{TEAM_LIB}"\n{script}'],
                           cwd=WURZEL, env=env, capture_output=True, text=True)
 
 
@@ -163,9 +164,9 @@ def _fixture_repo(tmp_path, stub_json):
 def _ralph(tmp_path, stub_json):
     repo, bin_dir = _fixture_repo(tmp_path, stub_json)
     env = dict(os.environ)
-    env.update({"PATH": f"{bin_dir}:{env['PATH']}", "AUTH_MODE": "api",
+    env.update({"PATH": pfad_voran(bin_dir, env), "AUTH_MODE": "api",
                 "ANTHROPIC_API_KEY": "sk-ant-dummy", "TEAM_LOCK_HELD": "1"})
-    return subprocess.run(["./ralph.sh"], cwd=repo, env=env,
+    return subprocess.run(entrypoint_aufruf("./ralph.sh"), cwd=repo, env=env,
                           capture_output=True, text=True)
 
 

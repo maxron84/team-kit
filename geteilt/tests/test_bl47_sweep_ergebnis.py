@@ -27,7 +27,8 @@ from pathlib import Path
 
 import pytest
 
-from conftest import kit_pfad, kopiere_team_namensraum
+from conftest import (BASH, entrypoint_aufruf, kit_pfad,
+                      kopiere_team_namensraum, pfad_voran)
 
 WURZEL = Path(__file__).resolve().parents[2]
 HARRY = WURZEL / "harry.sh"
@@ -62,7 +63,7 @@ def _konfig(schluessel):
     """Liest einen Wert aus der INSTALLIERTEN team.config.sh — die Ordnernamen
     bestimmt das Zielprojekt, nicht dieser Test."""
     return subprocess.run(
-        ["bash", "-c", f'source "{WURZEL}/team.config.sh"; printf "%s" "${schluessel}"'],
+        [BASH, "-c", f'source "{WURZEL}/team.config.sh"; printf "%s" "${schluessel}"'],
         capture_output=True, text=True).stdout
 
 
@@ -113,9 +114,9 @@ def _fixture(tmp_path, stub_body):
 def _sweep(tmp_path, stub_body):
     repo, bin_dir = _fixture(tmp_path, stub_body)
     env = dict(os.environ)
-    env.update({"PATH": f"{bin_dir}:{env['PATH']}", "AUTH_MODE": "api",
+    env.update({"PATH": pfad_voran(bin_dir, env), "AUTH_MODE": "api",
                 "ANTHROPIC_API_KEY": "sk-ant-dummy", "TEAM_LOCK_HELD": "1"})
-    ergebnis = subprocess.run(["./harry.sh"], cwd=repo, env=env,
+    ergebnis = subprocess.run(entrypoint_aufruf("./harry.sh"), cwd=repo, env=env,
                               capture_output=True, text=True)
     botschaft = subprocess.run(
         ["git", "-C", str(repo), "log", "-1", "--pretty=%s"],

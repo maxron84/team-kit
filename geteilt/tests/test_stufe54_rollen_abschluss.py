@@ -21,7 +21,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from conftest import kit_pfad
+from conftest import BASH, kit_pfad
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 KOSTEN_PY = kit_pfad("tools", "kosten.py")
@@ -152,7 +152,7 @@ def test_python_funktion_direkt_wirft_bei_ungueltiger_domaene(tmp_path):
 def test_archivierung_verschiebt_json_und_kosten_py_zaehlt_sie_nicht_mehr(tmp_path):
     logs = _fixture_team_logs(tmp_path, abo_usd=1.0, api_usd=2.0)
     result = subprocess.run(
-        ["bash", "-c", f'source "{TEAM_LIB}"; team_logs_archivieren "{logs}"'],
+        [BASH, "-c", f'source "{TEAM_LIB}"; team_logs_archivieren "{logs}"'],
         cwd=REPO_ROOT, capture_output=True, text=True,
     )
     assert result.returncode == 0, result.stderr

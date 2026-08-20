@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import kit_pfad
+from conftest import BASH, kit_pfad, werkzeug_wert
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -73,8 +73,8 @@ def _repo(tmp_path, plan="plans/ralph-kaskade-4-kamera.md"):
     shutil.copy(kit_pfad("tools", "kosten.py"),
                 tmp_path / "team" / "tools" / "kosten.py")
     (tmp_path / "team.config.sh").write_text(
-        'TEAM_BEUTEBUCH_TOOL="python3 team/tools/beutebuch.py"\n'
-        'TEAM_KOSTEN_TOOL="python3 team/tools/kosten.py"\n'
+        'TEAM_BEUTEBUCH_TOOL="' + werkzeug_wert('team/tools/beutebuch.py') + '"\n'
+        'TEAM_KOSTEN_TOOL="' + werkzeug_wert('team/tools/kosten.py') + '"\n'
         f'TEAM_DOMAENEN="{DOMAENE} team"\nexport TEAM_DOMAENEN\n',
         encoding="utf-8")
     (tmp_path / ".budget-ledger").write_text(KOPF, encoding="utf-8")
@@ -84,7 +84,7 @@ def _repo(tmp_path, plan="plans/ralph-kaskade-4-kamera.md"):
 
 
 def _abschluss(repo, *args):
-    return subprocess.run(["bash", "./team-status.sh", "--rollen-abschluss",
+    return subprocess.run([BASH, "./team-status.sh", "--rollen-abschluss",
                            *args], cwd=repo, capture_output=True, text=True)
 
 

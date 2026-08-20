@@ -18,7 +18,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from conftest import kit_pfad
+from conftest import BASH, kit_pfad
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 KOSTEN_PY = kit_pfad("tools", "kosten.py")
@@ -117,7 +117,7 @@ def test_ledger_split_python_funktion_direkt(tmp_path):
 def test_team_ledger_split_wrapper(tmp_path):
     ledger = _fixture_ledger(tmp_path)
     result = subprocess.run(
-        ["bash", "-c", f'source "{TEAM_LIB}"; team_ledger_split "{ledger}"'],
+        [BASH, "-c", f'source "{TEAM_LIB}"; team_ledger_split "{ledger}"'],
         cwd=REPO_ROOT, capture_output=True, text=True,
     )
     assert result.returncode == 0, result.stderr

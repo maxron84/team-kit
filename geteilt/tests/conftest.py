@@ -82,11 +82,189 @@ DIE DOPPELBAHN-QUOTE
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+IST_WINDOWS = os.name == "nt"
+
+
+# --- Die Wirtsplattform ------------------------------------------------------
+# BL-130. Bis hierher war der Harnisch fuer einen POSIX-Wirt geschrieben, und
+# das stand nirgends — es war einfach so. Der erste Lauf unter nativem Windows
+# hat 160 Tests rot gemacht, keinen einzigen davon wegen des Kits.
+#
+# Vier Annahmen trugen nicht:
+#
+#   1. `bash` im PATH ist eine Bash. Unter Windows ist es fast immer
+#      C:\Windows\System32\bash.exe — der WSL-Launcher. Ohne installierte
+#      Distro schreibt der eine UTF-16-Diagnose und endet mit 1. Als stdout
+#      gelesen wird daraus ein Konfigwert voller NUL-Bytes, und der naechste
+#      Path.mkdir() meldet "embedded null character in path" statt "hier gibt
+#      es keine Bash". Die teuerste Bauart von Fehlermeldung.
+#   2. Ein Skript ist ausfuehrbar, weil das x-Bit gesetzt ist. Unter Windows
+#      ist `./ralph.sh` keine ausfuehrbare Datei, sondern Text —
+#      WinError 193.
+#   3. Der PATH wird mit ":" zusammengesetzt. Unter Windows mit ";".
+#   4. Ein Kindprozess braucht nur HOME und PATH. Unter Windows braucht er
+#      SystemRoot (sonst COM+-Registry-Fehler) und PATHEXT (sonst findet
+#      PowerShell kein einziges .exe — `git` ist dann "not recognized").
+#
+# Die Antwort steht hier und nicht in 21 Testdateien: Wer eine dieser vier
+# Annahmen braucht, holt sie sich von hier.
+
+
+def _bash_kandidaten():
+    """Die Fundorte einer ECHTEN Bash unter Windows, in Suchreihenfolge.
+
+    Git for Windows ist laut doku/faq.md ohnehin Voraussetzung fuer die
+    pwsh-Bahn — sein bash.exe ist damit der Kandidat, der auf einer
+    eingerichteten Zielmaschine wirklich liegt.
+    """
+    for var in ("ProgramFiles", "ProgramW6432", "ProgramFiles(x86)",
+                "LOCALAPPDATA"):
+        wurzel = os.environ.get(var)
+        if wurzel:
+            yield Path(wurzel) / "Git" / "bin" / "bash.exe"
+            yield Path(wurzel) / "Git" / "usr" / "bin" / "bash.exe"
+    # Git liegt im PATH als <wurzel>/cmd/git.exe; die Bash ist sein Geschwister
+    # unter <wurzel>/bin/. Das faengt die Installationen ab, die keinen der
+    # Standardorte oben benutzen.
+    git = shutil.which("git")
+    if git:
+        wurzel = Path(git).resolve().parent.parent
+        yield wurzel / "bin" / "bash.exe"
+        yield wurzel / "usr" / "bin" / "bash.exe"
+
+
+def _finde_bash():
+    """Der bash, mit dem die Bash-Bahn gefahren wird — oder None.
+
+    Unter POSIX ist das schlicht der aus dem PATH. Unter Windows wird der
+    WSL-Launcher in System32 AUSGESCHLOSSEN: Er ist kein Rueckfall, sondern
+    eine Fehlerquelle mit falscher Diagnose (siehe Kopf). Wer WSL benutzen
+    will, faehrt die Suite IN der Distro — dann ist os.name "posix" und diese
+    Verzweigung existiert gar nicht.
+    """
+    if not IST_WINDOWS:
+        return shutil.which("bash")
+    for kandidat in _bash_kandidaten():
+        if kandidat.is_file():
+            return str(kandidat)
+    gefunden = shutil.which("bash")
+    if gefunden and "system32" not in gefunden.lower():
+        return gefunden
+    return None
+
+
+BASH = _finde_bash()
+
+
+def _finde_python_befehl():
+    r"""Der NAME, unter dem Python fuer team.config.<endung> erreichbar ist.
+
+    Bewusst ein Name und kein Pfad: `lib.sh` ruft `$TEAM_KOSTEN_TOOL summe`
+    OHNE Anfuehrungszeichen auf — der Wert wird wortgetrennt. Ein
+    sys.executable wie "C:\Program Files\Python312\python.exe" zerfiele
+    dort in zwei Woerter.
+
+    Die Kandidatenreihenfolge ist dieselbe wie in `Finde-Python`
+    (pwsh/install.ps1) und aus demselben Grund: Unter Windows legen weder
+    python.org noch winget ein python3.exe an. Was `where python3` dort
+    findet, ist der App-Execution-Alias aus dem Microsoft Store — er startet
+    den Store und endet mit "Python was not found". Die Tests wuerden also
+    einen Namen in ihre Fixture-Konfiguration schreiben, den es auf der
+    Maschine nachweislich nicht gibt (BL-125 in gruen).
+    """
+    kandidaten = (("python", "python3", "py") if IST_WINDOWS
+                  else ("python3", "python", "py"))
+    for kandidat in kandidaten:
+        if shutil.which(kandidat) is None:
+            continue
+        try:
+            probe = subprocess.run(
+                [kandidat, "-c", "import sys; print(sys.version_info[0])"],
+                capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if probe.returncode == 0 and probe.stdout.strip() == "3":
+            return kandidat
+    # Letzter Ausweg: der Interpreter, unter dem pytest gerade laeuft. Er ist
+    # nachweislich da; nur die Wortgrenze oben ist nicht mehr zugesichert.
+    return sys.executable
+
+
+PYTHON_BEFEHL = _finde_python_befehl()
+
+
+def werkzeug_wert(relativer_pfad):
+    """Der Wert fuer TEAM_KOSTEN_TOOL / TEAM_BEUTEBUCH_TOOL in einer Fixture.
+
+        werkzeug_wert("team/tools/kosten.py")
+            ->  "python3 team/tools/kosten.py"   (POSIX)
+            ->  "python team/tools/kosten.py"    (Windows)
+
+    Ein hartkodiertes "python3 …" in einer Fixture ist unter Windows ein
+    stiller Fehlschlag: Der Aufruf endet mit 1, die Bibliothek sieht eine
+    leere Antwort, und der Test urteilt ueber etwas, das nie gelaufen ist.
+    """
+    return f"{PYTHON_BEFEHL} {relativer_pfad}"
+
+
+# Die Variablen, ohne die ein Windows-Kindprozess nicht arbeiten kann. Die
+# Minimal-Umgebung in `Schale.lauf` ist Absicht — sie haelt TEAM_*-Werte der
+# Wirtssitzung aus dem Test heraus. Diese Liste erweitert sie um genau das,
+# was die Plattform selbst braucht, und um nichts anderes.
+_WINDOWS_GRUNDAUSSTATTUNG = (
+    "SystemRoot", "SystemDrive", "windir", "PATHEXT", "COMSPEC",
+    "TEMP", "TMP", "USERPROFILE", "HOMEDRIVE", "HOMEPATH",
+    "APPDATA", "LOCALAPPDATA", "PROGRAMDATA",
+    "ProgramFiles", "ProgramFiles(x86)", "ProgramW6432",
+    "PSModulePath", "NUMBER_OF_PROCESSORS", "PROCESSOR_ARCHITECTURE",
+)
+
+
+def basis_umgebung(**zusatz):
+    """Die Minimal-Umgebung eines Testlaufs, plattformrichtig.
+
+    POSIX: HOME und PATH, wie bisher. Windows: dazu die Grundausstattung
+    oben — ohne SystemRoot beantwortet jeder Prozessstart mit einem
+    COM+-Registry-Fehler, ohne PATHEXT findet PowerShell `git` nicht und
+    meldet "The term 'git' is not recognized".
+    """
+    umgebung = {"HOME": str(Path.home()),
+                "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin")}
+    if IST_WINDOWS:
+        for name in _WINDOWS_GRUNDAUSSTATTUNG:
+            wert = os.environ.get(name)
+            if wert is not None:
+                umgebung[name] = wert
+    umgebung.update(zusatz)
+    return umgebung
+
+
+def pfad_voran(bin_dir, umgebung=None):
+    """Stellt <bin_dir> dem PATH voran — mit dem Trenner DIESER Plattform.
+
+    `f"{bin_dir}:{env['PATH']}"` ergibt unter Windows EINEN unbrauchbaren
+    Eintrag, und der `claude`-Stub, den der Test gerade gelegt hat, wird nie
+    gefunden. Der Lauf ruft dann die echte CLI oder gar nichts.
+    """
+    bestand = (umgebung or os.environ).get("PATH", "")
+    return f"{bin_dir}{os.pathsep}{bestand}" if bestand else str(bin_dir)
+
+
+def entrypoint_aufruf(skript):
+    """Der Befehlsvektor, mit dem ein Entrypoint gestartet wird.
+
+    `["./ralph.sh"]` verlaesst sich darauf, dass der Kernel den Shebang liest.
+    Windows liest keinen Shebang — dort ist eine .sh eine Textdatei, und
+    subprocess meldet WinError 193. Der Interpreter wird deshalb genannt
+    statt vorausgesetzt; unter POSIX aendert das nichts am Verhalten.
+    """
+    return [BASH or "bash", str(skript)]
 
 
 # --- Die zwei Ablagen ---------------------------------------------------------
@@ -561,9 +739,7 @@ class Schale:
         if isinstance(schritte, _Schritt):
             schritte = [schritte]
         lib = Path(lib) if lib else self.kit_lib
-        umgebung = {"HOME": str(Path.home()),
-                    "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin")}
-        umgebung.update(env or {})
+        umgebung = basis_umgebung(**(env or {}))
         voll = strikt is True or strikt == "voll"
 
         if self.ist_bash:
@@ -572,7 +748,7 @@ class Schale:
             skript = (kopf + f"source {_zitat_bash(lib)}\n_team_rc=0\n"
                       + "".join(s.bash() for s in schritte)
                       + "exit $_team_rc\n")
-            befehl = ["bash", "-c", skript]
+            befehl = [BASH or "bash", "-c", skript]
         else:
             kopf = ""
             if strikt:
@@ -598,6 +774,27 @@ class Schale:
 # --- Verfuegbarkeit ----------------------------------------------------------
 
 
+def _bash_bereit():
+    """Warum das eine eigene Frage ist: Auf einem POSIX-Wirt ist sie immer mit
+    Ja beantwortet, unter nativem Windows nicht zwingend.
+
+    Die Bash-Bahn ist laut README die Bahn fuer Linux und WSL; nativ Windows
+    faehrt pwsh. Sie laesst sich unter Windows trotzdem fahren, wenn Git for
+    Windows liegt — und das tut es dort meistens, weil das Kit git ohnehin
+    braucht. Fehlt sie, wird UEBERSPRUNGEN und nicht rot: Ein WSL-Stub, der
+    UTF-16-Muell liefert, beweist nichts ueber das Kit, und 110 rote Tests
+    verdecken den einen echten Befund, der darunter liegen koennte.
+    """
+    if BASH is None:
+        return False, ("keine echte bash gefunden (der `bash` im PATH ist "
+                       "unter Windows der WSL-Launcher aus System32 und wird "
+                       "bewusst nicht benutzt) — Git for Windows installieren "
+                       "oder die Suite in einer WSL-Distro fahren")
+    if not kit_pfad("lib.sh").is_file():
+        return False, "team/lib.sh fehlt in dieser Ablage"
+    return True, ""
+
+
 def _pwsh_bereit():
     """Warum zwei Bedingungen: `pwsh` kann da sein, bevor es lib.psm1 gibt.
 
@@ -615,7 +812,7 @@ def _pwsh_bereit():
 # --- Fixtures und Bericht ----------------------------------------------------
 
 _QUOTE = {"beide": set(), "nur_bash": set(), "uebersprungen": set(),
-          "einbahnig": set()}
+          "einbahnig": set(), "ohne_bash": set()}
 
 
 @pytest.fixture(params=["bash", "pwsh"])
@@ -627,6 +824,11 @@ def schale(request):
         if not bereit:
             _QUOTE["uebersprungen"].add(kennung)
             pytest.skip(f"pwsh-Bahn nicht verfuegbar: {grund}")
+    else:
+        bereit, grund = _bash_bereit()
+        if not bereit:
+            _QUOTE["ohne_bash"].add(kennung)
+            pytest.skip(f"bash-Bahn nicht verfuegbar: {grund}")
     _QUOTE["beide"].add(kennung)
     return Schale(request.param)
 
@@ -634,7 +836,20 @@ def schale(request):
 @pytest.fixture
 def bash_schale():
     """Fuer Tests, die (noch) an Bash gebunden sind — ausdruecklich gezaehlt."""
+    verlange_bash()
     return Schale("bash")
+
+
+def verlange_bash():
+    """Skip mit Begruendung, wenn auf diesem Wirt keine echte Bash liegt.
+
+    Fuer die Tests, die ausserhalb der `schale`-Fixture selbst eine Bash
+    starten (Entrypoints, `bash -c`-Sonden). Ohne sie faellt dort WinError 193
+    oder UTF-16-Muell an, und beides liest sich wie ein Kit-Defekt.
+    """
+    bereit, grund = _bash_bereit()
+    if not bereit:
+        pytest.skip(f"bash-Bahn nicht verfuegbar: {grund}")
 
 
 def pytest_configure(config):
@@ -645,10 +860,30 @@ def pytest_configure(config):
     )
 
 
+# Die Symbole, deren blosser Import "dieser Test startet eine Bash" bedeutet.
+# `BASH` ist dann None und `entrypoint_aufruf` liefert einen Vektor, dessen
+# erstes Element es nicht gibt — beides endet in einem TypeError bzw.
+# FileNotFoundError mitten im Testkoerper. Das liest sich wie ein Kit-Defekt
+# und ist eine Aussage ueber den Wirt.
+_BRAUCHT_BASH = ("BASH", "entrypoint_aufruf")
+
+
 def pytest_collection_modifyitems(items):
+    bash_bereit, bash_grund = _bash_bereit()
     for item in items:
         if item.get_closest_marker("nur_bash"):
             _QUOTE["nur_bash"].add(item.nodeid.split("[")[0])
+        if bash_bereit:
+            continue
+        modul = getattr(item, "module", None)
+        if modul is None:
+            continue
+        # hasattr statt getattr(...) is None: Ein Modul, das das Symbol gar
+        # nicht importiert hat, soll nicht mitgeschleift werden.
+        if any(hasattr(modul, name) for name in _BRAUCHT_BASH):
+            _QUOTE["ohne_bash"].add(item.nodeid.split("[")[0])
+            item.add_marker(pytest.mark.skip(
+                reason=f"bash-Bahn nicht verfuegbar: {bash_grund}"))
 
 
 def pytest_terminal_summary(terminalreporter):
@@ -668,6 +903,10 @@ def pytest_terminal_summary(terminalreporter):
         terminalreporter.write_line(
             f"  bewusst nur bash           : {markiert}  "
             f"(jede Markierung gehoert in den Backlog)")
+    if _QUOTE["ohne_bash"]:
+        terminalreporter.write_line(
+            f"  bash-Bahn uebersprungen    : {len(_QUOTE['ohne_bash'])}  "
+            f"({_bash_bereit()[1]})")
     if _QUOTE["einbahnig"]:
         terminalreporter.write_line(
             f"  einbahnige Ablage          : nur "

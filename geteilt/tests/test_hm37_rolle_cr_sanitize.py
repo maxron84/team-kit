@@ -43,7 +43,10 @@ def _run(*args):
 
 def _fixture_ledger(tmp_path, inhalt="# datum | kaskade | usd | auth | domaene | rolle | notiz\n"):
     pfad = tmp_path / "fixture-ledger"
-    pfad.write_text(inhalt)
+    # BL-129: bytegenau. `write_text` uebersetzt unter Windows nach CRLF und
+    # schreibt in der Locale des Wirts — dieser Test urteilt aber ueber genau
+    # diese beiden Eigenschaften der Datei und darf sie nicht selbst setzen.
+    pfad.write_bytes(inhalt.encode("utf-8"))
     return pfad
 
 

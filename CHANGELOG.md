@@ -6,6 +6,102 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-130` — die Testsuite maß unter Windows sich selbst, nicht das Kit.**
+  ⚠️ **Feldbefund, dieselbe Windows-Maschine wie `BL-113` und
+  `BL-122`…`BL-128`.** Der erste Lauf der Regressionssuite unter nativem
+  Windows meldete **160 Fehlschläge**. Keiner davon kam aus dem Kit. Der
+  Harnisch in `geteilt/tests/conftest.py` war für einen POSIX-Wirt
+  geschrieben, und das stand nirgends — es war einfach so.
+
+  Vier Annahmen trugen dort nicht:
+
+  1. **`bash` im PATH ist eine Bash.** Unter Windows ist es fast immer
+     `C:\Windows\System32\bash.exe`, der WSL-Launcher. Ohne installierte
+     Distro schreibt der eine **UTF-16-Diagnose nach stdout** und endet
+     mit 1. Ein Test, der damit einen Konfigwert liest, bekommt eine
+     Zeichenkette voller NUL-Bytes — und die Meldung, die der Mensch sieht,
+     lautet `ValueError: mkdir: embedded null character in path`. Zwölf
+     Tests scheiterten so; keine dieser Meldungen nennt die Ursache.
+  2. **Ein Skript ist ausführbar, weil das x-Bit gesetzt ist.**
+     `subprocess.run(["./ralph.sh"])` verlässt sich auf den Shebang; Windows
+     liest keinen. 24 Tests endeten mit
+     `OSError: [WinError 193] %1 is not a valid Win32 application`.
+  3. **Der PATH wird mit `:` zusammengesetzt.** Unter Windows trennt `;`.
+     Der `claude`-Stub, den ein Test gerade gelegt hatte, wurde nie gefunden.
+  4. **Ein Kindprozess braucht nur `HOME` und `PATH`.** Unter Windows braucht
+     er `SystemRoot` (sonst antwortet jeder Prozessstart mit einem
+     COM+-Registry-Fehler) und `PATHEXT` (sonst findet PowerShell kein
+     einziges `.exe` — `git` ist dann *not recognized*, und **jeder** Test,
+     der ein Wegwerf-Repo baut, fällt). Das traf auch die **pwsh**-Bahn, die
+     mit der Plattformfrage sonst nichts zu tun hat.
+
+  Dazu, aus derselben Wurzel: 30 Stellen schrieben `python3` fest — den Namen,
+  den es unter Windows nicht gibt (`Finde-Python` in `install.ps1` löst genau
+  deshalb `python` vor `python3` auf, **BL-125**). Was `where python3` dort
+  findet, ist der App-Execution-Alias aus dem Microsoft Store.
+
+  **Warum das ein eigener Fund ist und keine Fußnote.** Ein roter Lauf, dessen
+  Fehler nicht vom Prüfgegenstand kommen, ist schlimmer als ein ausgelassener:
+  Er kostet dieselbe Zeit und liefert eine Zahl, der niemand mehr glaubt.
+  `BL-129` lag in dieser Liste und war von den 159 anderen nicht zu
+  unterscheiden. Betroffen ist auch der **Selbsttest der Erstinstallation**
+  (`BL-127`) — der lief auf Windows in genau diese 160 Fehlschläge.
+
+  Behoben in `conftest.py` als eine Plattformschicht, die die vier Annahmen an
+  **einer** Stelle auflöst statt in 21 Testdateien: `BASH` (sucht Git for
+  Windows, **schließt den WSL-Stub in System32 aus**), `entrypoint_aufruf()`,
+  `pfad_voran()`, `basis_umgebung()` und `werkzeug_wert()`. Findet sich keine
+  echte Bash, wird die Bash-Bahn **mit Begründung übersprungen** statt rot —
+  ein WSL-Stub, der UTF-16-Müll liefert, beweist nichts über das Kit. Die
+  Übersprungenen stehen in der Doppelbahn-Quote am Ende jedes Laufs.
+
+  Unter Test:
+  [`test_bl130_harnisch_plattformannahmen.py`](geteilt/tests/test_bl130_harnisch_plattformannahmen.py).
+  Die Bash-Auflösung wird mit **gestellter Plattform** gefahren — der Zweig ist
+  sonst nur unter Windows erreichbar und wäre genau die Bauart „Zweig, der nie
+  gefahren wurde", gegen die `BL-126`…`BL-128` stehen. Ein Sammeltest hält die
+  vier Annahmen über alle Testdateien fest; er fällt auf **jedem** Wirt,
+  sobald eine Datei wieder `["bash", …]` oder `"python3 team/tools/…"`
+  schreibt.
+
+- **`BL-129` — das Ledger bekam unter Windows in jeder Zeile ein CR-Byte.**
+  ⚠️ **Der Befund, der unter den 160 aus `BL-130` lag.**
+  `_ledger_zeile_ersetzen()` in `kosten.py` schrieb die Datei mit
+  `os.fdopen(fd, "w")`, also im Textmodus mit `newline=None`. Der übersetzt
+  jedes `\n` in `os.linesep` — unter Windows in `\r\n`. Betroffen war nicht
+  die neue Zeile allein: Die Funktion schreibt die Datei **vollständig neu**,
+  also bekamen Kopfzeile und alle Bestandszeilen bei **jedem**
+  `akteur-abschluss` ein CR dazu.
+
+  **Genau dieses Byte ist der Schaden, gegen den `HM-36`, `HM-37` und `HM-38`
+  die Feldwerte sanitisieren**: Ein rohes CR wird beim nächsten Einlesen unter
+  universal newlines als Zeilenumbruch gelesen und zerlegt die Zeile. Drei
+  Funde, drei Tests, eine Sanitisierungsfunktion — und die Plattform setzte
+  das Byte hinterher wieder ein. Die Absicherung konnte den Fall nicht fangen:
+  Sie greift auf die **Feldwerte**, eine Schicht über dem Schreibvorgang. Eine
+  Absicherung, die eine Schicht zu früh sitzt, sieht aus wie eine und ist
+  keine — dieselbe Bauart wie `BL-15`/`BL-17`.
+
+  Zweite Hälfte, Bauart `BL-125`: Dieselben Aufrufe nannten **keine
+  Kodierung**, galten also in der Locale des Wirts. Auf einem deutschen
+  Windows ist das cp1252. Eine Notiz mit Umlaut wandert dann als cp1252 in die
+  Datei; sobald sie den Rechner wechselt, ist sie Mojibake, und
+  `kosten.py ledger` bricht auf einem UTF-8-Wirt mit `UnicodeDecodeError` ab.
+
+  Behoben: `newline=""` und `encoding="utf-8"` am Schreibvorgang, `encoding`
+  an **allen** Lesestellen (die Kostenlogs mit `utf-8-sig`, weil Windows
+  PowerShell 5.1 sie mit BOM schreibt — `BL-113`/Stufe 3). Ein vor dem Fix
+  entstandenes CRLF-Ledger **heilt beim nächsten Schreibzugriff**, statt den
+  Schaden weiterzutragen.
+
+  Unter Test:
+  [`test_bl129_ledger_zeilenende_und_kodierung.py`](geteilt/tests/test_bl129_ledger_zeilenende_und_kodierung.py).
+  Neben den Verhaltenstests steht eine **Quelltext-Zusicherung**: Unter Linux
+  ist `os.linesep` bereits `\n` und die Locale praktisch immer UTF-8 — ein
+  rein verhaltensbasierter Test wäre auf der Maschine, auf der er meistens
+  läuft, auch **ohne** den Fix grün und meldete den Rückfall genau dort nicht,
+  wo er gebaut wird. Dieselbe Überlegung wie bei `BL-126`.
+
 - **`BL-126` — ein mit `--nur-pwsh` installiertes Projekt ließ sich nicht
   aktualisieren.** ⚠️ **Feldbefund, dieselbe Windows-Maschine wie
   `BL-122`…`BL-125`.** Der Update-Pfad **beider** Installer erkannte eine

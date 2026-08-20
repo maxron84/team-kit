@@ -33,7 +33,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import Ausgabe, FangUndMelde, kit_pfad
+from conftest import Ausgabe, BASH, FangUndMelde, kit_pfad, werkzeug_wert
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 KOSTEN_PY = kit_pfad("tools", "kosten.py")
@@ -92,8 +92,8 @@ def _repo(tmp_path, ledger_inhalt, schale=None):
     # bleibt schmal und eindeutig.
     (repo / "team.config.sh").write_text(
         'TEAM_DOMAENEN="produkt"\nexport TEAM_DOMAENEN\n'
-        'TEAM_KOSTEN_TOOL="python3 team/tools/kosten.py"\n'
-        'TEAM_BEUTEBUCH_TOOL="python3 team/tools/beutebuch.py"\n',
+        'TEAM_KOSTEN_TOOL="' + werkzeug_wert('team/tools/kosten.py') + '"\n'
+        'TEAM_BEUTEBUCH_TOOL="' + werkzeug_wert('team/tools/beutebuch.py') + '"\n',
         encoding="utf-8")
     (repo / ".budget-ledger").write_text(ledger_inhalt, encoding="utf-8")
     (repo / "plans" / "ralph-kaskade-3-test.md").write_text(
@@ -111,15 +111,15 @@ def _repo(tmp_path, ledger_inhalt, schale=None):
         schale.lib_kopieren(repo)
         schale.config_schreiben(repo, {
             "TEAM_DOMAENEN": "produkt",
-            "TEAM_KOSTEN_TOOL": "python3 team/tools/kosten.py",
-            "TEAM_BEUTEBUCH_TOOL": "python3 team/tools/beutebuch.py",
+            "TEAM_KOSTEN_TOOL": werkzeug_wert("team/tools/kosten.py"),
+            "TEAM_BEUTEBUCH_TOOL": werkzeug_wert("team/tools/beutebuch.py"),
         })
     return repo
 
 
 def _status(repo, *argumente):
     ergebnis = subprocess.run(
-        ["bash", str(repo / "team-status.sh"), *argumente],
+        [BASH, str(repo / "team-status.sh"), *argumente],
         capture_output=True, text=True, cwd=str(repo),
         env={"HOME": str(Path.home()), "PATH": "/usr/local/bin:/usr/bin:/bin"},
     )

@@ -25,7 +25,8 @@ from pathlib import Path
 
 import pytest
 
-from conftest import kopiere_team_namensraum
+from conftest import (BASH, entrypoint_aufruf, kopiere_team_namensraum,
+                      pfad_voran)
 
 WURZEL = Path(__file__).resolve().parents[2]
 HARRY = WURZEL / "harry.sh"
@@ -35,7 +36,7 @@ def _konfig(schluessel):
     """Liest einen Wert aus der INSTALLIERTEN team.config.sh — die Ordnernamen
     bestimmt das Zielprojekt, nicht dieser Test."""
     return subprocess.run(
-        ["bash", "-c", f'source "{WURZEL}/team.config.sh"; printf "%s" "${schluessel}"'],
+        [BASH, "-c", f'source "{WURZEL}/team.config.sh"; printf "%s" "${schluessel}"'],
         capture_output=True, text=True).stdout
 
 
@@ -92,10 +93,10 @@ def _prompt(tmp_path, zusatz_env):
     stub.chmod(0o755)
 
     env = dict(os.environ)
-    env.update({"PATH": f"{bin_dir}:{env['PATH']}", "AUTH_MODE": "api",
+    env.update({"PATH": pfad_voran(bin_dir, env), "AUTH_MODE": "api",
                 "ANTHROPIC_API_KEY": "sk-ant-dummy", "TEAM_LOCK_HELD": "1"})
     env.update(zusatz_env)
-    lauf = subprocess.run(["./harry.sh"], cwd=repo, env=env,
+    lauf = subprocess.run(entrypoint_aufruf("./harry.sh"), cwd=repo, env=env,
                           capture_output=True, text=True)
     assert lauf.returncode == 0, lauf.stderr
     return dump.read_text(encoding="utf-8")

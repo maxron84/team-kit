@@ -11,7 +11,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from conftest import kit_pfad
+from conftest import BASH, kit_pfad
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 TEAM_LIB = kit_pfad("lib.sh")
@@ -23,7 +23,7 @@ def _run(bash_script, env_overrides):
     env = {"HOME": str(Path.home()), "PATH": "/usr/bin:/bin"}
     env.update(env_overrides)
     result = subprocess.run(
-        ["bash", "-c", bash_script],
+        [BASH, "-c", bash_script],
         cwd=REPO_ROOT,
         env=env,
         capture_output=True,

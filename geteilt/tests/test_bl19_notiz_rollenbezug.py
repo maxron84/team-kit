@@ -34,7 +34,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import kit_pfad
+from conftest import BASH, kit_pfad, werkzeug_wert
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 KOSTEN_PY = kit_pfad("tools", "kosten.py")
@@ -183,8 +183,8 @@ def test_die_eine_bedienhandlung_trennt_die_herkunft(tmp_path):
     # die Installation.
     (repo / "team.config.sh").write_text(
         'TEAM_DOMAENEN="produkt"\nexport TEAM_DOMAENEN\n'
-        'TEAM_KOSTEN_TOOL="python3 team/tools/kosten.py"\n'
-        'TEAM_BEUTEBUCH_TOOL="python3 team/tools/beutebuch.py"\n',
+        'TEAM_KOSTEN_TOOL="' + werkzeug_wert('team/tools/kosten.py') + '"\n'
+        'TEAM_BEUTEBUCH_TOOL="' + werkzeug_wert('team/tools/beutebuch.py') + '"\n',
         encoding="utf-8")
     _log(repo / ".team-logs", "harry.json", 2.4085)
     _log(repo / ".ralph-logs", "stufe-1.json", 6.3851)
@@ -202,7 +202,7 @@ def test_die_eine_bedienhandlung_trennt_die_herkunft(tmp_path):
     ziel.chmod(0o755)
 
     ergebnis = subprocess.run(
-        ["bash", str(ziel), "--rollen-abschluss", "3", "produkt", FELD_NOTIZ],
+        [BASH, str(ziel), "--rollen-abschluss", "3", "produkt", FELD_NOTIZ],
         capture_output=True, text=True, cwd=str(repo),
         env=dict(os.environ, TEAM_DOMAENEN="produkt"))
     assert ergebnis.returncode == 0, ergebnis.stderr

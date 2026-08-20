@@ -7,7 +7,7 @@ gern verwechselt werden:
 | Vorgang | Was passiert | Wie oft |
 |---|---|---|
 | **Klonen und einrichten** | Das Kit-Repo landet auf der Maschine, die Bordmittel werden geprüft, die Auth des Agenten-Werkzeugs steht | einmal pro Maschine |
-| **Einbinden** | `install.sh` legt die 123 Dateien in ein **Zielprojekt** | einmal pro Projekt |
+| **Einbinden** | `install.sh` legt die 125 Dateien in ein **Zielprojekt** | einmal pro Projekt |
 
 Der kurze Weg steht ganz oben; alles darunter ist die Begründung und der
 Fehlerfall.
@@ -738,6 +738,28 @@ verifiziert bezeichnet — der Rest nicht.
   Abschnitts: Eine gegen pwsh 7 unter Linux vollständig grüne Bahn hat auf
   dem Ziel **an der ersten Datei** gescheitert. Was hier als „gefahren" steht,
   heißt weiterhin *unter Linux gefahren*.
+- **Zweiter Kontakt — die Regressionssuite auf derselben Maschine
+  (20.08.2026): rot, und zwar über sich selbst.** 160 der 487 Tests fielen.
+  **Keiner davon kam aus dem Kit**: Der Testharnisch
+  (`geteilt/tests/conftest.py`) setzte einen POSIX-Wirt voraus — `bash` im
+  PATH ist unter Windows der WSL-Launcher aus `System32`, eine `.sh` ist dort
+  keine ausführbare Datei, der PATH trennt mit `;`, und ein Kindprozess ohne
+  `SystemRoot`/`PATHEXT` findet nicht einmal `git`. Behoben als **BL-130**;
+  der eine echte Befund, der unter den 160 lag, ist **BL-129** (das Ledger
+  bekam unter Windows in jeder Zeile ein CR-Byte).
+
+  Der Vorgang wiederholt das Maß von BL-113 eine Ebene höher: Nicht nur der
+  Code, auch **die Prüfvorrichtung** war gegen Linux gebaut. Solange die
+  Suite auf dem Ziel nicht durchgelaufen ist, sagt eine grüne Zahl unter Linux
+  nichts über Windows.
+
+  **Was hier ebenfalls noch aussteht:** Die Fixes zu BL-129 und BL-130 sind
+  gegen Linux verifiziert — mit echter Bash (455 Tests grün) **und** gegen
+  einen simulierten Wirt ganz ohne Bash (0 Fehlschläge, die Bash-Bahn
+  übersprungen mit Begründung). Auf einer **Windows-Maschine gefahren sind sie
+  nicht.** Sie sind damit *hergeleitet*, nicht *abgenommen* — genau die
+  Unterscheidung, an der BL-113 hing.
+
 - **WSL 1: nicht zugesichert, aber nicht verboten.** Die Eigenschaften von
   VolFs (Metadaten in NTFS-Attributen) und die Implementierung von `flock()`
   in WSL 1 sprechen dafür, dass beide Proben grün werden — belegt ist das

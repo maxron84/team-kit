@@ -17,9 +17,10 @@ Netz-/CLI-frei über `bash -c` + `subprocess` gegen ein Fixture-Ledger im
 temporären Verzeichnis — rührt NIE die echte .budget-ledger an.
 """
 import subprocess
+import sys
 from pathlib import Path
 
-from conftest import kit_pfad
+from conftest import BASH, kit_pfad
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 TEAM_LIB = kit_pfad("lib.sh")
@@ -33,7 +34,7 @@ FIXTURE_LEDGER_ECHTE_NULL = """\
 
 def _run(bash_script, cwd=REPO_ROOT):
     return subprocess.run(
-        ["bash", "-c", bash_script],
+        [BASH, "-c", bash_script],
         cwd=cwd, capture_output=True, text=True,
     )
 
@@ -42,7 +43,7 @@ def test_ledger_anzahl_zaehlt_treffer_statt_summe(tmp_path):
     ledger = tmp_path / "fixture-ledger"
     ledger.write_text(FIXTURE_LEDGER_ECHTE_NULL)
     result = subprocess.run(
-        ["python3", str(kit_pfad("tools", "kosten.py")), "ledger", str(ledger),
+        [sys.executable, str(kit_pfad("tools", "kosten.py")), "ledger", str(ledger),
          "--rolle", "architekt", "--kaskade", "20", "--anzahl"],
         cwd=REPO_ROOT, capture_output=True, text=True,
     )
@@ -54,7 +55,7 @@ def test_ledger_anzahl_ist_null_ohne_treffer(tmp_path):
     ledger = tmp_path / "fixture-ledger"
     ledger.write_text(FIXTURE_LEDGER_ECHTE_NULL)
     result = subprocess.run(
-        ["python3", str(kit_pfad("tools", "kosten.py")), "ledger", str(ledger),
+        [sys.executable, str(kit_pfad("tools", "kosten.py")), "ledger", str(ledger),
          "--rolle", "architekt", "--kaskade", "21", "--anzahl"],
         cwd=REPO_ROOT, capture_output=True, text=True,
     )

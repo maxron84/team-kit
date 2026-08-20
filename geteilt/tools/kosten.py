@@ -296,7 +296,7 @@ def _datei_kosten(datei):
     unbekannt", nicht "kaputt"; wer beides unterscheiden muss, fragt
     _ist_verworfener_versuch()."""
     try:
-        data = json.load(open(datei))
+        data = json.load(open(datei, encoding="utf-8-sig"))
         if isinstance(data, dict) and data.get("team_versuch") == "verworfen":
             return 0.0, False
         kosten = data.get("total_cost_usd", 0)
@@ -315,7 +315,7 @@ def _ist_verworfener_versuch(datei):
     ist (BL-46). Der Zettel ist KEIN Kostenbeleg -- er haelt fest, dass ein
     bezahlter Anlauf stattfand, dessen Kosten niemand kennt."""
     try:
-        data = json.load(open(datei))
+        data = json.load(open(datei, encoding="utf-8-sig"))
     except Exception:
         return False
     return isinstance(data, dict) and data.get("team_versuch") == "verworfen"
@@ -332,7 +332,8 @@ def verworfene_versuche(dirs=None, files=None, since=None):
         if not _ist_verworfener_versuch(datei):
             continue
         try:
-            dauer = json.load(open(datei)).get("team_dauer_s")
+            with open(datei, encoding="utf-8-sig") as fh:
+                dauer = json.load(fh).get("team_dauer_s")
         except Exception:
             dauer = None
         treffer.append((datei, dauer))
@@ -408,7 +409,7 @@ def ledger_zeilen(pfad=".budget-ledger"):
     "unzugeordnet" statt stillschweigend zugeschlagen)."""
     if not os.path.isfile(pfad):
         return
-    with open(pfad) as fh:
+    with open(pfad, encoding="utf-8") as fh:
         for zeile in fh:
             zeile = zeile.strip()
             if not zeile or zeile.startswith("#"):
@@ -797,7 +798,7 @@ def turn_profil(dirs, files=None):
     zeilen = []
     for datei in files:
         try:
-            data = json.load(open(datei))
+            data = json.load(open(datei, encoding="utf-8-sig"))
         except Exception:
             continue
         if not isinstance(data, dict):
@@ -917,7 +918,7 @@ def kaskade_aus_plan(repo="."):
     pfad = os.path.join(repo, ".ralph-plan")
     if not os.path.isfile(pfad):
         return None
-    inhalt = open(pfad).read().strip()
+    inhalt = open(pfad, encoding="utf-8").read().strip()
     treffer = re.search(r"ralph-kaskade-(\d+)-", inhalt)
     return treffer.group(1) if treffer else None
 
@@ -1038,7 +1039,7 @@ def _ledger_zeile_setzen(zeile_neu, match_fn, pfad=".budget-ledger",
     with _ledger_lock(pfad):
         bestehend = []
         if os.path.isfile(pfad):
-            with open(pfad) as fh:
+            with open(pfad, encoding="utf-8") as fh:
                 bestehend = fh.readlines()
 
         treffer = 0
@@ -1083,7 +1084,21 @@ def _ledger_zeile_setzen(zeile_neu, match_fn, pfad=".budget-ledger",
         fd, tmp_pfad = tempfile.mkstemp(
             prefix=".budget-ledger.", suffix=".tmp", dir=ziel_verzeichnis)
         try:
-            with os.fdopen(fd, "w") as fh:
+            # BL-129: newline="" UND encoding. Ohne newline="" uebersetzt der
+            # Textmodus jedes "\n" in os.linesep — unter Windows also in
+            # "\r\n". Damit bekaeme JEDE Zeile des Ledgers ein CR-Byte, die
+            # Kopfzeile eingeschlossen, und zwar bei jedem Schreibzugriff neu.
+            # Genau dieses Byte ist der Schaden, gegen den HM-36/HM-37/HM-38
+            # die Feldwerte sanitisieren: Beim naechsten Einlesen unter
+            # universal newlines wird es als Zeilenumbruch gelesen und
+            # zerlegt die Zeile. Die Sanitisierung deckt den Fall nicht ab,
+            # weil das CR dort nicht aus einem Feldwert kommt, sondern aus der
+            # Plattform — sie greift eine Schicht zu frueh.
+            # Ohne encoding gilt die Locale-Kodierung des Wirts; auf einem
+            # deutschen Windows ist das cp1252, und ein Umlaut in einer Notiz
+            # macht aus dem Ledger entweder Mojibake oder einen
+            # UnicodeDecodeError beim naechsten Lesen (Bauart BL-125).
+            with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
                 fh.writelines(behalten)
                 fh.flush()
                 os.fsync(fh.fileno())

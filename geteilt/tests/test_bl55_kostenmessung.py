@@ -30,7 +30,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from conftest import kit_pfad
+from conftest import BASH, kit_pfad
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 TEAM_LIB = kit_pfad("lib.sh")
@@ -40,7 +40,7 @@ VOLLAUTOMATIK = REPO_ROOT / "vollautomatik.sh"
 def _bash(code):
     """Führt Bash-Code mit geladener team/lib.sh aus und liefert stdout (getrimmt)."""
     result = subprocess.run(
-        ["bash", "-c", f'set -euo pipefail; source "{TEAM_LIB}"; {code}'],
+        [BASH, "-c", f'set -euo pipefail; source "{TEAM_LIB}"; {code}'],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,

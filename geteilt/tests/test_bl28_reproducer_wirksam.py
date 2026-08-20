@@ -30,7 +30,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import Ruf, kit_pfad
+from conftest import Ruf, kit_pfad, werkzeug_wert
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TEAM_LIB = kit_pfad("lib.sh")
@@ -148,8 +148,8 @@ def _lib_repo(tmp_path, schale):
     schale.lib_kopieren(repo)
     shutil.copy(BEUTEBUCH_PY, repo / "team" / "tools" / "beutebuch.py")
     schale.config_schreiben(repo, {
-        "TEAM_BEUTEBUCH_TOOL": "python3 team/tools/beutebuch.py",
-        "TEAM_KOSTEN_TOOL": "python3 team/tools/kosten.py",
+        "TEAM_BEUTEBUCH_TOOL": werkzeug_wert("team/tools/beutebuch.py"),
+        "TEAM_KOSTEN_TOOL": werkzeug_wert("team/tools/kosten.py"),
         "TEAM_DOMAENEN": "produkt",
     })
     (repo / "plans" / "beutebuch.md").write_text(

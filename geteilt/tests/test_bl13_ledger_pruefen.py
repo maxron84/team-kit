@@ -25,7 +25,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import kit_pfad
+from conftest import BASH, kit_pfad
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 KOSTEN_PY = kit_pfad("tools", "kosten.py")
@@ -287,7 +287,7 @@ def test_team_status_reicht_durch(tmp_path):
         pytest.skip("team-status.sh liegt erst in der Installation in der Wurzel")
     pfad = _ledger(tmp_path, _zeile("1", 1.0969, "roles"))
     result = subprocess.run(
-        ["bash", str(TEAM_STATUS), "--ledger-pruefen", "--pfad", str(pfad),
+        [BASH, str(TEAM_STATUS), "--ledger-pruefen", "--pfad", str(pfad),
          *_leere_logs(tmp_path)],
         capture_output=True, text=True, cwd=REPO_ROOT,
     )

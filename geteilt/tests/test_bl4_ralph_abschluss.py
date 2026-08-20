@@ -29,7 +29,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import kit_pfad
+from conftest import BASH, kit_pfad
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 KOSTEN_PY = kit_pfad("tools", "kosten.py")
@@ -196,7 +196,7 @@ def test_ein_befehl_schliesst_beide_quellen_ab(tmp_path):
 
     umgebung = dict(os.environ, TEAM_DOMAENEN="produkt team")
     ergebnis = subprocess.run(
-        ["bash", str(ziel), "--rollen-abschluss", "1", "produkt"],
+        [BASH, str(ziel), "--rollen-abschluss", "1", "produkt"],
         capture_output=True, text=True, cwd=str(repo), env=umgebung)
 
     assert ergebnis.returncode == 0, ergebnis.stderr

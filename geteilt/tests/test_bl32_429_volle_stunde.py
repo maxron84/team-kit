@@ -74,7 +74,7 @@ def test_volle_stunde_reset_epoch_parst_und_ist_15_uhr(schale):
         # Verifizieren: geparste Zeit ist 15:00 lokaler Zeit (Minute 0).
         check = subprocess.run(
             [
-                "python3",
+                sys.executable,
                 "-c",
                 "import sys,datetime; "
                 "t=datetime.datetime.fromtimestamp(int(sys.argv[1])); "
@@ -100,7 +100,7 @@ def test_mit_minuten_weiter_korrekt(schale):
         assert rc == 0 and out.isdigit(), "'resets 3:30pm' muss weiter parsen"
         check = subprocess.run(
             [
-                "python3",
+                sys.executable,
                 "-c",
                 "import sys,datetime; "
                 "t=datetime.datetime.fromtimestamp(int(sys.argv[1])); "
