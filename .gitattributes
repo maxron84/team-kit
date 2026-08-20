@@ -13,7 +13,7 @@
 # der Maschine; damit ist der Fall nicht mehr dokumentiert, sondern erledigt.
 * text=auto eol=lf
 
-# Ausnahme für den nativen Windows-Zweig: Batch-Dateien brauchen CRLF.
+# Ausnahme für die pwsh-Bahn: Batch-Dateien brauchen CRLF.
 #
 # `.cmd`/`.bat` werden vom Kommandozeileninterpreter zeilenweise gelesen, und
 # zwar während der Ausführung. Bei reinem LF verhalten sich `goto`, Labels und
@@ -23,17 +23,20 @@
 # `.ps1` und `.psm1` bleiben bewusst bei LF: PowerShell liest die Datei am
 # Stück und ist gegen Zeilenenden unempfindlich. Eine Ausnahme ohne Not wäre
 # eine zweite Regel, die jemand pflegen müsste.
-*.cmd text eol=crlf
-*.bat text eol=crlf
+# Seit der Bahn-Trennung am PFAD statt an der Endung: Eine .cmd kann nur
+# unter pwsh/ liegen. Taucht eine ausserhalb auf, greift die Regel NICHT —
+# und das ist gewollt, denn dann stimmt die Ablage nicht.
+pwsh/**/*.cmd text eol=crlf
+pwsh/**/*.bat text eol=crlf
 
 # Nicht hier geregelt, aber hier zu suchen — die KODIERUNG (BL-113):
 #
-#     .ps1 / .psm1  ->  UTF-8 MIT BOM
-#     alles andere  ->  UTF-8 OHNE BOM
+#     pwsh/  (.ps1, .psm1)  ->  UTF-8 MIT BOM
+#     bash/, geteilt/       ->  UTF-8 OHNE BOM
 #
 # Git kennt dafür keine Direktive; das BOM ist Inhalt und steht in den Dateien
-# selbst. Durchgesetzt wird die Regel von `team/tests/test_bl113_bom_regel.py`
-# und von kit-test.sh, Schritt 10.
+# selbst. Durchgesetzt wird die Regel von `geteilt/tests/test_bl113_bom_regel.py`
+# und von bash/kit-test.sh, Schritt 10.
 #
 # Der Grund ist derselbe wie oben: eine Windows-Eigenheit, die unter Linux
 # unsichtbar bleibt. Windows PowerShell 5.1 liest eine Datei ohne BOM in der

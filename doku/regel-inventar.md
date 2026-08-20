@@ -10,15 +10,15 @@ Regeldatei (`BL-56`). Jede tragende Aussage der Vorlage ist hier klassifiziert:
 | **HISTORIE** | wann/von wem gebaut, was vorher galt | ja |
 
 \* **Vorbehalt:** Zwei Belege sind **testgeschützt** und dürfen die Regeldatei
-nicht verlassen — [`test_bl49`](../team/tests/test_bl49_regler_gegenprobe.py)
-verlangt „das Verstellen"/„sieben", [`test_bl17`](../team/tests/test_bl17_doku_gegen_verifikation.py)
+nicht verlassen — [`test_bl49`](../geteilt/tests/test_bl49_regler_gegenprobe.py)
+verlangt „das Verstellen"/„sieben", [`test_bl17`](../geteilt/tests/test_bl17_doku_gegen_verifikation.py)
 verlangt „PYTHONPATH". Begründung beider Docstrings: *Eine Regel ohne ihren
 Beleg wird als Büroaufwand gelesen und nicht angewandt.* Sie sind unten als
 HERLEITUNG geführt, aber mit `⚓` markiert.
 
 **Wozu das gut ist:** Der Gurt verbietet keine Änderung — er macht sie
 **sichtbar**. Wer eine Regel umformuliert oder streicht, bekommt in
-[`kit-regelinventar.py`](../kit-regelinventar.py) rot und muss die betroffene
+[`kit-regelinventar.py`](../geteilt/kit-regelinventar.py) rot und muss die betroffene
 Zeile hier **benannt** nachziehen. Im Feld hat genau das gehalten, als `BL-55`
 eine Regel bewusst umkehrte.
 
@@ -155,5 +155,5 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 ## Verwandte Seiten
 
 - [Anhang A.10](anhang-a.md) — Doku-Konsolidierung, die Lehre hinter diesem Inventar
-- [`kit-regelinventar.py`](../kit-regelinventar.py) — der Prüfer
+- [`kit-regelinventar.py`](../geteilt/kit-regelinventar.py) — der Prüfer
 - `plans/backlog.md`, `BL-56` — der Entscheid, für den dieses Inventar die Vorbedingung ist

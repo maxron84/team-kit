@@ -12,12 +12,12 @@ frisch angelegt **oder seit Jahren gewachsen**.
 ```bash
 git clone https://github.com/maxron84/team-kit.git ~/Source/team-kit
 cd ~/Source/team-kit
-bash kit-einrichten.sh ~/Source/mein-projekt
+bash bash/kit-einrichten.sh ~/Source/mein-projekt
 ```
 
 `kit-einrichten.sh` prüft die Maschine (Bordmittel, Zeilenenden, Dateisystem,
 Auth) und übergibt dann an `install.sh`. Wer die Maschine schon eingerichtet
-hat, ruft den Installer direkt auf: `bash install.sh ~/Source/mein-projekt` —
+hat, ruft den Installer direkt auf: `bash bash/install.sh ~/Source/mein-projekt` —
 oder, nach `--verknuepfen`, von überall mit
 `bash ~/.claude/scripts/team-init.sh <zielpfad>`.
 
@@ -107,7 +107,7 @@ Rollen-Skripte kennen keine Modellnamen, sie kennen zwei **Stufen**:
 | schwach | `TEAM_MODEL_LOOP` | `sonnet` | Ralph (Bau-Loop), Harry und Marv (Sweep), Frank (Fixes) |
 | stark | `TEAM_MODEL_STRONG` | `opus` | Axel (Forensik) — und die Architekten-Sitzung, die du selbst startest |
 
-Beide stehen in [team/lib.sh](team/lib.sh) und lassen sich pro Lauf
+Beide stehen in [team/lib.sh](bash/lib.sh) und lassen sich pro Lauf
 überschreiben (`TEAM_MODEL_LOOP=… ./vollautomatik.sh`). Es sind **Defaults,
 keine Voraussetzung**.
 
@@ -173,12 +173,12 @@ Schwester-Repo, nicht Teil dieses Kits.
 
 ```bash
 # Linux und WSL
-bash install.sh <zielpfad> [--nicht-interaktiv] [--update|--force]
+bash bash/install.sh <zielpfad> [--nicht-interaktiv] [--update|--force]
 ```
 
 ```powershell
 # Windows nativ (PowerShell 7, ohne WSL)
-pwsh -File install.ps1 <zielpfad> [-NichtInteraktiv] [-Update|-Force]
+pwsh -File pwsh\install.ps1 <zielpfad> [-NichtInteraktiv] [-Update|-Force]
 ```
 
 > **Beide Installer erzeugen aus denselben neun Antworten byte-identische
@@ -311,37 +311,56 @@ zwischen „uncommittete Team-Dateien" und „der Guard räumt sie weg".
 
 ## Aufbau des Kits
 
-```
-entry/                  Entrypoints — landen in der Wurzel des Zielprojekts
-├── vollautomatik.sh    Orchestrator: Ralph → Red Team → Frank → Axel
-├── halbautomatik.sh    Schrittweise, mit Halt beim Menschen
-├── team-status.sh      Kontostand, Pipeline, Beutebuch-Übersicht
-├── team-test.sh        Regressionstests der Team-Infrastruktur
-├── ralph.sh frank.sh axel.sh harry.sh marv.sh
-└── team.config.sh      ALLE Projektwerte an einer Stelle
+**Die Ablage trennt die beiden Bahnen — ein Blick sagt, was wozu gehört.**
+`ls bash/` ist die vollständige Bash-Bahn, `ls pwsh/` die vollständige
+pwsh-Bahn. Was in `geteilt/` liegt, gilt für beide und ist bewusst **nicht**
+portiert.
 
-team/                   Team-Namensraum — landet als team/ im Zielprojekt
-├── lib.sh             1159 Z — Auth, Guard, Budget, 429-Mechanik, Kosten
+```
+bash/                   ALLES, was die Bash-Bahn ausmacht
+├── install.sh          Der Installer
+├── kit-einrichten.sh   Vorflug-Prüfung zwischen Klon und Installation:
+│                       Bordmittel, Zeilenenden, Dateisystem (WSL!), Auth —
+│                       prüft mit Proben statt Annahmen, kostet nichts
+├── kit-test.sh         Selbstverifikation in 10 Stufen: installiert in ein
+│                       Wegwerf-Repo, fährt dort die Tests zweimal (Ausliefe-
+│                       rungswerte und angepasste team.config.sh), prüft
+│                       Update-Pfad, Bestandslage, Regel-Inventar und die
+│                       Einrichtungsroutine — DAS Gate vor jedem Push
+├── lib.sh              Auth, Guard, Budget, 429-Mechanik, Kosten
 ├── redteam.sh          Gemeinsame Sweep-Logik von Harry und Marv
-├── tools/              kosten.py (1569 Z), beutebuch.py (286 Z)
+├── entry/              Entrypoints — landen in der WURZEL des Zielprojekts
+│   ├── vollautomatik.sh    Orchestrator: Ralph → Red Team → Frank → Axel
+│   ├── halbautomatik.sh    Schrittweise, mit Halt beim Menschen
+│   ├── team-status.sh      Kontostand, Pipeline, Beutebuch-Übersicht
+│   ├── team-test.sh        Regressionstests der Team-Infrastruktur
+│   ├── ralph.sh frank.sh axel.sh harry.sh marv.sh
+│   └── team.config.sh      ALLE Projektwerte an einer Stelle
+└── scripts/            Maschinen-Skripte, NICHT installiert
+    ├── team-auth-setup.sh  Auth der Agenten-CLI (Beispiel Claude Code)
+    └── team-init.sh        Dünner Launcher, für ~/.claude/scripts/
+
+pwsh/                   ALLES, was die pwsh-Bahn ausmacht — spiegelbildlich
+├── install.ps1  kit-einrichten.ps1  kit-test.ps1
+├── pruefe-windows.ps1  Eigenständige Vorflug-Probe für die Zielmaschine,
+│                       hängt an keiner Kit-Datei (kein Gegenstück in bash/)
+├── lib.psm1  redteam.ps1
+├── entry/              ralph.ps1 + ralph.cmd, frank.ps1 + frank.cmd, …
+│                       Die .cmd sind Einzeiler auf die gleichnamige .ps1
+└── scripts/            team-auth-setup.ps1  team-init.ps1
+
+geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
+├── tools/              kosten.py, beutebuch.py, zitat_lint.py — Ledger,
+│                       Beutebuch und Kostenrechnung liegen auf beiden Wegen
+│                       in denselben Dateien. Die pwsh-Bahn ist eine zweite
+│                       ORCHESTRIERUNG, kein zweiter Zustandscode
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-└── tests/              54 Testdateien, 362 Testfälle
+├── tests/              62 Testdateien — der Doppelbahn-Harnisch fährt jeden
+│                       Fall gegen BEIDE Bahnen, aus EINEM Testkörper
+└── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 8). Kit-only —
+                        bewacht die Vorlage, nicht die installierte CLAUDE.md
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
-scripts/                Maschinen-Skripte, NICHT installiert
-├── team-auth-setup.sh  Auth der Agenten-CLI (Beispiel Claude Code)
-└── team-init.sh        Dünner Launcher, für ~/.claude/scripts/
-install.sh              Der Installer
-kit-einrichten.sh       Vorflug-Prüfung zwischen Klon und Installation:
-                        Bordmittel, Zeilenenden, Dateisystem (WSL!), Auth —
-                        prüft mit Proben statt Annahmen, kostet nichts
-kit-test.sh             Selbstverifikation in 9 Stufen: installiert in ein
-                        Wegwerf-Repo, fährt dort die Tests zweimal (Ausliefe-
-                        rungswerte und angepasste team.config.sh), prüft
-                        Update-Pfad, Bestandslage, Regel-Inventar und die
-                        Einrichtungsroutine — DAS Gate vor jedem Push
-kit-regelinventar.py    Prüfer für das Regel-Inventar (Stufe 8). Kit-only —
-                        bewacht die Vorlage, nicht die installierte CLAUDE.md
 plans/                  Roadmap und Backlog DES KITS (nicht die Vorlagen —
                         die liegen in bootstrap/ und werden installiert)
 doku/anhang-a.md        Die Warum-Schicht: Bauentscheide und Feld-Betriebs-
@@ -351,6 +370,24 @@ doku/einrichtung.md     Klonen und Einbinden — Linux und Windows mit WSL,
 doku/regel-inventar.md  Jede Regel der Vorlage als NORM/HERLEITUNG/HISTORIE,
                         mit Träger und wörtlichem Zitat
 ```
+
+**In der Wurzel liegt kein einziges Skript** — nur README, CHANGELOG, LICENSE
+und die vier Ordner oben. Wer eine `.sh` sucht, schaut in `bash/`; wer eine
+`.ps1` sucht, in `pwsh/`. Ein Namenspaar wie `ralph.sh` ↔ `ralph.ps1` liegt in
+**gespiegelten** Pfaden (`bash/entry/` ↔ `pwsh/entry/`), und jede Datei nennt
+ihr Gegenstück in Zeile 1 (`# Bahn: bash | Gegenstueck: ralph.ps1`, siehe
+[A.13](doku/anhang-a.md)). Beides wird geprüft, nicht vereinbart —
+[`geteilt/tests/test_bahn_kopfzeile.py`](geteilt/tests/test_bahn_kopfzeile.py).
+
+**Das Zielprojekt sieht anders aus als das Kit.** Dort landen die Entrypoints
+flach in der Wurzel und alles Aufgerufene unter `team/` — die Bahn-Ordner des
+Kits werden beim Installieren aufgelöst:
+
+| im Kit | im Zielprojekt |
+|---|---|
+| `bash/entry/ralph.sh`, `pwsh/entry/ralph.ps1` | `ralph.sh`, `ralph.ps1` (Wurzel) |
+| `bash/lib.sh`, `pwsh/lib.psm1` | `team/lib.sh`, `team/lib.psm1` |
+| `geteilt/tools/`, `geteilt/prompts/`, `geteilt/tests/` | `team/tools/`, `team/prompts/`, `team/tests/` |
 
 ### Im Zielprojekt
 
@@ -381,7 +418,7 @@ Grund für den eigenen Plan-Ordner — siehe `BL-51` oben.
 | `./team-status.sh --ledger-pruefen` | `.\team-status.cmd --ledger-pruefen` | Ist für jede Kaskade alles gebucht? Gegenprobe gegen die archivierten Rohlogs (Exit `4` = Warnbefunde) |
 | `./team-status.sh --altlast [N]` | `.\team-status.cmd --altlast [N]` | Produktivdateien, die seit N Kaskaden in keinem Diff lagen — die Auswahlhilfe für einen Altlast-Sweep (`BL-40`) |
 | `./team-test.sh` | `.\team-test.cmd` | Regressionstests der Team-Infrastruktur (pytest) |
-| `bash <kit>/install.sh . --update` | `pwsh -File <kit>\install.ps1 . -Update` | Auf eine neue Kit-Version heben, ohne Projektdaten anzufassen |
+| `bash <kit>/bash/install.sh . --update` | `pwsh -File <kit>\pwsh\install.ps1 . -Update` | Auf eine neue Kit-Version heben, ohne Projektdaten anzufassen |
 | `python3 team/tools/beutebuch.py list` | *(gleich)* | Alle Funde mit Status |
 | `python3 team/tools/zitat_lint.py` | *(gleich)* | Plandateien, die einen erledigten Backlog-Eintrag noch als offene Frage zitieren (`BL-50`) |
 
@@ -431,7 +468,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
   Der Tausch findet in **einer** Funktion statt (`team_claude()` in
   `team/lib.sh`); belegt ist er nicht. Ebenso wenig belegt ist bisher ein Lauf
   mit einem lokalen Open-Weights-Modell — das ist Ziel, nicht Zustand.
-- **Selbstverifikation**: `./kit-test.sh` installiert das Kit in ein
+- **Selbstverifikation**: `bash bash/kit-test.sh` installiert das Kit in ein
   Wegwerf-Repo und fährt dort die 369 Tests — **zweimal**: einmal mit den
   Auslieferungswerten, einmal mit angepasster `team.config.sh` (Caps,
   Commit-Präfixe, zwei Domänen). Der zweite Lauf ist die Lehre aus `BL-58`: In

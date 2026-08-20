@@ -69,26 +69,26 @@ Gemessen am Stand `af7da46` (2026-08-17), Zeilen ohne Kommentar und Leerzeile.
 
 | Was | Umfang | Warum |
 |---|---|---|
-| **Zustand** — [`team/tools/`](../team/tools/) | 2.372 Zeilen Python | `kosten.py`, `beutebuch.py`, `zitat_lint.py`. Ledger, Beutebuch, Kostenerfassung. PowerShell ruft sie exakt wie Bash auf — der zustandskritische Teil wird **nicht** portiert |
-| **Prosa** — [`team/prompts/`](../team/prompts/) | 340 Zeilen | Die sechs Rollen-Briefings liegen bereits als Markdown. [`team_briefing`](../team/lib.sh#L621) ist ein `cat`. Was das Agentenverhalten steuert, ist damit schon single-source |
-| **Tests** — [`team/tests/`](../team/tests/) | 57 Dateien | Bleiben **eine** Suite, siehe [Abschnitt 6](#6-die-testbahn--der-tragende-mechanismus) |
+| **Zustand** — [`team/tools/`](../geteilt/tools/) | 2.372 Zeilen Python | `kosten.py`, `beutebuch.py`, `zitat_lint.py`. Ledger, Beutebuch, Kostenerfassung. PowerShell ruft sie exakt wie Bash auf — der zustandskritische Teil wird **nicht** portiert |
+| **Prosa** — [`team/prompts/`](../geteilt/prompts/) | 340 Zeilen | Die sechs Rollen-Briefings liegen bereits als Markdown. [`team_briefing`](../bash/lib.sh#L621) ist ein `cat`. Was das Agentenverhalten steuert, ist damit schon single-source |
+| **Tests** — [`team/tests/`](../geteilt/tests/) | 57 Dateien | Bleiben **eine** Suite, siehe [Abschnitt 6](#6-die-testbahn--der-tragende-mechanismus) |
 
 ### Was dupliziert werden muss
 
 | Datei | Zeilen gesamt | davon Code |
 |---|---|---|
-| [`team/lib.sh`](../team/lib.sh) | 1.362 | **689** |
-| [`entry/team-status.sh`](../entry/team-status.sh) | 502 | 260 |
-| [`team/redteam.sh`](../team/redteam.sh) | 291 | 162 |
-| [`entry/vollautomatik.sh`](../entry/vollautomatik.sh) | 269 | 143 |
-| [`entry/ralph.sh`](../entry/ralph.sh) | 181 | 98 |
-| [`entry/frank.sh`](../entry/frank.sh) | 179 | 96 |
-| [`entry/axel.sh`](../entry/axel.sh) | 150 | 88 |
-| [`entry/halbautomatik.sh`](../entry/halbautomatik.sh), `harry.sh`, `marv.sh`, `team-test.sh`, `team.config.sh` | 386 | 153 |
+| [`team/lib.sh`](../bash/lib.sh) | 1.362 | **689** |
+| [`entry/team-status.sh`](../bash/entry/team-status.sh) | 502 | 260 |
+| [`team/redteam.sh`](../bash/redteam.sh) | 291 | 162 |
+| [`entry/vollautomatik.sh`](../bash/entry/vollautomatik.sh) | 269 | 143 |
+| [`entry/ralph.sh`](../bash/entry/ralph.sh) | 181 | 98 |
+| [`entry/frank.sh`](../bash/entry/frank.sh) | 179 | 96 |
+| [`entry/axel.sh`](../bash/entry/axel.sh) | 150 | 88 |
+| [`entry/halbautomatik.sh`](../bash/entry/halbautomatik.sh), `harry.sh`, `marv.sh`, `team-test.sh`, `team.config.sh` | 386 | 153 |
 | **Summe Orchestrierung** | 3.320 | **1.689** |
-| [`install.sh`](../install.sh) | 830 | ~480 |
-| [`kit-einrichten.sh`](../kit-einrichten.sh) | 372 | ~230 |
-| [`kit-test.sh`](../kit-test.sh) | 482 | ~300 |
+| [`install.sh`](../bash/install.sh) | 830 | ~480 |
+| [`kit-einrichten.sh`](../bash/kit-einrichten.sh) | 372 | ~230 |
+| [`kit-test.sh`](../bash/kit-test.sh) | 482 | ~300 |
 | **Summe Bootstrap & Prüfung** | 1.684 | **~1.010** |
 
 **Gesamte Duplizierungsfläche: rund 2.700 Code-Zeilen**, nicht die 5.190
@@ -103,11 +103,11 @@ genauso dünn und sind mechanische Arbeit.
 
 ### Zwei Korrekturen am dokumentierten Stand
 
-- **Indirekte Expansion.** [`kit-einrichten.sh:135`](../kit-einrichten.sh#L135)
+- **Indirekte Expansion.** [`kit-einrichten.sh:135`](../bash/kit-einrichten.sh#L135)
   und [`doku/einrichtung.md`](../doku/einrichtung.md) sagen, das Kit nutze
   *durchgehend* `${!var}`. Gemessen: In `lib.sh`, `entry/*.sh` und `redteam.sh`
   kommt sie **null** Mal vor. Alle sechs Fundstellen liegen in
-  [`install.sh`](../install.sh) (dazu `printf -v` und `unset "${!TEAM_@}"`).
+  [`install.sh`](../bash/install.sh) (dazu `printf -v` und `unset "${!TEAM_@}"`).
   Für den Aufwand heißt das: Die Laufzeit ist einfacher zu portieren als
   angenommen, der **Installer** schwerer. Die Doku-Aussage gehört in Stufe 5
   richtiggestellt.
@@ -124,16 +124,16 @@ Syntax-Übersetzung.
 
 | Bash heute | PowerShell | Anmerkung |
 |---|---|---|
-| `flock -n 9` — [lib.sh:877](../team/lib.sh#L877) | `[System.IO.FileStream]` mit `FileShare::None` | **Genau eine** echte Sperre im ganzen Kit. Die PowerShell-Fassung ist vom OS durchgesetzt statt kooperativ — also **besser** als `flock`, und sie löst die Problemklasse, an der WSL1 gescheitert wäre |
-| `flock -n … true` (Lesetest) — [team-status.sh:110](../entry/team-status.sh#L110), [install.sh:131](../install.sh#L131) | Öffnungsversuch mit `FileShare::None`, Exception = belegt | Zwei Stellen, reine Abfrage |
+| `flock -n 9` — [lib.sh:877](../bash/lib.sh#L877) | `[System.IO.FileStream]` mit `FileShare::None` | **Genau eine** echte Sperre im ganzen Kit. Die PowerShell-Fassung ist vom OS durchgesetzt statt kooperativ — also **besser** als `flock`, und sie löst die Problemklasse, an der WSL1 gescheitert wäre |
+| `flock -n … true` (Lesetest) — [team-status.sh:110](../bash/entry/team-status.sh#L110), [install.sh:131](../bash/install.sh#L131) | Öffnungsversuch mit `FileShare::None`, Exception = belegt | Zwei Stellen, reine Abfrage |
 | 13 × `python3 -c '…'` in `lib.sh` | `ConvertFrom-Json` | Entfällt ersatzlos. Die Windows-Seite wird hier **sauberer** als die Linux-Seite |
-| `chmod 600` auf den API-Key — [team-auth-setup.sh](../scripts/team-auth-setup.sh) | `Set-Acl`, Zugriff nur für den Besitzer | `chmod` ist unter Windows wirkungslos. Ohne diesen Punkt liegt der Schlüssel lesbar da — **Sicherheitsrelevant, nicht Komfort** |
+| `chmod 600` auf den API-Key — [team-auth-setup.sh](../bash/scripts/team-auth-setup.sh) | `Set-Acl`, Zugriff nur für den Besitzer | `chmod` ist unter Windows wirkungslos. Ohne diesen Punkt liegt der Schlüssel lesbar da — **Sicherheitsrelevant, nicht Komfort** |
 | `~/.config/claude-team/api-key` | `$env:APPDATA\claude-team\api-key` | Ablage und Migrationspfad in `team-auth-setup.ps1` |
-| `claude` über `PATH` — [lib.sh:342](../team/lib.sh#L342) ff. | `Get-Command claude` → `.cmd`-Shim auflösen | Ein `.cmd` startet nicht wie eine `.exe`. Fehlt die Auflösung, sieht das Ergebnis **aus wie ein Auth-Fehler** und ist keiner |
+| `claude` über `PATH` — [lib.sh:342](../bash/lib.sh#L342) ff. | `Get-Command claude` → `.cmd`-Shim auflösen | Ein `.cmd` startet nicht wie eine `.exe`. Fehlt die Auflösung, sieht das Ergebnis **aus wie ein Auth-Fehler** und ist keiner |
 | `cd "$(dirname "$0")"` | `Set-Location $PSScriptRoot` | Die BL-3-Invariante, auf der alle relativen Werkzeugpfade ruhen. Statisch geprüft — der Test braucht eine Idiom-Tabelle je Shell |
 | `set -euo pipefail` (8 Skripte) | `$ErrorActionPreference = 'Stop'` + `try/catch` | |
 | `${!var}`, `printf -v`, `unset "${!TEAM_@}"` — 6 × in `install.sh` | `Get-Variable -ValueOnly`, `Set-Variable`, `Remove-Item Env:TEAM_*` | Nur der Installer, nicht die Laufzeit |
-| [`entry/team.config.sh`](../entry/team.config.sh) — 30 Zuweisungen | `team.config.ps1` | **Beide vom Installer aus denselben neun Antworten erzeugt.** Ein Generat, keine Handarbeit — deshalb driftfrei |
+| [`entry/team.config.sh`](../bash/entry/team.config.sh) — 30 Zuweisungen | `team.config.ps1` | **Beide vom Installer aus denselben neun Antworten erzeugt.** Ein Generat, keine Handarbeit — deshalb driftfrei |
 | `git`-Aufrufe (durchgehend) | identisch | `git` ist unter Windows nativ |
 | `*.sh` mit `eol=lf` — [`.gitattributes`](../.gitattributes) | `*.cmd`/`*.bat` brauchen **CRLF** | Die heutige Regel `* text=auto eol=lf` erfasst alles. Batch-Dateien mit reinem LF verhalten sich unzuverlässig (Labels, `goto`). `.gitattributes` braucht eine Ausnahme |
 
@@ -187,7 +187,7 @@ Die 57 Tests zerfallen in fünf Klassen mit unterschiedlicher Behandlung:
 
 **Der Umbau der Kern-Tests.** Heute steht in den Testkörpern Bash-Syntax, nicht
 nur ein Funktionsaufruf — etwa in
-[`test_bl16_guard_zuschreibung.py:72`](../team/tests/test_bl16_guard_zuschreibung.py#L72):
+[`test_bl16_guard_zuschreibung.py:72`](../geteilt/tests/test_bl16_guard_zuschreibung.py#L72):
 
 ```python
 skript = ("set -euo pipefail\n"
@@ -249,11 +249,11 @@ einen Bericht aus, auch wenn alles fehlschlägt.
 Zielmaschine nicht einmal installieren. Henne-Ei.
 
 Neu:
-- `install.ps1` — Gegenstück zu [`install.sh`](../install.sh). Die sechs
+- `install.ps1` — Gegenstück zu [`install.sh`](../bash/install.sh). Die sechs
   `${!var}`-Stellen sind hier, das ist die inhaltliche Schwierigkeit dieser
   Stufe.
 - `kit-einrichten.ps1` — Gegenstück zu
-  [`kit-einrichten.sh`](../kit-einrichten.sh). Bordmittelprüfung für Windows:
+  [`kit-einrichten.sh`](../bash/kit-einrichten.sh). Bordmittelprüfung für Windows:
   `pwsh` ≥ 7, `git`, `python3` ≥ 3.8, Agenten-CLI. **Kein `flock`-Check** — an
   seine Stelle tritt die Zwei-Prozess-Probe auf die `FileStream`-Sperre, in der
   Haltung von A.5: *proben statt voraussetzen*.
@@ -266,13 +266,13 @@ Geändert:
   driftfrei bleibt.
 
 **Abnahme:** Auf einer frischen W11-Maschine ohne WSL führt
-`.\kit-einrichten.ps1 <zielpfad>` zu einem installierten Projekt. Auf Linux ist
+`.\pwsh\kit-einrichten.ps1 <zielpfad>` zu einem installierten Projekt. Auf Linux ist
 `bash kit-test.sh` unverändert grün — der Beleg, dass die Config-Änderung nichts
 gebrochen hat.
 
 ### Stufe 3 — Kern (4 PT)
 
-Neu: `team/lib.psm1` — 689 Code-Zeilen aus [`lib.sh`](../team/lib.sh).
+Neu: `team/lib.psm1` — 689 Code-Zeilen aus [`lib.sh`](../bash/lib.sh).
 
 Reihenfolge innerhalb der Stufe, billig nach teuer:
 
@@ -281,7 +281,7 @@ Reihenfolge innerhalb der Stufe, billig nach teuer:
 2. `team_lock` — die Plattform-Naht, mit der Zwei-Prozess-Probe als Test.
 3. Auth: `team_auth_mode_effektiv`, `team_resolve_auth_mode`,
    `team_warnung_abo_key` — inklusive `.cmd`-Auflösung.
-4. `team_claude` samt Abo→API-Fallback ([lib.sh:342–403](../team/lib.sh#L342)).
+4. `team_claude` samt Abo→API-Fallback ([lib.sh:342–403](../bash/lib.sh#L342)).
 5. Die sieben `team_guard_*` — der heikelste Teil. Der Schnappschuss hält
    **Blob-Hashes**, und die Lehre aus BL-16 (fremde Arbeit nie blanko
    zurücksetzen) muss Zeile für Zeile erhalten bleiben.
@@ -311,14 +311,14 @@ ohne echte CLI-Kosten.
 ### Stufe 5 — Prüfung, Doku, Abnahme (2 PT)
 
 Neu:
-- `kit-test.ps1` — Gegenstück zu [`kit-test.sh`](../kit-test.sh), prüft die
+- `kit-test.ps1` — Gegenstück zu [`kit-test.sh`](../bash/kit-test.sh), prüft die
   Bordmittel je Plattform.
 
 Geändert:
 - [`doku/einrichtung.md`](../doku/einrichtung.md) bekommt einen **dritten Weg**
   neben Linux und Windows-mit-WSL. Der WSL-Abschnitt bleibt — er ist hergeleitet
   und für Maschinen mit funktionierendem WSL2 weiterhin der bessere Weg.
-- Ebendort und in [`kit-einrichten.sh:135`](../kit-einrichten.sh#L135): die
+- Ebendort und in [`kit-einrichten.sh:135`](../bash/kit-einrichten.sh#L135): die
   Aussage zur indirekten Expansion richtigstellen (siehe
   [Abschnitt 3](#3-belegstand--die-messung)).
 - [`README.md`](../README.md), [`bootstrap/TEAM.md`](../bootstrap/TEAM.md) —
@@ -386,11 +386,11 @@ eigenständiges Artefakt und liegt bereit, sobald der Zugriff besteht.
 
 | Was | Wo | Stand |
 |---|---|---|
-| Doppelbahn-Harnisch | [`team/tests/conftest.py`](../team/tests/conftest.py) | **neu.** `Schale` (bash \| pwsh), acht Schritt-Bausteine, Idiom-Tabelle, Konfig- und Stub-Erzeugung je Bahn, Doppelbahn-Quote im Testbericht |
+| Doppelbahn-Harnisch | [`team/tests/conftest.py`](../geteilt/tests/conftest.py) | **neu.** `Schale` (bash \| pwsh), acht Schritt-Bausteine, Idiom-Tabelle, Konfig- und Stub-Erzeugung je Bahn, Doppelbahn-Quote im Testbericht |
 | Aufrufkonvention für PowerShell | ebenda, Kopfkommentar | **festgelegt** — sieben Punkte. Stufe 3 muss sie einhalten, sonst laufen die Tests dort ins Leere |
 | Kern-Tests auf neutrale Aufrufform | `test_bl18`, `test_bl24`, `test_bl28`, `test_bl32`, `test_bl41`, `test_hm32` | **umgestellt.** Kein Testkörper enthält mehr Shell-Syntax |
 | CRLF für Batch-Dateien | [`.gitattributes`](../.gitattributes) | **ergänzt** — `*.cmd`/`*.bat` auf `eol=crlf`, `.ps1` bleibt bei LF |
-| Vorflug-Probe | [`pruefe-windows.ps1`](../pruefe-windows.ps1) | **neu.** Eigenständig, ohne Kit-Abhängigkeit. Beantwortet R2 und R3 kostenlos, R1 nur mit `-MitEchtemAufruf` |
+| Vorflug-Probe | [`pruefe-windows.ps1`](../pwsh/pruefe-windows.ps1) | **neu.** Eigenständig, ohne Kit-Abhängigkeit. Beantwortet R2 und R3 kostenlos, R1 nur mit `-MitEchtemAufruf` |
 
 **Abnahme erfüllt.** `pytest team/tests` vor der Stufe: 21 failed, 329 passed,
 19 skipped. Danach: **21 failed, 329 passed**, 47 skipped. Bestandene und
@@ -414,13 +414,13 @@ zu, die Bash-Bahn nicht anzutasten.
 
 | Was | Wo | Stand |
 |---|---|---|
-| Installer | [`install.ps1`](../install.ps1) | **neu**, 640 Zeilen. Erstinstallation, `-Update`, `-Force`, Aufnahme-Interview, BL-51-Bestandsprüfung, BL-109-`.gitignore`-Abgleich, Selbsttest |
-| Vorflug-Prüfung | [`kit-einrichten.ps1`](../kit-einrichten.ps1) | **neu.** Fünf Abschnitte wie die Bash-Fassung — aber ohne `flock`-Abhaken und mit Zwei-Prozess-Sperrprobe |
-| Auth | [`scripts/team-auth-setup.ps1`](../scripts/team-auth-setup.ps1) | **neu.** `%APPDATA%\claude-team`, `Set-Acl` **mit Nachprüfung** statt wirkungslosem `chmod` |
-| Launcher | [`scripts/team-init.ps1`](../scripts/team-init.ps1) | **neu** (im Plan nicht aufgeführt, aber ohne ihn hat `-Verknuepfen` kein Ziel) |
-| Konfiguration | [`entry/team.config.ps1`](../entry/team.config.ps1) | **neu.** Vorlage mit denselben Platzhaltern; `Team-Wert` bildet Bashs `${VAR:-vorgabe}` ab |
-| Beide Bahnen aus einer Quelle | [`install.sh`](../install.sh) | **geändert.** Kopiert jetzt `entry/*.sh`, `*.ps1` und `*.cmd` und füllt **beide** Konfigurationen |
-| Gleichstands-Nachweis | [`kit-test.sh`](../kit-test.sh) Schritt 10/10 | **neu** (war für Stufe 5 vorgesehen — vorgezogen, weil die Zusicherung sonst ungeprüft bliebe) |
+| Installer | [`install.ps1`](../pwsh/install.ps1) | **neu**, 640 Zeilen. Erstinstallation, `-Update`, `-Force`, Aufnahme-Interview, BL-51-Bestandsprüfung, BL-109-`.gitignore`-Abgleich, Selbsttest |
+| Vorflug-Prüfung | [`kit-einrichten.ps1`](../pwsh/kit-einrichten.ps1) | **neu.** Fünf Abschnitte wie die Bash-Fassung — aber ohne `flock`-Abhaken und mit Zwei-Prozess-Sperrprobe |
+| Auth | [`scripts/team-auth-setup.ps1`](../pwsh/scripts/team-auth-setup.ps1) | **neu.** `%APPDATA%\claude-team`, `Set-Acl` **mit Nachprüfung** statt wirkungslosem `chmod` |
+| Launcher | [`scripts/team-init.ps1`](../pwsh/scripts/team-init.ps1) | **neu** (im Plan nicht aufgeführt, aber ohne ihn hat `-Verknuepfen` kein Ziel) |
+| Konfiguration | [`entry/team.config.ps1`](../pwsh/entry/team.config.ps1) | **neu.** Vorlage mit denselben Platzhaltern; `Team-Wert` bildet Bashs `${VAR:-vorgabe}` ab |
+| Beide Bahnen aus einer Quelle | [`install.sh`](../bash/install.sh) | **geändert.** Kopiert jetzt `entry/*.sh`, `*.ps1` und `*.cmd` und füllt **beide** Konfigurationen |
+| Gleichstands-Nachweis | [`kit-test.sh`](../bash/kit-test.sh) Schritt 10/10 | **neu** (war für Stufe 5 vorgesehen — vorgezogen, weil die Zusicherung sonst ungeprüft bliebe) |
 
 **Abnahme erfüllt, und zwar schärfer als geplant.** Der Plan verlangte „auf
 einer frischen W11-Maschine führt `kit-einrichten.ps1` zu einem installierten
@@ -461,8 +461,8 @@ das `.cmd`-Verhalten sind dort nicht prüfbar und bleiben offen.
 
 ### Stufe 3 — erledigt (2026-08-17)
 
-[`team/lib.psm1`](../team/lib.psm1) — 1.257 Zeilen, davon 934 Code. **Alle 42
-Funktionen** aus [`lib.sh`](../team/lib.sh) sind portiert, dazu vier
+[`team/lib.psm1`](../pwsh/lib.psm1) — 1.257 Zeilen, davon 934 Code. **Alle 42
+Funktionen** aus [`lib.sh`](../bash/lib.sh) sind portiert, dazu vier
 PowerShell-eigene Helfer (`Team-Default`, `Team-Werkzeug`, `Team-JsonLesen`,
 `Team-ClaudeSchreiben`) und `team_unlock`.
 
@@ -497,12 +497,12 @@ mitspielen. Genau diese Problemklasse hat die pwsh-Bahn ausgelöst.
 `& claude … > $Out`, hängt die Kodierung der Kostenlogs an die
 Standardeinstellung der Sitzung. Unter pwsh 7 ist das heute UTF8NoBOM, unter
 5.1 war es UTF-16LE, und ein Benutzerprofil kann es umstellen. Python bricht
-an einem BOM ab — und [`kosten.py`](../team/tools/kosten.py) **fängt das ab
+an einem BOM ab — und [`kosten.py`](../geteilt/tools/kosten.py) **fängt das ab
 und zählt die Datei still als `0.0000`**. Das ist exakt die Fehlerklasse aus
 BL-46 und BL-55: Eine bezahlte Stufe erscheint als die billigste der Kaskade,
 der Pro-Stufe-Deckel bekommt auf sie keinen Griff. `Team-ClaudeSchreiben` legt
 die Kodierung deshalb ausdrücklich fest;
-[`test_stufe3_kostenlog_kodierung.py`](../team/tests/test_stufe3_kostenlog_kodierung.py)
+[`test_stufe3_kostenlog_kodierung.py`](../geteilt/tests/test_stufe3_kostenlog_kodierung.py)
 pinnt sie auf beiden Bahnen, inklusive Umlaut-Rundlauf.
 
 **Ein Posten geht auf die Rechnung dieser Stufe:** `kit-test.sh` braucht mit
@@ -517,13 +517,13 @@ ist genau die Stelle, deren Fehlschlag wie ein Auth-Fehler aussieht.
 ### Stufe 4 — erledigt (2026-08-17)
 
 Zehn Rollen-Einstiege plus die gemeinsame Sweep-Logik, je mit `.cmd`-Shim:
-[`ralph.ps1`](../entry/ralph.ps1), [`frank.ps1`](../entry/frank.ps1),
-[`axel.ps1`](../entry/axel.ps1), [`harry.ps1`](../entry/harry.ps1),
-[`marv.ps1`](../entry/marv.ps1), [`vollautomatik.ps1`](../entry/vollautomatik.ps1),
-[`halbautomatik.ps1`](../entry/halbautomatik.ps1),
-[`team-status.ps1`](../entry/team-status.ps1),
-[`team-test.ps1`](../entry/team-test.ps1),
-[`team/redteam.ps1`](../team/redteam.ps1). 17 PowerShell-Dateien insgesamt,
+[`ralph.ps1`](../pwsh/entry/ralph.ps1), [`frank.ps1`](../pwsh/entry/frank.ps1),
+[`axel.ps1`](../pwsh/entry/axel.ps1), [`harry.ps1`](../pwsh/entry/harry.ps1),
+[`marv.ps1`](../pwsh/entry/marv.ps1), [`vollautomatik.ps1`](../pwsh/entry/vollautomatik.ps1),
+[`halbautomatik.ps1`](../pwsh/entry/halbautomatik.ps1),
+[`team-status.ps1`](../pwsh/entry/team-status.ps1),
+[`team-test.ps1`](../pwsh/entry/team-test.ps1),
+[`team/redteam.ps1`](../pwsh/redteam.ps1). 17 PowerShell-Dateien insgesamt,
 alle syntaktisch geprüft.
 
 **Der Trockenlauf, den der Plan verlangt hat**, geht durch: Ralph baut Stufe 1,
@@ -587,11 +587,11 @@ unter Linux.
 
 | Was | Wo | Stand |
 |---|---|---|
-| Selbstprüfung für Windows | [`kit-test.ps1`](../kit-test.ps1) | **neu.** Sechs Schritte, 15 Einzelprüfungen — inklusive Trockenlauf der ganzen Kette |
+| Selbstprüfung für Windows | [`kit-test.ps1`](../pwsh/kit-test.ps1) | **neu.** Sechs Schritte, 15 Einzelprüfungen — inklusive Trockenlauf der ganzen Kette |
 | Der dritte Weg | [`doku/einrichtung.md`](../doku/einrichtung.md) | **neu**, 691 statt 455 Zeilen: kurzer Weg, acht Detailabschnitte, acht eigene Fehlerbilder, Belegstand |
-| Richtigstellung `${!var}` | [`kit-einrichten.sh`](../kit-einrichten.sh), `doku/einrichtung.md` | **korrigiert** |
+| Richtigstellung `${!var}` | [`kit-einrichten.sh`](../bash/kit-einrichten.sh), `doku/einrichtung.md` | **korrigiert** |
 | Plattformspalte | [`README.md`](../README.md), [`bootstrap/TEAM.md`](../bootstrap/TEAM.md) | **ergänzt** |
-| Auslieferungs- und Doku-Prüfung | [`kit-test.sh`](../kit-test.sh) Schritt 9+10 | **erweitert** um `kit-test.ps1`, `team/lib.psm1`, `team/redteam.ps1` und zwei Prüfungen, dass die Doku den dritten Weg wirklich nennt |
+| Auslieferungs- und Doku-Prüfung | [`kit-test.sh`](../bash/kit-test.sh) Schritt 9+10 | **erweitert** um `kit-test.ps1`, `team/lib.psm1`, `team/redteam.ps1` und zwei Prüfungen, dass die Doku den dritten Weg wirklich nennt |
 
 **Warum `kit-test.ps1` einen anderen Zuschnitt hat als `kit-test.sh`:** Der
 Gleichstand der Installer ist bereits durch Schritt 10/10 belegt, und der
@@ -637,7 +637,7 @@ angefasst worden. Ergebnis in einem Satz: **Er hat es nicht bis zur ersten
 ausgeführten Zeile geschafft.**
 
 ```
-PS C:\…\team-kit> .\kit-einrichten.ps1 C:\…\duke-itam-2026\
+PS C:\…\team-kit> .\pwsh\kit-einrichten.ps1 C:\…\duke-itam-2026\
 At …\kit-einrichten.ps1:113 char:39
 +         "Windows 11 bringt 5.1 mit; 7 wird DANEBEN installiert, nicht ...
 +                                       ~~~~
@@ -685,12 +685,12 @@ und -ausgabe erwartet.
 R1 bleibt die Torbedingung. Die Reihenfolge ist so gewählt, dass jeder Schritt
 außer dem letzten nichts kostet:
 
-1. `pwsh -File .\pruefe-windows.ps1` — R2, R3, kostenlos.
-2. `pwsh -File .\pruefe-windows.ps1 -MitEchtemAufruf` — **R1**, Bruchteile
+1. `pwsh -File .\pwsh\pruefe-windows.ps1` — R2, R3, kostenlos.
+2. `pwsh -File .\pwsh\pruefe-windows.ps1 -MitEchtemAufruf` — **R1**, Bruchteile
    eines Cent. Fällt der Schritt, ist es eine Auth- und keine Plattformfrage,
    und die Stufen 3–5 stehen weiter auf einer Annahme.
-3. `pwsh -File .\kit-einrichten.ps1 -NurPruefen` — Maschine, kostenlos.
-4. `pwsh -File .\kit-test.ps1` — Wegwerf-Repo, Installation, Testlauf,
+3. `pwsh -File .\pwsh\kit-einrichten.ps1 -NurPruefen` — Maschine, kostenlos.
+4. `pwsh -File .\pwsh\kit-test.ps1` — Wegwerf-Repo, Installation, Testlauf,
    Trockenlauf der Kette. Setzt `TEAM_DRY_RUN=1` selbst; kostenlos.
 5. Erst dann ein echtes Projekt und ein bezahlter Rollenlauf — **das** ist die
    ausstehende Abnahme.

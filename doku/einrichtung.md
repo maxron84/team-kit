@@ -26,7 +26,7 @@ Produktnamen niemanden zum Laufen bringt. Die Trennlinie:
 | Bordmittel | `git`, `python3` ≥ 3.8; auf dem Bash-Weg zusätzlich `flock` | — | Git trägt Commit, Rollback und Guard; `team/tools/` ist Python. Die Serialisierung von Ledger und Kaskadenstand macht auf dem Bash-Weg `flock`, auf dem PowerShell-Weg `[System.IO.FileStream]` — dort braucht es **kein** `flock` |
 | Testrunner | `pytest` (nur für `team-test.sh`/`kit-test.sh`/`kit-test.ps1`) | — | Die Rollen selbst brauchen ihn nicht |
 | **IDE** | **keine** | VS Codium (Linux), VS Code + WSL-Erweiterung (Windows) | Das Kit wird im Terminal bedient. Ein Editor ist Komfort |
-| **Agenten-Werkzeug** | **eine** CLI, die headless arbeitet und ein maschinenlesbares Ergebnis liefert | Claude Code (`claude -p`) | Die einzige Aufrufstelle ist `team_claude()` in [team/lib.sh](../team/lib.sh) |
+| **Agenten-Werkzeug** | **eine** CLI, die headless arbeitet und ein maschinenlesbares Ergebnis liefert | Claude Code (`claude -p`) | Die einzige Aufrufstelle ist `team_claude()` in [team/lib.sh](../bash/lib.sh) |
 | **Modell** | zwei Stufen: schwach und stark | `sonnet` / `opus` als Default | Die Rollen sprechen `TEAM_MODEL_LOOP`/`TEAM_MODEL_STRONG` an, keine Modellnamen — siehe [README, Abschnitt *Modelle*](../README.md#modelle--agnostisch-aber-nicht-anspruchslos) |
 
 Wo unten `claude` steht, steht ein **Werkzeug**; wo `codium` steht, steht ein
@@ -46,7 +46,7 @@ git clone https://github.com/maxron84/team-kit.git ~/Source/team-kit
 cd ~/Source/team-kit
 
 # 3. Maschine prüfen und einrichten — und gleich in ein Projekt einbinden
-bash kit-einrichten.sh ~/Source/mein-projekt
+bash bash/kit-einrichten.sh ~/Source/mein-projekt
 ```
 
 `kit-einrichten.sh` prüft Umgebung, Werkzeuge und die Lage des Klons, richtet
@@ -81,7 +81,7 @@ git clone https://github.com/maxron84/team-kit.git $HOME\Source\team-kit
 cd $HOME\Source\team-kit
 
 # 3. Maschine prüfen und einrichten — und gleich in ein Projekt einbinden
-pwsh -File .\kit-einrichten.ps1 $HOME\Source\mein-projekt
+pwsh -File .\pwsh\kit-einrichten.ps1 $HOME\Source\mein-projekt
 ```
 
 **Wann dieser Weg der richtige ist:** Wenn WSL2 nicht zur Verfügung steht — in
@@ -96,7 +96,7 @@ gesperrter Firmware. Steht WSL2 zur Verfügung, ist der WSL-Weg der erprobtere
 | Sperre | `flock` — **kooperativ**, wirkt nur solange alle mitspielen | `[System.IO.FileStream]` mit `FileShare::None` — vom **Betriebssystem durchgesetzt** |
 | Dateisystem-Falle | Klon unter `/mnt/c` (DrvFs) | Klon auf Netzlaufwerk oder in einem Sync-Ordner (OneDrive) |
 | Was ein Skript am Start hindert | fehlendes Exec-Bit | die **Ausführungsrichtlinie** |
-| Selbstprüfung | `./kit-test.sh` (10/10) | `pwsh -File .\kit-test.ps1` (6 Schritte) |
+| Selbstprüfung | `bash bash/kit-test.sh` (10/10) | `pwsh -File .\pwsh\kit-test.ps1` (6 Schritte) |
 
 `kit-einrichten.ps1` prüft genau diese Punkte — und zwar **proben statt
 voraussetzen**: Die Sperre wird mit zwei echten Prozessen belegt, nicht
@@ -135,8 +135,8 @@ schiebt Dateien hinein — es wird keine Abhängigkeit von ihnen.
 
 ```bash
 cd ~/Source/team-kit
-bash kit-einrichten.sh            # nur prüfen und einrichten
-bash kit-einrichten.sh --nur-pruefen   # gar nichts anfassen
+bash bash/kit-einrichten.sh            # nur prüfen und einrichten
+bash bash/kit-einrichten.sh --nur-pruefen   # gar nichts anfassen
 ```
 
 Fünf Abschnitte, in dieser Reihenfolge:
@@ -149,8 +149,8 @@ Fünf Abschnitte, in dieser Reihenfolge:
 3. **Lage des Klons** — Zeilenenden, Dateisystem, und zwei **Proben** statt
    Annahmen: Greift `chmod +x` hier? Hält `flock` hier?
 4. **Auth** — legt auf Wunsch `~/.config/claude-team/` an (Abo als Prio 1).
-5. **Kurzbefehl** — verknüpft `scripts/team-init.sh` und
-   `scripts/team-auth-setup.sh` nach `~/.claude/scripts/`, als **Symlink**, nie
+5. **Kurzbefehl** — verknüpft `bash/scripts/team-init.sh` und
+   `bash/scripts/team-auth-setup.sh` nach `~/.claude/scripts/`, als **Symlink**, nie
    als Kopie. Eine schon vorhandene echte Datei wird gemeldet, nicht ersetzt.
 
 Exit `0` = bereit (Warnungen möglich), `1` = mindestens ein harter Fehler.
@@ -241,7 +241,7 @@ ausschließen. Auf einem echten Kernel ist das dasselbe, auf einer
 Syscall-Übersetzung nicht zwingend. Deshalb auf dem Zielrechner zusätzlich:
 
 ```bash
-bash kit-einrichten.sh --nur-pruefen     # Warnung „nicht erkennbar WSL2" ist hier erwartet
+bash bash/kit-einrichten.sh --nur-pruefen     # Warnung „nicht erkennbar WSL2" ist hier erwartet
 
 L=~/probe.lock                           # Zwei-Prozess-Gegenprobe für die Sperre
 bash -c 'exec 9>"$0"; flock -x 9; echo "A: Sperre gehalten"; sleep 2' "$L" &
@@ -259,10 +259,10 @@ wait; rm -f "$L"
 
 und **Exit `0`**. Das ist der Erfolgsfall. Erst `1` bedeutet, dass die Maschine
 nicht bereit ist. Prüfbar mit `echo $?` oder
-`bash kit-einrichten.sh --nur-pruefen && echo BEREIT`.
+`bash bash/kit-einrichten.sh --nur-pruefen && echo BEREIT`.
 
 „B: abgewiesen" heißt: Ledger und Kaskadenstand sind serialisiert, und
-[`vollautomatik.sh`](../entry/vollautomatik.sh) — sequenziell, hält das Lock über
+[`vollautomatik.sh`](../bash/entry/vollautomatik.sh) — sequenziell, hält das Lock über
 den ganzen Lauf — steht auf sicherem Grund. Kommt „B: bekam sie AUCH", gilt
 genau die Warnung: Zwei Rollen können unbemerkt gleichzeitig schreiben. Dann
 ist die Disziplin die Sperre: **immer nur ein Lauf**, und während eines Laufs
@@ -298,7 +298,7 @@ das pro Stufe committet und testet, ist das nicht nur Komfort.
 
 `kit-einrichten.sh` **bricht ab**, wenn Kit oder Zielprojekt unter `/mnt/`
 liegen. Wer es wider besseres Wissen will:
-`TEAM_EINRICHTEN_ERLAUBE_DRVFS=1 bash kit-einrichten.sh`.
+`TEAM_EINRICHTEN_ERLAUBE_DRVFS=1 bash bash/kit-einrichten.sh`.
 
 Aus Windows erreichbar bleibt alles trotzdem — im Explorer über
 `\\wsl$\Ubuntu\home\<benutzer>\Source`.
@@ -337,7 +337,7 @@ genau die Pfad- und Zeilenenden-Probleme zurück, die die Regel oben vermeidet.
 ```bash
 git clone https://github.com/maxron84/team-kit.git ~/Source/team-kit
 cd ~/Source/team-kit
-bash kit-einrichten.sh ~/Source/mein-projekt
+bash bash/kit-einrichten.sh ~/Source/mein-projekt
 ```
 
 ### 6. IDE — VS Code mit der WSL-Erweiterung
@@ -366,7 +366,7 @@ Unterschied.
 ### 7. Agenten-Werkzeug in der Distro
 
 Wie unter Linux (`npm install -g @anthropic-ai/claude-code`, `claude`, `/login`,
-dann `scripts/team-auth-setup.sh`) — **in der Distro installiert**, nicht in
+dann `bash/scripts/team-auth-setup.sh`) — **in der Distro installiert**, nicht in
 Windows. Ein aus Windows geerbter `ANTHROPIC_API_KEY` (etwa über
 `WSLENV`) hat denselben Effekt wie einer im Shell-Profil: Er verdrängt das Abo.
 
@@ -419,7 +419,7 @@ anschließend Python — und `json.load` bricht an einem BOM ab, während
 
 > Das Kit legt die Kodierung seiner Kostenlogs deshalb **ausdrücklich** fest
 > und verlässt sich nicht auf die Voreinstellung
-> ([`team/lib.psm1`](../team/lib.psm1), `Team-ClaudeSchreiben`). Der Punkt steht
+> ([`team/lib.psm1`](../pwsh/lib.psm1), `Team-ClaudeSchreiben`). Der Punkt steht
 > hier trotzdem, weil er erklärt, warum 5.1 nicht „auch irgendwie geht".
 
 ### 2. Die Ausführungsrichtlinie
@@ -496,7 +496,7 @@ Shells nicht.
 > Programm, sondern ein **`.cmd`-Shim**. Scheitert seine Auflösung, sieht das
 > Ergebnis **aus wie ein Auth-Fehler** und ist keiner. Das Kit löst den Befehl
 > deshalb über `Get-Command` auf und meldet den Fall mit eigenem Wortlaut
-> ([`team/lib.psm1`](../team/lib.psm1), `Team-ClaudeBefehl`).
+> ([`team/lib.psm1`](../pwsh/lib.psm1), `Team-ClaudeBefehl`).
 
 ### 7. Auth
 
@@ -589,7 +589,7 @@ Ein bestehendes Projekt auf eine neue Kit-Version heben: `--update`. Nie
 ```bash
 # Linux und WSL — auf der Maschine
 bash ~/Source/team-kit/kit-einrichten.sh --nur-pruefen   # → "Alles grün", Exit 0 *
-cd ~/Source/team-kit && ./kit-test.sh                    # → 10/10, dauert ein paar Minuten
+cd ~/Source/team-kit && bash bash/kit-test.sh                    # → 10/10, dauert ein paar Minuten
 
 # im Zielprojekt
 ./team-test.sh                                           # Infrastruktur-Tests
@@ -601,8 +601,8 @@ env -u ANTHROPIC_API_KEY claude -p 'Antworte nur mit: pong'
 
 ```powershell
 # Windows nativ — auf der Maschine
-pwsh -File .\kit-einrichten.ps1 -NurPruefen              # → Exit 0 *
-pwsh -File .\kit-test.ps1                                # → 6 Schritte, 15 Prüfungen
+pwsh -File .\pwsh\kit-einrichten.ps1 -NurPruefen              # → Exit 0 *
+pwsh -File .\pwsh\kit-test.ps1                                # → 6 Schritte, 15 Prüfungen
 
 # im Zielprojekt
 .\team-test.cmd
@@ -636,10 +636,10 @@ steht.
 
 | Tausch | Was zu tun ist | Aufwand |
 |---|---|---|
-| **Anderes Modell** | `TEAM_MODEL_LOOP` / `TEAM_MODEL_STRONG` in [team/lib.sh](../team/lib.sh) oder pro Lauf setzen | eine Zeile. Welche **Fähigkeiten** ein Kandidat mitbringen muss, steht im [README](../README.md#modelle--agnostisch-aber-nicht-anspruchslos) |
+| **Anderes Modell** | `TEAM_MODEL_LOOP` / `TEAM_MODEL_STRONG` in [team/lib.sh](../bash/lib.sh) oder pro Lauf setzen | eine Zeile. Welche **Fähigkeiten** ein Kandidat mitbringen muss, steht im [README](../README.md#modelle--agnostisch-aber-nicht-anspruchslos) |
 | **Andere IDE / keine** | nichts | Das Kit wird im Terminal bedient |
-| **Andere Agenten-CLI** | `team_claude()` in [team/lib.sh](../team/lib.sh) austauschen — die **einzige** Stelle im Kit, die eine CLI aufruft | überschaubar, aber **nicht belegt**: An dieser Funktion hängen das Ergebnis-JSON (`is_error`, `subtype`, `total_cost_usd`), der Auth-Fallback und die 429-Mechanik. Wer tauscht, muss diese vier Dinge nachbauen — siehe [anhang-a.md, A.11](anhang-a.md) |
-| **Anderes Auth-Verfahren** | `scripts/team-auth-setup.sh` ist ein Beispielskript für Claude Code, keine Kit-Mechanik | ersetzen |
+| **Andere Agenten-CLI** | `team_claude()` in [team/lib.sh](../bash/lib.sh) austauschen — die **einzige** Stelle im Kit, die eine CLI aufruft | überschaubar, aber **nicht belegt**: An dieser Funktion hängen das Ergebnis-JSON (`is_error`, `subtype`, `total_cost_usd`), der Auth-Fallback und die 429-Mechanik. Wer tauscht, muss diese vier Dinge nachbauen — siehe [anhang-a.md, A.11](anhang-a.md) |
+| **Anderes Auth-Verfahren** | `bash/scripts/team-auth-setup.sh` ist ein Beispielskript für Claude Code, keine Kit-Mechanik | ersetzen |
 
 Das Kit ist **modellagnostisch, aber nicht CLI-agnostisch**. Das ist eine
 ehrliche Grenze, keine Absichtserklärung: Der einzige erprobte Weg zu einem
@@ -657,10 +657,10 @@ Modell führt heute über `claude -p`.
 | `flock: … not implemented` oder Lauf hängt an der Sperre | Netz- oder Windows-Laufwerk | Repo auf ein lokales Linux-Dateisystem |
 | `kit-einrichten.sh`: „nicht erkennbar WSL2" | Distro läuft unter WSL1 — in VMs meist fehlende nested virtualization | Warnung, kein Abbruch: [Wenn nur WSL 1 geht](#wenn-nur-wsl-1-geht--vm-gesperrte-firmware-verwalteter-rechner) — erst Hypervisor prüfen, sonst Zwei-Prozess-Gegenprobe für `flock` |
 | `python3: command not found` mitten im Lauf | Bordmittel fehlt | `sudo apt install python3` — die Team-Werkzeuge sind Python |
-| CLI meldet „takes precedence" | `ANTHROPIC_API_KEY` im Profil oder in der Umgebung | `scripts/team-auth-setup.sh`, dann `unset ANTHROPIC_API_KEY` — **und die IDE neu starten** (geerbte Umgebung) |
+| CLI meldet „takes precedence" | `ANTHROPIC_API_KEY` im Profil oder in der Umgebung | `bash/scripts/team-auth-setup.sh`, dann `unset ANTHROPIC_API_KEY` — **und die IDE neu starten** (geerbte Umgebung) |
 | `install.sh`: „ist kein Git-Repository" | Zielprojekt ohne Git | `git -C <ziel> init` |
 | `team-test.sh` findet nichts | `pytest` fehlt | `sudo apt install python3-pytest` |
-| `pytest team/tests` im **Kit-Repo** ist rot | Erwartet: Die Tests setzen die installierte Ablage voraus | Stattdessen `./kit-test.sh` |
+| `pytest geteilt/tests` im **Kit-Repo** ist rot | Erwartet: Die Tests setzen die installierte Ablage voraus | Stattdessen `bash bash/kit-test.sh` |
 | Lauf endet mit Exit `42` oder `43` | Kein Einrichtungsproblem: Session-Limit bzw. „Stufe fertig, Quittung fehlt" | [README, Exit-Codes](../README.md#betrieb) |
 
 **Nur auf dem nativen Windows-Weg:**
@@ -671,7 +671,7 @@ Modell führt heute über `claude -p`.
 | `… cannot be loaded because running scripts is disabled` | Ausführungsrichtlinie `Restricted`/`AllSigned` | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` — kein Administrator nötig |
 | `The term 'claude' is not recognized` | `claude` ist ein `.cmd`-Shim; PATH-Änderung hat die laufende Shell nicht erreicht | **Neue** pwsh-Sitzung öffnen. **Das ist KEIN Auth-Fehler** — nicht verwechseln |
 | `python` öffnet den Microsoft Store | Store-Platzhalter statt Interpreter | Echtes Python installieren; Gegenprobe `python -c "print(1)"` |
-| `Could not find file '…'` bei einem relativen Pfad | Ein Skript hat `Set-Location` gesetzt, aber `[System.IO.File]` folgt dem **Prozess**-Arbeitsverzeichnis, nicht der PowerShell-Position | Im Kit behoben (`Team-Pfad` in [`team/lib.psm1`](../team/lib.psm1)); tritt eigener Code darauf, dieselbe Auflösung nutzen |
+| `Could not find file '…'` bei einem relativen Pfad | Ein Skript hat `Set-Location` gesetzt, aber `[System.IO.File]` folgt dem **Prozess**-Arbeitsverzeichnis, nicht der PowerShell-Position | Im Kit behoben (`Team-Pfad` in [`team/lib.psm1`](../pwsh/lib.psm1)); tritt eigener Code darauf, dieselbe Auflösung nutzen |
 | `.cmd` verhält sich sporadisch falsch (Labels, `goto`) | Batch-Datei mit reinem LF | `.gitattributes` erzwingt CRLF; ein Klon von vor dieser Regel: `git rm --cached -r .` und `git reset --hard` |
 | Sperre greift nicht / Lauf hängt | Klon auf Netzlaufwerk oder in einem Sync-Ordner (OneDrive) | Auf ein lokales Laufwerk verlegen. Unter Windows 11 Enterprise kann das Benutzerprofil per Richtlinie nach OneDrive umgeleitet sein |
 | Kosten stehen auf `0.0000`, obwohl ein Lauf lief | Kostenlog mit BOM oder UTF-16 — `kosten.py` fängt den Lesefehler ab und zählt still null | Mit `pwsh` **7** fahren, nicht mit `powershell` (5.1) |
@@ -702,7 +702,7 @@ verifiziert bezeichnet — der Rest nicht.
   `Set-Acl`, die Benutzer-Umgebungsvariablen, das `.cmd`-Verhalten — und vor
   allem die tragende Frage, **ob `claude -p --output-format json` unter nativem
   Windows headless mit dem Abo läuft**. Dafür liegt
-  [`pruefe-windows.ps1`](../pruefe-windows.ps1) bereit; sie beantwortet genau
+  [`pruefe-windows.ps1`](../pwsh/pruefe-windows.ps1) bereit; sie beantwortet genau
   diese drei Punkte und kostet im Standardlauf nichts. Solange sie nicht
   gefahren ist, gilt der native Weg als **gebaut, nicht abgenommen**.
 - **Erster Kontakt mit einer echten Windows-Maschine (18.08.2026): rot.**
@@ -710,7 +710,7 @@ verifiziert bezeichnet — der Rest nicht.
   Syntaxfehlern ab, ohne eine Zeile auszuführen — Ursache war die fehlende
   Kodierungsangabe, nicht der Code (**BL-113**, oben in den Fehlerbildern).
   Der Befund ist behoben und steht unter Test
-  ([`team/tests/test_bl113_bom_regel.py`](../team/tests/test_bl113_bom_regel.py),
+  ([`team/tests/test_bl113_bom_regel.py`](../geteilt/tests/test_bl113_bom_regel.py),
   `kit-test.sh` Schritt 10). Er ist zugleich das Maß für den Rest dieses
   Abschnitts: Eine gegen pwsh 7 unter Linux vollständig grüne Bahn hat auf
   dem Ziel **an der ersten Datei** gescheitert. Was hier als „gefahren" steht,

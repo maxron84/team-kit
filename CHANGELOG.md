@@ -14,7 +14,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   eine Fassung anfasst, bekommt zwei Zweige, die verschiedene Agenten steuern;
   kein Test schlug an, weil beide Zweige grün laufen.
 
-  [`team/tests/test_bl112_prompt_gleichstand.py`](team/tests/test_bl112_prompt_gleichstand.py)
+  [`team/tests/test_bl112_prompt_gleichstand.py`](geteilt/tests/test_bl112_prompt_gleichstand.py)
   zieht den Prompt-Quelltext aus beiden Zweigen, rechnet die Syntax heraus
   (jede Variableneinsetzung wird **ein** Platzhalter) und vergleicht die
   verbleibende Prosa zeichenweise — vier Prompt-Blöcke und fünf
@@ -60,7 +60,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   fremd, wenn er **unter** einem fremden Ordnereintrag liegt.
 
   Gegenprobe in
-  [`team/tests/test_bl114_rollback_verschont_fremde_arbeit.py`](team/tests/test_bl114_rollback_verschont_fremde_arbeit.py)
+  [`team/tests/test_bl114_rollback_verschont_fremde_arbeit.py`](geteilt/tests/test_bl114_rollback_verschont_fremde_arbeit.py)
   (21 Fälle): Schonung **und** Wirksamkeit je Bahn, dazu ein echter
   `frank.sh`-Lauf mit gestubbter CLI. Mit dem alten Rollback verschwindet dort
   `CHANGELOG.md` — genau die Datei aus dem Feldbericht —, mit dem Fix
@@ -92,7 +92,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Sitzung"**, samt Ausweg für den Ausnahmefall (Rohwert minus bereits gebucht,
   Rechnung in den Notiztext). Geprüft nach Träger getrennt: A.9 über das
   Regel-Inventar, das Briefing über
-  [`team/tests/test_bl116_ein_closeout_je_sitzung.py`](team/tests/test_bl116_ein_closeout_je_sitzung.py).
+  [`team/tests/test_bl116_ein_closeout_je_sitzung.py`](geteilt/tests/test_bl116_ein_closeout_je_sitzung.py).
 
 - **BL-111 — drei Ableitungen aus der Plan-Datei rissen den Aufrufer unter
   `set -o pipefail` weg, und der Kommentar darüber sagte das Gegenteil zu.**
@@ -115,7 +115,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
   Gegenprobe zweifach: `test_bl18_architekt_zeile_beschriftung.py` fährt jetzt
   `strikt=True` statt `strikt="abbruch"`, und
-  [`team/tests/test_bl111_ableitungen_unter_pipefail.py`](team/tests/test_bl111_ableitungen_unter_pipefail.py)
+  [`team/tests/test_bl111_ableitungen_unter_pipefail.py`](geteilt/tests/test_bl111_ableitungen_unter_pipefail.py)
   prüft je Funktion **beide** Pfade — leer unter voller Strenge **und** der
   vorhandene Wert, sonst wäre `funktion() { :; }` ein grüner Weg. Mit der
   alten `lib.sh` fallen genau die Leer-Fälle.
@@ -145,7 +145,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Deshalb `status_bekannt()`: exakter Kettenwert oder Wert plus Klammerzusatz
   (`erledigt (Frank-Fix, abc1234)`), sonst nichts. Dieser String steht als
   Gegenprobe im Test —
-  [`team/tests/test_bl115_statuszeile_und_nutzungshinweis.py`](team/tests/test_bl115_statuszeile_und_nutzungshinweis.py),
+  [`team/tests/test_bl115_statuszeile_und_nutzungshinweis.py`](geteilt/tests/test_bl115_statuszeile_und_nutzungshinweis.py),
   14 Fälle.
 
 - **BL-113 — der native Windows-Zweig startete auf der Zielmaschine nicht, und
@@ -159,8 +159,8 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   stehen 443 davon.
 
   Neu ist deshalb eine Kodierungsregel an **einer** Stelle je Installer
-  (`Team-Kodierung` in [install.ps1](install.ps1), das `fuelle`-Here-Doc in
-  [install.sh](install.sh)): **`.ps1`/`.psm1` mit BOM, alles andere ohne.**
+  (`Team-Kodierung` in [install.ps1](pwsh/install.ps1), das `fuelle`-Here-Doc in
+  [install.sh](bash/install.sh)): **`.ps1`/`.psm1` mit BOM, alles andere ohne.**
   Die zweite Hälfte ist gleich teuer bezahlt — ein BOM vor einer Shebang-Zeile
   macht aus ihr Zeichensalat, und `json.load` bricht darüber ab, worauf
   `kosten.py` die Datei still als `0.0000` zählt. `.cmd` wurde auf reines
@@ -174,7 +174,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   (15/15), die Doppelbahn (364 bestanden) und der Syntaxcheck über alle
   `.ps1` grün. Die Lehre steckt in der Bauart der neuen Prüfung: Was die
   Zielmaschine anders **liest** statt anders **tut**, prüft man an den Bytes.
-  [`team/tests/test_bl113_bom_regel.py`](team/tests/test_bl113_bom_regel.py)
+  [`team/tests/test_bl113_bom_regel.py`](geteilt/tests/test_bl113_bom_regel.py)
   sieht sich Dateianfänge an, braucht kein PowerShell und greift deshalb auch
   dort, wo der Zweig gar nicht laufen kann; `kit-test.sh` Schritt 10 prüft
   dieselben drei Regeln im Kit, und [.gitattributes](.gitattributes) trägt die
@@ -211,7 +211,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 ### Fixed
 
 - **Die Begründung für `bash` ≥ 4 stand falsch in
-  [`kit-einrichten.sh`](kit-einrichten.sh) und in der Doku.** Dort hieß es, das
+  [`kit-einrichten.sh`](bash/kit-einrichten.sh) und in der Doku.** Dort hieß es, das
   Kit nutze *durchgehend* indirekte Expansion (`${!var}`). Nachgemessen kommt
   sie in der **Laufzeit** — `team/lib.sh`, `entry/*.sh`, `team/redteam.sh` —
   genau **null** Mal vor; alle sechs Fundstellen liegen im **Installer**. Die
@@ -224,13 +224,13 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 - **Die Rollen laufen unter Windows — der Zweig ist bedienbar.** Zehn
   Einstiege plus die gemeinsame Sweep-Logik, je mit `.cmd`-Shim:
-  [`ralph.ps1`](entry/ralph.ps1), [`frank.ps1`](entry/frank.ps1),
-  [`axel.ps1`](entry/axel.ps1), [`harry.ps1`](entry/harry.ps1),
-  [`marv.ps1`](entry/marv.ps1), [`vollautomatik.ps1`](entry/vollautomatik.ps1),
-  [`halbautomatik.ps1`](entry/halbautomatik.ps1),
-  [`team-status.ps1`](entry/team-status.ps1),
-  [`team-test.ps1`](entry/team-test.ps1),
-  [`team/redteam.ps1`](team/redteam.ps1). Die `.cmd`-Dateien sind Einzeiler auf
+  [`ralph.ps1`](pwsh/entry/ralph.ps1), [`frank.ps1`](pwsh/entry/frank.ps1),
+  [`axel.ps1`](pwsh/entry/axel.ps1), [`harry.ps1`](pwsh/entry/harry.ps1),
+  [`marv.ps1`](pwsh/entry/marv.ps1), [`vollautomatik.ps1`](pwsh/entry/vollautomatik.ps1),
+  [`halbautomatik.ps1`](pwsh/entry/halbautomatik.ps1),
+  [`team-status.ps1`](pwsh/entry/team-status.ps1),
+  [`team-test.ps1`](pwsh/entry/team-test.ps1),
+  [`team/redteam.ps1`](pwsh/redteam.ps1). Die `.cmd`-Dateien sind Einzeiler auf
   die `.ps1` — kein Symlink, denn der braucht unter Windows
   Administratorrechte, und ein Einrichtungsschritt, der an Rechten scheitert,
   hat sein Versprechen gebrochen.
@@ -266,9 +266,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added (Fortsetzung)
 
-- **Der Kern des Windows-Zweigs — [`team/lib.psm1`](team/lib.psm1), und die 28
+- **Der Kern des Windows-Zweigs — [`team/lib.psm1`](pwsh/lib.psm1), und die 28
   schlafenden Tests wachen auf.** Alle 42 Funktionen aus
-  [`team/lib.sh`](team/lib.sh) sind portiert: Werkzeug-Hüllen, Sperre, Auth,
+  [`team/lib.sh`](bash/lib.sh) sind portiert: Werkzeug-Hüllen, Sperre, Auth,
   `team_claude` samt Abo→API-Fallback und 429-Logik, die sieben `team_guard_*`,
   Promise, Quittung, Bewertung. Die Funktionsnamen bleiben **zeichengleich**
   (`team_guard_verify`, nicht `Verify-TeamGuard`) — PowerShell warnt darüber bei
@@ -294,14 +294,14 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   schreibt mit der Standardkodierung der Sitzung: unter pwsh 7 heute UTF8NoBOM,
   unter Windows PowerShell 5.1 UTF-16LE, und ein `$PSDefaultParameterValues` im
   Benutzerprofil kann es jederzeit umstellen. Python bricht an einem BOM ab —
-  aber [`team/tools/kosten.py`](team/tools/kosten.py) **fängt das ab und zählt
+  aber [`team/tools/kosten.py`](geteilt/tools/kosten.py) **fängt das ab und zählt
   die Datei still als `0.0000`**. Das ist exakt die Fehlerklasse aus `BL-46`
   (Log von 0 Byte nach 47 Minuten Laufzeit) und `BL-55` (Pro-Stufe-Cap
   umgehbar): Eine bezahlte Stufe erscheint als die **billigste** der Kaskade,
   der Deckel bekommt auf sie keinen Griff, und auffallen würde es erst, wenn
   jemand die Kostentabelle als Vergleichsband liest. `Team-ClaudeSchreiben`
   legt die Kodierung jetzt ausdrücklich fest;
-  [`test_stufe3_kostenlog_kodierung.py`](team/tests/test_stufe3_kostenlog_kodierung.py)
+  [`test_stufe3_kostenlog_kodierung.py`](geteilt/tests/test_stufe3_kostenlog_kodierung.py)
   pinnt sie auf beiden Bahnen, inklusive Umlaut-Rundlauf — reines ASCII sähe in
   UTF-8 und Latin-1 gleich aus und bewiese nichts.
 - **`install.sh` kannte den PowerShell-Kern nicht.** Sie kopiert `team/lib.sh`
@@ -320,17 +320,17 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 ### Added (Fortsetzung)
 
 - **Der Bootstrap des Windows-Zweigs — und der Nachweis, dass beide Installer
-  dasselbe tun.** Neu sind [`install.ps1`](install.ps1),
-  [`kit-einrichten.ps1`](kit-einrichten.ps1),
-  [`scripts/team-auth-setup.ps1`](scripts/team-auth-setup.ps1),
-  [`scripts/team-init.ps1`](scripts/team-init.ps1) und die Konfigurationsvorlage
-  [`entry/team.config.ps1`](entry/team.config.ps1). Ohne sie ließe sich das Kit
+  dasselbe tun.** Neu sind [`install.ps1`](pwsh/install.ps1),
+  [`kit-einrichten.ps1`](pwsh/kit-einrichten.ps1),
+  [`scripts/team-auth-setup.ps1`](pwsh/scripts/team-auth-setup.ps1),
+  [`scripts/team-init.ps1`](pwsh/scripts/team-init.ps1) und die Konfigurationsvorlage
+  [`entry/team.config.ps1`](pwsh/entry/team.config.ps1). Ohne sie ließe sich das Kit
   auf einer Windows-Maschine ohne WSL gar nicht erst einrichten — deshalb steht
   der Bootstrap **vor** dem Kern und nicht danach.
   **Die Zusicherung ist nicht „beide funktionieren", sondern „beide tun
   dasselbe":** `install.sh` und `install.ps1` erzeugen aus denselben neun
   Antworten **byte-identische Bäume** (155 Dateien, `diff -r` ohne Ausgabe).
-  Festgenagelt in [`kit-test.sh`](kit-test.sh) als Schritt 10/10 — ein
+  Festgenagelt in [`kit-test.sh`](bash/kit-test.sh) als Schritt 10/10 — ein
   Vergleich statt einer Liste von Einzelprüfungen, denn eine Liste prüft nur,
   woran jemand gedacht hat. Fehlt `pwsh`, sagt der Schritt **laut**, dass die
   halbe Zusicherung des Windows-Zweigs hier ungeprüft blieb; ein
@@ -363,7 +363,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   liegende Weg wäre eine zweite Testsuite gewesen — und das wäre der eine
   Fehler, der das Vorhaben zum Scheitern bringt: Zwei Suiten driften genauso
   wie zwei Implementierungen, nur unbemerkt. Neu ist deshalb
-  [`team/tests/conftest.py`](team/tests/conftest.py) mit der `Schale`: Ein
+  [`team/tests/conftest.py`](geteilt/tests/conftest.py) mit der `Schale`: Ein
   Test formuliert nur noch **Schritte**, und wie ein Schritt in der jeweiligen
   Shell ausgesprochen wird, weiß allein der Harnisch. Damit wird eine künftige
   Feldlehre auf der anderen Bahn **automatisch rot**, bis sie nachgezogen ist
@@ -382,7 +382,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Bahnen liefen, wie viele die pwsh-Bahn übersprangen und wie viele bewusst
   mit `@pytest.mark.nur_bash` geführt werden. Jede Markierung braucht eine
   Begründung und gehört zusätzlich in den Backlog.
-- **[`pruefe-windows.ps1`](pruefe-windows.ps1)** — die Vorflug-Probe für den
+- **[`pruefe-windows.ps1`](pwsh/pruefe-windows.ps1)** — die Vorflug-Probe für den
   nativen Zweig, **eigenständig** und ohne jede Kit-Abhängigkeit, damit sie
   einzeln auf die Zielmaschine kopiert werden kann. Sie beantwortet, was der
   Bauplan bisher nur annimmt: ob PowerShell die Agenten-CLI findet und startet
@@ -395,7 +395,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   das vorher. Erfolgskriterium ist der Exit-Code, nicht die Schlusszeile.
 - **Klonen und Einbinden ist jetzt eine Routine — für Linux und für Windows
   mit WSL.** Bis hierher begann jede Anleitung in dem Zustand, in dem die
-  Autorenmaschine ohnehin war. Neu ist [`kit-einrichten.sh`](kit-einrichten.sh):
+  Autorenmaschine ohnehin war. Neu ist [`kit-einrichten.sh`](bash/kit-einrichten.sh):
   die Vorflug-Prüfung zwischen `git clone` und `install.sh`. Fünf Abschnitte —
   Umgebung (Linux/WSL1/WSL2), Bordmittel (`bash` ≥ 4, `git`, `python3` ≥ 3.8,
   `flock` als Fehler; `pytest` und die Agenten-CLI als Hinweis), Lage des
@@ -420,7 +420,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   und auf einer Syscall-Übersetzung nur die schwächere Aussage trifft — eine
   **Zwei-Prozess-Gegenprobe für `flock`**, und die Regeln, die dort strenger
   gelten (`/mnt/c` doppelt verboten, obwohl WSL 1 dort *schneller* ist).
-- **[`scripts/`](scripts/) — die Maschinen-Skripte liegen jetzt im Repo.**
+- **[`scripts/`](bash/scripts/) — die Maschinen-Skripte liegen jetzt im Repo.**
   README, `install.sh` und `TEAM.md` verwiesen auf
   `~/.claude/scripts/team-auth-setup.sh`, eine Datei, die es nur auf der
   Autorenmaschine gab: **Wer das öffentliche Repo klonte, bekam eine Anleitung,
@@ -523,7 +523,7 @@ eingewechselt von unten nach oben.
   „Opus" tauchte in der Anleitung wie eine Voraussetzung auf. Neu und
   gleichlautend in [README.md](README.md) (Abschnitt **Modelle**),
   [bootstrap/TEAM.md](bootstrap/TEAM.md) (*Welches Modell arbeitet wo*),
-  [entry/team.config.sh](entry/team.config.sh) (kommentierter Block an der
+  [entry/team.config.sh](bash/entry/team.config.sh) (kommentierter Block an der
   Stelle, wo man es verstellt) und [doku/anhang-a.md](doku/anhang-a.md) (**A.11**,
   die Warum-Schicht): Das Kit bindet sich an **kein** Modell und keinen
   Anbieter; `sonnet`/`opus` sind Defaults, keine Voraussetzung. Vorausgesetzt
@@ -863,7 +863,7 @@ Dazu ein **Einstieg für Entwickler, die das Kit nicht kennen** — bisher benut
   (`BL-56`, Vorbedingung aus A.10).** [`doku/regel-inventar.md`](doku/regel-inventar.md)
   klassifiziert **72 Aussagen** der ausgelieferten Regeldatei über alle 10
   Abschnitte als `NORM` (60), `HERLEITUNG` (11) oder `HISTORIE` (1) — mit
-  wörtlichem Zitat. [`kit-regelinventar.py`](kit-regelinventar.py) prüft als
+  wörtlichem Zitat. [`kit-regelinventar.py`](geteilt/kit-regelinventar.py) prüft als
   **Stufe 7 in `kit-test.sh`**, dass jedes `NORM`-Zitat wörtlich in
   `bootstrap/CLAUDE.md.vorlage` steht, dass kein Abschnitt unerfasst ist und
   dass das Inventar keine Abschnitte nennt, die es nicht mehr gibt.
@@ -987,15 +987,15 @@ trotzdem „sauber".
   Produktivcode-Ordner (`BL-52`).** Leerliste aus Dateien **und** Ordnern
   (`"main.py bin/"`), die mitgeprüft werden, ohne unter `TEAM_PRODUKTIVCODE` zu
   liegen. Sie erscheint in der Scope-Zeile des Sweeps
-  ([`team/redteam.sh`](team/redteam.sh)), in der **eisernen Regel** von Red Team
+  ([`team/redteam.sh`](bash/redteam.sh)), in der **eisernen Regel** von Red Team
   und Axel — mitgeprüft heißt **genauso tabu**, nicht „freigegeben" — und in
-  Franks Fix-Auftrag ([`entry/frank.sh`](entry/frank.sh)), damit er den Fund
+  Franks Fix-Auftrag ([`entry/frank.sh`](bash/entry/frank.sh)), damit er den Fund
   dort reparieren darf, wo er liegt. Das Aufnahme-Interview fragt danach
   (neunter Wert); im neuen Projekt bleibt der Wert leer und **kein Wortlaut
   ändert sich** — dafür gibt es eine eigene Gegenprobe.
   **Nicht** umgesetzt wurde die Backlog-Skizze, `TEAM_PRODUKTIVCODE` selbst zur
   Liste zu machen: Der Wert trägt die Invariante „endet auf genau einen
-  Schrägstrich" ([`entry/team.config.sh`](entry/team.config.sh)), an der
+  Schrägstrich" ([`entry/team.config.sh`](bash/entry/team.config.sh)), an der
   `**`-Muster, Guard-Meldungen und ein Test-Regex hängen — und eine Liste, die
   auch einzelne Dateien enthalten darf, kann sie nicht halten.
 - **Der Installer erkennt eine belegte Schreibzone (`BL-51`).** Nach dem
@@ -1074,10 +1074,10 @@ Ursache, ein abgetragener Backlog-Punkt ohne Nachzug in den Zitaten.
   den Fehlermodus; dreimal folgte darauf ein Neubau, der die bezahlte Arbeit
   wegwarf.
   **Neu:** `team_result_meldet_erfolg` + `team_quittung_fehlt_melden` in
-  [`team/lib.sh`](team/lib.sh); [`ralph.sh`](entry/ralph.sh) endet in diesem
+  [`team/lib.sh`](bash/lib.sh); [`ralph.sh`](bash/entry/ralph.sh) endet in diesem
   Fall mit dem eigenen **Exit 43** und druckt den Prüfweg (committet? Suite
-  grün? dann von Hand quittieren), [`vollautomatik.sh`](entry/vollautomatik.sh)
-  und [`halbautomatik.sh`](entry/halbautomatik.sh) reichen ihn als eigenen
+  grün? dann von Hand quittieren), [`vollautomatik.sh`](bash/entry/vollautomatik.sh)
+  und [`halbautomatik.sh`](bash/entry/halbautomatik.sh) reichen ihn als eigenen
   Ausgang durch — nicht als „Fehler". **Geprüft wird die Struktur, nicht der
   Wortlaut:** Die drei Feldvorfälle formulierten es dreimal anders („background
   pytest run and monitor", „fallback check / wakeup", „set up a monitor to catch
@@ -1120,7 +1120,7 @@ Ursache, ein abgetragener Backlog-Punkt ohne Nachzug in den Zitaten.
   committet. Übergabe an Frank." Inhaltlich war das Nichtfinden richtig; der
   Fund ist die **Ununterscheidbarkeit**: Eine read-only-Rolle hat weder
   Statuswechsel noch Produktivdiff, an dem sie sonst auffiele. **Neu:**
-  [`redteam.sh`](team/redteam.sh) zählt die **wirklichen** neuen Funde
+  [`redteam.sh`](bash/redteam.sh) zählt die **wirklichen** neuen Funde
   (`next-id` vorher gegen nachher — die Zahl lag längst vor) und schreibt sie in
   Commit-Botschaft **und** Protokoll: „1 neuer Fund" / „keine neuen Funde",
   „Geprüft, KEINE neuen Funde … Keine Übergabe an Frank." Dazu im Sweep-Auftrag
@@ -1180,7 +1180,7 @@ Anzeige über die Zahlen **sagte**.
 
 - **`--budget` behauptete „nicht im Gesamt enthalten" — auch dann, wenn die
   Architekten-Zeile sehr wohl enthalten war (`BL-18`).**
-  [`entry/team-status.sh`](entry/team-status.sh) druckte den Zusatz
+  [`entry/team-status.sh`](bash/entry/team-status.sh) druckte den Zusatz
   **unbedingt**, obwohl `team_architekt_stand` zwei Modi hat: Im Modus
   `geschätzt` stammt der Wert aus der A2-Churn-Schätzung und steht in **keiner**
   Ledger-Zeile — der Zusatz stimmt. Im Modus `echt` stammt er aus einer
@@ -1216,7 +1216,7 @@ Anzeige über die Zahlen **sagte**.
   Feld ist die **einzige** Prosa-Spur je Zeile. Ein Rückfall obendrein: Genau
   diese Beschwerde stand schon in Feld-`BL-5`, der `BL-4`-Fix hat sie
   strukturell wieder eingebaut.
-  **Neu:** [`kosten.py`](team/tools/kosten.py) setzt den Vorspann selbst, aus
+  **Neu:** [`kosten.py`](geteilt/tools/kosten.py) setzt den Vorspann selbst, aus
   der Zielrolle — `Rollen: …` / `Bau: …`, für projekteigene Rollen deren Name.
   Kein zweiter Bedienparameter: Die Bedienung bleibt einhändig, und ein
   optionales `--notiz-ralph` wäre dieselbe Falle wie das „optional" in `BL-15`
@@ -1245,7 +1245,7 @@ offene Feld-K2-Befund; `BL-17` kam aus demselben Feld nach.
 ### Fixed
 
 - **Der Read-Only-Guard schrieb jede schmutzige Datei der laufenden Rolle zu
-  (`BL-16`, Ebene 1).** [`team_guard_verify`](team/lib.sh) bildete die
+  (`BL-16`, Ebene 1).** [`team_guard_verify`](bash/lib.sh) bildete die
   Verletzerliste aus `git diff --name-only` **plus** `git status --porcelain`
   und hatte **keinen Ausgangszustand**: Sie wusste nicht, was beim Rollenstart
   bereits schmutzig war. Jeder fremde Schreiber — eine parallele Sitzung, eine
@@ -1262,8 +1262,8 @@ offene Feld-K2-Befund; `BL-17` kam aus demselben Feld nach.
   laut und nennt die Pfade — **warnen statt abbrechen**, weil uncommittete
   Arbeit der Normalfall ist und ein harter Abbruch legitime Läufe erschlüge.
 - **Eine Guard-Verletzung kassiert den Übergriff, nicht die Arbeit (`BL-16`,
-  Ebene 2).** Bisher übersetzten [`entry/axel.sh`](entry/axel.sh) und
-  [`team/redteam.sh`](team/redteam.sh) jeden Übergriff sofort in `RC=1`. Damit
+  Ebene 2).** Bisher übersetzten [`entry/axel.sh`](bash/entry/axel.sh) und
+  [`team/redteam.sh`](bash/redteam.sh) jeden Übergriff sofort in `RC=1`. Damit
   zählte im Feld eine **fertige, korrekte** Ermittlung als „Aufruf
   fehlgeschlagen" → Stagnationszähler → Lauf gestoppt.
   **Neu:** `team_guard_urteil <rolle> <übergriff> <ergebnis>`. Liegt das
@@ -1345,8 +1345,8 @@ Fehlersignal.
   **Reservierung** des Dateinamens für Frank. Geändert in
   [`bootstrap/beutebuch.md`](bootstrap/beutebuch.md) (Vorlage + Begründungs­block),
   [`bootstrap/CLAUDE.md.vorlage`](bootstrap/CLAUDE.md.vorlage) (Beutezug-Dreisatz
-  Schritt 2 + Fund-Format), [`team/prompts/rolle-harry.md`](team/prompts/rolle-harry.md),
-  [`team/prompts/rolle-marv.md`](team/prompts/rolle-marv.md).
+  Schritt 2 + Fund-Format), [`team/prompts/rolle-harry.md`](geteilt/prompts/rolle-harry.md),
+  [`team/prompts/rolle-marv.md`](geteilt/prompts/rolle-marv.md).
 - **Der Guard bleibt unangetastet scharf.** Gewählt wurde die Prompt-Pflicht,
   nicht die Guard-Lockerung (Strippenzieher-Entscheid im Feld, 2026-08-02).
   Begründung aus dem Feld: Beim Folgefund setzte Frank die Zeile **von sich
@@ -1409,9 +1409,9 @@ gebaut wurden (Skizze D, Frage 2).
   Archivordner 1:1 auf **eine** Rolle ab (`roles ↔ .team-logs`). Das ist
   falsch, sobald ein Projekt eine weitere Rolle **separat** bucht — und genau
   dafür existiert `akteur-abschluss --rolle <X>`. Real schreiben
-  [`team/redteam.sh`](team/redteam.sh), [`entry/frank.sh`](entry/frank.sh),
-  [`entry/axel.sh`](entry/axel.sh) und
-  [`entry/vollautomatik.sh`](entry/vollautomatik.sh) **alle** nach
+  [`team/redteam.sh`](bash/redteam.sh), [`entry/frank.sh`](bash/entry/frank.sh),
+  [`entry/axel.sh`](bash/entry/axel.sh) und
+  [`entry/vollautomatik.sh`](bash/entry/vollautomatik.sh) **alle** nach
   `.team-logs`, während der Ahnherr Franks Out-of-Loop-Arbeit als eigene
   `frank`-Zeile bucht. `P3` meldete dieses Geld als „archiviert, aber nie
   gebucht" — strukturell unauflösbar, denn nachbuchen kann man nichts, was

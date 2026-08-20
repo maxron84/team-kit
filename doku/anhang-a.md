@@ -130,7 +130,7 @@ Folge-Entscheid 2026-07-13 läuft auch Der Architekt Abo-first — damit ist
   `team_result_is_error`; unlesbares JSON zählt als Fehler).
 - **Genau ein Retry**: Scheitert der Abo-Aufruf, folgt ein einziger
   API-Versuch mit eigener Log-Datei; scheitert auch der → harter Abbruch.
-- **Maschinen-Einrichtung**: `scripts/team-auth-setup.sh` im Kit (idempotent;
+- **Maschinen-Einrichtung**: `bash/scripts/team-auth-setup.sh` im Kit (idempotent;
   Key-Migration aus Shell-Profilen mit Backup, optionaler headless Abo-Test
   inklusive Erkennung der „takes precedence"-Warnung).
 
@@ -620,7 +620,7 @@ Regeldatei („Doku-Hygiene"); hier die Bau-Details:
   A.7/Lehre 7 (Prosa-Arbeit als Architekt-Handarbeit).
 - **Im Kit gebaut (`BL-56`):** Das Inventar für die ausgelieferte Regeldatei
   liegt in [`regel-inventar.md`](regel-inventar.md), der Prüfer in
-  [`kit-regelinventar.py`](../kit-regelinventar.py) (Stufe 8 in `kit-test.sh`).
+  [`kit-regelinventar.py`](../geteilt/kit-regelinventar.py) (Stufe 8 in `kit-test.sh`).
   Zwei Bauentscheide, die ein Nachbau übernehmen sollte: **(1) Normalisiert
   vergleichen** — Blockquote-Marker, Betonungszeichen und Zeilenumbrüche raus,
   sonst scheitert ein wörtlich richtiges Zitat an einem `**nie**` mitten im
@@ -851,7 +851,7 @@ eine vergessene Portierung sehen sonst gleich aus — und die vergessene fällt
 erst auf der Zielmaschine auf, wie `BL-113` teuer belegt hat.
 
 Durchgesetzt wird die Regel von
-[`team/tests/test_bahn_kopfzeile.py`](../team/tests/test_bahn_kopfzeile.py):
+[`team/tests/test_bahn_kopfzeile.py`](../geteilt/tests/test_bahn_kopfzeile.py):
 Vollständigkeit, Bahn passt zur Endung, Gegenstück existiert und liegt auf der
 anderen Bahn, Paare sind wechselseitig, `keines` trägt einen Grund, Kennung
 ist ASCII. Im Kit sucht der Test **rekursiv** — damit auch jede neue Datei
@@ -859,11 +859,47 @@ erfasst wird; im installierten Projekt prüft er nur die Namensliste des Kits,
 weil dort fremder Code liegt (dieselbe Erwägung wie in
 `test_bl113_bom_regel.py`).
 
-**Was diese Stufe ausdrücklich nicht tut:** Die Dateien sind **nicht** in
-`entry/bash/` und `entry/pwsh/` umgezogen, und das Zielprojekt bekommt
-weiterhin beide Bahnen in die Wurzel installiert. Beides steht als eigener
-Punkt im Backlog (`BL-118`, `BL-119`) — der zweite hat einen echten Konflikt
-mit `BL-3` und ist keine Formsache.
+### Die Ablage folgt der Kennung (`BL-118`, 2026-08-20)
+
+Die Kennung machte die Trennung **greppbar**. Sichtbar wurde sie erst, als die
+Ablage nachzog: `bash/`, `pwsh/` und `geteilt/` auf oberster Ebene, in der
+Wurzel kein einziges Skript mehr. `ls bash/` ist seitdem die vollständige
+Bash-Bahn — vorher war das eine Suche über vier Ordner und drei Endungen.
+
+Drei Dinge sind dabei mehr als Optik geworden:
+
+1. **`.gitattributes` hängt am Pfad statt an der Endung.** `pwsh/**/*.cmd
+   text eol=crlf` statt `*.cmd text eol=crlf`. Eine Batch-Datei außerhalb von
+   `pwsh/` bekommt die Regel **nicht** — und das ist gewollt: Dann stimmt die
+   Ablage nicht. `kit-test.sh` prüft seitdem zweierlei, die Regel **und** dass
+   git sie auf einer echten Datei anwendet (`git check-attr`); eine Regel, die
+   dasteht und nicht greift, sieht im `grep` bestanden aus.
+2. **Das Gegenstück ist über den Pfad prüfbar.** Im Kit liegt es in der
+   **gespiegelten** Bahn — `bash/entry/ralph.sh` ↔ `pwsh/entry/ralph.ps1`,
+   `bash/lib.sh` ↔ `pwsh/lib.psm1`. Gespiegelt wird nur das erste
+   Pfadsegment; der Rest ist in beiden Bahnen identisch, und genau das ist
+   die Zusicherung.
+3. **Die Übersetzung steht an EINER Stelle.** Die Tests laufen in zwei
+   Ablagen (Kit und installiertes Projekt) und sprachen die Kit-Ablage an 105
+   Stellen direkt an. Statt 105 Fallunterscheidungen gibt es jetzt
+   `kit_pfad()` in `conftest.py` — gesprochen wird in der Sprache des
+   **Zielprojekts** (`kit_pfad("lib.sh")`), weil das die Ablage ist, für die
+   die Tests geschrieben sind.
+
+**Der Preis war die Fallhöhe.** Der Umzug hat in der Kit-Ablage 281 Tests
+umgeworfen, bevor `kit_pfad()` da war, und 24 Dateien ließen sich nicht
+einmal mehr einsammeln — ein einziger Import-Pfad in 23 Kopien. Maßstab war
+deshalb nicht „grün", sondern **derselbe Befundstand wie vorher**: 21
+Fehlschläge in der Kit-Ablage, Datei für Datei identisch mit dem Stand vor
+dem Umzug (die Tests setzen die installierte Ablage voraus, siehe
+`kit-test.sh`). In der Installation selbst: 431 grün, unverändert.
+
+**Was diese Stufe nicht tut:** Das Zielprojekt bekommt weiterhin **beide**
+Bahnen in die Wurzel installiert. Der Grund steht in `install.sh` und ist
+keine Bequemlichkeit: `team.config.sh` und `team.config.ps1` sind zwei
+Generate **einer** Quelle. Wer nur eine Bahn installierte, hätte unter dem
+anderen System keine Konfiguration — und schriebe sie von Hand. Genau dort
+fängt Drift an. Die bewusste **Abwahl** durch den Anwender ist `BL-119`.
 
 ---
 
