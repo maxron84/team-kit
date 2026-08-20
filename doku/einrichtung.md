@@ -410,7 +410,7 @@ der Klon älter als diese Regel: `git pull`, dann erneut.
 > nur beim direkten Aufruf einer `.ps1`.
 
 Warum 7 Pflicht ist: `ConvertFrom-Json` verhält sich dort verlässlich (es
-ersetzt im PowerShell-Zweig die eingebetteten Python-Aufrufe der Bash-Fassung),
+ersetzt auf der pwsh-Bahn die eingebetteten Python-Aufrufe der Bash-Fassung),
 und `Set-StrictMode -Version Latest` ist das brauchbare Gegenstück zu Bashs
 `set -u`. Dazu kommt eine unauffällige, aber teure Eigenschaft: **5.1 schreibt
 Umlenkungen als UTF-16**, 7 als UTF-8 ohne BOM. Die Kostenlogs des Kits liest
@@ -476,11 +476,11 @@ pytest --version      # nur für die Selbstprüfung
 > `kit-einrichten.ps1` und `install.ps1` prüfen genau so und akzeptieren nur
 > einen Interpreter, der wirklich antwortet.
 
-**Kein `flock`.** Es gibt das unter Windows nicht, und der PowerShell-Zweig
+**Kein `flock`.** Es gibt das unter Windows nicht, und die pwsh-Bahn
 braucht es auch nicht. An seine Stelle tritt `[System.IO.FileStream]` mit
 `FileShare::None` — eine vom Betriebssystem **durchgesetzte** Sperre, während
 `flock` nur wirkt, solange alle Beteiligten mitspielen. Genau diese
-Problemklasse hat den nativen Zweig ausgelöst: Unter WSL 1 gibt es für
+Problemklasse hat die pwsh-Bahn ausgelöst: Unter WSL 1 gibt es für
 Dateisperren keine Zusicherung.
 
 ### 6. Agenten-Werkzeug
@@ -615,7 +615,7 @@ $env:ANTHROPIC_API_KEY = $null; claude -p 'Antworte nur mit: pong'
 > **`kit-test.ps1` ist kein Ersatz für `kit-test.sh`, und es behauptet das auch
 > nicht.** Es schließt die Lücke, dass eine Windows-Maschine ohne WSL gar keine
 > Selbstprüfung hätte — und **sagt am Ende ausdrücklich, was es nicht geprüft
-> hat**: den Bash-Zweig (dort liegt keine `bash`), den Gleichstand beider
+> hat**: die Bash-Bahn (dort liegt keine `bash`), den Gleichstand beider
 > Installer (der braucht beide Shells nebeneinander) und das Regel-Inventar.
 > Ein übersprungener Nachweis, den niemand sieht, liest sich sonst wie ein
 > bestandener.
@@ -693,7 +693,7 @@ verifiziert bezeichnet — der Rest nicht.
   **an der Maschine** statt sie vorauszusetzen (Proben für `chmod +x` und
   `flock`). Ein vollständiger Durchlauf auf einer Windows-Maschine steht aus.
 - **Windows nativ (PowerShell): gebaut und gefahren, aber NICHT auf Windows.**
-  Der ganze Zweig — `kit-einrichten.ps1`, `install.ps1`, `team/lib.psm1`, die
+  Die ganze pwsh-Bahn — `kit-einrichten.ps1`, `install.ps1`, `team/lib.psm1`, die
   zehn Rollen-Einstiege, `kit-test.ps1` — ist gegen **pwsh 7.4.6 unter Linux**
   geprüft: Syntax, Einrichtung, Installation, ein `-Update` gegen eine mit
   `install.sh` erzeugte Installation, ein Trockenlauf der ganzen Kette, und die
@@ -712,7 +712,7 @@ verifiziert bezeichnet — der Rest nicht.
   Der Befund ist behoben und steht unter Test
   ([`team/tests/test_bl113_bom_regel.py`](../team/tests/test_bl113_bom_regel.py),
   `kit-test.sh` Schritt 10). Er ist zugleich das Maß für den Rest dieses
-  Abschnitts: Ein gegen pwsh 7 unter Linux vollständig grüner Zweig hat auf
+  Abschnitts: Eine gegen pwsh 7 unter Linux vollständig grüne Bahn hat auf
   dem Ziel **an der ersten Datei** gescheitert. Was hier als „gefahren" steht,
   heißt weiterhin *unter Linux gefahren*.
 - **WSL 1: nicht zugesichert, aber nicht verboten.** Die Eigenschaften von

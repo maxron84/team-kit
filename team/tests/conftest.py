@@ -1,7 +1,7 @@
 """Die Doppelbahn: eine Testsuite, zwei Shells (bash und pwsh).
 
 WARUM ES DIESE DATEI GIBT
-    Das Kit bekommt einen nativen Windows-Zweig in PowerShell, waehrend Bash
+    Das Kit bekommt eine native pwsh-Bahn in PowerShell, waehrend Bash
     die Linux-Implementierung bleibt (`plans/windows-nativ.md`). Der nahe
     liegende Weg waere eine zweite Testsuite gewesen. Das waere der Fehler:
     Zwei Suiten driften genauso auseinander wie zwei Implementierungen, nur
@@ -361,7 +361,7 @@ class Schale:
         Die BL-3-Invariante, auf der ALLE relativen Werkzeugpfade ruhen: Ohne
         sie haengt jede Kostenzahl davon ab, aus welchem Verzeichnis der Mensch
         das Skript gestartet hat, und `kosten.py` meldet still 0.0000 statt zu
-        scheitern. Beide Zweige sichern dasselbe zu, nur anders geschrieben —
+        scheitern. Beide Bahnen sichern dasselbe zu, nur anders geschrieben —
         das ist die Idiom-Tabelle aus plans/windows-nativ.md in ihrer
         einfachsten Form.
         """
@@ -370,7 +370,7 @@ class Schale:
     def default_muster(self, name):
         """Regex fuer die Zeile, in der die Bibliothek ihren EIGENEN Default setzt.
 
-        Die Idiom-Tabelle in einer Zeile: Beide Zweige sagen dasselbe, nur
+        Die Idiom-Tabelle in einer Zeile: Beide Bahnen sagen dasselbe, nur
         anders. Ein Test prueft damit dieselbe Zusicherung auf beiden Bahnen,
         statt sich an eine Schreibweise zu binden (Vertrag Punkt 6).
         """
@@ -388,7 +388,7 @@ class Schale:
     def config_schreiben(self, ziel_repo, werte, exportiert=("TEAM_DOMAENEN",)):
         """Schreibt team.config.<endung> aus einem Wertebuch.
 
-        Beide Zweige bekommen ihre Konfiguration aus DERSELBEN Quelle — im
+        Beide Bahnen bekommen ihre Konfiguration aus DERSELBEN Quelle — im
         Betrieb aus den neun Installer-Antworten, hier aus einem dict. Das ist
         der Grund, warum die Konfiguration nicht driften kann: Sie wird
         erzeugt, nicht gepflegt.
@@ -489,8 +489,8 @@ class Schale:
                 kopf = "$ErrorActionPreference = 'Stop'\n"
             if voll:
                 kopf += "Set-StrictMode -Version Latest\n"
-            # -DisableNameChecking: Die Bibliothek fuehrt die Funktionsnamen des
-            # Bash-Zweigs weiter (team_guard_verify statt Verify-TeamGuard).
+            # -DisableNameChecking: Die Bibliothek fuehrt die Funktionsnamen der
+            # Bash-Bahn weiter (team_guard_verify statt Verify-TeamGuard).
             # PowerShell warnt darueber bei JEDEM Import. Die Namensgleichheit
             # ist Absicht — sie ist es, was EINE Testsuite fuer beide Bahnen
             # ueberhaupt moeglich macht; also wird die Warnung abgestellt und

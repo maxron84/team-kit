@@ -1,6 +1,6 @@
 ﻿# Bahn: pwsh | Gegenstueck: team-init.sh
 <#
-  team-init.ps1 — Starter fuer das T.E.A.M.-Starterkit (Windows-Zweig).
+  team-init.ps1 — Starter fuer das T.E.A.M.-Starterkit (pwsh-Bahn).
 
   Duenner Launcher: findet das Kit-Repo und reicht alle Argumente durch.
   Der eigentliche Installer lebt versioniert im Kit (<kit>\install.ps1).

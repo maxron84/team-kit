@@ -72,7 +72,7 @@ die Bedienanleitung fürs Zielprojekt ist `TEAM.md`:
 | Datei | Für wen | Inhalt |
 |---|---|---|
 | **[doku/einrichtung.md](doku/einrichtung.md)** | **wer das Kit auf eine Maschine holt** | **Die Routine: Klonen, Bordmittel, WSL, IDE, Auth, Einbinden, Fehlerbilder, Belegstand** |
-| [doku/anhang-a.md](doku/anhang-a.md) | wer wissen will, *warum* es so gebaut ist | Die Warum-Schicht: Bauentscheide und Feld-Betriebslehren (A.0–A.12) |
+| [doku/anhang-a.md](doku/anhang-a.md) | wer wissen will, *warum* es so gebaut ist | Die Warum-Schicht: Bauentscheide und Feld-Betriebslehren (A.0–A.13) |
 | [doku/regel-inventar.md](doku/regel-inventar.md) | wer eine Regel der Vorlage ändert | Jede Regel als NORM/HERLEITUNG/HISTORIE, mit Träger und wörtlichem Zitat |
 | [CHANGELOG.md](CHANGELOG.md) | wer eine bestehende Installation nachzieht | Jede Änderung mit Begründung und Feldbeleg |
 | [plans/backlog.md](plans/backlog.md) | wer am Kit mitbaut | Offene Punkte (Abgetragenes im [Archiv](plans/backlog-archiv.md)) |
@@ -185,7 +185,7 @@ pwsh -File install.ps1 <zielpfad> [-NichtInteraktiv] [-Update|-Force]
 > Bäume** — festgenagelt in `kit-test.sh`, Schritt 10/10. Sie schreiben auch
 > **beide** Konfigurationen (`team.config.sh` *und* `team.config.ps1`), damit
 > ein auf Linux eingerichtetes Projekt unter Windows nicht ohne Konfiguration
-> dasteht. Der Windows-Zweig ist **gebaut, aber noch nicht auf Windows
+> dasteht. Die pwsh-Bahn ist **gebaut, aber noch nicht auf Windows
 > abgenommen** — siehe [doku/einrichtung.md, *Belegstand*](doku/einrichtung.md#belegstand).
 
 **Ein bestehendes Projekt auf eine neue Kit-Version heben:** `--update`. Es
@@ -345,7 +345,7 @@ kit-regelinventar.py    Prüfer für das Regel-Inventar (Stufe 8). Kit-only —
 plans/                  Roadmap und Backlog DES KITS (nicht die Vorlagen —
                         die liegen in bootstrap/ und werden installiert)
 doku/anhang-a.md        Die Warum-Schicht: Bauentscheide und Feld-Betriebs-
-                        lehren (A.0–A.12). Bleibt im Kit, wird nicht installiert
+                        lehren (A.0–A.13). Bleibt im Kit, wird nicht installiert
 doku/einrichtung.md     Klonen und Einbinden — Linux und Windows mit WSL,
                         IDE- und Werkzeug-Beispiele, Fehlerbilder, Belegstand
 doku/regel-inventar.md  Jede Regel der Vorlage als NORM/HERLEITUNG/HISTORIE,
@@ -372,7 +372,7 @@ Grund für den eigenen Plan-Ordner — siehe `BL-51` oben.
 
 ## Betrieb
 
-| Linux / WSL | Windows nativ | Wirkung |
+| Bash-Bahn (Linux · WSL) | pwsh-Bahn (Windows ohne WSL) | Wirkung |
 |---|---|---|
 | `./vollautomatik.sh` | `.\vollautomatik.cmd` | Ganze Kaskade automatisch durchfahren |
 | `./halbautomatik.sh <rolle>` | `.\halbautomatik.cmd <rolle>` | Einzelnen Schritt, Entscheidung beim Menschen |
@@ -385,10 +385,15 @@ Grund für den eigenen Plan-Ordner — siehe `BL-51` oben.
 | `python3 team/tools/beutebuch.py list` | *(gleich)* | Alle Funde mit Status |
 | `python3 team/tools/zitat_lint.py` | *(gleich)* | Plandateien, die einen erledigten Backlog-Eintrag noch als offene Frage zitieren (`BL-50`) |
 
+**Welche Spalte gilt, entscheidet die Shell, nicht das Betriebssystem.** Wer
+unter Windows in einer WSL-Distro arbeitet, steht in der **linken** Spalte —
+WSL ist Windows und fährt die Bash-Bahn. Die rechte Spalte gilt für Windows
+**ohne** WSL.
+
 Die `.cmd`-Dateien sind Einzeiler auf die gleichnamige `.ps1`. Die beiden
 letzten Zeilen stehen bewusst als *(gleich)* da: Die Python-Werkzeuge werden
 **nicht** portiert — Ledger, Beutebuch und Kostenrechnung liegen auf beiden
-Wegen in denselben Dateien. Der PowerShell-Zweig ist eine zweite
+Wegen in denselben Dateien. Die pwsh-Bahn ist eine zweite
 **Orchestrierung**, kein zweiter Zustandscode.
 
 **Exit-Codes**: `0` = durchgelaufen · `1` = echter Fehler · `3` = nichts zu tun ·

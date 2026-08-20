@@ -95,7 +95,7 @@ $TEAM_FEAT_PRAEFIX = Team-Wert 'TEAM_FEAT_PRAEFIX' 'feat'
 # --- Werkzeuge der Team-Infrastruktur -----------------------------------------
 # Die Team-Werkzeuge liegen unter team/tools/ und sind in Python geschrieben.
 # python3 ist damit eine Abhaengigkeit der TEAM-INFRASTRUKTUR — auf einer Ebene
-# mit git und der Agenten-CLI. Sie sind der Grund, warum der PowerShell-Zweig
+# mit git und der Agenten-CLI. Sie sind der Grund, warum die pwsh-Bahn
 # KEIN zweiter Zustandscode ist: Ledger, Beutebuch und Kostenrechnung liegen
 # hier wie dort in denselben Dateien.
 #

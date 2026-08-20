@@ -779,6 +779,94 @@ selbst steht in [einrichtung.md](einrichtung.md).
 
 ---
 
+## A.13 Zwei Bahnen, ein Wort dafür — die Bahn-Kennung
+
+**Der Schnitt heißt nicht „Windows gegen Linux".** Er heißt `bash` gegen
+`pwsh`. Wer unter Windows in einer WSL-Distro arbeitet, fährt die **Bash**-
+Bahn; wer Windows ohne WSL benutzt, die **pwsh**-Bahn. Die alte Benennung
+nach Betriebssystem beschrieb genau den häufigsten Fall falsch — und WSL ist
+im Feld der Normalfall, nicht die Ausnahme.
+
+Deshalb gilt seit 2026-08-20 ein Begriffspaar, und nur eines:
+
+| Begriff | meint | Beispiele |
+|---|---|---|
+| **Bash-Bahn** / **pwsh-Bahn** | die Code-Bahn — welche Shell den Code ausführt | `ralph.sh` ↔ `ralph.ps1`, `lib.sh` ↔ `lib.psm1` |
+| **Weg** | den Installationsweg des Anwenders | „Linux", „WSL", „Windows nativ" |
+
+Vorher standen dafür vier Paare nebeneinander — „Linux/WSL" gegen „Windows
+nativ" im README, „Bash-Zweig" gegen „PowerShell-Zweig" im Bauplan,
+`feat(windows)` in den Commits, „Bahn" in `conftest.py`. Vier Namen für eine
+Sache sind kein Stilproblem: Sie machen unauffindbar, was zusammengehört.
+`conftest.py` hatte das Wort bereits scharf definiert (die Doppelbahn-Quote,
+`@pytest.mark.nur_bash`) — die übrigen drei sind daran angeglichen worden,
+nicht umgekehrt.
+
+**Commit-Scopes** folgen demselben Paar: `(bash)`, `(pwsh)`, `(beide)` statt
+`(windows)`. Ein Fix, der nur eine Bahn anfasst, ist damit an der Betreffzeile
+zu erkennen — und ein `(bash)`-Commit an einer `.ps1` fällt auf.
+
+### Warum die Kennung in jeder Datei steht
+
+Bis hierher war die Zugehörigkeit einer Datei nur an ihrer **Endung**
+abzulesen. Das reicht an drei Stellen nicht:
+
+1. `entry/` listet 29 Dateien alphabetisch verschränkt — `axel.cmd`,
+   `axel.ps1`, `axel.sh`, `frank.cmd`, … Der Ordner zeigt keine zwei Bahnen,
+   sondern einen Haufen.
+2. Die Namensgleichheit `ralph.sh` ↔ `ralph.ps1` ↔ `ralph.cmd` ist die
+   Kopplung, auf der die Doppelbahn-Testbahn ruht. Sie stand als
+   Absichtserklärung im Bauplan und wurde von nichts geprüft.
+3. Geteilter Code war von bahn-gebundenem nicht zu unterscheiden.
+   `team/tools/*.py` ist **bewusst** nicht portiert — die pwsh-Bahn ist eine
+   zweite *Orchestrierung*, kein zweiter Zustandscode. Dieser Entscheid stand
+   in der Doku und in keiner Datei.
+
+Jede Skriptdatei trägt deshalb in einer der ersten drei Zeilen:
+
+```
+# Bahn: bash  | Gegenstueck: ralph.ps1
+# Bahn: pwsh  | Gegenstueck: ralph.sh
+# Bahn: beide | Gegenstueck: keines (geteilter Zustandscode, nicht portiert)
+```
+
+**Reines ASCII, `|` statt Geviertstrich.** Dieselbe Zeile steht auch in einer
+`.cmd`, und die liest der Kommandozeileninterpreter in der OEM-Codepage der
+Maschine (850 oder 437, je nach Gerät) — ASCII ist das einzige, was dort
+überall dasselbe bedeutet (`BL-113`, siehe A.2). Ein Suchmuster findet die
+Zeile damit in jeder Datei des Kits:
+
+```
+grep -rlE '^(#|rem) Bahn: pwsh' .
+```
+
+Die Verankerung am Zeilenanfang ist nicht Kosmetik: Ohne sie stehen auch die
+Dateien in der Liste, die das Muster nur **zitieren** — diese Doku, der Test
+und der Backlog-Eintrag `BL-118`. Mit ihr bleibt genau eine Datei zu viel
+übrig, nämlich diese hier (der Codeblock oben beginnt am Zeilenanfang).
+
+**`keines` braucht einen Grund in Klammern.** Übernommen von
+`@pytest.mark.nur_bash`, wo der Grund ebenfalls Pflicht ist: Eine fehlende und
+eine vergessene Portierung sehen sonst gleich aus — und die vergessene fällt
+erst auf der Zielmaschine auf, wie `BL-113` teuer belegt hat.
+
+Durchgesetzt wird die Regel von
+[`team/tests/test_bahn_kopfzeile.py`](../team/tests/test_bahn_kopfzeile.py):
+Vollständigkeit, Bahn passt zur Endung, Gegenstück existiert und liegt auf der
+anderen Bahn, Paare sind wechselseitig, `keines` trägt einen Grund, Kennung
+ist ASCII. Im Kit sucht der Test **rekursiv** — damit auch jede neue Datei
+erfasst wird; im installierten Projekt prüft er nur die Namensliste des Kits,
+weil dort fremder Code liegt (dieselbe Erwägung wie in
+`test_bl113_bom_regel.py`).
+
+**Was diese Stufe ausdrücklich nicht tut:** Die Dateien sind **nicht** in
+`entry/bash/` und `entry/pwsh/` umgezogen, und das Zielprojekt bekommt
+weiterhin beide Bahnen in die Wurzel installiert. Beides steht als eigener
+Punkt im Backlog (`BL-118`, `BL-119`) — der zweite hat einen echten Konflikt
+mit `BL-3` und ist keine Formsache.
+
+---
+
 *Die konzeptionelle Grundlage (Vorlage, Guard-Konzept, Ralph-Schleife,
 Finder-Fixer-Prinzip) liegt im privaten LLM-Wiki des Autors unter
 `../../llm-wiki/wiki/` — ein Schwester-Repo, nicht Teil dieses Kits.*

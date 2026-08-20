@@ -477,7 +477,7 @@ done
 e_pruefe "README verweist nicht mehr auf den Pfad der Autorenmaschine" \
     "$(grep -c 'claude/scripts/team-auth-setup.sh' "$KIT/README.md")" "0"
 
-# f) Der dritte Weg muss in der Anleitung stehen. Ein Zweig, den die Doku nicht
+# f) Der dritte Weg muss in der Anleitung stehen. Eine Bahn, die die Doku nicht
 #    nennt, existiert fuer den Anwender nicht — und der native Weg ist genau
 #    fuer die Maschinen da, auf denen der WSL-Weg ausfaellt.
 e_pruefe "einrichtung.md nennt den nativen Windows-Weg" \
@@ -487,8 +487,8 @@ e_pruefe "einrichtung.md fuehrt ihn im Belegstand" \
 
 [ "$E_FEHLER" -eq 0 ] || exit 1
 
-kopf "10/10 — Windows-Zweig: Gleichstand der beiden Installer"
-# Die Zusicherung, auf der der ganze Windows-Zweig ruht: install.sh und
+kopf "10/10 — pwsh-Bahn: Gleichstand der beiden Installer"
+# Die Zusicherung, auf der die ganze pwsh-Bahn ruht: install.sh und
 # install.ps1 erzeugen aus DENSELBEN Antworten DASSELBE Projekt. Nicht
 # "aehnlich", nicht "funktional gleichwertig" — Byte fuer Byte dasselbe.
 #
@@ -516,7 +516,7 @@ w_pruefe ".gitattributes erzwingt CRLF fuer *.cmd" \
 #     Versionspruefung sagen kann, dass hier pwsh 7 hingehoert.
 #
 #     Warum eine Pruefung und kein Kommentar: Unter pwsh 7 ist der Fehler
-#     UNSICHTBAR. Der ganze Windows-Zweig ist gegen pwsh 7 gebaut worden und
+#     UNSICHTBAR. Die ganze pwsh-Bahn ist gegen pwsh 7 gebaut worden und
 #     blieb gruen, waehrend keine einzige Datei auf der Zielmaschine startete.
 OHNE_BOM=""
 for f in $(cd "$KIT" && ls *.ps1 entry/*.ps1 team/*.ps1 team/*.psm1 scripts/*.ps1 2>/dev/null); do
@@ -554,7 +554,7 @@ if ! command -v pwsh >/dev/null 2>&1; then
     # Maschine UNGEPRUEFT, und das gehoert in die Ausgabe. Ein uebersprungener
     # Nachweis, den niemand sieht, liest sich am Ende wie ein bestandener.
     gelb "  ! pwsh fehlt — der Gleichstand der Installer ist hier UNGEPRUEFT."
-    echo  "      Das ist die halbe Zusicherung des Windows-Zweigs. Nachholen auf"
+    echo  "      Das ist die halbe Zusicherung der pwsh-Bahn. Nachholen auf"
     echo  "      einer Maschine mit PowerShell 7:  ./kit-test.sh"
 else
     gruen "  ✓ pwsh $(pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()' 2>/dev/null)"

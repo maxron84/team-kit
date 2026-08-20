@@ -255,7 +255,7 @@ try {
 Kopf 'Was dieser Lauf NICHT geprüft hat'
 # Die Ehrlichkeit ist hier kein Stil, sondern der Zweck: Wer glaubt, alles
 # geprüft zu haben, prüft den Rest nie.
-Zeile 'Den Bash-Zweig (.sh) — hier liegt keine bash. Er ist mitinstalliert und'
+Zeile 'Die Bash-Bahn (.sh) — hier liegt keine bash. Sie ist mitinstalliert und'
 Zeile 'gilt unverändert aus dem Kit.'
 Zeile 'Den GLEICHSTAND beider Installer (kit-test.sh, Schritt 10/10) — der'
 Zeile 'braucht beide Shells nebeneinander und läuft auf einer Linux-Maschine.'
@@ -273,5 +273,5 @@ if ($script:Fehler -ne 0) {
     exit 1
 }
 Remove-Item -Recurse -Force $basis -ErrorAction SilentlyContinue
-Write-Host '  Selbstverifikation grün (Windows-Zweig).' -ForegroundColor Green
+Write-Host '  Selbstverifikation grün (pwsh-Bahn).' -ForegroundColor Green
 exit 0

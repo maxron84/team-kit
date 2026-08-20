@@ -1,6 +1,6 @@
 ﻿# Bahn: pwsh | Gegenstueck: lib.sh
 <#
-  team/lib.psm1 — gemeinsame Bibliothek der T.E.A.M.-Rollen, PowerShell-Zweig.
+  team/lib.psm1 — gemeinsame Bibliothek der T.E.A.M.-Rollen, pwsh-Bahn.
 
   Gegenstueck zu team/lib.sh. Wird per `Import-Module` eingebunden, nicht
   direkt ausgefuehrt.
@@ -33,7 +33,7 @@
   WAS GLEICH BLEIBT, UND ZWAR ABSICHTLICH
   Die Werkzeuge unter team/tools/ werden NICHT portiert. Ledger, Beutebuch und
   Kostenrechnung — der gesamte Zustand — liegen hier wie dort in denselben
-  Python-Dateien. Der PowerShell-Zweig ist eine zweite ORCHESTRIERUNG, kein
+  Python-Dateien. Die pwsh-Bahn ist eine zweite ORCHESTRIERUNG, kein
   zweiter Zustandscode.
 #>
 
@@ -178,7 +178,7 @@ $TEAM_ROLE_HARDCAP_USD = Team-Default 'TEAM_ROLE_HARDCAP_USD' '10'
 # --- Auth ---------------------------------------------------------------------
 function Team-CfgDir {
     # Unter Windows %APPDATA%\claude-team, sonst ~/.config/claude-team — dort
-    # liegt die Ablage des Bash-Zweigs, und eine Maschine hat EINE
+    # liegt die Ablage der Bash-Bahn, und eine Maschine hat EINE
     # Auth-Konfiguration, nicht zwei.
     if ($env:APPDATA) { return (Join-Path $env:APPDATA 'claude-team') }
     return (Join-Path $HOME '.config/claude-team')
@@ -490,9 +490,9 @@ function team_extract_cost_usd {
 }
 
 # --- Werkzeug-Huellen ---------------------------------------------------------
-# Duenne Huellen ueber team/tools/*.py. Sie sind der Grund, warum der
-# PowerShell-Zweig kein zweiter Zustandscode ist: Ledger und Beutebuch liegen
-# hier wie im Bash-Zweig in denselben Python-Dateien.
+# Duenne Huellen ueber team/tools/*.py. Sie sind der Grund, warum die
+# pwsh-Bahn kein zweiter Zustandscode ist: Ledger und Beutebuch liegen
+# hier wie auf der Bash-Bahn in denselben Python-Dateien.
 
 function team_kosten_summe { param([string[]]$Ordner)
     Team-Werkzeug $TEAM_KOSTEN_TOOL (@('summe') + $Ordner) }
@@ -550,10 +550,10 @@ function team_architekt_kaskade {
       ist (frisches Projekt, benannte Kaskade, fehlende .ralph-plan).
 
       Diese Fassung reisst den Aufrufer unter keiner Strenge weg: Es gibt
-      keine Pipeline, deren Zwischenschritt durchschlagen koennte. Der
-      Bash-Zweig hatte hier BL-111 — `| head -1` hielt den Rueckgabewert nur
+      keine Pipeline, deren Zwischenschritt durchschlagen koennte. Die
+      Bash-Bahn hatte hier BL-111 — `| head -1` hielt den Rueckgabewert nur
       gegen `set -e`, nicht gegen `set -o pipefail`; seit dem Fix haelt ihn
-      dort `{ … ; } || true` unter jeder Stufe. Beide Zweige sagen damit
+      dort `{ … ; } || true` unter jeder Stufe. Beide Bahnen sagen damit
       dasselbe zu, und der Doppelbahn-Test faehrt beide unter voller Strenge.
     #>
     param([string]$PlanDatei = $null)
@@ -723,7 +723,7 @@ function team_lock {
       HIER IST DER WINDOWS-ZWEIG BESSER ALS DER BASH-ZWEIG: FileShare::None
       wird vom Betriebssystem DURCHGESETZT. flock ist kooperativ — es wirkt nur,
       solange alle Beteiligten mitspielen, und unter WSL 1 gab es dafuer gar
-      keine Zusicherung. Genau diese Problemklasse hat den Windows-Zweig
+      keine Zusicherung. Genau diese Problemklasse hat die pwsh-Bahn
       ausgeloest.
 
       Der Strom bleibt im Modulzustand offen, solange der Prozess laeuft — das
@@ -1260,7 +1260,7 @@ function team_claude {
       Abo-Fehlversuch + 4,9 USD API meldeten 4,9 gegen einen 5-USD-Deckel).
 
       Der API-Key wird dem Aufruf AUFRUF-LOKAL vorangestellt: Ein blosses
-      Setzen der Prozessvariablen reichte im Bash-Zweig nicht — die CLI
+      Setzen der Prozessvariablen reichte auf der Bash-Bahn nicht — die CLI
       bevorzugte im selben Prozess weiterhin die limitierte Abo-Session und
       der Fallback lief real erneut ins Abo-429.
 

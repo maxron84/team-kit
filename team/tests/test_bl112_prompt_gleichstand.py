@@ -4,18 +4,18 @@
 Der Plan zur Doppelbahn stuetzte sich auf die Feststellung, die
 driftgefaehrlichste Flaeche sei "konstruktionsbedingt bereits single-source":
 `team_briefing` liest `team/prompts/rolle-*.md`, und die 340 Zeilen Briefing
-gelten damit fuer beide Zweige. Das stimmt — und ist die halbe Wahrheit. Der
+gelten damit fuer beide Bahnen. Das stimmt — und ist die halbe Wahrheit. Der
 Prompt, der die Rolle wirklich erreicht, entsteht erst im Einstiegsskript, und
 diese Prosa steht ZWEIMAL im Repo: einmal in `.sh`, einmal in `.ps1`.
 
 Wer eine Feldlehre nachschaerft und nur eine Fassung anfasst, bekommt zwei
-Zweige, die VERSCHIEDENE Agenten steuern. Kein Test schlug an: Beide Zweige
+Bahnen, die VERSCHIEDENE Agenten steuern. Kein Test schlug an: Beide Bahnen
 laufen gruen, die Prompts sind nur nicht mehr dieselben. Das war die letzte
 Stelle, an der Drift unsichtbar blieb — ueberall sonst greift die Doppelbahn.
 
 WAS DIESER TEST PRUEFT UND WAS NICHT
 
-Verglichen wird der Prompt-QUELLTEXT beider Zweige, nachdem die reine
+Verglichen wird der Prompt-QUELLTEXT beider Bahnen, nachdem die reine
 SYNTAX herausgerechnet ist: `PROMPT="…"` gegen `@"…"@`, und jede Form der
 Variablen-Einsetzung (`${VAR}`, `$VAR`, `$(…)`, `$($…)`) wird zu einem
 einzigen Platzhalter. Uebrig bleibt die Prosa — also genau das, was ein Mensch
@@ -27,8 +27,8 @@ Fall ist als eigener Backlog-Eintrag ausgewiesen statt hier behauptet.
 
 DIE AUSNAHMELISTE IST DER HEIKLE TEIL
 
-Ein zeichenweiser Vergleich schlaegt auch auf LEGITIME Zweigunterschiede an —
-`SMOKE_ZEILE` nennt im Bash-Zweig `team.config.sh` und im PowerShell-Zweig
+Ein zeichenweiser Vergleich schlaegt auch auf LEGITIME Bahnunterschiede an —
+`SMOKE_ZEILE` nennt auf der Bash-Bahn `team.config.sh` und auf der pwsh-Bahn
 `team.config.ps1`, und das ist richtig so. Ohne Ausnahmeliste waere der Test am
 ersten Tag rot und wuerde abgeschaltet statt gelesen (BL-14). Mit einer Liste
 ohne Begruendungspflicht wuerde sie zur Sammelstelle, hinter der die echte
@@ -50,7 +50,7 @@ WURZEL = Path(__file__).resolve().parents[2]
 # (bash-Text, powershell-Text, Grund) — der Grund ist Pflicht, siehe Kopf.
 AUSNAHMEN = [
     ("team.config.sh", "team.config.ps1",
-     "Jeder Zweig nennt seine eigene Konfigurationsdatei. Ein Prompt, der "
+     "Jede Bahn nennt ihre eigene Konfigurationsdatei. Ein Prompt, der "
      "unter Windows auf team.config.sh zeigt, schickt den Menschen zu einer "
      "Datei, die dort nicht liegt."),
 ]
@@ -124,9 +124,9 @@ def ps_block(pfad, name):
 def kanon(zeilen, ausnahmen=AUSNAHMEN):
     """Syntax heraus, Prosa stehen lassen.
 
-    Die Klammer-Zaehlung ist noetig statt eines Regex: Der Bash-Zweig setzt
+    Die Klammer-Zaehlung ist noetig statt eines Regex: Die Bash-Bahn setzt
     Bestandsordner mit `${VAR:+ (${A}: ${B})}` ein, also VERSCHACHTELT, und
-    der PowerShell-Zweig rechnet dasselbe vorher in `$planTeil` aus. Erst das
+    die pwsh-Bahn rechnet dasselbe vorher in `$planTeil` aus. Erst das
     Zusammenfassen benachbarter Platzhalter macht beide Formen vergleichbar —
     ohne es meldete der Vergleich einen Unterschied, wo keiner ist, und genau
     solche Falschmeldungen kosten den Test seine Glaubwuerdigkeit.
@@ -193,7 +193,7 @@ def _paar(sh_kandidaten, ps_kandidaten):
     sh = _quelle(*sh_kandidaten)
     ps = _quelle(*ps_kandidaten)
     if sh is None or ps is None:
-        pytest.skip(f"Zweig unvollstaendig: {sh_kandidaten} / {ps_kandidaten}")
+        pytest.skip(f"Bahn unvollstaendig: {sh_kandidaten} / {ps_kandidaten}")
     return sh, ps
 
 
@@ -208,16 +208,16 @@ def test_prompt_block_ist_in_beiden_zweigen_derselbe(rolle, sh_pfade, ps_pfade,
     # Extraktion ins Leere greift — die BL-22-Falle. Zwei leere Listen sind
     # gleich, und niemand merkt es.
     assert len(a) >= mindestzeilen, (
-        f"{rolle}: aus dem Bash-Zweig kamen nur {len(a)} Prompt-Zeilen — die "
+        f"{rolle}: von der Bash-Bahn kamen nur {len(a)} Prompt-Zeilen — die "
         f"Extraktion greift ins Leere, der Vergleich waere wertlos."
     )
     assert len(b) >= mindestzeilen, (
-        f"{rolle}: aus dem PowerShell-Zweig kamen nur {len(b)} Prompt-Zeilen."
+        f"{rolle}: von der pwsh-Bahn kamen nur {len(b)} Prompt-Zeilen."
     )
 
     assert a == b, (
-        f"Der Prompt der Rolle '{rolle}' laeuft zwischen den Zweigen "
-        f"auseinander — beide Zweige laufen gruen, steuern aber verschiedene "
+        f"Der Prompt der Rolle '{rolle}' laeuft zwischen den Bahnen "
+        f"auseinander — beide Bahnen laufen gruen, steuern aber verschiedene "
         f"Agenten:\n" + _bericht(a, b)
     )
 
@@ -232,11 +232,11 @@ def test_prosa_variablen_sind_in_beiden_zweigen_dieselben(wo, sh_pfade, ps_pfade
     sh, ps = _paar(sh_pfade, ps_pfade)
     a = [kanon(b) for b in bash_block(sh, bash_name)]
     b = [kanon(x) for x in ps_block(ps, ps_name)]
-    assert a, f"{wo}/{bash_name}: im Bash-Zweig nichts gefunden"
-    assert b, f"{wo}/{ps_name}: im PowerShell-Zweig nichts gefunden"
+    assert a, f"{wo}/{bash_name}: auf der Bash-Bahn nichts gefunden"
+    assert b, f"{wo}/{ps_name}: auf der pwsh-Bahn nichts gefunden"
     assert len(a) == len(b), (
-        f"{wo}/{bash_name}: {len(a)} Zuweisungen im Bash-Zweig, {len(b)} im "
-        f"PowerShell-Zweig — eine Fallunterscheidung fehlt auf einer Seite."
+        f"{wo}/{bash_name}: {len(a)} Zuweisungen auf der Bash-Bahn, {len(b)} auf der "
+        f"pwsh-Bahn — eine Fallunterscheidung fehlt auf einer Seite."
     )
     for nr, (x, y) in enumerate(zip(a, b), 1):
         assert x == y, (
@@ -303,4 +303,4 @@ def test_der_vergleich_wuerde_drift_wirklich_melden():
 def _bericht(a, b):
     import difflib
     return "\n".join(list(difflib.unified_diff(
-        a, b, fromfile="bash-Zweig", tofile="powershell-Zweig", lineterm=""))[:40])
+        a, b, fromfile="bash-Bahn", tofile="pwsh-Bahn", lineterm=""))[:40])

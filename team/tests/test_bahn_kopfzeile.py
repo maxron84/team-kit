@@ -1,7 +1,7 @@
 """Die Bahn-Kennung — jede Skriptdatei sagt in Zeile 1, wo sie hingehoert.
 
 WARUM DIESER TEST EXISTIERT
-    Das Kit faehrt seit dem nativen Windows-Zweig auf zwei Bahnen: `bash`
+    Das Kit faehrt seit der nativen Windows-Unterstuetzung auf zwei Bahnen: `bash`
     und `pwsh`. Die Trennung war bis hierher nur an der DATEIENDUNG
     abzulesen, und das reicht an drei Stellen nicht:
 
@@ -14,7 +14,7 @@ WARUM DIESER TEST EXISTIERT
        wurde von nichts geprueft.
     3. Geteilter Code war von bahn-gebundenem Code nicht zu unterscheiden.
        `team/tools/kosten.py` ist BEWUSST nicht portiert — der
-       PowerShell-Zweig ist eine zweite Orchestrierung, kein zweiter
+       pwsh-Bahn ist eine zweite Orchestrierung, kein zweiter
        Zustandscode. Diese Entscheidung stand in der Doku und in keiner
        Datei.
 

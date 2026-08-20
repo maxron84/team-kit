@@ -1,6 +1,6 @@
 ﻿# Bahn: pwsh | Gegenstueck: team-auth-setup.sh
 <#
-  team-auth-setup.ps1 — Maschinen-Einrichtung fuer den nativen Windows-Zweig:
+  team-auth-setup.ps1 — Maschinen-Einrichtung fuer die pwsh-Bahn:
   Abo als Prio 1, API-Key nur als geschuetzter Fallback.
 
   Gegenstueck zu scripts/team-auth-setup.sh. Gleiche Aufgabe, gleiche
@@ -36,7 +36,7 @@ $ErrorActionPreference = 'Stop'
 function Team-CfgDir {
     # %APPDATA% ist der richtige Ort unter Windows. Der Rueckfall haelt das
     # Skript auf Nicht-Windows lauffaehig und zeigt dort auf DIESELBE Ablage,
-    # die der Bash-Zweig benutzt — eine Maschine, eine Auth-Konfiguration.
+    # die die Bash-Bahn benutzt — eine Maschine, eine Auth-Konfiguration.
     # Bewusst in jedem Bootstrap-Skript einzeln: Sie duerfen von team/lib.psm1
     # nicht abhaengen, denn sie laufen, BEVOR es die Bibliothek gibt.
     if ($env:APPDATA) { return (Join-Path $env:APPDATA 'claude-team') }

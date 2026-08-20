@@ -1,6 +1,6 @@
-# Windows nativ — PowerShell-Zweig neben Bash
+# Windows nativ — die pwsh-Bahn neben der Bash-Bahn
 
-Plan für einen **unter Windows 11 nativ lauffähigen** T.E.A.M.-Zweig: ohne WSL,
+Plan für eine **unter Windows 11 nativ lauffähige** T.E.A.M.-Bahn: ohne WSL,
 ohne Git Bash, ohne jede Unix-Schicht. Bash bleibt die Linux-Implementierung und
 wird **nicht** angetastet.
 
@@ -44,8 +44,8 @@ Verworfen wurden:
 **Der erhobene Einwand und seine Auflösung.** Gegen zwei dauerhafte
 Implementierungen wurde eingewandt: In einem Kit, in dem jede Feldlehre eine
 Codeänderung *plus* einen Test wird, kostet jede künftige Lehre doppelt — und es
-ist absehbar, welche Seite driftet, weil der Betreiber auf Linux arbeitet. Der
-Windows-Zweig sähe dann unterstützt aus, ohne es zu sein: genau die Klasse
+ist absehbar, welche Seite driftet, weil der Betreiber auf Linux arbeitet. Die
+pwsh-Bahn sähe dann unterstützt aus, ohne es zu sein: genau die Klasse
 stiller Fehler, gegen die [`doku/einrichtung.md`](../doku/einrichtung.md) an
 mehreren Stellen anschreibt.
 
@@ -111,14 +111,14 @@ genauso dünn und sind mechanische Arbeit.
   Für den Aufwand heißt das: Die Laufzeit ist einfacher zu portieren als
   angenommen, der **Installer** schwerer. Die Doku-Aussage gehört in Stufe 5
   richtiggestellt.
-- **`python3 -c`-Einbettungen.** 13 Stellen in `lib.sh`. Sie entfallen im
-  PowerShell-Zweig ersatzlos, siehe unten.
+- **`python3 -c`-Einbettungen.** 13 Stellen in `lib.sh`. Sie entfallen auf der
+  pwsh-Bahn ersatzlos, siehe unten.
 
 ---
 
 ## 4. Die Plattform-Naht
 
-Die vollständige Liste der Stellen, an denen die beiden Zweige technisch
+Die vollständige Liste der Stellen, an denen die beiden Bahnen technisch
 auseinandergehen. Alles, was hier nicht steht, ist eine reine
 Syntax-Übersetzung.
 
@@ -178,7 +178,7 @@ Die 57 Tests zerfallen in fünf Klassen mit unterschiedlicher Behandlung:
 | Klasse | Anzahl | Behandlung |
 |---|---|---|
 | **Rein Python** — Werkzeuge, Doku, Briefings | 24 | Unberührt. Laufen auf beiden Plattformen wie heute |
-| **Statische Quelltextprüfung** — lesen `.sh`-Text und prüfen auf ein Muster | 24 | Die aufwendigste Klasse. Das geprüfte *Idiom* wird je Shell in einer Tabelle hinterlegt (`cd "$(dirname "$0")"` ↔ `Set-Location $PSScriptRoot`), der Test läuft einmal je Zweig gegen die passende Datei |
+| **Statische Quelltextprüfung** — lesen `.sh`-Text und prüfen auf ein Muster | 24 | Die aufwendigste Klasse. Das geprüfte *Idiom* wird je Shell in einer Tabelle hinterlegt (`cd "$(dirname "$0")"` ↔ `Set-Location $PSScriptRoot`), der Test läuft einmal je Bahn gegen die passende Datei |
 | **Entrypoint-Start** — starten `./ralph.sh` o. Ä. | 16 | Harnisch wählt `.sh` oder `.ps1`. Test-Rumpf unverändert |
 | **`kit-test.sh` / `install.sh`** | 8 | Warten auf Stufe 2, dann analog |
 | **`lib.sh` sourcen und eine Funktion rufen** | 6 | Der Kern. Braucht eine **neutrale Aufrufform** statt eingebetteter Shell-Fragmente (siehe unten) |
@@ -342,8 +342,8 @@ wenn sie hält.
 | R1 | `claude -p --output-format json` läuft unter nativem Windows **headless mit dem Abo** | **Unbelegt.** Die tragende Annahme des ganzen Plans | Die Stufen 3–5 sind wirkungslos. Es ist eine Auth-, keine Plattformfrage — dann wäre der API-Key-Weg der einzige, und die Kostenlage ändert sich grundlegend |
 | R2 | PowerShell kann das `claude.cmd`-Shim aus einem Skript starten | Unbelegt, aber gut beherrschbar über `Get-Command` | Aufwand, kein Blocker |
 | R3 | `FileStream` mit `FileShare::None` sperrt über Prozessgrenzen zuverlässig | Sehr wahrscheinlich (OS-durchgesetzt), Probe in Stufe 1 | Es gäbe keine belastbare Sperre unter Windows — die Vollautomatik dürfte dort nur einzeln laufen |
-| R4 | Die 24 statischen Quelltexttests lassen sich über eine Idiom-Tabelle koppeln | Wahrscheinlich; einzelne Tests prüfen womöglich Bash-Eigenheiten ohne PowerShell-Entsprechung | Solche Tests bekommen eine ausdrückliche `nur-bash`-Markierung. **Jede** Markierung ist ein Stück ungeprüfter Windows-Zweig und gehört in den Backlog, nicht in die Stille |
-| R5 | Der Windows-Zweig wird bei künftigen Feldlehren mitgezogen | Strukturell abgesichert über die Doppelbahn — aber nur, solange R4 nicht massenhaft greift | Der Zweig verrottet sichtbar statt unsichtbar. Das ist der Zweck der Konstruktion |
+| R4 | Die 24 statischen Quelltexttests lassen sich über eine Idiom-Tabelle koppeln | Wahrscheinlich; einzelne Tests prüfen womöglich Bash-Eigenheiten ohne PowerShell-Entsprechung | Solche Tests bekommen eine ausdrückliche `nur-bash`-Markierung. **Jede** Markierung ist ein Stück ungeprüfte pwsh-Bahn und gehört in den Backlog, nicht in die Stille |
+| R5 | Die pwsh-Bahn wird bei künftigen Feldlehren mitgezogen | Strukturell abgesichert über die Doppelbahn — aber nur, solange R4 nicht massenhaft greift | Die Bahn verrottet sichtbar statt unsichtbar. Das ist der Zweck der Konstruktion |
 
 **R1 zuerst prüfen.** Der Betreiber hat derzeit keinen Zugriff auf die
 Zielmaschine; `pruefe-windows.ps1` entsteht deshalb in Stufe 1 als
@@ -354,7 +354,7 @@ eigenständiges Artefakt und liegt bereit, sobald der Zugriff besteht.
 ## 9. Entschiedenes
 
 1. **Gleichwertigkeit wird gemessen, nicht geschwellt.** *(entschieden
-   2026-08-17)* Eine Zahl wie „ab fünf Markierungen gilt der Zweig als nicht
+   2026-08-17)* Eine Zahl wie „ab fünf Markierungen gilt die Bahn als nicht
    gleichwertig" wäre willkürlich und würde sofort verhandelt. Stattdessen
    berichtet **jeder** Testlauf die **Doppelbahn-Quote**: wie viele Tests auf
    beiden Bahnen liefen, wie viele die pwsh-Bahn übersprangen und wie viele
@@ -408,7 +408,7 @@ das ist der Zweck, nicht ein Mangel.
 **Nebenbefund:** [`BL-111`](backlog.md) — die `head -1`-Absicherung in
 `team_architekt_kaskade` trägt gegen `set -e`, aber nicht gegen
 `set -o pipefail`. Bewusst **nicht** in dieser Stufe gefixt: Stufe 1 sichert
-zu, den Bash-Zweig nicht anzutasten.
+zu, die Bash-Bahn nicht anzutasten.
 
 ### Stufe 2 — erledigt (2026-08-17)
 
@@ -419,7 +419,7 @@ zu, den Bash-Zweig nicht anzutasten.
 | Auth | [`scripts/team-auth-setup.ps1`](../scripts/team-auth-setup.ps1) | **neu.** `%APPDATA%\claude-team`, `Set-Acl` **mit Nachprüfung** statt wirkungslosem `chmod` |
 | Launcher | [`scripts/team-init.ps1`](../scripts/team-init.ps1) | **neu** (im Plan nicht aufgeführt, aber ohne ihn hat `-Verknuepfen` kein Ziel) |
 | Konfiguration | [`entry/team.config.ps1`](../entry/team.config.ps1) | **neu.** Vorlage mit denselben Platzhaltern; `Team-Wert` bildet Bashs `${VAR:-vorgabe}` ab |
-| Beide Zweige aus einer Quelle | [`install.sh`](../install.sh) | **geändert.** Kopiert jetzt `entry/*.sh`, `*.ps1` und `*.cmd` und füllt **beide** Konfigurationen |
+| Beide Bahnen aus einer Quelle | [`install.sh`](../install.sh) | **geändert.** Kopiert jetzt `entry/*.sh`, `*.ps1` und `*.cmd` und füllt **beide** Konfigurationen |
 | Gleichstands-Nachweis | [`kit-test.sh`](../kit-test.sh) Schritt 10/10 | **neu** (war für Stufe 5 vorgesehen — vorgezogen, weil die Zusicherung sonst ungeprüft bliebe) |
 
 **Abnahme erfüllt, und zwar schärfer als geplant.** Der Plan verlangte „auf
@@ -435,13 +435,13 @@ Weiter belegt (pwsh 7.4.6 unter Linux):
   dieselbe Zahl wie bei `install.sh`.
 - `install.ps1 -Update` gegen eine **mit `install.sh` erzeugte** Installation:
   78 Infrastruktur-Dateien ersetzt, Ledger-Zeile, Kaskadenstand `7` und ein
-  von Hand eingetragener Smoke-Test **unverändert**. Die beiden Zweige können
+  von Hand eingetragener Smoke-Test **unverändert**. Die beiden Bahnen können
   einander also updaten, ohne Projektdaten zu verlieren.
 - `kit-einrichten.ps1 -NurPruefen`: alle fünf Abschnitte, Exit 0.
 - `kit-test.sh`: 10/10 grün — **mit** pwsh (Gleichstand geprüft) und **ohne**
   pwsh (laut übersprungen, kein Fehler).
 
-**Was der Windows-Zweig hier besser macht als der Bash-Zweig:**
+**Was die pwsh-Bahn hier besser macht als die Bash-Bahn:**
 
 | | Bash | PowerShell |
 |---|---|---|
@@ -491,7 +491,7 @@ nachweisen.
 `team_lock`, Kindprozess wird abgewiesen (Exit 42, korrekte Meldung), nach
 `team_unlock` bekommt das Kind die Sperre. `FileShare::None` ist vom
 Betriebssystem durchgesetzt — anders als `flock`, das nur wirkt, solange alle
-mitspielen. Genau diese Problemklasse hat den Windows-Zweig ausgelöst.
+mitspielen. Genau diese Problemklasse hat die pwsh-Bahn ausgelöst.
 
 **Nebenbefund, behoben und unter Test gestellt.** Der naheliegende Weg,
 `& claude … > $Out`, hängt die Kodierung der Kostenlogs an die
@@ -564,7 +564,7 @@ gilt für die **Briefings** (340 Zeilen, `team_briefing` ist ein `cat`) — aber
 Einstiegsskript: 35 Zeilen in `redteam.sh`, je ~20 in `ralph.sh`, `frank.sh`,
 `axel.sh`. Diese ~140 Zeilen agentensteuernde Prosa liegen seit dieser Stufe
 **doppelt**. Wer eine Feldlehre nur in einer Fassung nachschärft, bekommt zwei
-Zweige, die verschiedene Agenten steuern — und **kein Test schlägt an**. Das
+Bahnen, die verschiedene Agenten steuern — und **kein Test schlägt an**. Das
 ist die einzige verbliebene Stelle, an der Drift unsichtbar wäre. Die
 Fix-Skizze steht im Backlog: ein Gleichstands-Test über einen `claude`-Stub,
 der seinen Prompt mitschreibt, statt zu arbeiten.
@@ -619,8 +619,8 @@ ausdrücklich, was es nicht geprüft hat.
 
 **Die Abnahme aus dem Plan bleibt offen.** Sie lautet: *„Ein echter, bezahlter
 Lauf einer Rolle auf der Zielmaschine, mit Ledger-Zeile."* Ohne Zugriff auf die
-W11-Maschine ist das nicht einlösbar. Damit ist der Windows-Zweig **gebaut,
-aber nicht abgenommen** — und genau so steht er im Belegstand der Doku.
+W11-Maschine ist das nicht einlösbar. Damit ist die pwsh-Bahn **gebaut,
+aber nicht abgenommen** — und genau so steht sie im Belegstand der Doku.
 
 ### Torbedingung — weiterhin offen
 
@@ -632,7 +632,7 @@ gebaut.
 
 ## 12. Erster Kontakt mit der Zielmaschine (2026-08-18) — BL-113
 
-Der Zweig ist zum ersten Mal auf einer echten Windows-11-Enterprise-VM
+Die Bahn ist zum ersten Mal auf einer echten Windows-11-Enterprise-VM
 angefasst worden. Ergebnis in einem Satz: **Er hat es nicht bis zur ersten
 ausgeführten Zeile geschafft.**
 
@@ -647,7 +647,8 @@ Unexpected token 'wird' in expression or statement.
 Zehn solche Fehler, **keiner davon echt**. Windows PowerShell 5.1 liest eine
 Datei ohne BOM in der ANSI-Codepage; `—` (UTF-8 `E2 80 94`) wird dabei zu
 `â€"`, dessen letztes Zeichen U+201D ist — für PowerShell eine gültige
-Stringgrenze. 443 Gedankenstriche im Zweig, jeder eine Sollbruchstelle.
+Stringgrenze. 443 Gedankenstriche in den Dateien der pwsh-Bahn, jeder
+eine Sollbruchstelle.
 Behoben, begründet und unter Test: **BL-113** im
 [Backlog-Archiv](backlog-archiv.md).
 
@@ -672,7 +673,7 @@ Die Lehre für die weiteren Stufen ist deshalb nicht „mehr testen", sondern ei
 zweite Sorte Prüfung: **Was die Zielmaschine anders LIEST statt anders TUT,
 prüft man an den Bytes, nicht am Verhalten.** `test_bl113_bom_regel.py` sieht
 sich Dateianfänge an und läuft ohne PowerShell — deshalb greift es auch dort,
-wo der Zweig gar nicht laufen kann.
+wo die Bahn gar nicht laufen kann.
 
 Kandidaten derselben Bauart, noch ungeprüft: die OEM-Codepage der Konsole
 (Kästchenzeichen und `✓` in der Ausgabe), `$OutputEncoding` bei Pipes zwischen

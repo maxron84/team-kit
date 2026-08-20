@@ -1,7 +1,7 @@
 ﻿# Bahn: pwsh | Gegenstueck: kit-einrichten.sh
 <#
   kit-einrichten.ps1 — die Vorflug-Pruefung zwischen `git clone` und
-  `install.ps1`, fuer den nativen Windows-Zweig.
+  `install.ps1`, fuer die pwsh-Bahn.
 
   Gegenstueck zu kit-einrichten.sh. Fuenf Abschnitte, dieselbe Reihenfolge,
   dieselbe Haltung: PROBEN STATT VORAUSSETZEN. Die Heuristik erklaert den
@@ -12,7 +12,7 @@
 
   1. KEIN flock. Unter Windows gibt es das nicht. An seine Stelle tritt eine
      ZWEI-PROZESS-PROBE auf [System.IO.FileStream] mit FileShare::None. Das
-     ist strenger als der Bash-Zweig prueft: Dort wird `flock -n` einmal im
+     ist strenger als die Bash-Bahn prueft: Dort wird `flock -n` einmal im
      eigenen Prozess versucht, was eine kooperative Sperre kaum belasten kann.
 
   2. STATT /mnt/c: Netzlaufwerke und Synchronisationsordner. Der teuerste
@@ -55,7 +55,7 @@ $script:Warnungen = 0
 function Team-CfgDir {
     # %APPDATA% ist der richtige Ort unter Windows. Der Rueckfall haelt das
     # Skript auf Nicht-Windows lauffaehig und zeigt dort auf DIESELBE Ablage,
-    # die der Bash-Zweig benutzt — eine Maschine, eine Auth-Konfiguration.
+    # die die Bash-Bahn benutzt — eine Maschine, eine Auth-Konfiguration.
     # Bewusst in jedem Bootstrap-Skript einzeln: Sie duerfen von team/lib.psm1
     # nicht abhaengen, denn sie laufen, BEVOR es die Bibliothek gibt.
     if ($env:APPDATA) { return (Join-Path $env:APPDATA 'claude-team') }
@@ -94,7 +94,7 @@ if ($IsWindows -eq $false) {
     # ein irrtuemlicher Aufruf unter Linux soll erklaert werden, nicht
     # abgewiesen. Der Bash-Weg ist dort der richtige.
     Warnung "Das hier ist nicht Windows." @(
-        "Dieses Skript richtet den NATIVEN Windows-Zweig ein.",
+        "Dieses Skript richtet die pwsh-Bahn ein (Windows ohne WSL).",
         "Unter Linux ist bash kit-einrichten.sh der richtige Weg."
     )
 } else {
@@ -177,7 +177,7 @@ if (-not $script:PythonBefehl) {
 }
 
 # KEIN flock-Check — es gibt das unter Windows nicht. Die Zusicherung, die es
-# im Bash-Zweig traegt, wird in 3/5 geprobt statt hier abgehakt.
+# auf der Bash-Bahn traegt, wird in 3/5 geprobt statt hier abgehakt.
 
 if (Get-Command pytest -ErrorAction SilentlyContinue) {
     Ok "pytest $((pytest --version 2>&1 | Select-Object -First 1))"
@@ -210,7 +210,7 @@ if ($claude) {
 # --------------------------------------------------------- 3/5 Lage des Klons
 Kopf "3/5 — Lage des Klons"
 
-# a) Zeilenenden. Fuer den Windows-Zweig zaehlen .cmd (muessen CRLF sein) und
+# a) Zeilenenden. Fuer die pwsh-Bahn zaehlen .cmd (muessen CRLF sein) und
 #    .ps1 (LF ist richtig und schadet nicht). Geprueft wird der Fall, der
 #    wirklich weh tut: ein .cmd mit reinem LF verhaelt sich sporadisch falsch.
 $cmdLf = @()

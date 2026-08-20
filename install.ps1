@@ -53,7 +53,7 @@ $Interaktiv = -not $NichtInteraktiv -and -not [Console]::IsInputRedirected
 function Team-CfgDir {
     # %APPDATA% ist der richtige Ort unter Windows. Der Rueckfall haelt das
     # Skript auf Nicht-Windows lauffaehig und zeigt dort auf DIESELBE Ablage,
-    # die der Bash-Zweig benutzt — eine Maschine, eine Auth-Konfiguration.
+    # die die Bash-Bahn benutzt — eine Maschine, eine Auth-Konfiguration.
     # Bewusst in jedem Bootstrap-Skript einzeln: Sie duerfen von team/lib.psm1
     # nicht abhaengen, denn sie laufen, BEVOR es die Bibliothek gibt.
     if ($env:APPDATA) { return (Join-Path $env:APPDATA 'claude-team') }
@@ -120,7 +120,7 @@ function Team-Kodierung {
       erreicht. Der Anwender sieht zehn Syntaxfehler statt eines Hinweises.
 
       Unter Linux ist das nicht messbar: pwsh 7 liest UTF-8 ohne BOM korrekt.
-      Der ganze Windows-Zweig ist gegen pwsh 7 gefahren worden und blieb
+      Die ganze pwsh-Bahn ist gegen pwsh 7 gefahren worden und blieb
       trotzdem gruen. Deshalb ist die Regel jetzt eine Pruefung (kit-test.sh
       Schritt 10) und nicht nur ein Kommentar.
     #>
@@ -273,7 +273,7 @@ function Schreibe {
 
 function Kopiere-Infrastruktur {
     <#
-      Die Dateien, die BEIDE Zweige ausmachen. Aufgerufen von Erstinstallation
+      Die Dateien, die BEIDE Bahnen ausmachen. Aufgerufen von Erstinstallation
       und Update — damit kann keiner der beiden Wege eine Datei vergessen, die
       der andere kennt.
     #>
@@ -359,7 +359,7 @@ if ($Update) {
     # Projektwerte aus der INSTALLIERTEN Konfiguration lesen, nicht aus den
     # Defaults — sonst bekaemen die Rollen-Briefings die falschen Pfade und
     # damit eine falsche Guard-Grenze. Gelesen wird die .sh-Fassung, weil sie
-    # in JEDER Installation liegt (auch in einer, die vor dem Windows-Zweig
+    # in JEDER Installation liegt (auch in einer, die vor der pwsh-Bahn
     # entstanden ist).
     $konf = @{}
     foreach ($zeile in [System.IO.File]::ReadAllLines($configSh)) {
@@ -735,7 +735,7 @@ Setze-Werte $Projekt $Produktivcode $TestOrdner $PlanOrdner $SmokeTest `
 Kopf "A.2 — Dateien installieren"
 Kopiere-Infrastruktur
 $anzahlTests = @(Get-ChildItem (Join-Path $KIT 'team\tests') -Filter 'test_*.py' -File).Count
-Gruen "  [ok] Entrypoints (Wurzel, beide Zweige) + team/ (lib, tools, prompts, $anzahlTests Tests)"
+Gruen "  [ok] Entrypoints (Wurzel, beide Bahnen) + team/ (lib, tools, prompts, $anzahlTests Tests)"
 
 # ------------------------------------------------------------- A.0 Bootstrap
 Kopf "A.0 — Bootstrap-Dateien"

@@ -1,7 +1,7 @@
 """Stufe 3: Die Kostenlogs muessen fuer Python lesbar bleiben — auf BEIDEN Bahnen.
 
 WARUM DIESER TEST EXISTIERT
-    Der PowerShell-Zweig schreibt die Kostenlogs, die anschliessend
+    Die pwsh-Bahn schreibt die Kostenlogs, die anschliessend
     team/tools/kosten.py mit `json.load` liest. Damit haengen zwei
     Implementierungen an EINER Datei, und ihre Kodierung ist die Naht.
 
@@ -27,7 +27,7 @@ WARUM DIESER TEST EXISTIERT
 WARUM UEBER DEN DRY-RUN GEPRUEFT WIRD
     TEAM_DRY_RUN=1 schreibt dasselbe JSON-Format ohne CLI-Aufruf und ohne
     Kosten. Der echte Pfad ist damit nicht abgedeckt — aber die Kodierung
-    entsteht in beiden Zweigen an derselben Stelle, und ein Test, der Geld
+    entsteht auf beiden Bahnen an derselben Stelle, und ein Test, der Geld
     kostet, wird nicht gefahren.
 """
 import json

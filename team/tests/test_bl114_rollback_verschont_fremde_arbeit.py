@@ -217,7 +217,7 @@ def test_kein_einstiegsskript_rollt_mehr_blanko_zurueck(skript):
     """Der Waechter gegen den Rueckfall — und gegen die halbe Reparatur.
 
     Der Eintrag nannte urspruenglich nur `frank.sh`; betroffen waren beide
-    Zweige und drei Rollen. Ein Fix in einer Fassung erzeugt genau die Drift,
+    Bahnen und drei Rollen. Ein Fix in einer Fassung erzeugt genau die Drift,
     vor der BL-112 warnt, deshalb steht hier jede Datei einzeln.
     """
     wurzel = Path(__file__).resolve().parents[2]

@@ -266,7 +266,7 @@ Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 
 ## Befehle im Überblick
 
-| Linux / WSL | Windows | Wirkung |
+| Bash-Bahn (Linux · WSL) | pwsh-Bahn (Windows ohne WSL) | Wirkung |
 |---|---|---|
 | `./vollautomatik.sh` | `.\vollautomatik.cmd` | ganze Kaskade automatisch |
 | `./halbautomatik.sh [rolle]` | `.\halbautomatik.cmd [rolle]` | ein Schritt, Entscheidung bei dir |
@@ -276,7 +276,9 @@ Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 | `python3 team/tools/beutebuch.py list` | *(gleich)* | alle Funde mit Status |
 
 **Welche Spalte für dich gilt:** die linke, wenn du unter Linux oder in einer
-WSL-Distro arbeitest; die rechte, wenn du Windows **ohne** WSL benutzt. Beide
+WSL-Distro arbeitest; die rechte, wenn du Windows **ohne** WSL benutzt. Nicht
+das Betriebssystem entscheidet, sondern die Shell — WSL ist Windows und steht
+trotzdem links. Beide
 Spalten tun dasselbe — es sind zwei Schreibweisen, kein Funktionsunterschied.
 Die letzte Zeile steht bewusst als *(gleich)* da: Die Werkzeuge sind Python und
 werden auf beiden Wegen identisch aufgerufen.

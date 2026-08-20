@@ -61,7 +61,7 @@ function Status-Einmal {
         [Console]::Out.WriteLine('            → Bau abgeschlossen (Ralph hat Feierabend).')
     }
 
-    # Sperre — hier zeigt sich der Windows-Zweig von seiner besseren Seite: Der
+    # Sperre — hier zeigt sich die pwsh-Bahn von ihrer besseren Seite: Der
     # Oeffnungsversuch mit FileShare::None ist eine echte Probe, waehrend die
     # Bash-Fassung auf ein kooperatives flock angewiesen ist.
     $laeuft = $false

@@ -202,7 +202,7 @@ if [ "$UPDATE" -eq 1 ]; then
             case "$(basename "$f")" in
                 ralph.sh|frank.sh|axel.sh|harry.sh|marv.sh) ;;
                 vollautomatik.sh|halbautomatik.sh|team-status.sh|team-test.sh|team.config.sh) ;;
-                # Der Windows-Zweig: eigene Entrypoints des Kits, kein
+                # Die pwsh-Bahn: eigene Entrypoints des Kits, kein
                 # Projektcode. Ohne diese Zeilen meldete der Installer die
                 # eigenen Dateien als "ungeprueft in der Wurzel" — eine
                 # Warnung, die bei jedem Aufruf erscheint, erzieht zum
@@ -292,7 +292,7 @@ PY
 
     # Entrypoints — team.config.sh UND team.config.ps1 sind AUSGENOMMEN: sie
     # tragen die Projektwerte (Smoke-Test!) und sind damit Projektdatum, nicht
-    # Infrastruktur. Beide Zweige werden aktualisiert; ein Projekt soll nach
+    # Infrastruktur. Beide Bahnen werden aktualisiert; ein Projekt soll nach
     # einem Update nicht auf einer Haelfte veralten.
     for f in "$KIT"/entry/*.sh "$KIT"/entry/*.ps1 "$KIT"/entry/*.cmd; do
         [ -e "$f" ] || continue
@@ -778,9 +778,9 @@ PY
 
 # Entrypoints in die Repo-Wurzel — der Strippenzieher tippt sie direkt
 # (Ablage-Konvention aus dem Feld: Einstiegspunkte sichtbar oben).
-# BEIDE Zweige werden installiert, auch wenn dieser Installer unter Linux
+# BEIDE Bahnen werden installiert, auch wenn dieser Installer unter Linux
 # laeuft und den Windows-Teil hier niemand braucht. Der Grund ist die
-# Zusicherung, auf der der Windows-Zweig ruht: team.config.sh und
+# Zusicherung, auf der die pwsh-Bahn ruht: team.config.sh und
 # team.config.ps1 sind ZWEI GENERATE EINER QUELLE (denselben neun Antworten),
 # keine zwei gepflegten Dateien. Installierte nur install.ps1 den
 # PowerShell-Teil, haette ein auf Linux eingerichtetes Projekt unter Windows

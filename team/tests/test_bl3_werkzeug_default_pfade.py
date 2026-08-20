@@ -54,7 +54,7 @@ def test_jeder_entrypoint_wechselt_ins_skriptverzeichnis(schale):
     Die Zuordnung steht in der Schale (schale.wechsel_ins_skriptverzeichnis),
     nicht hier — sonst muesste jeder statische Test seine eigene
     Uebersetzungstabelle fuehren, und die erste, die jemand vergisst, ist eine
-    stille Luecke im Windows-Zweig.
+    stille Luecke auf der pwsh-Bahn.
     """
     idiom = schale.wechsel_ins_skriptverzeichnis
     gefunden = 0

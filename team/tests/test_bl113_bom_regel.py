@@ -1,8 +1,8 @@
 """BL-113: Die Kodierungsregel — PowerShell-Quelltext MIT BOM, alles andere OHNE.
 
 WARUM DIESER TEST EXISTIERT
-    Auf der ersten echten Windows-Maschine startete keine einzige Datei des
-    nativen Zweigs. `kit-einrichten.ps1` brach mit zehn Syntaxfehlern ab:
+    Auf der ersten echten Windows-Maschine startete keine einzige Datei der
+    pwsh-Bahn. `kit-einrichten.ps1` brach mit zehn Syntaxfehlern ab:
 
         Unexpected token 'wird' in expression or statement.
         Missing argument in parameter list.
@@ -26,7 +26,7 @@ WAS DARAN DIE EIGENTLICHE LEHRE IST
     Wall aus Folgefehlern, die alle auf harmlose deutsche Prosa zeigen.
 
     Und er war unter Linux nicht messbar. pwsh 7 liest UTF-8 ohne BOM korrekt,
-    auf jeder Plattform. Der gesamte Windows-Zweig ist gegen pwsh 7 gefahren
+    auf jeder Plattform. Die gesamte pwsh-Bahn ist gegen pwsh 7 gefahren
     worden, kit-test.sh war gruen, die Doppelbahn lief — waehrend auf dem
     Ziel nichts startete. Ein Test, der nur die eigene Maschine kennt, kann
     das nicht finden. Ein Test, der die BYTES prueft, findet es ueberall.

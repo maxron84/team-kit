@@ -1,6 +1,6 @@
 ﻿# Bahn: pwsh | Gegenstueck: keines (eigenstaendige Vorflug-Probe, laeuft allein auf der Zielmaschine)
 <#
-  pruefe-windows.ps1 — Vorflug-Probe fuer den nativen Windows-Zweig.
+  pruefe-windows.ps1 — Vorflug-Probe fuer die pwsh-Bahn.
 
   WAS DAS HIER IST
     Eigenstaendige Probe, die BEANTWORTET, was der Bauplan
@@ -69,7 +69,7 @@ function Fehler {
 }
 function Info($text) { Write-Host "        $text" -ForegroundColor DarkGray }
 
-Write-Host "=== T.E.A.M. — Probe fuer den nativen Windows-Zweig ===" -ForegroundColor White
+Write-Host "=== T.E.A.M. — Probe fuer die pwsh-Bahn ===" -ForegroundColor White
 
 # ---------------------------------------------------------------- 1/5 Umgebung
 Kopf "1/5 — Umgebung"
@@ -81,7 +81,7 @@ if ($psv.Major -ge 7) {
     # Kein Abbruch: Die Probe selbst laeuft auch unter 5.1, und ihr Befund ist
     # dann besonders interessant — er sagt, was die Maschine OHNE Nachruesten
     # kann. Der Bauplan setzt pwsh 7 voraus.
-    Fehler "PowerShell $psv — der Windows-Zweig setzt pwsh 7 voraus." @(
+    Fehler "PowerShell $psv — die pwsh-Bahn setzt pwsh 7 voraus." @(
         "Windows 11 bringt 5.1 mit; 7 wird daneben installiert, nicht darueber.",
         "  winget install --id Microsoft.PowerShell --source winget",
         "Danach diese Probe mit `pwsh` erneut fahren, nicht mit `powershell`."
@@ -95,11 +95,11 @@ try {
     Warnung "Betriebssystem nicht ermittelbar" @($_.Exception.Message)
 }
 
-# Nur Information: Ob WSL da ist, aendert am nativen Zweig nichts. Es steht
+# Nur Information: Ob WSL da ist, aendert an der pwsh-Bahn nichts. Es steht
 # hier, damit der Bericht die Maschine vollstaendig beschreibt.
 $wsl = Get-Command wsl.exe -ErrorAction SilentlyContinue
-if ($wsl) { Info "wsl.exe vorhanden (fuer den nativen Zweig ohne Belang)" }
-else { Info "kein wsl.exe — der native Zweig braucht auch keines" }
+if ($wsl) { Info "wsl.exe vorhanden (fuer die pwsh-Bahn ohne Belang)" }
+else { Info "kein wsl.exe — die pwsh-Bahn braucht auch keines" }
 
 # ------------------------------------------------------------- 2/5 Bordmittel
 Kopf "2/5 — Bordmittel"
