@@ -135,9 +135,17 @@ try {
     # den echten.
     & git add -A | Out-Null
     & git commit -q -m 'chore: T.E.A.M. eingerichtet' | Out-Null
-    if (Get-Command pytest -ErrorAction SilentlyContinue) {
+    # BL-124: Modulaufruf bevorzugt — siehe team-test.ps1.
+    $ptBefehl = $null
+    foreach ($k in @('python', 'python3', 'py')) {
+        if (-not (Get-Command $k -ErrorAction SilentlyContinue)) { continue }
+        try { & $k -m pytest --version 2>$null | Out-Null } catch { continue }
+        if ($LASTEXITCODE -eq 0) { $ptBefehl = $k; break }
+    }
+    if ($ptBefehl -or (Get-Command pytest -ErrorAction SilentlyContinue)) {
         $log = Join-Path $basis 'pytest.log'
-        & pytest -q team/tests *> $log
+        if ($ptBefehl) { & $ptBefehl -m pytest -q team/tests *> $log }
+        else           { & pytest -q team/tests *> $log }
         $rc = $LASTEXITCODE
         $zeile = (Select-String -Path $log -Pattern '\d+ passed' | Select-Object -First 1)
         if ($rc -eq 0) { Gruen "grün ($($zeile.Matches[0].Value))" }

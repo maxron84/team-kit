@@ -198,7 +198,21 @@ if (-not $script:PythonBefehl) {
 # KEIN flock-Check — es gibt das unter Windows nicht. Die Zusicherung, die es
 # auf der Bash-Bahn traegt, wird in 3/5 geprobt statt hier abgehakt.
 
-if (Get-Command pytest -ErrorAction SilentlyContinue) {
+# BL-124: als MODUL suchen, nicht nur als Befehl. Unter Windows legt
+# `pip install pytest` die pytest.exe in ein Scripts-Verzeichnis, das oft nicht
+# im PATH steht — bei `--user` warnt pip beim Installieren sogar davor. Wer nur
+# den Befehl sucht, meldet "fehlt" und empfiehlt danach genau die Installation,
+# die es schon gibt. Der Modulaufruf braucht den PATH-Eintrag nicht.
+$script:PytestAufruf = $null
+foreach ($k in $script:PythonKandidaten) {
+    if (-not (Get-Command $k -ErrorAction SilentlyContinue)) { continue }
+    try { & $k -m pytest --version 2>$null | Out-Null } catch { continue }
+    if ($LASTEXITCODE -eq 0) { $script:PytestAufruf = $k; break }
+}
+if ($script:PytestAufruf) {
+    $pv = (& $script:PytestAufruf -m pytest --version 2>&1 | Select-Object -First 1)
+    Ok "$pv (via: $script:PytestAufruf -m pytest)"
+} elseif (Get-Command pytest -ErrorAction SilentlyContinue) {
     Ok "pytest $((pytest --version 2>&1 | Select-Object -First 1))"
 } else {
     Warnung "pytest fehlt." @(

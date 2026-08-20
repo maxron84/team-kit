@@ -270,6 +270,34 @@ function Finde-Python {
     return $null
 }
 
+function Finde-Pytest {
+    <#
+      BL-124. Bevorzugt wird der MODULAUFRUF ueber denselben Interpreter, unter
+      dem auch team/tools/ laeuft. Zwei Gruende, und der zweite ist der, der im
+      Feld zuschlug:
+
+      1. Eine pytest.exe im PATH kann zu einer ANDEREN Python-Installation
+         gehoeren. Dann testet man etwas anderes, als man betreibt.
+      2. Unter Windows legt `pip install pytest` die ausfuehrbare Datei in ein
+         Scripts-Verzeichnis, das oft NICHT im PATH steht — bei `--user` warnt
+         pip beim Installieren sogar davor. Get-Command findet dann nichts,
+         waehrend das Modul laengst installiert ist, und der Installer meldete
+         "pytest nicht installiert — Regressionstests uebersprungen".
+
+      Rueckgabe: @{ Befehl = ...; Vorab = @(...) } oder $null.
+    #>
+    $py = Finde-Python
+    if ($py) {
+        $ok = $false
+        try { & $py -m pytest --version 2>$null | Out-Null; $ok = ($LASTEXITCODE -eq 0) } catch { $ok = $false }
+        if ($ok) { return @{ Befehl = $py; Vorab = @('-m', 'pytest') } }
+    }
+    if (Get-Command pytest -ErrorAction SilentlyContinue) {
+        return @{ Befehl = 'pytest'; Vorab = @() }
+    }
+    return $null
+}
+
 function Python-Fuer-Config {
     # Was als {{PYTHON}} in team.config.ps1 landet. Faellt die Probe aus, wird
     # der Wert trotzdem gesetzt — aber die Luecke wird GENANNT statt verdeckt.
@@ -592,7 +620,8 @@ if ($Update) {
     Gelb "  [!] Die .sh-Entrypoints wurden NICHT geprueft — hier liegt keine bash."
     Gelb "      Sie sind mitinstalliert und gelten unveraendert aus dem Kit."
 
-    if (Get-Command pytest -ErrorAction SilentlyContinue) {
+    $pt = Finde-Pytest
+    if ($pt) {
         # OHNE die TEAM_*-Variablen, die dieser Prozess geerbt haben koennte:
         # Sonst gilt z. B. TEAM_DOMAENEN des Projekts auch fuer die Fixtures.
         $gemerkt = @{}
@@ -603,7 +632,8 @@ if ($Update) {
         try {
             Push-Location $Ziel
             $log = Join-Path ([System.IO.Path]::GetTempPath()) 'team-update-pytest.log'
-            & pytest -q team/tests *> $log
+            $vorab = $pt.Vorab
+            & $pt.Befehl @vorab -q team/tests *> $log
             if ($LASTEXITCODE -eq 0) {
                 $zeile = (Select-String -Path $log -Pattern '\d+ passed' | Select-Object -First 1)
                 Gruen "  [ok] Regressionstests gruen ($($zeile.Matches[0].Value))"
@@ -1012,11 +1042,13 @@ if (-not $py) {
     else { Rot "  [x] Python-Werkzeuge fehlerhaft"; $fehler = 1 }
 }
 
-if (Get-Command pytest -ErrorAction SilentlyContinue) {
+$pt = Finde-Pytest
+if ($pt) {
     Push-Location $Ziel
     try {
         $log = Join-Path ([System.IO.Path]::GetTempPath()) 'team-init-pytest.log'
-        & pytest -q team/tests *> $log
+        $vorab = $pt.Vorab
+        & $pt.Befehl @vorab -q team/tests *> $log
         if ($LASTEXITCODE -eq 0) {
             $zeile = (Select-String -Path $log -Pattern '\d+ passed' | Select-Object -First 1)
             Gruen "  [ok] Regressionstests gruen ($($zeile.Matches[0].Value))"
@@ -1026,7 +1058,8 @@ if (Get-Command pytest -ErrorAction SilentlyContinue) {
         }
     } finally { Pop-Location }
 } else {
-    Gelb "  - pytest nicht installiert — Regressionstests uebersprungen"
+    Gelb "  - pytest nicht gefunden — Regressionstests uebersprungen"
+    Gelb "    Gesucht als Modul (<python> -m pytest) UND als Befehl im PATH."
 }
 
 # ------------------------------------------------------------------ Abschluss

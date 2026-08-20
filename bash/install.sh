@@ -495,8 +495,24 @@ PY
     # Sonst gilt z. B. TEAM_DOMAENEN des Projekts auch fuer die Fixtures, und
     # jeder Test mit domaene="team" scheitert an einem Projekt, das diese
     # Domaene gar nicht fuehrt — ein Fehlalarm, der nur im Update auftraete.
-    if command -v pytest >/dev/null 2>&1; then
-        if (cd "$ZIEL" && unset "${!TEAM_@}" && pytest -q team/tests >/tmp/team-update-pytest.log 2>&1); then
+# team_pytest: Der Aufruf, mit dem pytest hier erreichbar ist (BL-124).
+# Bevorzugt der MODULAUFRUF ueber denselben Interpreter, unter dem auch
+# team/tools/ laeuft: Ein pytest im PATH kann zu einer anderen Installation
+# gehoeren, und bei `pip install --user` steht sein bin-Verzeichnis oft gar
+# nicht im PATH. Gibt nichts aus und liefert 1, wenn es pytest nicht gibt.
+team_pytest() {
+    local py
+    for py in python3 python py; do
+        command -v "$py" >/dev/null 2>&1 || continue
+        if "$py" -m pytest --version >/dev/null 2>&1; then
+            printf '%s -m pytest' "$py"; return 0
+        fi
+    done
+    command -v pytest >/dev/null 2>&1 && { printf 'pytest'; return 0; }
+    return 1
+}
+    if PYTEST_AUFRUF="$(team_pytest)"; then
+        if (cd "$ZIEL" && unset "${!TEAM_@}" && $PYTEST_AUFRUF -q team/tests >/tmp/team-update-pytest.log 2>&1); then
             gruen "  ✓ Regressionstests grün ($(grep -oE '[0-9]+ passed' /tmp/team-update-pytest.log | head -1))"
         else
             rot "  ✗ Regressionstests NICHT grün — Log: /tmp/team-update-pytest.log"
@@ -1012,15 +1028,16 @@ else
     rot "  ✗ Python-Werkzeuge fehlerhaft"; FEHLER=1
 fi
 
-if command -v pytest >/dev/null 2>&1; then
-    if (cd "$ZIEL" && pytest -q team/tests >/tmp/team-init-pytest.log 2>&1); then
+if PYTEST_AUFRUF="$(team_pytest)"; then
+    if (cd "$ZIEL" && $PYTEST_AUFRUF -q team/tests >/tmp/team-init-pytest.log 2>&1); then
         gruen "  ✓ Regressionstests grün ($(grep -oE '[0-9]+ passed' /tmp/team-init-pytest.log | head -1))"
     else
         gelb "  ! Regressionstests nicht vollständig grün — Log: /tmp/team-init-pytest.log"
         gelb "    $(tail -3 /tmp/team-init-pytest.log | head -1)"
     fi
 else
-    gelb "  · pytest nicht installiert — Regressionstests übersprungen"
+    gelb "  · pytest nicht gefunden — Regressionstests übersprungen"
+    gelb "    Gesucht als Modul (python3/python/py -m pytest) UND als Befehl im PATH."
 fi
 
 # ---------------------------------------------------------------- Abschluss

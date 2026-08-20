@@ -6,6 +6,44 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-124` — pytest war installiert, und das Kit meldete „nicht gefunden".**
+  ⚠️ **Feldbefund, dieselbe Windows-Maschine wie `BL-122` und `BL-123`.**
+  Gesucht wurde ein **Name im PATH**, statt die Fähigkeit zu proben.
+  `pip install pytest` legt die ausführbare Datei in ein Scripts- bzw.
+  bin-Verzeichnis, das oft nicht im PATH steht — bei `--user` warnt pip beim
+  Installieren sogar ausdrücklich davor. Das Modul ist dann da und
+  importierbar; der Befehl ist es nicht.
+
+  **Das Kit hat den Zustand selbst erzeugt.** `team-test.sh` empfahl wörtlich
+  `pip install --user pytest` — also genau die Installationsart, deren
+  Zielverzeichnis typischerweise fehlt — und meldete danach „pytest nicht
+  gefunden", zusammen mit derselben Empfehlung noch einmal. Wer ihr folgt,
+  landet in einer Schleife, aus der die Meldung nicht herausführt.
+
+  Die zweite, leisere Hälfte: Ein `pytest` im PATH kann zu einer **anderen**
+  Python-Installation gehören als das Python, unter dem `team/tools/` läuft.
+  Dann laufen die Tests unter einem anderen Interpreter als der Code, den sie
+  prüfen — grün, und trotzdem ohne Aussage. Der Modulaufruf über denselben
+  Interpreter schließt beides zugleich aus.
+
+  Behoben auf **beiden Bahnen** und an allen fünf Stellen, die pytest suchen:
+  `team-test.sh`/`.ps1`, die Selbstverifikation in `install.sh`/`.ps1` (sie
+  meldete „Regressionstests übersprungen", obwohl pytest da war), die
+  Vorflug-Prüfung in `kit-einrichten.sh`/`.ps1` und `kit-test.ps1`. Überall
+  gilt jetzt: erst `<python> -m pytest`, dann als **zweiter** Versuch ein
+  `pytest` im PATH, dessen Interpreter man nicht kennt. Die Meldung im
+  Fehlerfall sagt, dass **beide** Wege probiert wurden.
+
+  Ein `set -e`-Fallstrick in der eigenen Ergänzung mitentschärft: Eine
+  `&&`-Kette, deren erstes Glied im **Erfolgsfall** falsch ist, hätte
+  `kit-einrichten.sh` beendet. Jetzt ein `if`.
+
+  Unter Test: [`test_bl124_pytest_als_modul.py`](geteilt/tests/test_bl124_pytest_als_modul.py),
+  zwei Fälle — der Modulweg muss versucht werden, **und** kein Hinweis darf
+  `--user` empfehlen, ohne die PATH-Falle zu nennen. Gegenprobe gefahren:
+  `team-test.sh` aus `HEAD` zurückgespielt, **beide** Fälle fallen namentlich.
+
+
 - **`BL-123` — die neun `.cmd`-Aufrufer riefen `pwsh` blank auf.**
   ⚠️ **Feldbefund, dieselbe Windows-Maschine wie `BL-122`.** Fehlt PowerShell 7
   im PATH **genau dieser** cmd-Sitzung, war

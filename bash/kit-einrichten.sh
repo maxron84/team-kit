@@ -186,8 +186,25 @@ else
 fi
 
 # pytest: nur für die Testläufe nötig, nicht für den Betrieb der Rollen.
-if command -v pytest >/dev/null 2>&1; then
-    ok "pytest $(pytest --version 2>&1 | head -1 | awk '{print $2}')"
+# BL-124: als MODUL suchen, nicht nur als Befehl. `pip install --user pytest`
+# legt die ausfuehrbare Datei in ein bin-Verzeichnis, das oft nicht im PATH
+# steht — pip warnt beim Installieren sogar davor. Wer nur den Befehl sucht,
+# meldet "fehlt" und empfiehlt genau die Installation, die es schon gibt.
+PYTEST_AUFRUF=""
+for _py in python3 python py; do
+    command -v "$_py" >/dev/null 2>&1 || continue
+    if "$_py" -m pytest --version >/dev/null 2>&1; then
+        PYTEST_AUFRUF="$_py -m pytest"; break
+    fi
+done
+# Bewusst ein if statt einer &&-Kette: Unter `set -e` reisst eine Kette, deren
+# erstes Glied falsch ist, den ganzen Lauf mit — und falsch ist sie genau dann,
+# wenn oben schon etwas gefunden wurde. Also im Erfolgsfall.
+if [ -z "$PYTEST_AUFRUF" ] && command -v pytest >/dev/null 2>&1; then
+    PYTEST_AUFRUF="pytest"
+fi
+if [ -n "$PYTEST_AUFRUF" ]; then
+    ok "pytest $($PYTEST_AUFRUF --version 2>&1 | head -1 | awk '{print $2}') (via: $PYTEST_AUFRUF)"
 else
     warnung "pytest fehlt. ./team-test.sh im Zielprojekt und ./kit-test.sh hier" \
             "brauchen es; die Rollen selbst nicht." \
