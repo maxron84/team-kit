@@ -6,6 +6,45 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-121` — das Aufnahme-Interview fragte nach dem Produktivcode-Ordner,
+  prüfte aber nie, ob es ihn gibt, und legte ihn nie an.**
+  ⚠️ **Im Feld bestätigt**, auf einer Windows-Maschine: „die Ordner werden
+  automatisch erstellt, außer `src/`" — und nachgeschoben, in der
+  allgemeineren und schlimmeren Form: **auch ein eingegebener Name wird nicht
+  angelegt.** An `src/` war nichts besonderes; der Installer legte schlicht
+  keinen Produktivcode-Ordner an, egal wie er hieß.
+
+  Der Name wurde nur **eingesetzt** — in die Guard-Grenze, in den Prüfumfang,
+  in die Briefings der drei Read-Only-Rollen, in `team.config.sh`. Test- und
+  Plan-Ordner entstehen sehr wohl; der Produktivcode-Ordner war der einzige,
+  der ausfiel. Zwei stille Folgen: Im neuen Projekt zeigten Guard und
+  Prüfumfang nach der Installation auf einen Pfad, den es nicht gibt. Im
+  Bestandsprojekt wurde ein Tippfehler wortlos übernommen, und der erste
+  Bericht meldete „sauber" über einen leeren Suchraum — dieselbe Fehlerklasse
+  wie `BL-52`, nur eine Frage früher.
+
+  `src/` bleibt Standardvorschlag und die Frage bleibt eine Frage. Neu ist,
+  was **danach** passiert: Ist der Ordner da, wird er genommen. Ist er es
+  nicht, wird er **angelegt und das angesagt** — im Bestand aber erst,
+  nachdem die vorhandenen Wurzelordner zum Abschreiben gezeigt wurden, denn
+  dort ist Nichtexistenz eher ein Tippfehler als ein neues Projekt (dieselbe
+  Erwägung wie bei `kandidaten_ausserhalb()` für `BL-52`). Nicht-interaktiv
+  wird ohne Rückfrage angelegt, aber nicht wortlos.
+
+  **Die `.gitkeep`-Frage ist entschieden statt offengelassen:** Ein neu
+  angelegter leerer Ordner bekommt eine Platzhalterdatei. Ohne sie wäre er
+  nach dem Commit weg, den der nächste Schritt ausdrücklich verlangt
+  („Committen — VOR dem ersten Guard-Lauf"), und der Fehler wäre beim
+  nächsten Klon zurück. Dieselbe Lösung wie bei `ermittlungsakten/`.
+
+  Beide Bahnen. Gegenprobe in `kit-test.sh` Stufe 2, drei Zusicherungen:
+  `src/` existiert nach der Installation, ein **eigener** Name
+  (`TEAM_INIT_PRODUKTIVCODE=quelle/`) wird ebenso angelegt **und angesagt**,
+  und der Ordner überlebt einen echten `git commit`. Die Commit-Probe läuft in
+  einem eigenen Wegwerf-Repo, damit sie den Git-Stand nicht verändert, gegen
+  den die späteren Stufen prüfen.
+
+
 - **`BL-122` — auf der pwsh-Bahn war ein Exit-Code != 0 eine Ausnahme statt
   eines Werts. Die gesamte Fehlerbehandlung war damit unerreichbar.**
   ⚠️ **Feldbefund von einer echten Windows-Maschine.** `kit-einrichten.ps1`

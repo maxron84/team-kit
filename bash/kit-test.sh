@@ -111,6 +111,60 @@ else
     exit 1
 fi
 
+# BL-121: Der Produktivcode-Ordner muss NACH der Installation existieren.
+# Vorher wurde sein Name nur eingesetzt — in die Guard-Grenze, in den
+# Pruefumfang, in die Briefings der drei Read-Only-Rollen —, aber nie geprueft
+# und nie angelegt. Das Red Team prueft dann einen leeren Suchraum und der
+# erste Bericht meldet "sauber" ueber nichts.
+#
+# Drei Zusicherungen, und die dritte ist die, die im Feld gebrochen waere:
+# Ein LEERER Ordner ist fuer Git nicht vorhanden. Der Schritt direkt nach der
+# Installation heisst "Committen, VOR dem ersten Guard-Lauf" — ohne
+# Platzhalterdatei waere der Ordner nach dem naechsten Klon wieder weg.
+if [ ! -d "$ZIEL/src" ]; then
+    rot "  ✗ Produktivcode-Ordner src/ fehlt nach der Installation (BL-121)"
+    exit 1
+fi
+if [ ! -f "$ZIEL/src/.gitkeep" ]; then
+    rot "  ✗ src/ ist leer und ohne .gitkeep — der Ordner faellt beim ersten Commit weg"
+    exit 1
+fi
+gruen "  ✓ Produktivcode-Ordner src/ angelegt, mit .gitkeep"
+
+# Und dasselbe mit einem NICHT vorgegebenen Namen: An src/ ist nichts
+# besonderes, der Fehler traf jeden eingegebenen Ordner. Eigenes Wegwerf-Repo,
+# damit die Hauptinstallation unberuehrt bleibt.
+ZIEL2="$(mktemp -d -t team-kit-bl121.XXXXXX)"
+git -C "$ZIEL2" init -q
+git -C "$ZIEL2" config user.email "kit-test@localhost"
+git -C "$ZIEL2" config user.name  "Kit-Selbsttest"
+if ! TEAM_INIT_PRODUKTIVCODE="quelle/" bash "$KIT/bash/install.sh" "$ZIEL2" \
+        --nicht-interaktiv > "$ZIEL2/.install.log" 2>&1; then
+    rot "  ✗ install.sh mit TEAM_INIT_PRODUKTIVCODE schlug fehl:"
+    tail -20 "$ZIEL2/.install.log" >&2
+    exit 1
+fi
+if [ ! -d "$ZIEL2/quelle" ]; then
+    rot "  ✗ Eigener Produktivcode-Ordner 'quelle/' wurde nicht angelegt (BL-121)"
+    exit 1
+fi
+if ! grep -q 'ohne Rueckfrage, aber nicht ohne Ansage' "$ZIEL2/.install.log"; then
+    rot "  ✗ Der Installer legt 'quelle/' still an — nicht-interaktiv darf er das,"
+    echo "      aber nicht wortlos. Die Ansage fehlt im Log."
+    exit 1
+fi
+# Die Commit-Probe gehoert hierher und nicht ins Haupt-Repo: Ein Commit dort
+# wuerde den Git-Stand veraendern, gegen den die spaeteren Stufen pruefen.
+git -C "$ZIEL2" add -A >/dev/null 2>&1
+git -C "$ZIEL2" commit -q -m "test: Installationsstand" >/dev/null 2>&1
+if ! git -C "$ZIEL2" ls-files --error-unmatch quelle/.gitkeep >/dev/null 2>&1; then
+    rot "  ✗ 'quelle/' hat den Commit nicht ueberlebt — genau der Fall, den"
+    echo "      .gitkeep verhindern soll (BL-121)."
+    exit 1
+fi
+rm -rf "$ZIEL2"
+gruen "  ✓ Eigener Ordnername wird ebenso angelegt, angesagt und ueberlebt den Commit"
+
 kopf "3/11 — Ungefüllte Platzhalter suchen"
 # Ein übrig gebliebenes {{...}} heißt: Der Installer kennt die Datei nicht oder
 # der Platzhalter wurde umbenannt. Beides fällt sonst erst im Feld auf, wo die

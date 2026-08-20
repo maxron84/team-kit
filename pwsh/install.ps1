@@ -701,6 +701,91 @@ function Kandidaten-Ausserhalb {
     return ($namen -join ' ')
 }
 
+function Wurzel-Ordner {
+    # Abschreibhilfe fuer den Tippfehler-Fall (BL-121). Dieselbe Erwaegung wie
+    # bei Kandidaten-Ausserhalb: Eine Liste zum Abschreiben schlaegt jede
+    # Erklaerung.
+    $namen = @()
+    foreach ($e in (Get-ChildItem -LiteralPath $Ziel -Directory -Force -ErrorAction SilentlyContinue)) {
+        $n = $e.Name
+        if ($n.StartsWith('.')) { continue }
+        if ($n -in @('team', 'node_modules', '__pycache__', 'venv', 'dist', 'build', 'target')) { continue }
+        $namen += "$n/"
+    }
+    if ($namen.Count -gt 12) { return (($namen | Select-Object -First 12) -join ' ') + ' ...' }
+    return ($namen -join ' ')
+}
+
+function Produktivcode-Anlegen {
+    # Legt den Ordner an und sichert ihn gegen den naechsten Commit ab. Ein
+    # LEERER Ordner ist fuer Git nicht vorhanden — und der Schritt direkt nach
+    # der Installation heisst "Committen, VOR dem ersten Guard-Lauf". Ohne
+    # Platzhalter waere der Ordner nach dem naechsten Klon wieder weg und der
+    # Fehler von vorn da. Dieselbe Loesung wie bei ermittlungsakten/.
+    param([string]$Pfad)
+    $voll = Join-Path $Ziel $Pfad.TrimEnd('/', '\')
+    New-Item -ItemType Directory -Force -Path $voll | Out-Null
+    if (-not (Get-ChildItem -LiteralPath $voll -Force -ErrorAction SilentlyContinue)) {
+        New-Item -ItemType File -Force -Path (Join-Path $voll '.gitkeep') | Out-Null
+        return $true
+    }
+    return $false
+}
+
+function Produktivcode-Sichern {
+    <#
+      Guard-Grenze, Pruefumfang und die Briefings der drei Read-Only-Rollen
+      zeigen ab hier auf den Produktivcode-Ordner. Ein Name, den es nicht gibt,
+      ist deshalb kein Schoenheitsfehler: Das Red Team prueft dann einen leeren
+      Suchraum, und der erste Bericht meldet "sauber" ueber nichts. Vorher wurde
+      der Name nur eingesetzt, nie geprueft und nie angelegt (BL-121).
+
+      Im BESTAND ist ein nicht vorhandener Ordner eher ein Tippfehler als ein
+      neues Projekt. Deshalb wird nicht wortlos angelegt, sondern erst gezeigt,
+      was da ist — und angelegt wird trotzdem, wenn der Name so gewollt war.
+
+      Rueckgabe: der (moeglicherweise korrigierte) Ordnername.
+    #>
+    param([string]$Pfad)
+    while ($true) {
+        $voll = Join-Path $Ziel $Pfad.TrimEnd('/', '\')
+        if (Test-Path -LiteralPath $voll -PathType Container) {
+            Gruen "  [ok] Produktivcode-Ordner $Pfad ist vorhanden."
+            return $Pfad
+        }
+        if (-not $Interaktiv) {
+            if (Produktivcode-Anlegen $Pfad) {
+                Gelb "  [!] $Pfad gab es nicht — angelegt, mit .gitkeep."
+            } else {
+                Gelb "  [!] $Pfad gab es nicht — angelegt."
+            }
+            Gelb "      Nicht-interaktiv: ohne Rueckfrage, aber nicht ohne Ansage."
+            return $Pfad
+        }
+        Gelb "  [!] Den Ordner '$Pfad' gibt es in diesem Projekt nicht."
+        $vorhandene = Wurzel-Ordner
+        if ($vorhandene) {
+            Write-Host "      Hier liegen: $vorhandene"
+            Write-Host "      Ist der gesuchte dabei, tipp ihn ab — ein Tippfehler faellt"
+            Write-Host "      sonst erst auf, wenn das Red Team `"sauber`" ueber einen leeren"
+            Write-Host "      Ordner meldet."
+        } else {
+            Write-Host "      Das Projekt ist noch leer. Bei einem neuen Projekt ist das der Normalfall."
+        }
+        $neu = Read-Host "      Enter = '$Pfad' anlegen, oder anderen Namen eingeben"
+        if ([string]::IsNullOrWhiteSpace($neu)) {
+            if (Produktivcode-Anlegen $Pfad) {
+                Gruen "  [ok] $Pfad angelegt — mit .gitkeep, sonst faellt der leere Ordner"
+                Gruen "       bei dem Commit weg, den der naechste Schritt verlangt."
+            } else {
+                Gruen "  [ok] $Pfad angelegt."
+            }
+            return $Pfad
+        }
+        $Pfad = $neu.TrimEnd('/', '\') + '/'
+    }
+}
+
 Kopf "Aufnahme-Interview — neun Fragen"
 if ($Interaktiv) {
     Write-Host "  Hinter jeder Frage steht in [Klammern] eine Vorgabe. Enter nimmt sie an."
@@ -718,6 +803,7 @@ Erklaerung @("In welchem Ordner liegt dein Programmcode?",
              "Frank, der Reparateur. Ein Waechter setzt das durch: Fasst eine der",
              "drei den Ordner doch an, wird die Aenderung automatisch zurueckgenommen.")
 $Produktivcode = (Frage 'PRODUKTIVCODE' 'Ordner mit dem Programmcode' 'src/').TrimEnd('/', '\') + '/'
+$Produktivcode = Produktivcode-Sichern $Produktivcode
 
 Erklaerung @("Wohin duerfen die pruefenden Rollen Testdateien schreiben?",
              "Findet Harry einen Fehler, legt er hier den Test ab, der ihn zeigt.",

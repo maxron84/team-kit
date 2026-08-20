@@ -492,7 +492,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
   `team/lib.sh`); belegt ist er nicht. Ebenso wenig belegt ist bisher ein Lauf
   mit einem lokalen Open-Weights-Modell — das ist Ziel, nicht Zustand.
 - **Selbstverifikation**: `bash bash/kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 476 Tests — **zweimal**: einmal mit den
+  Wegwerf-Repo und fährt dort die 478 Tests — **zweimal**: einmal mit den
   Auslieferungswerten, einmal mit angepasster `team.config.sh` (Caps,
   Commit-Präfixe, zwei Domänen). Der zweite Lauf ist die Lehre aus `BL-58`: In
   einer frischen Installation stehen dieselben Werte wie in `team/lib.sh`, ein

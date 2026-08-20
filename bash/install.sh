@@ -601,6 +601,87 @@ kandidaten_ausserhalb() {
     printf '%s' "${ausgabe# }"
 }
 
+# wurzel_ordner: die Ordner, die im Zielprojekt schon existieren. Abschreibhilfe
+# fuer den Fall, dass der eingegebene Name ein Tippfehler ist (BL-121). Dieselbe
+# Erwaegung wie bei kandidaten_ausserhalb(): Eine Liste zum Abschreiben schlaegt
+# jede Erklaerung.
+wurzel_ordner() {
+    local eintrag name ausgabe="" n=0
+    for eintrag in "$ZIEL"/*/; do
+        [ -d "$eintrag" ] || continue
+        name="$(basename "$eintrag")"
+        case "$name" in
+            team|node_modules|__pycache__|venv|.venv|dist|build|target|.*) continue ;;
+        esac
+        n=$((n + 1))
+        [ "$n" -le 12 ] && ausgabe="$ausgabe ${name}/"
+    done
+    [ "$n" -gt 12 ] && ausgabe="$ausgabe …"
+    printf '%s' "${ausgabe# }"
+}
+
+# produktivcode_anlegen: legt den Ordner an und sichert ihn gegen den naechsten
+# Commit ab. Ein LEERER Ordner ist fuer Git nicht vorhanden — und der Schritt
+# direkt nach der Installation heisst "Committen, VOR dem ersten Guard-Lauf".
+# Ohne Platzhalter waere der Ordner nach dem naechsten Klon wieder weg und der
+# Fehler von vorn da. Dieselbe Loesung wie bei ermittlungsakten/ (BL-121).
+produktivcode_anlegen() {
+    mkdir -p "$ZIEL/${PRODUKTIVCODE%/}"
+    if [ -z "$(ls -A "$ZIEL/${PRODUKTIVCODE%/}" 2>/dev/null)" ]; then
+        : > "$ZIEL/${PRODUKTIVCODE%/}/.gitkeep"
+        return 0
+    fi
+    return 1
+}
+
+# produktivcode_sichern: Guard-Grenze, Pruefumfang und die Briefings der drei
+# Read-Only-Rollen zeigen ab hier auf ${PRODUKTIVCODE}. Ein Name, den es nicht
+# gibt, ist deshalb kein Schoenheitsfehler: Das Red Team prueft dann einen
+# leeren Suchraum, und der erste Bericht meldet "sauber" ueber nichts. Vorher
+# wurde der Name nur eingesetzt, nie geprueft und nie angelegt (BL-121).
+#
+# Im BESTAND ist ein nicht vorhandener Ordner eher ein Tippfehler als ein neues
+# Projekt. Deshalb wird nicht wortlos angelegt, sondern erst gezeigt, was da
+# ist — und angelegt wird trotzdem, wenn der Name so gewollt war.
+produktivcode_sichern() {
+    local vorhandene neu
+    while :; do
+        if [ -d "$ZIEL/${PRODUKTIVCODE%/}" ]; then
+            gruen "  ✓ Produktivcode-Ordner ${PRODUKTIVCODE} ist vorhanden."
+            return 0
+        fi
+        if [ "$INTERAKTIV" -eq 0 ]; then
+            if produktivcode_anlegen; then
+                gelb "  ! ${PRODUKTIVCODE} gab es nicht — angelegt, mit .gitkeep."
+            else
+                gelb "  ! ${PRODUKTIVCODE} gab es nicht — angelegt."
+            fi
+            gelb "    Nicht-interaktiv: ohne Rueckfrage, aber nicht ohne Ansage."
+            return 0
+        fi
+        gelb "  ! Den Ordner '${PRODUKTIVCODE}' gibt es in diesem Projekt nicht."
+        vorhandene="$(wurzel_ordner)"
+        if [ -n "$vorhandene" ]; then
+            echo "    Hier liegen: $vorhandene"
+            echo "    Ist der gesuchte dabei, tipp ihn ab — ein Tippfehler faellt sonst"
+            echo "    erst auf, wenn das Red Team "sauber" ueber einen leeren Ordner meldet."
+        else
+            echo "    Das Projekt ist noch leer. Bei einem neuen Projekt ist das der Normalfall."
+        fi
+        read -r -p "    Enter = '${PRODUKTIVCODE}' anlegen, oder anderen Namen eingeben: " neu || true
+        if [ -z "$neu" ]; then
+            if produktivcode_anlegen; then
+                gruen "  ✓ ${PRODUKTIVCODE} angelegt — mit .gitkeep, sonst faellt der leere"
+                gruen "    Ordner bei dem Commit weg, den der naechste Schritt verlangt."
+            else
+                gruen "  ✓ ${PRODUKTIVCODE} angelegt."
+            fi
+            return 0
+        fi
+        PRODUKTIVCODE="${neu%/}/"
+    done
+}
+
 kopf "Aufnahme-Interview — neun Fragen"
 if [ "$INTERAKTIV" -eq 1 ]; then
     echo "  Hinter jeder Frage steht in [Klammern] eine Vorgabe. Enter nimmt sie an."
@@ -618,6 +699,7 @@ erklaerung "In welchem Ordner liegt dein Programmcode?" \
            "drei den Ordner doch an, wird die Änderung automatisch zurückgenommen."
 frage PRODUKTIVCODE "Ordner mit dem Programmcode" "src/"
 PRODUKTIVCODE="${PRODUKTIVCODE%/}/"
+produktivcode_sichern
 
 erklaerung "Wohin dürfen die prüfenden Rollen Testdateien schreiben?" \
            "Findet Harry einen Fehler, legt er hier den Test ab, der ihn zeigt." \
