@@ -74,6 +74,35 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **`doku/faq.md` — ganze Fragen mit ganzer Antwort.** Die Doku beantwortete
+  bisher zwei Sorten Frage: *„wie geht der Weg?"* (`einrichtung.md`) und
+  *„was heißt diese Meldung?"* (die Fehlerbilder-Tabelle, eine Zeile je
+  Symptom). Eine dritte fiel durch: die Frage, deren Antwort **mehr als eine
+  Zeile** braucht, aber kein Bauentscheid ist und darum auch nicht nach
+  Anhang A gehört.
+
+  Erste Frage: **„Claude-CLI nicht gefunden — wie installiere ich sie?"** für
+  Linux, WSL und Windows nativ. Sie steht hier und nicht in der Tabelle, weil
+  die Antwort vier Dinge trennen muss, die im Feld ständig verwechselt
+  werden: die **Installationswege** (nativ, Paketverwaltung, npm — mit der
+  Entscheidungshilfe, wann welcher), der **PATH**, die **geerbte Umgebung**
+  (Terminal, IDE, `cron` — dieselbe Maschine, drei verschiedene PATHs) und
+  die **Auth**, die danach immer noch aussteht. Der teuerste Fehlschluss der
+  pwsh-Bahn hängt genau an dieser Trennung: Ein nicht auflösbares `claude`
+  sieht aus wie ein Auth-Fehler und ist keiner.
+
+  Der Abschnitt trägt einen eigenen **Belegstand**, weil er fremde Befehle
+  zitiert: Die Kit-Seite ist verifiziert, der npm-Weg unter Linux ist im
+  Betrieb, die native Installation und der apt-Weg sind aus der Herstellerdoku
+  **übernommen, nicht durchlaufen**. Fremde Befehle altern schneller als
+  dieses Repo — im Zweifel gilt die Herstellerdoku.
+
+  Verlinkt aus `README.md` (Doku-Tabelle und Ablage-Baum) und aus
+  `einrichtung.md` an den drei Stellen, an denen die Frage aufschlägt.
+  Mitgenommen: ein toter Anker in `einrichtung.md`
+  (`#die-einbindung--auf-beiden-plattformen-gleich`), der bei der Umbenennung
+  des Abschnitts auf *„auf allen Wegen dieselbe"* zurückgeblieben war.
+
 - **Die Bahn-Kennung — jede Skriptdatei sagt in Zeile 1, wo sie hingehört.**
   48 Dateien tragen `# Bahn: bash | Gegenstueck: ralph.ps1` (in `.cmd`:
   `rem …`). Reines ASCII und `|` statt Geviertstrich, weil dieselbe Zeile in

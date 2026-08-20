@@ -193,6 +193,10 @@ claude          # einmalig: /login → Konto wählen → /exit
 bash ~/Source/team-kit/bash/scripts/team-auth-setup.sh
 ```
 
+Das ist **einer** von mehreren Wegen; die native Installation des Herstellers
+und der apt-Weg stehen in der [FAQ](faq.md#claude-cli-nicht-gefunden--wie-installiere-ich-sie),
+zusammen mit den PATH-Fallen danach.
+
 `team-auth-setup.sh` ist idempotent. Es setzt `~/.config/claude-team/auth-mode`
 auf `abo`, holt einen eventuell im Shell-Profil liegenden API-Key **dort heraus**
 und legt ihn als geschützten Fallback nach `~/.config/claude-team/api-key`
@@ -200,7 +204,7 @@ und legt ihn als geschützten Fallback nach `~/.config/claude-team/api-key`
 
 ### 6. Einbinden
 
-Siehe [Die Einbindung](#die-einbindung--auf-beiden-plattformen-gleich).
+Siehe [Die Einbindung](#die-einbindung--auf-allen-wegen-dieselbe).
 
 ---
 
@@ -497,7 +501,8 @@ npm install -g @anthropic-ai/claude-code
 ```
 
 Danach **eine neue Sitzung öffnen** — PATH-Änderungen erreichen laufende
-Shells nicht.
+Shells nicht. Native Installation und WinGet als Alternativen: siehe
+[FAQ](faq.md#windows-nativ-ohne-wsl).
 
 > **Der teuerste Fehlschluss auf diesem Weg:** Unter Windows ist `claude` kein
 > Programm, sondern ein **`.cmd`-Shim**. Scheitert seine Auflösung, sieht das
@@ -663,6 +668,9 @@ Modell führt heute über `claude -p`.
 
 ## Fehlerbilder
 
+Eine Zeile je Symptom. Was mehr Platz braucht — etwa *„`claude` ist gar nicht
+installiert, wie komme ich dazu?"* — steht in der [FAQ](faq.md).
+
 | Symptom | Ursache | Abhilfe |
 |---|---|---|
 | `/usr/bin/env: bad interpreter` | CRLF-Zeilenenden (Klon aus Windows) | In der Distro neu klonen; `git config --global core.autocrlf input` |
@@ -683,7 +691,7 @@ Modell führt heute über `claude -p`.
 |---|---|---|
 | Wand aus `Unexpected token '…'` / `Missing argument in parameter list`, die auf deutsche Prosa zeigt | Kein Syntaxfehler: Windows PowerShell **5.1** liest eine `.ps1` ohne BOM in der ANSI-Codepage, `—` endet auf U+201D und schließt die Zeichenkette (BL-113) | Mit `pwsh` starten, nicht mit `powershell`. Zeigt der Klon die Fehler trotzdem, ist er älter als die BOM-Regel: `git pull` |
 | `… cannot be loaded because running scripts is disabled` | Ausführungsrichtlinie `Restricted`/`AllSigned` | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` — kein Administrator nötig |
-| `The term 'claude' is not recognized` | `claude` ist ein `.cmd`-Shim; PATH-Änderung hat die laufende Shell nicht erreicht | **Neue** pwsh-Sitzung öffnen. **Das ist KEIN Auth-Fehler** — nicht verwechseln |
+| `The term 'claude' is not recognized` | `claude` ist ein `.cmd`-Shim; PATH-Änderung hat die laufende Shell nicht erreicht | **Neue** pwsh-Sitzung öffnen. **Das ist KEIN Auth-Fehler** — nicht verwechseln. Bleibt es dabei: [FAQ](faq.md#sie-ist-installiert-der-lauf-findet-sie-trotzdem-nicht) |
 | `python` öffnet den Microsoft Store | Store-Platzhalter statt Interpreter | Echtes Python installieren; Gegenprobe `python -c "print(1)"` |
 | `Could not find file '…'` bei einem relativen Pfad | Ein Skript hat `Set-Location` gesetzt, aber `[System.IO.File]` folgt dem **Prozess**-Arbeitsverzeichnis, nicht der PowerShell-Position | Im Kit behoben (`Team-Pfad` in [`team/lib.psm1`](../pwsh/lib.psm1)); tritt eigener Code darauf, dieselbe Auflösung nutzen |
 | `.cmd` verhält sich sporadisch falsch (Labels, `goto`) | Batch-Datei mit reinem LF | `.gitattributes` erzwingt CRLF; ein Klon von vor dieser Regel: `git rm --cached -r .` und `git reset --hard` |

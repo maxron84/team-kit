@@ -72,6 +72,7 @@ die Bedienanleitung fürs Zielprojekt ist `TEAM.md`:
 | Datei | Für wen | Inhalt |
 |---|---|---|
 | **[doku/einrichtung.md](doku/einrichtung.md)** | **wer das Kit auf eine Maschine holt** | **Die Routine: Klonen, Bordmittel, WSL, IDE, Auth, Einbinden, Fehlerbilder, Belegstand** |
+| [doku/faq.md](doku/faq.md) | wer beim Aufsetzen hängt | Ganze Fragen statt Symptomzeilen — beginnend mit *Claude-CLI nicht gefunden* (Linux, WSL, Windows) |
 | [doku/anhang-a.md](doku/anhang-a.md) | wer wissen will, *warum* es so gebaut ist | Die Warum-Schicht: Bauentscheide und Feld-Betriebslehren (A.0–A.13) |
 | [doku/regel-inventar.md](doku/regel-inventar.md) | wer eine Regel der Vorlage ändert | Jede Regel als NORM/HERLEITUNG/HISTORIE, mit Träger und wörtlichem Zitat |
 | [CHANGELOG.md](CHANGELOG.md) | wer eine bestehende Installation nachzieht | Jede Änderung mit Begründung und Feldbeleg |
@@ -389,6 +390,8 @@ doku/einrichtung.md     Klonen und Einbinden — Linux und Windows mit WSL,
                         IDE- und Werkzeug-Beispiele, Fehlerbilder, Belegstand
 doku/regel-inventar.md  Jede Regel der Vorlage als NORM/HERLEITUNG/HISTORIE,
                         mit Träger und wörtlichem Zitat
+doku/faq.md             Ganze Fragen mit ganzer Antwort — Installation der
+                        Agenten-CLI, PATH-Fallen, was danach noch fehlt
 ```
 
 **In der Wurzel liegt kein einziges Skript** — nur README, CHANGELOG, LICENSE
