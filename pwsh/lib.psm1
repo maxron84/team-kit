@@ -37,6 +37,21 @@
   zweiter Zustandscode.
 #>
 
+# --- Native Befehle: Exit-Code statt Ausnahme ---------------------------------
+# BL-122, und hier wiegt es am schwersten. Team-ClaudeSchreiben ruft die
+# Agenten-CLI mit `&` auf und LIEST DEREN EXIT-CODE — daran haengen die
+# 429-Mechanik, der Abo-nach-Key-Fallback und team_bewerte_ergebnis. Seit
+# PowerShell 7.4 macht $PSNativeCommandUseErrorActionPreference aus einem
+# Exit-Code != 0 einen terminierenden Fehler, sobald der Aufrufer auf 'Stop'
+# steht — und genau das tun alle Rollen-Entrypoints. Die Zeile `$code =
+# $LASTEXITCODE` waere dann unerreichbar: Jeder normale CLI-Fehler, jedes 429
+# und jeder Timeout risse den Lauf mit, statt behandelt zu werden.
+#
+# Eine Modulfunktion erbt die Praeferenz des Aufrufers NICHT zuverlaessig
+# (Modulscope), deshalb steht sie hier zusaetzlich und nicht nur in den
+# Entrypoints.
+$PSNativeCommandUseErrorActionPreference = $false
+
 # --- Projekt-Konfiguration ----------------------------------------------------
 # Zuerst gelesen, damit die Team-Default-Zuweisungen unten sie stehen lassen.
 # Fehlt die Datei, laufen die Rollen mit den Defaults dieser Bibliothek weiter —

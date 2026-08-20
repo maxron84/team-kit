@@ -53,6 +53,13 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# BL-122: Seit PowerShell 7.4 ist $PSNativeCommandUseErrorActionPreference
+# standardmaessig $true — ein Exit-Code != 0 aus einem NATIVEN Befehl ist damit
+# ein TERMINIERENDER Fehler und nicht mehr nur ein Wert in $LASTEXITCODE. Diese
+# Bahn ist durchgehend fuer den klassischen Vertrag geschrieben: aufrufen,
+# $LASTEXITCODE lesen, entscheiden. Ohne diese Zeile ist jede dieser
+# Entscheidungen unerreichbar — der Abbruch kommt vorher.
+$PSNativeCommandUseErrorActionPreference = $false
 
 if ($NurBash -and $NurPwsh) {
     Write-Host "FEHLER: -NurBash und -NurPwsh schliessen einander aus." -ForegroundColor Red
@@ -211,14 +218,68 @@ function Setze-Werte {
 }
 
 function Finde-Python {
-    # Derselbe Kandidatenlauf wie in kit-einrichten.ps1. Ein Store-Platzhalter
-    # traegt den Namen, beantwortet die Versionsfrage aber nicht.
-    foreach ($kandidat in @('python3', 'python', 'py')) {
-        if (-not (Get-Command $kandidat -ErrorAction SilentlyContinue)) { continue }
-        $v = & $kandidat -c 'print(1)' 2>$null
-        if ($LASTEXITCODE -eq 0 -and $v) { return $kandidat }
+    <#
+      BL-122. Drei Dinge, die diese Fassung anders macht als die alte:
+
+      1. REIHENFOLGE NACH PLATTFORM. Der Windows-Installer von python.org und
+         `winget install Python.Python.3.x` legen python.exe und den
+         py-Launcher an — KEIN python3.exe. Was Get-Command unter Windows als
+         python3 findet, ist deshalb meist der App-Execution-Alias aus
+         %LOCALAPPDATA%\Microsoft\WindowsApps: ein Platzhalter, der keinen
+         Interpreter startet, sondern den Microsoft Store oeffnet und mit 9009
+         endet. Unter Linux ist es genau umgekehrt — dort kann `python`
+         fehlen oder auf Python 2 zeigen. Also fragt jede Plattform zuerst
+         nach dem Namen, der bei ihr der richtige ist.
+
+      2. try/catch UM DIE PROBE. Der Platzhalter endet mit Exit-Code != 0, und
+         dieses Skript laeuft unter $ErrorActionPreference = 'Stop'. Auch mit
+         dem Pin oben ist der Griff hier billig und die Absicht steht dabei:
+         Ein Kandidat, der nicht laeuft, wird UEBERSPRUNGEN, nie zum Abbruch.
+
+      3. VERSION STATT LEBENSZEICHEN. `print(1)` beantwortet auch ein Python 2
+         klaglos. Gefragt wird deshalb nach der Version, und 3.8 ist die
+         Untergrenze — dieselbe wie in kit-einrichten.ps1.
+
+      Rueckgabe: der Befehlsname, oder $null. KEIN stiller Rueckfall mehr auf
+      'python3': Der trug sich unter Windows in team.config.ps1 ein und liess
+      Kosten und Beutebuch dort auf einen Namen zeigen, den es auf der
+      Maschine nachweislich nicht gibt.
+    #>
+    if (Get-Variable -Name GefundenesPython -Scope Script -ErrorAction SilentlyContinue) {
+        if ($script:GefundenesPython) { return $script:GefundenesPython }
     }
-    return 'python3'   # letzte Vorgabe: das Projekt laeuft dann auf Linux
+    $kandidaten = if ($IsWindows) { @('python', 'python3', 'py') }
+                  else            { @('python3', 'python', 'py') }
+    foreach ($kandidat in $kandidaten) {
+        if (-not (Get-Command $kandidat -ErrorAction SilentlyContinue)) { continue }
+        $v = $null
+        try { $v = & $kandidat -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>$null }
+        catch { continue }
+        if ($LASTEXITCODE -ne 0 -or -not $v) { continue }
+        # Bewusst -match statt -notmatch: Ob -notmatch $Matches fuellt, ist eine
+        # Feinheit, die man nachschlaegt statt sie zu wissen. Hier wird nichts
+        # gelesen, was nicht sichtbar gesetzt wurde.
+        if ("$v".Trim() -match '^(\d+)\.(\d+)$') {
+            $gross = [int]$Matches[1]; $klein = [int]$Matches[2]
+            if ($gross -gt 3 -or ($gross -eq 3 -and $klein -ge 8)) {
+                $script:GefundenesPython = $kandidat
+                return $kandidat
+            }
+        }
+    }
+    return $null
+}
+
+function Python-Fuer-Config {
+    # Was als {{PYTHON}} in team.config.ps1 landet. Faellt die Probe aus, wird
+    # der Wert trotzdem gesetzt — aber die Luecke wird GENANNT statt verdeckt.
+    $p = Finde-Python
+    if ($p) { return $p }
+    $vorgabe = if ($IsWindows) { 'python' } else { 'python3' }
+    Gelb "  [!] Kein lauffaehiger Python 3.8+ gefunden (geprueft: Start UND Version)."
+    Gelb "      team.config.ps1 bekommt '$vorgabe' — Kosten und Beutebuch laufen"
+    Gelb "      erst, wenn ein Interpreter unter diesem Namen im PATH steht."
+    return $vorgabe
 }
 
 # --- .gitignore ----------------------------------------------------------------
@@ -458,7 +519,7 @@ if ($Update) {
 
     Setze-Werte $Projekt $Produktivcode $TestOrdner $PlanOrdner $SmokeTest `
                 'TODO: in CLAUDE.md nachtragen' 'TODO: in CLAUDE.md nachtragen' 'keine' `
-                $Domaenen $commitEntscheid '' $testBestand $planBestand (Finde-Python)
+                $Domaenen $commitEntscheid '' $testBestand $planBestand (Python-Fuer-Config)
 
     Kopiere-Infrastruktur -Immer -OhneConfig
 
@@ -795,7 +856,7 @@ $CommitEntscheid = if ($CommitModus.ToLower() -in @('j', 'ja', 'y', 'yes')) {
 
 Setze-Werte $Projekt $Produktivcode $TestOrdner $PlanOrdner $SmokeTest `
             $TechStack 'TODO: in CLAUDE.md nachtragen' 'keine' `
-            $Domaenen $CommitEntscheid $WeitererCode $TestBestand $PlanBestand (Finde-Python)
+            $Domaenen $CommitEntscheid $WeitererCode $TestBestand $PlanBestand (Python-Fuer-Config)
 
 # ------------------------------------------------------------------ Kopieren
 Kopf "A.2 — Dateien installieren"
@@ -856,9 +917,14 @@ Gelb "  [!] Die .sh-Entrypoints wurden NICHT geprueft — hier liegt keine bash.
 Gelb "      Sie sind mitinstalliert und gelten unveraendert aus dem Kit."
 
 $py = Finde-Python
-& $py -m py_compile (Get-ChildItem (Join-Path $Ziel 'team\tools') -Filter '*.py' -File | ForEach-Object { $_.FullName }) 2>$null
-if ($LASTEXITCODE -eq 0) { Gruen "  [ok] Python-Werkzeuge kompilieren" }
-else { Rot "  [x] Python-Werkzeuge fehlerhaft"; $fehler = 1 }
+if (-not $py) {
+    Gelb "  [!] Python-Werkzeuge NICHT geprueft — kein Interpreter auf dieser Maschine."
+    Gelb "      Das ist kein Befund ueber die Dateien, sondern das Fehlen einer Probe."
+} else {
+    & $py -m py_compile (Get-ChildItem (Join-Path $Ziel 'team\tools') -Filter '*.py' -File | ForEach-Object { $_.FullName }) 2>$null
+    if ($LASTEXITCODE -eq 0) { Gruen "  [ok] Python-Werkzeuge kompilieren" }
+    else { Rot "  [x] Python-Werkzeuge fehlerhaft"; $fehler = 1 }
+}
 
 if (Get-Command pytest -ErrorAction SilentlyContinue) {
     Push-Location $Ziel

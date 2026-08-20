@@ -49,6 +49,13 @@ if ($Hilfe) {
 }
 
 $ErrorActionPreference = 'Continue'
+# BL-122: Seit PowerShell 7.4 ist $PSNativeCommandUseErrorActionPreference
+# standardmaessig $true — ein Exit-Code != 0 aus einem NATIVEN Befehl ist damit
+# ein TERMINIERENDER Fehler und nicht mehr nur ein Wert in $LASTEXITCODE. Diese
+# Bahn ist durchgehend fuer den klassischen Vertrag geschrieben: aufrufen,
+# $LASTEXITCODE lesen, entscheiden. Ohne diese Zeile ist jede dieser
+# Entscheidungen unerreichbar — der Abbruch kommt vorher.
+$PSNativeCommandUseErrorActionPreference = $false
 
 $script:Fehler = 0
 $script:Warnungen = 0
@@ -109,12 +116,24 @@ function Pruefe-Werkzeug {
           [switch]$Pflicht)
     foreach ($k in $Kandidaten) {
         $cmd = Get-Command $k -ErrorAction SilentlyContinue
-        if ($cmd) {
-            $version = ""
-            try { $version = (& $k $Versionsschalter 2>&1 | Select-Object -First 1) } catch { }
-            Ok "$Name — $k $version"
-            return $cmd
+        if (-not $cmd) { continue }
+        $version = ""
+        try { $version = (& $k $Versionsschalter 2>&1 | Select-Object -First 1) } catch { }
+        # BL-122: Gefunden ist nicht lauffaehig. Unter Windows liegen in
+        # %LOCALAPPDATA%\Microsoft\WindowsApps Platzhalter namens python.exe
+        # und python3.exe, die Get-Command klaglos zurueckgibt, aber nur den
+        # Microsoft Store oeffnen und mit 9009 enden. Diese Datei ist die
+        # VORFLUG-PROBE der Zielmaschine — sie darf einen Platzhalter nicht als
+        # gruen melden, sonst ist sie genau die Annahme, die sie ersetzen soll.
+        if ($LASTEXITCODE -ne 0 -or -not $version) {
+            Warnung "$Name — '$k' gefunden, aber nicht lauffaehig (Exit $LASTEXITCODE)" @(
+                "Unter Windows ist das fast immer ein Store-Platzhalter aus",
+                "%LOCALAPPDATA%\Microsoft\WindowsApps. Naechster Kandidat."
+            )
+            continue
         }
+        Ok "$Name — $k $version"
+        return $cmd
     }
     if ($Pflicht) {
         Fehler "$Name fehlt (gesucht: $($Kandidaten -join ', '))" @(
@@ -127,7 +146,9 @@ function Pruefe-Werkzeug {
 }
 
 Pruefe-Werkzeug -Name "git" -Kandidaten @("git") -Versionsschalter "--version" -Pflicht | Out-Null
-$python = Pruefe-Werkzeug -Name "Python" -Kandidaten @("python3", "python", "py") `
+$pyKandidaten = if ($IsWindows) { @("python", "python3", "py") }
+                else            { @("python3", "python", "py") }
+$python = Pruefe-Werkzeug -Name "Python" -Kandidaten $pyKandidaten `
                           -Versionsschalter "--version" -Pflicht
 
 # --------------------------------------------------- 3/5 R2: die Agenten-CLI

@@ -26,7 +26,7 @@ im Linux-Dateisystem. Die ganze Routine für beide Plattformen, mit IDE (VS
 Codium bzw. VS Code) und Agenten-Werkzeug, steht in
 [doku/einrichtung.md](doku/einrichtung.md).
 
-Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 117 Dateien im
+Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 118 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
 `TEAM.md` und 369 Regressionstests.
@@ -375,7 +375,7 @@ geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 │                       in denselben Dateien. Die pwsh-Bahn ist eine zweite
 │                       ORCHESTRIERUNG, kein zweiter Zustandscode
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-├── tests/              65 Testdateien, 476 Fälle — der Doppelbahn-Harnisch
+├── tests/              66 Testdateien, 478 Fälle — der Doppelbahn-Harnisch
 │                       fährt jeden Fall gegen BEIDE Bahnen, aus EINEM
 │                       Testkörper
 └── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
@@ -525,7 +525,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 
 Benutzen, ändern, weitergeben und in eigene Projekte einziehen ist ausdrücklich
 erlaubt, kommerziell wie privat; es bleibt nur die Namensnennung. Das gilt
-**auch für die 117 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
+**auch für die 118 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
 lösen keine Lizenzpflicht für den Code des Zielprojekts aus. Der Code stammt aus
 einem eigenen Projekt des Autors; das Urheberrecht liegt vollständig bei ihm.
 

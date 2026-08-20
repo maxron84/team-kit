@@ -45,6 +45,13 @@ param(
 )
 
 $ErrorActionPreference = 'Continue'
+# BL-122: Seit PowerShell 7.4 ist $PSNativeCommandUseErrorActionPreference
+# standardmaessig $true — ein Exit-Code != 0 aus einem NATIVEN Befehl ist damit
+# ein TERMINIERENDER Fehler und nicht mehr nur ein Wert in $LASTEXITCODE. Diese
+# Bahn ist durchgehend fuer den klassischen Vertrag geschrieben: aufrufen,
+# $LASTEXITCODE lesen, entscheiden. Ohne diese Zeile ist jede dieser
+# Entscheidungen unerreichbar — der Abbruch kommt vorher.
+$PSNativeCommandUseErrorActionPreference = $false
 
 # Seit der Bahn-Trennung: BAHN ist <kit>\pwsh, KIT die Wurzel des Kits.
 $BAHN = Split-Path -Parent $PSCommandPath
@@ -149,13 +156,23 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
 # python: Abhaengigkeit der TEAM-Infrastruktur (geteilt/tools/), nicht des
 # Projekts. Unter Windows heisst der Interpreter je nach Installation anders —
 # gesucht wird in der Reihenfolge, in der er am ehesten der richtige ist.
+# REIHENFOLGE NACH PLATTFORM (BL-122): Unter Windows legen python.org und
+# winget python.exe und den py-Launcher an, KEIN python3.exe — was dort als
+# python3 gefunden wird, ist meist der Store-Platzhalter aus WindowsApps.
+# Unter Linux ist es umgekehrt: python fehlt oder zeigt auf Python 2.
 $script:PythonBefehl = ""
-foreach ($kandidat in @('python3', 'python', 'py')) {
+$script:PythonKandidaten = if ($IsWindows) { @('python', 'python3', 'py') }
+                           else            { @('python3', 'python', 'py') }
+foreach ($kandidat in $script:PythonKandidaten) {
     $cmd = Get-Command $kandidat -ErrorAction SilentlyContinue
     if (-not $cmd) { continue }
-    # Der Windows-Store legt Platzhalter namens python.exe ab, die nur den
-    # Store oeffnen. Ein echter Interpreter beantwortet die Versionsfrage.
-    $v = & $kandidat -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>$null
+    # Der Windows-Store legt Platzhalter namens python.exe und python3.exe ab,
+    # die nur den Store oeffnen und mit 9009 enden. Ein echter Interpreter
+    # beantwortet die Versionsfrage. Das try/catch haelt den Platzhalter davon
+    # ab, den Kandidatenlauf zu beenden, statt nur diesen Kandidaten.
+    $v = $null
+    try { $v = & $kandidat -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>$null }
+    catch { continue }
     if ($LASTEXITCODE -ne 0 -or -not $v) { continue }
     $script:PythonBefehl = $kandidat
     $teile = $v.Trim().Split('.')
@@ -169,7 +186,7 @@ foreach ($kandidat in @('python3', 'python', 'py')) {
     break
 }
 if (-not $script:PythonBefehl) {
-    Fehler "Kein brauchbarer Python-Interpreter gefunden (python3, python, py)." @(
+    Fehler "Kein brauchbarer Python-Interpreter gefunden ($($script:PythonKandidaten -join ', '))." @(
         "Die Team-Werkzeuge (Kosten, Beutebuch) sind Python — das ist eine",
         "Abhaengigkeit der Infrastruktur, nicht deines Projekts.",
         "  winget install --id Python.Python.3.12 --source winget",

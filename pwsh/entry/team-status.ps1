@@ -15,6 +15,13 @@
            .\team-status.cmd --beutebuch-archivieren [--dry-run]
 #>
 $ErrorActionPreference = 'Continue'
+# BL-122: Seit PowerShell 7.4 ist $PSNativeCommandUseErrorActionPreference
+# standardmaessig $true — ein Exit-Code != 0 aus einem NATIVEN Befehl ist damit
+# ein TERMINIERENDER Fehler und nicht mehr nur ein Wert in $LASTEXITCODE. Diese
+# Bahn ist durchgehend fuer den klassischen Vertrag geschrieben: aufrufen,
+# $LASTEXITCODE lesen, entscheiden. Ohne diese Zeile ist jede dieser
+# Entscheidungen unerreichbar — der Abbruch kommt vorher.
+$PSNativeCommandUseErrorActionPreference = $false
 Set-Location $PSScriptRoot
 Import-Module ./team/lib.psm1 -Force -DisableNameChecking
 

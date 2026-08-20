@@ -4,6 +4,64 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`BL-122` — auf der pwsh-Bahn war ein Exit-Code != 0 eine Ausnahme statt
+  eines Werts. Die gesamte Fehlerbehandlung war damit unerreichbar.**
+  ⚠️ **Feldbefund von einer echten Windows-Maschine.** `kit-einrichten.ps1`
+  brach in der Übergabe an `install.ps1` ab; die Meldung nannte `python3.exe`
+  und sah aus wie ein fehlendes Python. Es war keines.
+
+  Unter Windows liegen in `%LOCALAPPDATA%\Microsoft\WindowsApps`
+  App-Execution-Aliase namens `python.exe` **und** `python3.exe`.
+  `Get-Command` gibt sie klaglos zurück; gestartet öffnen sie den Microsoft
+  Store und enden mit Exit-Code 9009. Genau dafür war die Kandidatenschleife
+  gebaut — sie prüft die Antwort, nicht den Namen. Nur kam sie nicht dazu:
+  Seit **PowerShell 7.4** steht `$PSNativeCommandUseErrorActionPreference`
+  standardmäßig auf `$true`, ein nativer Befehl mit Exit-Code != 0 löst damit
+  einen Fehler nach `$ErrorActionPreference` aus — und `install.ps1` steht auf
+  `'Stop'`. Der Platzhalter warf einen **terminierenden** Fehler beim ersten
+  Kandidaten. `2>$null` half nicht: Die Meldung kommt von PowerShell, nicht
+  vom Programm.
+
+  **Die Fehlerklasse ist breiter als die Fundstelle.** Die ganze Bahn ist für
+  den klassischen Vertrag geschrieben — aufrufen, `$LASTEXITCODE` lesen,
+  entscheiden. Unter 7.4 war jede dieser Entscheidungen tot, sobald der
+  Aufrufer auf `'Stop'` stand: `Team-ClaudeSchreiben` liest den Exit-Code der
+  Agenten-CLI, und daran hängen **429-Mechanik, Abo-nach-Key-Fallback und
+  Ergebnisprüfung** — jeder normale CLI-Fehler hätte den Lauf gerissen statt
+  ihn zu behandeln. Dazu die freundliche Meldung „ist kein Git-Repository"
+  samt Exit 2, und die Selbstverifikation, die ihre Befunde über
+  `$LASTEXITCODE` meldet.
+
+  **Warum kein Test das gefunden hat:** nicht wegen der Plattform — die
+  Präferenz gilt überall — sondern weil unter Linux jeder dieser Aufrufe
+  **gelingt**. Geprüft worden ist immer nur der glückliche Pfad. Der
+  Store-Platzhalter macht unter Windows aus dem glücklichen Pfad einen
+  Fehlerpfad und legt frei, was die ganze Zeit unerreichbar war. Dieselbe
+  Familie wie `BL-113`: unter pwsh 7 auf Linux vollständig grün, auf dem Ziel
+  an der ersten Datei gescheitert.
+
+  Behoben in vier Schritten: Der Pin
+  `$PSNativeCommandUseErrorActionPreference = $false` steht jetzt in **allen
+  17 ausführbaren pwsh-Dateien** und zusätzlich in `lib.psm1` — eine
+  Modulfunktion erbt die Präferenz des Aufrufers nicht zuverlässig. Die
+  Python-Suche fragt **plattformgerecht** (unter Windows `python` zuerst, denn
+  python.org und winget legen kein `python3.exe` an), fängt den Kandidaten in
+  `try/catch` ab und prüft die **Version** statt eines Lebenszeichens — ein
+  Python 2 beantwortet `print(1)` klaglos. Der stille Rückfall auf `python3`
+  ist weg: Er trug sich unter Windows in `team.config.ps1` ein und ließ Kosten
+  und Beutebuch auf einen Namen zeigen, den es dort nachweislich nicht gibt.
+  Und `pruefe-windows.ps1` meldet einen Platzhalter nicht mehr als grün — als
+  Vorflug-Probe der Zielmaschine wäre sie sonst genau die Annahme, die sie
+  ersetzen soll.
+
+  Unter Test: [`test_bl122_native_exitcode.py`](geteilt/tests/test_bl122_native_exitcode.py).
+  Gegenprobe gefahren — Pin aus `ralph.ps1` entfernt, Test fällt namentlich;
+  wieder eingesetzt, grün. **Der Beweis auf der Zielmaschine steht aus:** Auf
+  der Entwicklungsmaschine ist kein `pwsh`, keine dieser Dateien konnte hier
+  geparst werden.
+
 ### Changed
 
 - **Der Launcher außerhalb des Repos kann nicht mehr still verrotten.**
