@@ -448,10 +448,20 @@ function Kopiere-Infrastruktur {
 # ================================================================ Update-Pfad
 if ($Update) {
     Kopf "Update — nur Team-Infrastruktur"
-    $configSh = Join-Path $Ziel 'team.config.sh'
-    if (-not (Test-Path $configSh)) {
+    # BL-126: Als Merkmal einer Installation zaehlt JEDE der beiden
+    # Konfigurationen. Bis hierher zaehlte nur die Bash-Fassung — und damit
+    # war der Rueckweg, den BL-119 ausdruecklich verspricht ("ein Update ohne
+    # Schalter macht das Projekt wieder vollstaendig"), fuer ein mit -NurPwsh
+    # installiertes Projekt versperrt: Der Installer erklaerte es fuer keine
+    # Installation und stieg aus, bevor er die fehlende Bahn nachziehen
+    # konnte. Auf dieser Bahn wiegt es schwerer als auf der anderen — ein
+    # Windows-Projekt OHNE bash ist der Normalfall, fuer den sie gebaut ist.
+    $configSh  = Join-Path $Ziel 'team.config.sh'
+    $configPs1 = Join-Path $Ziel 'team.config.ps1'
+    if (-not (Test-Path $configSh) -and -not (Test-Path $configPs1)) {
         Rot "FEHLER: $Ziel sieht nicht nach einer T.E.A.M.-Installation aus"
-        Write-Host "  (team.config.sh fehlt). Fuer eine Erstinstallation ohne -Update aufrufen."
+        Write-Host "  (weder team.config.sh noch team.config.ps1). Fuer eine"
+        Write-Host "  Erstinstallation ohne -Update aufrufen."
         exit 2
     }
 
@@ -492,13 +502,28 @@ if ($Update) {
 
     # Projektwerte aus der INSTALLIERTEN Konfiguration lesen, nicht aus den
     # Defaults — sonst bekaemen die Rollen-Briefings die falschen Pfade und
-    # damit eine falsche Guard-Grenze. Gelesen wird die .sh-Fassung, weil sie
-    # in JEDER Installation liegt (auch in einer, die vor der pwsh-Bahn
-    # entstanden ist).
+    # damit eine falsche Guard-Grenze.
+    #
+    # Bevorzugt die .sh-Fassung: Sie liegt in jeder zweibahnigen Ablage, auch
+    # in einer, die vor der pwsh-Bahn entstanden ist. Sie liegt aber NICHT in
+    # einem mit -NurPwsh installierten Projekt (BL-126) — dort stehen die
+    # Werte nur in der .ps1, und die hat eine eigene, ebenso feste Form:
+    # $TEAM_X = Team-Wert 'TEAM_X' 'wert'. Gelesen statt gesourct, wie auf der
+    # anderen Bahn: Ein Dot-Sourcing wuerde die Konfiguration des ZIELS in
+    # den Installer laden und dessen eigene Variablen ueberschreiben.
     $konf = @{}
-    foreach ($zeile in [System.IO.File]::ReadAllLines($configSh)) {
-        $m = [regex]::Match($zeile, '^(TEAM_[A-Z_]+)="\$\{\1:-(.*)\}"\s*$')
-        if ($m.Success) { $konf[$m.Groups[1].Value] = $m.Groups[2].Value }
+    if (Test-Path $configSh) {
+        $konfQuelle = 'team.config.sh'
+        foreach ($zeile in [System.IO.File]::ReadAllLines($configSh)) {
+            $m = [regex]::Match($zeile, '^(TEAM_[A-Z_]+)="\$\{\1:-(.*)\}"\s*$')
+            if ($m.Success) { $konf[$m.Groups[1].Value] = $m.Groups[2].Value }
+        }
+    } else {
+        $konfQuelle = 'team.config.ps1'
+        foreach ($zeile in [System.IO.File]::ReadAllLines($configPs1)) {
+            $m = [regex]::Match($zeile, '^\$(TEAM_[A-Z_]+)\s*=\s*Team-Wert\s+''\1''\s+''(.*)''\s*$')
+            if ($m.Success) { $konf[$m.Groups[1].Value] = $m.Groups[2].Value }
+        }
     }
     function Konf($name, $vorgabe) {
         if ($konf.ContainsKey($name) -and $konf[$name]) { return $konf[$name] }
@@ -510,7 +535,7 @@ if ($Update) {
     $PlanOrdner    = Konf 'TEAM_PLAN_ORDNER' 'plans/'
     $SmokeTest     = Konf 'TEAM_SMOKE_TEST' ''
     $Domaenen      = Konf 'TEAM_DOMAENEN' 'produkt'
-    Gruen "  [ok] Projektwerte aus team.config.sh gelesen (Projekt: $Projekt)"
+    Gruen "  [ok] Projektwerte aus $konfQuelle gelesen (Projekt: $Projekt)"
 
     # BL-51: -Update ist der einzige Zeitpunkt, zu dem jemand von aussen auf die
     # Installation schaut. Gemeldet wird NUR, was in der Config steht — keine

@@ -136,11 +136,47 @@ fi
 # auf 1 zurueck, Beutebuch-Funde weg, TEAM_SMOKE_TEST aus team.config.sh
 # verschwunden. Beides unbrauchbar. --update fasst ausschliesslich die
 # Infrastruktur an.
+# team_pytest: Der Aufruf, mit dem pytest hier erreichbar ist (BL-124).
+# Bevorzugt der MODULAUFRUF ueber denselben Interpreter, unter dem auch
+# team/tools/ laeuft: Ein pytest im PATH kann zu einer anderen Installation
+# gehoeren, und bei `pip install --user` steht sein bin-Verzeichnis oft gar
+# nicht im PATH. Gibt nichts aus und liefert 1, wenn es pytest nicht gibt.
+#
+# BL-127: Diese Definition stand bis hierher INNERHALB des --update-Blocks.
+# Bash definiert eine Funktion erst, wenn die Definition AUSGEFUEHRT wird —
+# auf dem Erstinstallations-Pfad wurde der Block nie betreten, und der
+# Selbsttest am Ende rief eine Funktion auf, die es nicht gab
+# ("team_pytest: command not found", danach "pytest nicht gefunden").
+# Jede frische Installation hat damit ihre Regressionstests uebersprungen:
+# genau die Pruefung, fuer die BL-124 gebaut wurde, tot auf dem Weg, auf
+# dem sie am meisten zaehlt. Die Einrueckung tarnte es — die Funktion stand
+# in Spalte 0 und sah aus wie eine Definition auf oberster Ebene.
+team_pytest() {
+    local py
+    for py in python3 python py; do
+        command -v "$py" >/dev/null 2>&1 || continue
+        if "$py" -m pytest --version >/dev/null 2>&1; then
+            printf '%s -m pytest' "$py"; return 0
+        fi
+    done
+    command -v pytest >/dev/null 2>&1 && { printf 'pytest'; return 0; }
+    return 1
+}
+
 if [ "$UPDATE" -eq 1 ]; then
     kopf "Update — nur Team-Infrastruktur"
-    if [ ! -f "$ZIEL/team.config.sh" ]; then
+    # BL-126: Als Merkmal einer Installation zaehlt JEDE der beiden
+    # Konfigurationen. Bis hierher zaehlte nur die Bash-Fassung — und damit
+    # war der Rueckweg, den BL-119 ausdruecklich verspricht ("ein --update
+    # ohne Schalter macht das Projekt wieder vollstaendig"), fuer ein mit
+    # --nur-pwsh installiertes Projekt versperrt: Der Installer erklaerte es
+    # fuer keine Installation und stieg aus, bevor er die fehlende Bahn
+    # nachziehen konnte. Die Abwahl war in dieser Richtung eine
+    # Einbahnstrasse — genau das, was sie nicht sein darf.
+    if [ ! -f "$ZIEL/team.config.sh" ] && [ ! -f "$ZIEL/team.config.ps1" ]; then
         rot "FEHLER: $ZIEL sieht nicht nach einer T.E.A.M.-Installation aus"
-        echo "  (team.config.sh fehlt). Fuer eine Erstinstallation ohne --update aufrufen."
+        echo "  (weder team.config.sh noch team.config.ps1). Fuer eine"
+        echo "  Erstinstallation ohne --update aufrufen."
         exit 2
     fi
 
@@ -176,8 +212,29 @@ if [ "$UPDATE" -eq 1 ]; then
     # Projektwerte aus der INSTALLIERTEN Konfiguration lesen, nicht aus den
     # Defaults — sonst bekaemen die Rollen-Briefings die falschen Pfade und
     # damit eine falsche Guard-Grenze.
-    # shellcheck disable=SC1091
-    . "$ZIEL/team.config.sh"
+    #
+    # BL-126: WELCHE der beiden Fassungen die Werte traegt, haengt an der
+    # Installation. Ueblicherweise ist es die .sh (sie liegt in jeder
+    # zweibahnigen Ablage); in einem mit --nur-pwsh installierten Projekt
+    # gibt es sie nicht, und dann stehen die Werte NUR in der .ps1. Die wird
+    # gelesen, nicht gesourct — fuer bash ist sie kein Skript. Die Zeilen,
+    # um die es geht, haben eine feste Form, die der Installer selbst
+    # erzeugt:  $TEAM_X = Team-Wert 'TEAM_X' 'wert'
+    if [ -f "$ZIEL/team.config.sh" ]; then
+        KONF_QUELLE="team.config.sh"
+        # shellcheck disable=SC1091
+        . "$ZIEL/team.config.sh"
+    else
+        KONF_QUELLE="team.config.ps1"
+        for _name in TEAM_PROJEKT TEAM_PRODUKTIVCODE TEAM_TEST_ORDNER \
+                     TEAM_PLAN_ORDNER TEAM_SMOKE_TEST TEAM_DOMAENEN \
+                     TEAM_TEST_ORDNER_BESTAND TEAM_PLAN_ORDNER_BESTAND; do
+            _wert="$(sed -n "s/^\\\$$_name[[:space:]]*=[[:space:]]*Team-Wert[[:space:]]*'$_name'[[:space:]]*'\(.*\)'[[:space:]]*\$/\1/p" \
+                     "$ZIEL/team.config.ps1" | head -1)"
+            [ -n "$_wert" ] && eval "$_name=\$_wert"
+        done
+        unset _name _wert
+    fi
     PROJEKT="${TEAM_PROJEKT:-$(basename "$ZIEL")}"
     PRODUKTIVCODE="${TEAM_PRODUKTIVCODE:-src/}"
     TEST_ORDNER="${TEAM_TEST_ORDNER:-tests/}"
@@ -191,7 +248,7 @@ if [ "$UPDATE" -eq 1 ]; then
     TECH_STACK="TODO: in CLAUDE.md nachtragen"
     DEPLOY="TODO: in CLAUDE.md nachtragen"
     DEPLOY_AUSNAHMEN="keine"
-    gruen "  ✓ Projektwerte aus team.config.sh gelesen (Projekt: $PROJEKT)"
+    gruen "  ✓ Projektwerte aus $KONF_QUELLE gelesen (Projekt: $PROJEKT)"
 
     # BL-51: --update ist der einzige Zeitpunkt, zu dem jemand von aussen auf
     # die Installation schaut. Gemeldet wird NUR, was in der Config steht —
@@ -486,31 +543,24 @@ PY
 
     kopf "Selbsttest"
     FEHLER=0
+    # BL-128: leerer Glob -> bash reicht das Muster durch (Begruendung unten
+    # beim Selbsttest der Erstinstallation).
+    SH_ANZAHL=0
     for f in "$ZIEL"/*.sh; do
+        [ -e "$f" ] || continue
+        SH_ANZAHL=$((SH_ANZAHL + 1))
         bash -n "$f" || { rot "  ✗ Syntaxfehler: $(basename "$f")"; FEHLER=1; }
     done
-    [ "$FEHLER" -eq 0 ] && gruen "  ✓ Alle Shell-Skripte syntaktisch korrekt"
+    if [ "$SH_ANZAHL" -eq 0 ]; then
+        gruen "  ✓ keine .sh zu pruefen (Bash-Bahn abgewaehlt)"
+    elif [ "$FEHLER" -eq 0 ]; then
+        gruen "  ✓ Alle Shell-Skripte syntaktisch korrekt"
+    fi
     # Der Selbsttest muss laufen wie ./team-test.sh beim Anwender: OHNE die
     # TEAM_*-Variablen, die dieses Skript beim Sourcen der Config geerbt hat.
     # Sonst gilt z. B. TEAM_DOMAENEN des Projekts auch fuer die Fixtures, und
     # jeder Test mit domaene="team" scheitert an einem Projekt, das diese
     # Domaene gar nicht fuehrt — ein Fehlalarm, der nur im Update auftraete.
-# team_pytest: Der Aufruf, mit dem pytest hier erreichbar ist (BL-124).
-# Bevorzugt der MODULAUFRUF ueber denselben Interpreter, unter dem auch
-# team/tools/ laeuft: Ein pytest im PATH kann zu einer anderen Installation
-# gehoeren, und bei `pip install --user` steht sein bin-Verzeichnis oft gar
-# nicht im PATH. Gibt nichts aus und liefert 1, wenn es pytest nicht gibt.
-team_pytest() {
-    local py
-    for py in python3 python py; do
-        command -v "$py" >/dev/null 2>&1 || continue
-        if "$py" -m pytest --version >/dev/null 2>&1; then
-            printf '%s -m pytest' "$py"; return 0
-        fi
-    done
-    command -v pytest >/dev/null 2>&1 && { printf 'pytest'; return 0; }
-    return 1
-}
     if PYTEST_AUFRUF="$(team_pytest)"; then
         if (cd "$ZIEL" && unset "${!TEAM_@}" && $PYTEST_AUFRUF -q team/tests >/tmp/team-update-pytest.log 2>&1); then
             gruen "  ✓ Regressionstests grün ($(grep -oE '[0-9]+ passed' /tmp/team-update-pytest.log | head -1))"
@@ -1017,10 +1067,24 @@ gitignore_abgleich ergaenzen
 # ---------------------------------------------------------------- Selbsttest
 kopf "Selbsttest"
 FEHLER=0
+# BL-128: Findet der Glob nichts, reicht bash das MUSTER selbst durch —
+# `bash -n "$ZIEL/*.sh"` scheitert dann an einer Datei namens "*.sh" und der
+# Selbsttest meldet "Syntaxfehler: *.sh" samt Exit 1. Genau das passiert in
+# einer mit --nur-pwsh installierten Ablage: Dort GIBT es keine .sh, und das
+# ist kein Defekt, sondern die Abwahl (BL-119). Ein Installer, der eine
+# gelungene Installation als kaputt meldet, verbrennt das Vertrauen in
+# jede weitere Meldung.
+SH_ANZAHL=0
 for f in "$ZIEL"/*.sh; do
+    [ -e "$f" ] || continue
+    SH_ANZAHL=$((SH_ANZAHL + 1))
     bash -n "$f" || { rot "  ✗ Syntaxfehler: $(basename "$f")"; FEHLER=1; }
 done
-[ "$FEHLER" -eq 0 ] && gruen "  ✓ Alle Shell-Skripte syntaktisch korrekt"
+if [ "$SH_ANZAHL" -eq 0 ]; then
+    gruen "  ✓ keine .sh zu pruefen (Bash-Bahn abgewaehlt)"
+elif [ "$FEHLER" -eq 0 ]; then
+    gruen "  ✓ Alle Shell-Skripte syntaktisch korrekt"
+fi
 
 if python3 -m py_compile "$ZIEL"/team/tools/*.py 2>/dev/null; then
     gruen "  ✓ Python-Werkzeuge kompilieren"

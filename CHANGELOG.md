@@ -6,6 +6,78 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-126` — ein mit `--nur-pwsh` installiertes Projekt ließ sich nicht
+  aktualisieren.** ⚠️ **Feldbefund, dieselbe Windows-Maschine wie
+  `BL-122`…`BL-125`.** Der Update-Pfad **beider** Installer erkannte eine
+  Installation nur an `team.config.sh`. Genau die gibt es in einem einbahnig
+  pwsh installierten Projekt nicht — der Installer erklärte es für *keine*
+  T.E.A.M.-Installation und stieg mit Exit 2 aus, **bevor** er die fehlende
+  Bahn nachziehen konnte.
+
+  Damit war der Rückweg, den `BL-119` ausdrücklich verspricht („ein Update
+  ohne Schalter macht das Projekt wieder vollständig"), in dieser Richtung
+  versperrt: Die Abwahl war die Einbahnstraße, die sie nicht sein darf. Auf
+  der pwsh-Bahn wiegt das schwerer als auf der anderen — ein Windows-Projekt
+  ohne bash ist der **Normalfall**, für den sie gebaut ist.
+
+  **Warum es durchrutschte, steht im Selbsttest selbst.** `kit-test.sh`
+  Stufe 8 bewies den Rückweg — für `--nur-bash`. Also für die Richtung, in
+  der die Datei, an der alles hängt, zufällig vorhanden ist. Die andere
+  Richtung ist nie gefahren worden.
+
+  Behoben auf beiden Bahnen: Als Merkmal zählt jede der beiden
+  Konfigurationen, und fehlt die `.sh`, werden die Projektwerte aus der
+  `.ps1` gelesen (`$TEAM_X = Team-Wert 'TEAM_X' 'wert'` — gelesen, nicht
+  gesourct). Aus **welcher** Quelle sie stammen, steht jetzt in der Ausgabe:
+  Ein stiller Rückfall auf die Auslieferungswerte gäbe der zurückgeholten
+  Bahn eine andere Guard-Grenze als der, die schon läuft.
+
+  Unter Test: `kit-test.sh` Stufe 8 fährt jetzt **beide** Richtungen als
+  echte Installation, und
+  [`test_bl126_update_beide_konfigurationen.py`](geteilt/tests/test_bl126_update_beide_konfigurationen.py)
+  hält die Zusicherung am Quelltext beider Bahnen fest — der Lauf kann die
+  pwsh-Fassung auf einer Maschine ohne PowerShell nicht prüfen, und genau
+  dort ist der Fehler aufgetreten.
+
+
+- **`BL-127` — jede frische Installation hat ihre Regressionstests
+  übersprungen.** `team_pytest()` war **innerhalb** des `--update`-Blocks
+  definiert. Bash definiert eine Funktion erst, wenn die Definition
+  *ausgeführt* wird; auf dem Erstinstallations-Pfad wurde der Block nie
+  betreten. Der Selbsttest rief eine Funktion auf, die es nicht gab
+  (`team_pytest: command not found`), fing den Fehlschlag im `if` ab und
+  meldete in Gelb „pytest nicht gefunden — Regressionstests übersprungen".
+
+  Das ist genau die Prüfung, für die `BL-124` einen Tag zuvor gebaut wurde —
+  tot auf dem Weg, auf dem sie am meisten zählt. Die Einrückung tarnte es:
+  Die Funktion stand in Spalte 0 und sah nach oberster Ebene aus. Die
+  pwsh-Bahn war **nicht** betroffen (dort steht `Finde-Pytest` oben), also
+  stille Drift zwischen zwei Fassungen derselben Lehre.
+
+  Gefunden nicht durch Lesen, sondern durch einen **Trockenlauf** mit einem
+  Schalter, den sonst niemand benutzt. Behoben durch Herausziehen der
+  Definition; `kit-test.sh` Stufe 2 sieht jetzt nach, ob der Installer seine
+  Tests **wirklich gefahren** hat (er hatte 442 Fälle grün, sobald die
+  Funktion erreichbar war). Statisch festgehalten in
+  [`test_bl127_selbsttest_der_erstinstallation.py`](geteilt/tests/test_bl127_selbsttest_der_erstinstallation.py).
+
+
+- **`BL-128` — eine gelungene Installation meldete sich selbst als kaputt.**
+  Der Selbsttest lief mit einem ungeprüften Glob: `for f in "$ZIEL"/*.sh`
+  reicht bei null Treffern das **Muster** durch, `bash -n "$ZIEL/*.sh"`
+  scheitert an einer Datei namens `*.sh`, und heraus kam
+  `✗ Syntaxfehler: *.sh` samt Exit 1. Getroffen hat es jede mit `--nur-pwsh`
+  installierte Ablage — dort *gibt* es keine `.sh`, und das ist kein Defekt,
+  sondern die Abwahl aus `BL-119`.
+
+  Behoben an **beiden** Selbsttests (Erstinstallation und Update — ein Fix an
+  nur einer Stelle wäre genau die halbe Arbeit, aus der solche Funde
+  entstehen). Die leere Ablage wird jetzt benannt statt stillschweigend
+  übersprungen: „keine .sh zu prüfen (Bash-Bahn abgewählt)". Unter Test in
+  derselben Datei wie `BL-127`, dazu eine Zusicherung in `kit-test.sh`
+  Stufe 8.
+
+
 - **`BL-125` — `kosten.py` war unter Windows nicht ladbar, und das nahm alles
   mit.** ⚠️ **Feldbefund, dieselbe Windows-Maschine wie `BL-122`…`BL-124`.**
   `team-test.cmd` brach mit **21 Sammelfehlern** ab, alle mit demselben Satz

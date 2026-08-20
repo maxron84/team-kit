@@ -8,7 +8,7 @@
 #
 # WARUM ES DIESES SKRIPT GIBT
 #
-# Die Regressionstests unter team/tests/ (Stand 2.11.0: 487 Fälle in 69 Dateien)
+# Die Regressionstests unter team/tests/ (Stand 2.11.0: 494 Fälle in 71 Dateien)
 # setzen die INSTALLIERTE Ablage voraus: Entrypoints in der Repo-Wurzel,
 # CLAUDE.md und team.config.sh mit gefüllten Platzhaltern. Im Kit-Repo liegen
 # sie unter bash/entry/, pwsh/entry/ und bootstrap/ — `pytest geteilt/tests`
@@ -92,6 +92,20 @@ if ! bash "$KIT/bash/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.lo
     exit 1
 fi
 gruen "  ✓ $(grep -oE 'Fertig — [0-9]+ Dateien geschrieben' "$ZIEL/.install.log" | head -1)"
+
+# BL-127: Der Selbsttest des Installers MUSS seine Regressionstests gefahren
+# haben. Er meldete "pytest nicht gefunden — übersprungen", weil team_pytest()
+# innerhalb des --update-Blocks definiert war und auf dem Erstinstallations-
+# Pfad nie zur Ausfuehrung kam. Eine uebersprungene Pruefung sieht in gelb
+# fast aus wie eine bestandene; gemerkt hat es niemand, weil kein Schritt
+# nachsah. Jetzt sieht einer nach.
+if grep -q 'Regressionstests grün' "$ZIEL/.install.log"; then
+    gruen "  ✓ und der Selbsttest hat seine Regressionstests wirklich gefahren"
+else
+    rot "  ✗ Der Installer hat seine Regressionstests NICHT gefahren"
+    sed 's/\x1b\[[0-9;]*m//g' "$ZIEL/.install.log" | grep -iE 'pytest|Regressionstests' | head -3
+    exit 1
+fi
 
 # Die Zahl steht auch in der Doku — und stand dort jahrelang falsch (75 statt
 # 117). Eine Zahl, die niemand nachrechnet, veraltet lautlos und liest sich
@@ -553,6 +567,60 @@ a_pruefe "mit den Werten des Projekts, nicht den Auslieferungswerten" \
 a_pruefe "und das Nachziehen ist gemeldet worden" \
     "$(grep -c 'team.config.ps1 fehlte und ist neu erzeugt worden' "$A_REPO/.rueckweg.log")" "1"
 rm -rf "$(dirname "$A_REPO")"
+
+# --- Dieselbe Zusicherung in der ANDEREN Richtung (BL-126)
+# Bis hierher stand oben nur --nur-bash. Das ist die Richtung, die zufaellig
+# funktionierte: Der Update-Pfad las seine Projektwerte aus team.config.sh und
+# nahm ihr Vorhandensein zugleich als Merkmal "ist eine Installation". In einem
+# mit --nur-pwsh installierten Projekt gibt es diese Datei nicht — der
+# Installer erklaerte es fuer keine Installation und stieg mit Exit 2 aus,
+# BEVOR er die fehlende Bahn nachziehen konnte. Die Abwahl war in dieser
+# Richtung genau die Einbahnstrasse, die sie nicht sein darf.
+#
+# Im Feld getroffen hat es einen Windows-Anwender, also den Normalfall, fuer
+# den die pwsh-Bahn ueberhaupt gebaut ist.
+B_REPO="$(mktemp -d)/projekt"
+mkdir -p "$B_REPO"
+git -C "$B_REPO" init -q
+git -C "$B_REPO" commit -q --allow-empty -m "init"
+
+TEAM_INIT_PRODUKTIVCODE="quellcode/" TEAM_INIT_PROJEKT="einbahnig-pwsh" \
+    bash "$KIT/bash/install.sh" "$B_REPO" --nicht-interaktiv --nur-pwsh \
+    > "$B_REPO/.abwahl.log" 2>&1 \
+    || { rot "  ✗ Installation mit --nur-pwsh schlug fehl"; \
+         sed 's/\x1b\[[0-9;]*m//g' "$B_REPO/.abwahl.log" | tail -10; exit 1; }
+a_pruefe "keine .sh im Projekt" "$(ls "$B_REPO" | grep -cE '\.sh$')" "0"
+# BL-128: In dieser Ablage findet der Glob des Selbsttests nichts. Reicht bash
+# das Muster durch, meldet der Installer "Syntaxfehler: *.sh" und Exit 1 —
+# eine gelungene Installation, die sich selbst fuer kaputt erklaert.
+a_pruefe "und der Selbsttest meldet KEINEN Syntaxfehler ueber das Glob-Muster" \
+    "$(grep -c 'Syntaxfehler: \*.sh' "$B_REPO/.abwahl.log")" "0"
+
+git -C "$B_REPO" add -A >/dev/null 2>&1
+git -C "$B_REPO" commit -q -m "einbahnig pwsh installiert"
+bash "$KIT/bash/install.sh" "$B_REPO" --update > "$B_REPO/.rueckweg.log" 2>&1 \
+    || { rot "  ✗ --update auf einem NUR-PWSH-Projekt schlug fehl (BL-126)"; \
+         sed 's/\x1b\[[0-9;]*m//g' "$B_REPO/.rueckweg.log" | tail -20; exit 1; }
+a_pruefe "--update holt die Bash-Bahn zurueck" "$(ls "$B_REPO"/*.sh | wc -l)" "10"
+a_pruefe "team.config.sh ist wieder da" \
+    "$([ -f "$B_REPO/team.config.sh" ] && echo ja || echo nein)" "ja"
+a_pruefe "und VOLLSTAENDIG gefuellt (kein Platzhalter uebrig)" \
+    "$(grep -c '{{' "$B_REPO/team.config.sh")" "0"
+# Der Kern: Die Werte muessen aus der VORHANDENEN Konfiguration stammen. Faellt
+# der Installer auf die Auslieferungswerte zurueck, bekommt die zurueckgeholte
+# Bahn eine andere Guard-Grenze als die, die schon laeuft — und der Guard
+# schuetzt dann den falschen Ordner.
+a_pruefe "mit den Werten des Projekts, aus team.config.ps1 gelesen" \
+    "$(grep -c 'TEAM_PRODUKTIVCODE:-quellcode/' "$B_REPO/team.config.sh")" "1"
+a_pruefe "und die Quelle steht im Protokoll" \
+    "$(grep -c 'Projektwerte aus team.config.ps1 gelesen' "$B_REPO/.rueckweg.log")" "1"
+a_pruefe "das Nachziehen ist gemeldet worden" \
+    "$(grep -c 'team.config.sh fehlte und ist neu erzeugt worden' "$B_REPO/.rueckweg.log")" "1"
+# BEWUSST NICHT geprueft: dass die Tests in einer nur-pwsh-Ablage gruen
+# bleiben. Sie sind es nicht (109 rot) — die bash-getriebenen Faelle laufen
+# dort ins Leere. Das ist ein EIGENER, offener Punkt (BL-129) und wird hier
+# nicht stillschweigend mitbehauptet.
+rm -rf "$(dirname "$B_REPO")"
 
 kopf "9/11 — Regel-Inventar gegen die Regeldatei (A.10, BL-56)"
 # Der Sicherheitsgurt vor dem Umbau der Regeldatei: Jedes NORM-Zitat muss
