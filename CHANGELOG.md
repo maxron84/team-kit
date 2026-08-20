@@ -4,6 +4,31 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **BL-112 — ein Test, der meldet, wenn die beiden Zweige verschiedene Agenten
+  steuern.** Die Rollen-Briefings sind single-source (`team_briefing` liest
+  `team/prompts/rolle-*.md`), der **zusammengesetzte** Prompt war es nicht: Er
+  entsteht erst im Einstiegsskript und stand seit der Portierung zweimal im
+  Repo — einmal `.sh`, einmal `.ps1`. Wer eine Feldlehre nachschärft und nur
+  eine Fassung anfasst, bekommt zwei Zweige, die verschiedene Agenten steuern;
+  kein Test schlug an, weil beide Zweige grün laufen.
+
+  [`team/tests/test_bl112_prompt_gleichstand.py`](team/tests/test_bl112_prompt_gleichstand.py)
+  zieht den Prompt-Quelltext aus beiden Zweigen, rechnet die Syntax heraus
+  (jede Variableneinsetzung wird **ein** Platzhalter) und vergleicht die
+  verbleibende Prosa zeichenweise — vier Prompt-Blöcke und fünf
+  Prosa-Variablen, darunter `SMOKE_ZEILE` aus der **Bibliothek**, die der
+  Befund nicht im Blick hatte. Stand beim Bau: noch keine Drift, alle neun
+  Vergleiche zeichengleich.
+
+  Die Ausnahmeliste (genau ein Eintrag: `team.config.sh` ↔ `team.config.ps1`)
+  trägt Begründungspflicht und wird selbst bewacht — eine Ausnahme, die keinen
+  Vergleich mehr rettet, fällt auf. Ohne das wäre die Liste die Sammelstelle,
+  hinter der echte Drift verschwindet. **Nicht** geprüft wird Drift in den
+  eingesetzten Werten; das zeigt nur ein Lauf mit beiden Shells auf einer
+  Maschine und steht als `BL-117` offen, statt hier behauptet zu werden.
+
 ### Fixed
 
 - **BL-114 — der Rollback eines Rollenlaufs riss fremde uncommittete Arbeit
