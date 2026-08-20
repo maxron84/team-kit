@@ -35,7 +35,7 @@ FIXTURE_LEDGER_ECHTE_NULL = """\
 def _run(bash_script, cwd=REPO_ROOT):
     return subprocess.run(
         [BASH, "-c", bash_script],
-        cwd=cwd, capture_output=True, text=True,
+        cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
 
 
@@ -45,7 +45,7 @@ def test_ledger_anzahl_zaehlt_treffer_statt_summe(tmp_path):
     result = subprocess.run(
         [sys.executable, str(kit_pfad("tools", "kosten.py")), "ledger", str(ledger),
          "--rolle", "architekt", "--kaskade", "20", "--anzahl"],
-        cwd=REPO_ROOT, capture_output=True, text=True,
+        cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "1"
@@ -57,7 +57,7 @@ def test_ledger_anzahl_ist_null_ohne_treffer(tmp_path):
     result = subprocess.run(
         [sys.executable, str(kit_pfad("tools", "kosten.py")), "ledger", str(ledger),
          "--rolle", "architekt", "--kaskade", "21", "--anzahl"],
-        cwd=REPO_ROOT, capture_output=True, text=True,
+        cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "0"

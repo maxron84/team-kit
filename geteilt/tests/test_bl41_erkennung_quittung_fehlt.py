@@ -47,7 +47,7 @@ def _lib(script, env_extra=None):
     env = {"HOME": str(Path.home()), "PATH": "/usr/bin:/bin"}
     env.update(env_extra or {})
     return subprocess.run([BASH, "-c", f'source "{TEAM_LIB}"\n{script}'],
-                          cwd=WURZEL, env=env, capture_output=True, text=True)
+                          cwd=WURZEL, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
 def _log(tmp_path, name, daten):
@@ -167,7 +167,7 @@ def _ralph(tmp_path, stub_json):
     env.update({"PATH": pfad_voran(bin_dir, env), "AUTH_MODE": "api",
                 "ANTHROPIC_API_KEY": "sk-ant-dummy", "TEAM_LOCK_HELD": "1"})
     return subprocess.run(entrypoint_aufruf("./ralph.sh"), cwd=repo, env=env,
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
 def test_ralph_meldet_43_statt_generischem_fehler(tmp_path):

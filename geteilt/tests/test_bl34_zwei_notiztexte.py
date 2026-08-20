@@ -85,7 +85,7 @@ def _repo(tmp_path, plan="plans/ralph-kaskade-4-kamera.md"):
 
 def _abschluss(repo, *args):
     return subprocess.run([BASH, "./team-status.sh", "--rollen-abschluss",
-                           *args], cwd=repo, capture_output=True, text=True)
+                           *args], cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
 def _notiz(repo, rolle):

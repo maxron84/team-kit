@@ -37,7 +37,7 @@ KOPF = "# datum | kaskade | usd | auth | domaene | rolle | notiz\n"
 def _run(*args):
     result = subprocess.run(
         [sys.executable, str(KOSTEN_PY), "ledger-pruefen", *args],
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 
@@ -289,7 +289,7 @@ def test_team_status_reicht_durch(tmp_path):
     result = subprocess.run(
         [BASH, str(TEAM_STATUS), "--ledger-pruefen", "--pfad", str(pfad),
          *_leere_logs(tmp_path)],
-        capture_output=True, text=True, cwd=REPO_ROOT,
+        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=REPO_ROOT,
     )
     assert result.returncode == 4, result.stdout + result.stderr
     assert "keine ralph-Zeile" in result.stdout

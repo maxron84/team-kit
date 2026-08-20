@@ -41,7 +41,7 @@ import kosten  # noqa: E402
 def _run(*args):
     result = subprocess.run(
         [sys.executable, str(KOSTEN_PY), *args],
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 
@@ -153,7 +153,7 @@ def test_archivierung_verschiebt_json_und_kosten_py_zaehlt_sie_nicht_mehr(tmp_pa
     logs = _fixture_team_logs(tmp_path, abo_usd=1.0, api_usd=2.0)
     result = subprocess.run(
         [BASH, "-c", f'source "{TEAM_LIB}"; team_logs_archivieren "{logs}"'],
-        cwd=REPO_ROOT, capture_output=True, text=True,
+        cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     assert result.returncode == 0, result.stderr
 

@@ -64,7 +64,7 @@ def _fixture_repo(tmp_path):
 def _run(tmp_path, *args):
     result = subprocess.run(
         [BASH, "./team-status.sh", "--akteur-abschluss", *args],
-        cwd=tmp_path, capture_output=True, text=True,
+        cwd=tmp_path, capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 

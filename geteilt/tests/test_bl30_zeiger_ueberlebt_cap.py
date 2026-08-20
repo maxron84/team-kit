@@ -112,7 +112,7 @@ def _lauf(repo, kosten, mit_promise=True):
     env.update({"PATH": pfad_voran(bin_dir, env), "AUTH_MODE": "api",
                 "ANTHROPIC_API_KEY": "sk-ant-dummy", "TEAM_LOCK_HELD": "1"})
     return subprocess.run(entrypoint_aufruf("./harry.sh"), cwd=repo, env=env,
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
 def test_erfolgreicher_sweep_ueber_cap_behaelt_seinen_zeiger(tmp_path):

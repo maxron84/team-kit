@@ -211,7 +211,7 @@ def test_cli_nennt_das_zu_alte_log_beim_buchen(tmp_path):
          "rollen-abschluss", "--kaskade", "28", "--domaene", "produkt",
          "--logs", str(repo / ".team-logs"),
          "--pfad", str(repo / ".budget-ledger"), "--repo", str(repo)],
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
         env=dict(os.environ, TEAM_DOMAENEN="produkt"))
     assert ergebnis.returncode == 0, ergebnis.stderr
     assert "AELTER als der Beginn" in ergebnis.stderr

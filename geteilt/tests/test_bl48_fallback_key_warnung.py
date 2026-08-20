@@ -33,7 +33,7 @@ def _run(script, env_extra):
     env = {"HOME": str(Path.home()), "PATH": "/usr/bin:/bin"}
     env.update(env_extra)
     return subprocess.run([BASH, "-c", f'source "{TEAM_LIB}"\n{script}'],
-                          cwd=WURZEL, env=env, capture_output=True, text=True)
+                          cwd=WURZEL, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
 def test_selbst_gesetzter_key_bekommt_die_richtige_diagnose():

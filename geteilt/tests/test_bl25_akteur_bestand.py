@@ -176,7 +176,7 @@ def _wrapper_repo(tmp_path):
 
 def _status(repo, *args):
     return subprocess.run([BASH, "./team-status.sh", "--akteur-abschluss",
-                           *args], cwd=repo, capture_output=True, text=True)
+                           *args], cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
 def test_wrapper_reicht_kaskade_durch_statt_auf_ralph_plan_zu_buchen(tmp_path):

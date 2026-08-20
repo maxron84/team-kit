@@ -20,7 +20,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from conftest import BASH, kit_pfad
+from conftest import BASH, entrypoint_aufruf, kit_pfad
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 TEAM_LIB = kit_pfad("lib.sh")
@@ -41,7 +41,7 @@ FIXTURE_LEDGER_OHNE_ARCHITEKT = """\
 def _run(bash_script, cwd=REPO_ROOT):
     result = subprocess.run(
         [BASH, "-c", bash_script],
-        cwd=cwd, capture_output=True, text=True,
+        cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     return result
 
@@ -110,8 +110,8 @@ def test_team_status_budget_laeuft_und_zeigt_architekt_status():
     # Regressionsschutz gegen das echte Repo: `--budget` muss fehlerfrei
     # laufen und den Architekt-Status-Marker enthalten (Stufe 44).
     result = subprocess.run(
-        ["./team-status.sh", "--budget"],
-        cwd=REPO_ROOT, capture_output=True, text=True,
+        [*entrypoint_aufruf("./team-status.sh"), "--budget"],
+        cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     assert result.returncode == 0, result.stderr
     # BL-18: Die Beschriftung traegt seither ggf. die Kaskade ("Architekt K3
@@ -128,8 +128,8 @@ def test_eine_domaene_zeigt_keinen_domaenenblock():
     null zeigt, erzieht dazu, den ganzen Block zu ueberlesen."""
     umgebung = dict(os.environ, TEAM_DOMAENEN="produkt")
     result = subprocess.run(
-        ["./team-status.sh", "--budget"],
-        cwd=REPO_ROOT, capture_output=True, text=True, env=umgebung,
+        [*entrypoint_aufruf("./team-status.sh"), "--budget"],
+        cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", env=umgebung,
     )
     assert result.returncode == 0, result.stderr
     assert "Domänen (Ledger-Basis" not in result.stdout
@@ -144,8 +144,8 @@ def test_mehrere_domaenen_zeigen_jede_einzeln():
     fest verdrahtete 'team'-Zeile."""
     umgebung = dict(os.environ, TEAM_DOMAENEN="backend frontend")
     result = subprocess.run(
-        ["./team-status.sh", "--budget"],
-        cwd=REPO_ROOT, capture_output=True, text=True, env=umgebung,
+        [*entrypoint_aufruf("./team-status.sh"), "--budget"],
+        cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", env=umgebung,
     )
     assert result.returncode == 0, result.stderr
     assert "Domänen (Ledger-Basis" in result.stdout

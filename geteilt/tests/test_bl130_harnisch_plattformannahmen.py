@@ -165,9 +165,24 @@ VERBOTEN = (
     (re.compile(r'\[\s*"bash"\s*,'),
      '["bash", …] — unter Windows der WSL-Launcher. '
      'Stattdessen: [BASH, …] aus conftest.'),
-    (re.compile(r'\[\s*"\./[a-z-]+\.sh"\s*\]'),
-     '["./x.sh"] — Windows liest keinen Shebang (WinError 193). '
-     'Stattdessen: entrypoint_aufruf("./x.sh").'),
+    # Kein abschliessendes \] im Muster: Der erste Entwurf verlangte, dass die
+    # Liste direkt nach dem Skriptnamen endet, und liess
+    # ["./team-status.sh", "--budget"] durch. Fuenf Tests blieben deshalb rot,
+    # obwohl der Sammeltest gruen war — ein Waechter, der die Haelfte der
+    # Faelle nicht sieht, ist schlimmer als keiner.
+    (re.compile(r'\[\s*"\./[a-z-]+\.sh"\s*[,\]]'),
+     '["./x.sh", …] — Windows liest keinen Shebang (WinError 193). '
+     'Stattdessen: [*entrypoint_aufruf("./x.sh"), …].'),
+    # BL-132: `text=True` ohne encoding dekodiert die Ausgabe des Kindes in
+    # der Locale des Wirts. Auf einem deutschen Windows ist das cp1252, und
+    # ein UTF-8-Byte darin wirft — im READER-THREAD von subprocess. Der
+    # Aufrufer sieht keine Ausnahme, sondern `stdout is None`, und der Test
+    # scheitert Zeilen spaeter mit "NoneType is not iterable". pytest meldet
+    # die wahre Ursache nur als Warnung.
+    (re.compile(r'text=True(?!\s*,\s*encoding=)'),
+     'text=True ohne encoding= — die Ausgabe wird in der Locale des Wirts '
+     'dekodiert; unter Windows wirft das im Reader-Thread und stdout wird '
+     'None. Stattdessen: text=True, encoding="utf-8", errors="replace".'),
     (re.compile(r'"python3 team/tools/'),
      '"python3 team/tools/…" — unter Windows der Store-Alias. '
      'Stattdessen: werkzeug_wert("team/tools/…").'),

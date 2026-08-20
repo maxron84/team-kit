@@ -64,7 +64,7 @@ def _konfig(schluessel):
     bestimmt das Zielprojekt, nicht dieser Test."""
     return subprocess.run(
         [BASH, "-c", f'source "{WURZEL}/team.config.sh"; printf "%s" "${schluessel}"'],
-        capture_output=True, text=True).stdout
+        capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
 
 
 def _fixture(tmp_path, stub_body):
@@ -100,7 +100,7 @@ def _fixture(tmp_path, stub_body):
     # dem Test — sonst haengt er an der Annahme "Zielprojekt hat keine Funde".
     naechste = subprocess.run(
         [sys.executable, "team/tools/beutebuch.py", "next-id"],
-        cwd=repo, capture_output=True, text=True).stdout.strip()
+        cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.strip()
     nr1 = int(naechste.split("-")[-1] or 1)
     stub.write_text("#!/usr/bin/env bash\n"
                     + stub_body.format(tests=_konfig("TEAM_TEST_ORDNER"),
@@ -117,10 +117,10 @@ def _sweep(tmp_path, stub_body):
     env.update({"PATH": pfad_voran(bin_dir, env), "AUTH_MODE": "api",
                 "ANTHROPIC_API_KEY": "sk-ant-dummy", "TEAM_LOCK_HELD": "1"})
     ergebnis = subprocess.run(entrypoint_aufruf("./harry.sh"), cwd=repo, env=env,
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace")
     botschaft = subprocess.run(
         ["git", "-C", str(repo), "log", "-1", "--pretty=%s"],
-        capture_output=True, text=True).stdout.strip()
+        capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.strip()
     return ergebnis, botschaft
 
 

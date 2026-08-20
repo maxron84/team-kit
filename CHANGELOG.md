@@ -6,6 +6,79 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-131` — die Bash-Bahn verdrahtete `python3`, auch unter Windows.**
+  ⚠️ **Feldbefund, zweiter Windows-Lauf.** An drei Stellen stand der Name des
+  Interpreters fest im Text, jedes Mal mit derselben Begründung: *„dieser
+  Installer läuft unter Linux"*. Unter **Git for Windows** läuft er das nicht.
+
+  * [`bash/lib.sh`](bash/lib.sh) — **dreizehn** Aufrufe (`python3 -c '…'`).
+  * [`bash/entry/team.config.sh`](bash/entry/team.config.sh) — `TEAM_KOSTEN_TOOL`
+    und `TEAM_BEUTEBUCH_TOOL` mit eingebautem `python3`, **ohne Platzhalter**.
+  * [`bash/install.sh`](bash/install.sh) — der Installer selbst und der Wert,
+    den er in **beide** Konfigurationen schreibt.
+
+  Unter Windows ist `python3` nicht abwesend, sondern **belegt**:
+  `%LOCALAPPDATA%\Microsoft\WindowsApps\python3.exe` ist der
+  App-Execution-Alias aus dem Microsoft Store. `command -v` findet ihn, der
+  Aufruf startet den Store und meldet *„Python was not found"*, Exit 49. Tot
+  waren damit `team_promise_in`, `team_result_meldet_erfolg`,
+  `team_429_reset_epoch` und die Budget-Summen — also genau die Funktionen, an
+  denen Geld und Abbruchentscheidungen hängen.
+
+  **Warum es so lange unbemerkt blieb.** Der Fund ist zeichengleich mit
+  `BL-122`/`BL-125`, und `Finde-Python` löst ihn auf der pwsh-Bahn seit Langem;
+  die pwsh-Bahn hat die dreizehn Blöcke sogar ganz durch native Ausdrücke
+  ersetzt. Die Bash-Bahn hat es nie nachgezogen, weil sie als *„die
+  Linux-Bahn"* galt und niemand sie unter Windows gefahren hat. Das ist die
+  Doppelbahn-Drift, gegen die der gemeinsame Harnisch gebaut wurde — an einer
+  Stelle, die kein Test berührte.
+
+  Bitter dabei: Ein Windows-Projekt bekam eine **korrekte** `team.config.ps1`
+  und eine **kaputte** `team.config.sh` daneben. Beide Installer schreiben
+  beide Konfigurationen (`BL-126`) — die eine war seit jeher halb blind, weil
+  es dort gar keinen Platzhalter zu füllen gab.
+
+  Behoben: `TEAM_PYTHON` als Bibliotheks-Default nach Vertrag Punkt 6, beide
+  Werkzeugzeilen davon abgeleitet, `{{PYTHON}}` jetzt auch in der
+  `.sh`-Vorlage, und `finde_python()` in `install.sh` als Gegenstück zu
+  `Finde-Python` — **plattformabhängige Reihenfolge** (`python` vor `python3`
+  unter Windows) und **Start *und* Version** als Probe, weil `command -v`
+  allein den Store-Alias findet.
+
+  Unter Test:
+  [`test_bl131_python_name_ist_maschinensache.py`](geteilt/tests/test_bl131_python_name_ist_maschinensache.py) —
+  sieben Zusicherungen, davon fünf am Quelltext, weil `python3` unter Linux
+  richtig ist und ein Verhaltenstest den Rückfall dort nicht meldete.
+
+- **`BL-132` — `text=True` ohne Kodierung machte `stdout` zu `None`.**
+  ⚠️ **Feldbefund, zweiter Windows-Lauf — und die Erklärung für ein Rätsel aus
+  `BL-130`.** 77 `subprocess`-Aufrufe der Testsuite standen auf `text=True`
+  ohne `encoding=`. Die Ausgabe des Kindprozesses wird dann in der **Locale des
+  Wirts** dekodiert; auf einem deutschen Windows ist das cp1252, und das erste
+  UTF-8-Byte wirft `UnicodeDecodeError`.
+
+  Der Fehler fällt aber **im Reader-Thread von `subprocess`** an. Der Aufrufer
+  sieht keine Ausnahme — er bekommt `stdout is None`. Der Test scheitert
+  Zeilen später mit `'NoneType' object has no attribute 'splitlines'` bzw.
+  `argument of type 'NoneType' is not iterable`, und pytest meldet die wahre
+  Ursache nur als **Warnung**, die in einem roten Lauf niemand liest. Genau
+  daran ist die erste Analyse hängengeblieben: Der `NoneType` war aus dem
+  Testcode heraus nicht erklärbar, weil `capture_output=True` ihn nicht
+  erzeugen *kann* — die Ursache lag eine Ebene tiefer.
+
+  Wo die Dekodierung nicht warf, log sie: `Rolle siehe CLAUDE.md â€” lies sie
+  zuerst.` Dasselbe Muster, nur ohne Ausnahme.
+
+  Behoben: `encoding="utf-8", errors="replace"` an allen 77 Stellen. Der
+  Sammeltest in `BL-130` hält es fest — `text=True` ohne `encoding=` fällt ab
+  jetzt auf **jedem** Wirt auf.
+
+  Ebenfalls hier berichtigt: Das Entrypoint-Muster des `BL-130`-Wächters
+  verlangte, dass die Argumentliste direkt nach dem Skriptnamen endet, und
+  ließ `["./team-status.sh", "--budget"]` durch. Fünf Tests blieben deshalb
+  rot, während der Wächter grün meldete — ein Wächter, der die Hälfte der
+  Fälle nicht sieht, ist schlimmer als keiner.
+
 - **`BL-130` — die Testsuite maß unter Windows sich selbst, nicht das Kit.**
   ⚠️ **Feldbefund, dieselbe Windows-Maschine wie `BL-113` und
   `BL-122`…`BL-128`.** Der erste Lauf der Regressionssuite unter nativem

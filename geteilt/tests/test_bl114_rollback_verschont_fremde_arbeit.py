@@ -43,7 +43,7 @@ ORIGINAL = "original\n"
 
 def _git(repo, *args):
     ergebnis = subprocess.run(["git", *args], cwd=str(repo),
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert ergebnis.returncode == 0, ergebnis.stderr
     return ergebnis.stdout.strip()
 
@@ -276,7 +276,7 @@ def test_frank_lauf_verschont_fremde_arbeit(tmp_path):
         return subprocess.run(
             [BASH, "-c",
              f'source "{wurzel}/team.config.sh"; printf "%s" "${schluessel}"'],
-            capture_output=True, text=True).stdout
+            capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
 
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -320,7 +320,7 @@ def test_frank_lauf_verschont_fremde_arbeit(tmp_path):
     env.update({"PATH": pfad_voran(bin_dir, env), "AUTH_MODE": "api",
                 "ANTHROPIC_API_KEY": "sk-ant-dummy", "TEAM_LOCK_HELD": "1"})
     lauf = subprocess.run(entrypoint_aufruf("./frank.sh"), cwd=repo, env=env,
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8", errors="replace")
 
     assert lauf.returncode == 1, (
         f"erwartet war der Fehlversuchspfad (Exit 1), kam {lauf.returncode}:\n"

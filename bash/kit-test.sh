@@ -183,8 +183,16 @@ kopf "3/11 — Ungefüllte Platzhalter suchen"
 # Ein übrig gebliebenes {{...}} heißt: Der Installer kennt die Datei nicht oder
 # der Platzhalter wurde umbenannt. Beides fällt sonst erst im Feld auf, wo die
 # Briefings die Pfade des Ursprungsprojekts nennen würden — falsche Guard-Grenze.
+# __pycache__ ausgenommen: Dort liegt kompilierter Bytecode, den der Testlauf
+# eine Zeile weiter unten selbst erzeugt — kein ausgeliefertes Dokument, in dem
+# ein Platzhalter je gefuellt wuerde. Und er ist eine Falschmeldungsquelle: Der
+# Compiler faltet benachbarte String-Literale zu einer Konstanten zusammen, so
+# dass ein Test, der die Marke bewusst ZERLEGT schreibt, im .pyc trotzdem
+# wieder als Fund erscheint (aufgefallen an test_bl131). Die Zusicherung
+# betrifft den Quelltext; dort greift sie unveraendert.
 RESTE="$(grep -rlE '\{\{[A-Z_]+\}\}' "$ZIEL" \
-           --exclude-dir=.git --exclude=.install.log 2>/dev/null || true)"
+           --exclude-dir=.git --exclude-dir=__pycache__ \
+           --exclude=.install.log 2>/dev/null || true)"
 if [ -n "$RESTE" ]; then
     rot "  ✗ Ungefüllte Platzhalter in:"
     echo "$RESTE" | sed 's|^|      |' >&2

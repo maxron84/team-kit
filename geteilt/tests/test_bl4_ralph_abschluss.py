@@ -39,7 +39,7 @@ TEAM_STATUS = REPO_ROOT / "team-status.sh"
 def _run(*args):
     result = subprocess.run(
         [sys.executable, str(KOSTEN_PY), *args],
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 
@@ -197,7 +197,7 @@ def test_ein_befehl_schliesst_beide_quellen_ab(tmp_path):
     umgebung = dict(os.environ, TEAM_DOMAENEN="produkt team")
     ergebnis = subprocess.run(
         [BASH, str(ziel), "--rollen-abschluss", "1", "produkt"],
-        capture_output=True, text=True, cwd=str(repo), env=umgebung)
+        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(repo), env=umgebung)
 
     assert ergebnis.returncode == 0, ergebnis.stderr
     ledger = repo / ".budget-ledger"

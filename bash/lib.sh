@@ -80,6 +80,17 @@ TEAM_MODEL_STRONG="${TEAM_MODEL_STRONG:-opus}"
 #   - Ralph/Harry/Marv: sofortiger HART-Cap beim Soft-Wert (kein Soft-Fenster) —
 #     Ralph hat nach dem Commit ohnehin Feierabend (kein Rollback, Mensch
 #     schaltet weiter), Harry/Marv sind read-only (nichts Bezahltes geht verloren).
+# BL-131: Wie der Python-Interpreter heisst, ist eine Eigenschaft der
+# MASCHINE, nicht der Bahn. Bis hierher stand `python3` dreizehnmal fest im
+# Text — mit der Begruendung, diese Bahn laufe unter Linux. Unter Git-Bash auf
+# Windows laeuft sie das nicht, und dort ist `python3` der App-Execution-Alias
+# aus dem Microsoft Store: Er startet den Store, schreibt "Python was not
+# found" und endet mit 49. Jeder dieser dreizehn Aufrufe war damit tot.
+# Die pwsh-Bahn hatte das Problem nie — sie hat dieselben dreizehn Bloecke
+# durch native Ausdruecke ersetzt. Der Default hier bleibt `python3`, weil er
+# unter POSIX richtig ist; der Installer traegt in team.config.sh ein, was er
+# auf der Maschine wirklich gefunden hat.
+TEAM_PYTHON="${TEAM_PYTHON:-python3}"
 TEAM_ROLE_BUDGET_USD="${TEAM_ROLE_BUDGET_USD:-5}"
 TEAM_ROLE_HARDCAP_USD="${TEAM_ROLE_HARDCAP_USD:-10}"
 
@@ -280,7 +291,7 @@ team_429_sleep() {
 # Rückgabe 0, wenn ein Zettel geschrieben wurde (Aufrufer meldet es).
 team_versuch_sichern() {
     local rolle="$1" out="$2" dauer="$3"
-    python3 - "$out" "$dauer" <<'PY'
+    "$TEAM_PYTHON" - "$out" "$dauer" <<'PY'
 import json, sys
 pfad, dauer = sys.argv[1], sys.argv[2]
 try:
@@ -322,7 +333,7 @@ team_claude() {
     TEAM_LAST_RESET=""
 
     if [ "${TEAM_DRY_RUN:-0}" = "1" ]; then
-        python3 - "$out" "${TEAM_DRY_RESULT:-}" <<'PY'
+        "$TEAM_PYTHON" - "$out" "${TEAM_DRY_RESULT:-}" <<'PY'
 import json, sys
 json.dump({"result": sys.argv[2], "total_cost_usd": 0.01, "is_error": False},
           open(sys.argv[1], "w"))
@@ -442,7 +453,7 @@ PY
 # team_promise_in <json-datei> <promise-text>
 # Rückgabe 0, wenn das Ergebnis <promise>TEXT</promise> enthält.
 team_promise_in() {
-    python3 -c '
+    "$TEAM_PYTHON" -c '
 import json, sys
 try:
     data = json.load(open(sys.argv[1]))
@@ -484,7 +495,7 @@ sys.exit(0 if f"<promise>{sys.argv[2]}</promise>" in result else 1)
 # is_error falsch und subtype "success" — beides muss zutreffen, sonst wäre
 # jedes lesbare Log ohne is_error-Feld schon ein "Erfolg").
 team_result_meldet_erfolg() {
-    python3 -c '
+    "$TEAM_PYTHON" -c '
 import json, sys
 try:
     data = json.load(open(sys.argv[1]))
@@ -997,7 +1008,7 @@ team_lock() {
 # Rückgabe 0, wenn die JSON-Ausgabe von `claude -p` einen Fehler meldet
 # (is_error) oder gar nicht lesbar ist — dann greift z. B. Ralphs API-Fallback.
 team_result_is_error() {
-    python3 -c '
+    "$TEAM_PYTHON" -c '
 import json, sys
 try:
     data = json.load(open(sys.argv[1]))
@@ -1055,7 +1066,7 @@ team_bewerte_ergebnis() {
 # Nicht lesbare Datei → kein 429 (Rückgabe 1), das bleibt Sache von
 # team_result_is_error.
 team_result_is_429() {
-    python3 -c '
+    "$TEAM_PYTHON" -c '
 import json, re, sys
 try:
     data = json.load(open(sys.argv[1]))
@@ -1085,7 +1096,7 @@ sys.exit(1)
 # aus falscher Fundstelle (z. B. einem Doku-Zitat) einen falschen Reset-
 # Zeitpunkt liefern.
 team_429_reset_epoch() {
-    python3 -c '
+    "$TEAM_PYTHON" -c '
 import json, re, sys
 from datetime import datetime, timedelta
 
@@ -1130,7 +1141,7 @@ print(int(reset.timestamp()))
 # allein aus dem FINALEN Log gelesen wurde. Damit war der Cap umgehbar: 4.9 USD
 # Abo-Fehlversuch + 4.9 USD API meldeten 4.9 gegen einen 5-USD-Deckel.
 team_summe_cost_usd() {
-    python3 -c '
+    "$TEAM_PYTHON" -c '
 import json, sys
 gesamt = 0.0
 for pfad in sys.argv[1:]:
@@ -1145,7 +1156,7 @@ print(f"{gesamt:.10f}")
 # team_extract_cost_usd <json-datei>
 # Liest total_cost_usd aus der JSON-Ausgabe von `claude -p --output-format json`.
 team_extract_cost_usd() {
-    python3 -c '
+    "$TEAM_PYTHON" -c '
 import json, sys
 try:
     data = json.load(open(sys.argv[1]))
@@ -1216,7 +1227,7 @@ team_ledger_split() {
 # Stufe 51) — duenner Wrapper um `kosten.py akteur-abschluss` fuer JEDE
 # interaktiv (ausserhalb team_claude) arbeitende Rolle (Architekt, Frank im
 # Abomodus, …), analog den bestehenden team_ledger_*-Wrappern. Alle Werte
-# gehen als eigene argv-Elemente an python3 (kein `python3 -c` mit roher
+# gehen als eigene argv-Elemente an Python (kein `python -c` mit roher
 # Interpolation — Lehre aus BL-23/HM-17). pfad/repo optional, Default wie
 # kosten.py (".budget-ledger"/"."), damit Fixture-Tests isoliert gegen ein
 # Test-Ledger pruefen koennen.
@@ -1396,7 +1407,7 @@ team_kontostand_gesamt() {
     IFS=$'\t' read -r abo api <<<"$(team_kosten_split .ralph-logs .team-logs)"
     # kein rohes ${…}-Interpolieren — BL-23/HM-17/HM-34/HM-42: Werte als
     # eigene sys.argv-Elemente uebergeben statt in den Python-Quelltext.
-    python3 -c "import sys; print(f'{float(sys.argv[1]) + float(sys.argv[2]) + float(sys.argv[3]):.4f}')" "$basis" "$abo" "$api"
+    "$TEAM_PYTHON" -c "import sys; print(f'{float(sys.argv[1]) + float(sys.argv[2]) + float(sys.argv[3]):.4f}')" "$basis" "$abo" "$api"
 }
 
 # team_logs_archivieren <dir>: verschiebt die aktuell in <dir> liegenden
@@ -1441,7 +1452,7 @@ team_resolve_budget_cap() {
         echo "$aktuell"; return 0
     fi
     if [ -n "$empfehlung" ] \
-       && python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) > float(sys.argv[2]) else 1)" "$empfehlung" "$aktuell" 2>/dev/null; then
+       && "$TEAM_PYTHON" -c "import sys; sys.exit(0 if float(sys.argv[1]) > float(sys.argv[2]) else 1)" "$empfehlung" "$aktuell" 2>/dev/null; then
         echo "$empfehlung"; return 0
     fi
     echo "$aktuell"
@@ -1464,7 +1475,7 @@ team_resolve_budget_cap() {
 # (0/1/2), 2 bleibt "Soft-Limit überschritten". Der neue Zustand 3 tritt nur
 # auf, wenn ein sinnvolles hard-limit (> soft-limit) übergeben wird.
 team_budget_check() {
-    python3 -c '
+    "$TEAM_PYTHON" -c '
 import sys
 cost = float(sys.argv[1])
 soft = float(sys.argv[2])

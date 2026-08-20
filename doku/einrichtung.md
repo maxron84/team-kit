@@ -7,7 +7,7 @@ gern verwechselt werden:
 | Vorgang | Was passiert | Wie oft |
 |---|---|---|
 | **Klonen und einrichten** | Das Kit-Repo landet auf der Maschine, die Bordmittel werden geprüft, die Auth des Agenten-Werkzeugs steht | einmal pro Maschine |
-| **Einbinden** | `install.sh` legt die 125 Dateien in ein **Zielprojekt** | einmal pro Projekt |
+| **Einbinden** | `install.sh` legt die 126 Dateien in ein **Zielprojekt** | einmal pro Projekt |
 
 Der kurze Weg steht ganz oben; alles darunter ist die Begründung und der
 Fehlerfall.
@@ -759,6 +759,27 @@ verifiziert bezeichnet — der Rest nicht.
   übersprungen mit Begründung). Auf einer **Windows-Maschine gefahren sind sie
   nicht.** Sie sind damit *hergeleitet*, nicht *abgenommen* — genau die
   Unterscheidung, an der BL-113 hing.
+
+- **Dritter Kontakt — zweiter Lauf der Suite (21.08.2026): 160 → rund 50.**
+  Die Bash-Bahn lief diesmal wirklich (`auf beiden Bahnen gelaufen: 38`) —
+  Git for Windows wurde gefunden, der WSL-Stub blieb außen vor. Übrig blieben
+  zwei Ursachen, beide diesmal **im Kit**, nicht im Harnisch:
+
+  **BL-131** — die Bash-Bahn verdrahtete `python3` an drei Stellen fest, unter
+  Windows der Store-Alias. **BL-132** — 77 `subprocess`-Aufrufe der Suite
+  dekodierten in cp1252; der Fehler fiel im Reader-Thread an, und der Test sah
+  nur `stdout is None`.
+
+  **Die Lehre steht in BL-131 und ist die teuerste dieser Reihe:** Die
+  pwsh-Bahn hatte den Python-Fund seit `BL-122` gelöst, die Bash-Bahn nie
+  nachgezogen — weil sie als *„die Linux-Bahn"* galt. Genau das ist die Drift,
+  gegen die die Doppelbahn gebaut ist. Sie war nur an einer Stelle, die kein
+  Test berührte. Ein Windows-Projekt bekam dadurch eine korrekte
+  `team.config.ps1` und eine kaputte `team.config.sh` daneben.
+
+  Auch dieser Stand ist **hergeleitet, nicht abgenommen**: Verifiziert ist er
+  gegen Linux (Kit-Selbsttest 11/11, 459 Tests in der Installation) und gegen
+  einen simulierten Wirt ohne Bash. Der nächste Windows-Lauf ist der Beleg.
 
 - **WSL 1: nicht zugesichert, aber nicht verboten.** Die Eigenschaften von
   VolFs (Metadaten in NTFS-Attributen) und die Implementierung von `flock()`

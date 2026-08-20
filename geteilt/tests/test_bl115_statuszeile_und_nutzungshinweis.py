@@ -76,7 +76,7 @@ def _buch(tmp_path):
 
 def _lauf(*args):
     return subprocess.run([sys.executable, str(TOOL), *args],
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
 def _quelle(*kandidaten):

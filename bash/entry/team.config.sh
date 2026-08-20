@@ -90,11 +90,18 @@ TEAM_FEAT_PRAEFIX="${TEAM_FEAT_PRAEFIX:-feat}"
 
 # --- Werkzeuge der Team-Infrastruktur ------------------------------------------
 # Die Team-Werkzeuge liegen unter team/tools/ und sind in Python geschrieben.
-# python3 ist damit eine Abhängigkeit der TEAM-INFRASTRUKTUR — auf einer Ebene
+# Python ist damit eine Abhängigkeit der TEAM-INFRASTRUKTUR — auf einer Ebene
 # mit git, flock und der Agenten-CLI. Das PROJEKT bleibt davon unberührt: ein
 # Rust-Projekt bleibt ein reines Rust-Projekt, in dem ein Werkzeugordner liegt.
-TEAM_BEUTEBUCH_TOOL="${TEAM_BEUTEBUCH_TOOL:-python3 team/tools/beutebuch.py}"
-TEAM_KOSTEN_TOOL="${TEAM_KOSTEN_TOOL:-python3 team/tools/kosten.py}"
+#
+# BL-131: Wie der Interpreter HEISST, entscheidet die Maschine, nicht diese
+# Datei. Unter Windows legen weder python.org noch winget ein python3.exe an;
+# was dort unter dem Namen antwortet, ist der App-Execution-Alias aus dem
+# Microsoft Store — er startet den Store und meldet "Python was not found".
+# Der Installer trägt hier ein, was er auf DIESER Maschine gefunden hat.
+TEAM_PYTHON="${TEAM_PYTHON:-{{PYTHON}}}"
+TEAM_BEUTEBUCH_TOOL="${TEAM_BEUTEBUCH_TOOL:-$TEAM_PYTHON team/tools/beutebuch.py}"
+TEAM_KOSTEN_TOOL="${TEAM_KOSTEN_TOOL:-$TEAM_PYTHON team/tools/kosten.py}"
 
 # --- Angriffsfläche des Red Teams (BL-20) -------------------------------------
 # Der ausgelieferte Grundauftrag von Harry und Marv beschreibt die METHODE, nicht

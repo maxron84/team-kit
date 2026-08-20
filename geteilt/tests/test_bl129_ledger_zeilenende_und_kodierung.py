@@ -73,7 +73,7 @@ def _abschluss(ledger, *extra):
          "--rolle", "frank", "--kaskade", "16", "--auth", "abo",
          "--domaene", "produkt", "--usd", "1.0", "--pfad", str(ledger),
          *extra],
-        capture_output=True, text=True)
+        capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
 # --- Das Verhalten: auf Windows der eigentliche Nachweis --------------------

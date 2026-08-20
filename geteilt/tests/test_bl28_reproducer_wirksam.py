@@ -113,7 +113,7 @@ def test_cli_liefert_exit_3_und_meldet_nach_stderr(tmp_path):
     pfad = _buch(tmp_path, block)
     ergebnis = subprocess.run(
         [sys.executable, str(BEUTEBUCH_PY), "--pfad", str(pfad), "lint", "HM-31"],
-        capture_output=True, text=True)
+        capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert ergebnis.returncode == 3
     assert "Reproducer-Test" in ergebnis.stderr
     assert ergebnis.stdout == ""
@@ -123,7 +123,7 @@ def test_cli_ist_still_und_null_bei_sauberem_block(tmp_path):
     pfad = _buch(tmp_path, VOLLSTAENDIG)
     ergebnis = subprocess.run(
         [sys.executable, str(BEUTEBUCH_PY), "--pfad", str(pfad), "lint", "HM-30"],
-        capture_output=True, text=True)
+        capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert ergebnis.returncode == 0
     assert ergebnis.stderr == ""
 
@@ -134,7 +134,7 @@ def test_reproducer_verb_liefert_genau_den_reservierten_pfad(tmp_path):
     pfad = _buch(tmp_path, VOLLSTAENDIG)
     ergebnis = subprocess.run(
         [sys.executable, str(BEUTEBUCH_PY), "--pfad", str(pfad),
-         "reproducer", "HM-30"], capture_output=True, text=True)
+         "reproducer", "HM-30"], capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert ergebnis.returncode == 0
     assert ergebnis.stdout.strip() == "tests/test_hm30_parser.py", \
         "nicht die Produktivdatei, sondern die reservierte Testdatei"

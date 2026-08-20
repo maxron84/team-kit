@@ -43,7 +43,7 @@ def _bash(code):
         [BASH, "-c", f'set -euo pipefail; source "{TEAM_LIB}"; {code}'],
         cwd=REPO_ROOT,
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
     )
     assert result.returncode == 0, f"bash schlug fehl: {result.stderr}"
     return result.stdout.strip()

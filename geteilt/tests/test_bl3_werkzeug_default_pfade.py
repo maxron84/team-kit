@@ -86,7 +86,7 @@ def test_kosten_liest_das_ledger_ohne_pfadangabe_aus_dem_arbeitsverzeichnis(tmp_
 
     ergebnis = subprocess.run(
         [sys.executable, "team/tools/kosten.py", "ledger"],
-        cwd=projekt, capture_output=True, text=True, check=True,
+        cwd=projekt, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True,
     )
     assert ergebnis.stdout.strip() == "2.5000"
 
@@ -104,7 +104,7 @@ def test_fehlendes_ledger_meldet_still_null(tmp_path):
 
     ergebnis = subprocess.run(
         [sys.executable, str(KOSTEN), "ledger"],
-        cwd=leeres, capture_output=True, text=True, check=True,
+        cwd=leeres, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True,
     )
     assert ergebnis.stdout.strip() == "0.0000"
     assert ergebnis.returncode == 0

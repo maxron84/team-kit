@@ -120,7 +120,7 @@ def _repo(tmp_path, ledger_inhalt, schale=None):
 def _status(repo, *argumente):
     ergebnis = subprocess.run(
         [BASH, str(repo / "team-status.sh"), *argumente],
-        capture_output=True, text=True, cwd=str(repo),
+        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(repo),
         env={"HOME": str(Path.home()), "PATH": "/usr/local/bin:/usr/bin:/bin"},
     )
     assert ergebnis.returncode == 0, ergebnis.stderr

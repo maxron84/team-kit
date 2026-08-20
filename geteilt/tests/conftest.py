@@ -186,7 +186,7 @@ def _finde_python_befehl():
         try:
             probe = subprocess.run(
                 [kandidat, "-c", "import sys; print(sys.version_info[0])"],
-                capture_output=True, text=True, timeout=30)
+                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
         except (OSError, subprocess.SubprocessError):
             continue
         if probe.returncode == 0 and probe.stdout.strip() == "3":
@@ -768,7 +768,7 @@ class Schale:
             befehl = ["pwsh", "-NoProfile", "-NonInteractive", "-Command", skript]
 
         return subprocess.run(befehl, cwd=str(cwd), env=umgebung,
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
 # --- Verfuegbarkeit ----------------------------------------------------------

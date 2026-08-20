@@ -124,7 +124,7 @@ def _lauf(repo, kosten=1.20, baut=None, auto=None):
     if auto is not None:
         env["TEAM_QUITTUNG_AUTO"] = auto
     return subprocess.run(entrypoint_aufruf("./ralph.sh"), cwd=repo, env=env,
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
 # --- Die Richtung, für die es die Automatik gibt -----------------------------
@@ -149,11 +149,11 @@ def test_uncommittete_arbeit_wird_dabei_gesichert(tmp_path):
     repo = _repo(tmp_path)
     _lauf(repo, baut=["src/modul.py", "tests/test_stufe1_sache.py"])
     offen = subprocess.run(["git", "-C", str(repo), "status", "--porcelain"],
-                           capture_output=True, text=True).stdout.strip()
+                           capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.strip()
     assert offen == "", f"der Baum muss sauber sein, offen war:\n{offen}"
     betreff = subprocess.run(
         ["git", "-C", str(repo), "log", "-1", "--pretty=%s"],
-        capture_output=True, text=True).stdout.strip()
+        capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.strip()
     assert "stufe1" in betreff, \
         f"der Sicherungs-Commit muss die Stufe nennen, war: {betreff}"
 

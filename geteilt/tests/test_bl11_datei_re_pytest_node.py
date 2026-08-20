@@ -81,6 +81,6 @@ def test_dateien_liefert_node_referenzierte_datei(tmp_path):
 
     ergebnis = subprocess.run(
         [sys.executable, "team/tools/beutebuch.py", "dateien", "HM-1"],
-        cwd=projekt, capture_output=True, text=True, check=True,
+        cwd=projekt, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True,
     )
     assert "tests/test_app_headless.py" in ergebnis.stdout.split()

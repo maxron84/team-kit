@@ -79,7 +79,7 @@ def _archiv(tmp_path, bloecke=(), name="archiv.md"):
 def _run(*args):
     result = subprocess.run(
         [sys.executable, str(BEUTEBUCH_PY), *args],
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     return result.returncode, result.stdout, result.stderr
 

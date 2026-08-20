@@ -34,7 +34,7 @@ FIXTURE_LEDGER = """\
 def _run_ledger(pfad, *extra_args):
     result = subprocess.run(
         [sys.executable, str(KOSTEN_PY), "ledger", str(pfad), *extra_args],
-        cwd=REPO_ROOT, capture_output=True, text=True,
+        cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 

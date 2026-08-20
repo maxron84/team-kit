@@ -37,7 +37,7 @@ def _konfig(schluessel):
     bestimmt das Zielprojekt, nicht dieser Test."""
     return subprocess.run(
         [BASH, "-c", f'source "{WURZEL}/team.config.sh"; printf "%s" "${schluessel}"'],
-        capture_output=True, text=True).stdout
+        capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
 
 
 def _neutrale_config():
@@ -97,7 +97,7 @@ def _prompt(tmp_path, zusatz_env):
                 "ANTHROPIC_API_KEY": "sk-ant-dummy", "TEAM_LOCK_HELD": "1"})
     env.update(zusatz_env)
     lauf = subprocess.run(entrypoint_aufruf("./harry.sh"), cwd=repo, env=env,
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert lauf.returncode == 0, lauf.stderr
     return dump.read_text(encoding="utf-8")
 

@@ -187,7 +187,7 @@ def _sweep(repo, fokus=None):
     else:
         env.pop("TEAM_REDTEAM_FOCUS", None)
     lauf = subprocess.run(entrypoint_aufruf("./harry.sh"), cwd=repo, env=env,
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8", errors="replace")
     return lauf, (dump.read_text(encoding="utf-8") if dump.exists() else "")
 
 

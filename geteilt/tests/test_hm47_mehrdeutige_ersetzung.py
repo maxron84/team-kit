@@ -33,7 +33,7 @@ import kosten  # noqa: E402
 def _run(*args):
     result = subprocess.run(
         [sys.executable, str(KOSTEN_PY), *args],
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 

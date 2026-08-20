@@ -116,7 +116,7 @@ def _lauf(repo, kosten, mit_promise):
     env.update({"PATH": pfad_voran(bin_dir, env), "AUTH_MODE": "api",
                 "ANTHROPIC_API_KEY": "sk-ant-dummy", "TEAM_LOCK_HELD": "1"})
     return subprocess.run(entrypoint_aufruf("./ralph.sh"), cwd=repo, env=env,
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
 def test_fehlende_quittung_UND_gesprengter_cap_meldet_den_benannten_fall(tmp_path):

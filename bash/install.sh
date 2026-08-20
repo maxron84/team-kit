@@ -151,9 +151,52 @@ fi
 # genau die Pruefung, fuer die BL-124 gebaut wurde, tot auf dem Weg, auf
 # dem sie am meisten zaehlt. Die Einrueckung tarnte es — die Funktion stand
 # in Spalte 0 und sah aus wie eine Definition auf oberster Ebene.
+# finde_python: der Name, unter dem Python auf DIESER Maschine antwortet.
+#
+# BL-131. Bis hierher stand an drei Stellen fest `python3` — im Installer
+# selbst, in team.config.sh und dreizehnmal in lib.sh —, jeweils mit der
+# Begruendung "dieser Installer laeuft unter Linux". Unter Git for Windows
+# laeuft er das nicht. Und dort ist `python3` nicht etwa abwesend, sondern
+# BELEGT: %LOCALAPPDATA%\Microsoft\WindowsApps\python3.exe ist der
+# App-Execution-Alias aus dem Microsoft Store. `command -v` findet ihn,
+# der Aufruf startet den Store und meldet "Python was not found".
+#
+# Das ist derselbe Fund wie BL-122/BL-125 auf der pwsh-Bahn; `Finde-Python`
+# in install.ps1 loest ihn dort seit Langem. Diese Bahn hatte ihn nie
+# nachgezogen, weil niemand sie unter Windows gefahren hat. Die Reihenfolge
+# ist deshalb zeichengleich mit der dort: unter Windows `python` zuerst,
+# sonst `python3` zuerst.
+#
+# Geprueft wird START UND VERSION: Der Store-Alias startet und endet mit != 0,
+# und ein `python` aus einer Alt-Installation koennte Python 2 sein.
+finde_python() {
+    local kandidaten="python3 python py"
+    case "$(uname -s 2>/dev/null)" in
+        MINGW*|MSYS*|CYGWIN*|Windows*) kandidaten="python python3 py" ;;
+    esac
+    local py
+    for py in $kandidaten; do
+        command -v "$py" >/dev/null 2>&1 || continue
+        if "$py" -c 'import sys; sys.exit(0 if sys.version_info[:2] >= (3, 8) else 1)' \
+                >/dev/null 2>&1; then
+            printf '%s' "$py"; return 0
+        fi
+    done
+    return 1
+}
+
+# Einmal aufloesen, ueberall benutzen. Faellt die Probe aus, bleibt der
+# POSIX-Name stehen — aber die Luecke wird GENANNT statt verdeckt (die Meldung
+# steht unten, wo auch die uebrigen Vorbedingungen gemeldet werden).
+if PYTHON="$(finde_python)"; then
+    PYTHON_GEFUNDEN=1
+else
+    PYTHON="python3"; PYTHON_GEFUNDEN=0
+fi
+
 team_pytest() {
     local py
-    for py in python3 python py; do
+    for py in "$PYTHON" python3 python py; do
         command -v "$py" >/dev/null 2>&1 || continue
         if "$py" -m pytest --version >/dev/null 2>&1; then
             printf '%s -m pytest' "$py"; return 0
@@ -349,14 +392,15 @@ if [ "$UPDATE" -eq 1 ]; then
         # fasst er ja nicht an. Seit er eine abgewaehlte Bahn zurueckholen
         # kann, ERZEUGT er team.config.ps1, und dann zaehlt jeder Platzhalter:
         # vier ungefuellte blieben stehen und die Datei war halb fertig.
-        python3 - "$datei" "$PROJEKT" "$PRODUKTIVCODE" "$TEST_ORDNER" "$PLAN_ORDNER" \
+        "$PYTHON" - "$datei" "$PROJEKT" "$PRODUKTIVCODE" "$TEST_ORDNER" "$PLAN_ORDNER" \
                            "$SMOKE_TEST" "$TECH_STACK" "$DEPLOY" "$DEPLOY_AUSNAHMEN" \
                            "$DOMAENEN" "$COMMIT_ENTSCHEID" \
                            "${TEAM_WEITERER_CODE:-}" "${TEAM_TEST_ORDNER_BESTAND:-}" \
-                           "${TEAM_PLAN_ORDNER_BESTAND:-}" <<'PY'
+                           "${TEAM_PLAN_ORDNER_BESTAND:-}" "$PYTHON" <<'PY'
 import sys, pathlib
 (d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
- domaenen, commit, weiterer, test_bestand, plan_bestand) = sys.argv[1:15]
+ domaenen, commit, weiterer, test_bestand, plan_bestand,
+ python_name) = sys.argv[1:16]
 # BL-113: siehe die Begruendung bei fuelle() weiter unten. Die Regel steht
 # hier ein zweites Mal, weil der Update-Pfad eine eigene Fuell-Routine hat —
 # und ein Update, das die Kodierung verliert, ist genau der Fall, in dem ein
@@ -371,9 +415,9 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{TECH_STACK}}", stack), ("{{DEPLOY}}", deploy),
              ("{{DEPLOY_AUSNAHMEN}}", ausn), ("{{DOMAENEN}}", domaenen),
              ("{{COMMIT_ENTSCHEID}}", commit),
-             # Dieser Installer laeuft unter Linux, also python3; install.ps1
-             # traegt ein, was es auf der Maschine gefunden hat.
-             ("{{PYTHON}}", "python3"),
+             # BL-131: was auf DIESER Maschine wirklich antwortet — nicht
+             # der Name, von dem die Bahn annimmt, sie laufe unter Linux.
+             ("{{PYTHON}}", python_name),
              ("{{WEITERER_CODE}}", weiterer),
              ("{{TEST_BESTAND}}", test_bestand),
              ("{{PLAN_BESTAND}}", plan_bestand)]:
@@ -942,13 +986,14 @@ schreibe() {  # schreibe <ziel-relativ> <inhalt>
 fuelle() {
     local datei="$ZIEL/$1"
     [ -f "$datei" ] || return 0
-    python3 - "$datei" "$PROJEKT" "$PRODUKTIVCODE" "$TEST_ORDNER" "$PLAN_ORDNER" \
+    "$PYTHON" - "$datei" "$PROJEKT" "$PRODUKTIVCODE" "$TEST_ORDNER" "$PLAN_ORDNER" \
                        "$SMOKE_TEST" "$TECH_STACK" "$DEPLOY" "$DEPLOY_AUSNAHMEN" \
                        "$DOMAENEN" "$COMMIT_ENTSCHEID" "$WEITERER_CODE" \
-                       "$TEST_ORDNER_BESTAND" "$PLAN_ORDNER_BESTAND" <<'PY'
+                       "$TEST_ORDNER_BESTAND" "$PLAN_ORDNER_BESTAND" "$PYTHON" <<'PY'
 import sys, pathlib
 (d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
- domaenen, commit, weiterer, test_bestand, plan_bestand) = sys.argv[1:15]
+ domaenen, commit, weiterer, test_bestand, plan_bestand,
+ python_name) = sys.argv[1:16]
 # BL-113: utf-8-sig liest ein vorhandenes BOM weg, statt es als ﻿ mitten
 # in den Text zu nehmen. Ob beim Schreiben wieder eines hinkommt, entscheidet
 # unten allein die Endung — nicht der Zufall, was in der Vorlage stand.
@@ -962,11 +1007,10 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{TECH_STACK}}", stack), ("{{DEPLOY}}", deploy),
              ("{{DEPLOY_AUSNAHMEN}}", ausn), ("{{DOMAENEN}}", domaenen),
              ("{{COMMIT_ENTSCHEID}}", commit),
-             # Nur in team.config.ps1: Unter Windows heisst der Interpreter je
-             # nach Installation python/py. Dieser Installer laeuft unter
-             # Linux, also steht hier python3; install.ps1 traegt ein, was es
-             # auf der Maschine gefunden hat.
-             ("{{PYTHON}}", "python3"),
+             # BL-131: In BEIDEN Konfigurationen. Unter Windows heisst der
+             # Interpreter je nach Installation python/py, und seit team.config.sh
+             # denselben Platzhalter traegt, gilt das fuer beide Bahnen.
+             ("{{PYTHON}}", python_name),
              # BL-52/BL-51: leer ist der Normalfall — die Platzhalter stehen nur
              # in team.config.sh, damit eine leere Ersetzung nirgends Prosa
              # zerreisst.
@@ -1086,7 +1130,7 @@ elif [ "$FEHLER" -eq 0 ]; then
     gruen "  ✓ Alle Shell-Skripte syntaktisch korrekt"
 fi
 
-if python3 -m py_compile "$ZIEL"/team/tools/*.py 2>/dev/null; then
+if "$PYTHON" -m py_compile "$ZIEL"/team/tools/*.py 2>/dev/null; then
     gruen "  ✓ Python-Werkzeuge kompilieren"
 else
     rot "  ✗ Python-Werkzeuge fehlerhaft"; FEHLER=1

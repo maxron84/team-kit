@@ -70,7 +70,7 @@ def test_default_pfad_findet_das_buch_unabhaengig_vom_arbeitsverzeichnis(tmp_pat
 
     ergebnis = subprocess.run(
         [sys.executable, str(projekt / "team" / "tools" / "beutebuch.py"), "list"],
-        cwd=fremdes_cwd, capture_output=True, text=True, check=True,
+        cwd=fremdes_cwd, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True,
     )
     assert ergebnis.stdout.strip() == "HM-1\tan Frank uebergeben"
 

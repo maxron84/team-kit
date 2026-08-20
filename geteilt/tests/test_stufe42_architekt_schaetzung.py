@@ -51,7 +51,7 @@ def _bauen_fixture_repo(tmp_path):
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", "initial")
     ref = subprocess.run(
-        ["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True,
+        ["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace",
         check=True,
     ).stdout.strip()
 
@@ -69,7 +69,7 @@ def _run_schaetzung(repo, ref, *extra_args):
     result = subprocess.run(
         [sys.executable, str(KOSTEN_PY), "architekt-schaetzung",
          "--since", ref, "--repo", str(repo), *extra_args],
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 

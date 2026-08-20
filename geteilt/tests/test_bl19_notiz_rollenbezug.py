@@ -68,7 +68,7 @@ TEAM_STATUS = _entrypoint("team-status.sh")
 
 def _run(*args):
     ergebnis = subprocess.run(
-        [sys.executable, str(KOSTEN_PY), *args], capture_output=True, text=True)
+        [sys.executable, str(KOSTEN_PY), *args], capture_output=True, text=True, encoding="utf-8", errors="replace")
     return ergebnis.returncode, ergebnis.stdout.strip(), ergebnis.stderr.strip()
 
 
@@ -203,7 +203,7 @@ def test_die_eine_bedienhandlung_trennt_die_herkunft(tmp_path):
 
     ergebnis = subprocess.run(
         [BASH, str(ziel), "--rollen-abschluss", "3", "produkt", FELD_NOTIZ],
-        capture_output=True, text=True, cwd=str(repo),
+        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(repo),
         env=dict(os.environ, TEAM_DOMAENEN="produkt"))
     assert ergebnis.returncode == 0, ergebnis.stderr
 

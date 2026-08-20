@@ -42,7 +42,7 @@ def _bash(skript, cwd):
         cwd=cwd,
         env={"HOME": str(Path.home()), "PATH": "/usr/local/bin:/usr/bin:/bin"},
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
     )
 
 

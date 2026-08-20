@@ -122,7 +122,7 @@ def test_turns_cli_meldet_das_profil(tmp_path):
         json.dumps({"num_turns": 87, "total_cost_usd": 5.90}), encoding="utf-8")
     ergebnis = subprocess.run(
         [sys.executable, str(kit_pfad("tools", "kosten.py")),
-         "turns", str(logs)], capture_output=True, text=True)
+         "turns", str(logs)], capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert ergebnis.returncode == 0, ergebnis.stderr
     assert "87 Turns" in ergebnis.stdout
 

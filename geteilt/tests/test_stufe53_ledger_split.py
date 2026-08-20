@@ -18,7 +18,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from conftest import BASH, kit_pfad
+from conftest import BASH, entrypoint_aufruf, kit_pfad
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 KOSTEN_PY = kit_pfad("tools", "kosten.py")
@@ -47,7 +47,7 @@ FIXTURE_LEDGER = """\
 def _run(*args):
     result = subprocess.run(
         [sys.executable, str(KOSTEN_PY), *args],
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 
@@ -118,7 +118,7 @@ def test_team_ledger_split_wrapper(tmp_path):
     ledger = _fixture_ledger(tmp_path)
     result = subprocess.run(
         [BASH, "-c", f'source "{TEAM_LIB}"; team_ledger_split "{ledger}"'],
-        cwd=REPO_ROOT, capture_output=True, text=True,
+        cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     assert result.returncode == 0, result.stderr
     abo, api, gemischt = (float(x) for x in result.stdout.strip().split("\t"))
@@ -130,8 +130,8 @@ def test_team_status_budget_kopfzeilen_summieren_sich_auf_gesamt():
     # test_stufe44_domaenen_status.py): die drei Kostenzeilen (API + Abo +
     # gemischt) muessen sich exakt auf die "Gesamt"-Zeile summieren.
     result = subprocess.run(
-        ["./team-status.sh", "--budget"],
-        cwd=REPO_ROOT, capture_output=True, text=True,
+        [*entrypoint_aufruf("./team-status.sh"), "--budget"],
+        cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     assert result.returncode == 0, result.stderr
     zeilen = {}
