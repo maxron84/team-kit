@@ -42,10 +42,38 @@ param(
     [Parameter(Position = 0)][string]$Ziel = "",
     [switch]$NichtInteraktiv,
     [switch]$Force,
-    [switch]$Update
+    [switch]$Update,
+    # Ausdrueckliche Abwahl einer Bahn durch den Anwender (BL-119). Default
+    # ist BEIDES — die Begruendung steht am Kopierblock: Die zwei
+    # Konfigurationen sind zwei Generate EINER Quelle, und wer nur eine Bahn
+    # bekommt, schreibt die andere irgendwann von Hand. Genau dort faengt
+    # Drift an. Zurueckgeholt wird mit -Update ohne Schalter.
+    [switch]$NurBash,
+    [switch]$NurPwsh
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ($NurBash -and $NurPwsh) {
+    Write-Host "FEHLER: -NurBash und -NurPwsh schliessen einander aus." -ForegroundColor Red
+    exit 2
+}
+$NurBahn = if ($NurBash) { 'bash' } elseif ($NurPwsh) { 'pwsh' } else { '' }
+
+function Test-BahnAbgewaehlt {
+    <#
+      Gehoert die Datei zu einer abgewaehlten Bahn? Entschieden wird ueber die
+      ENDUNG, weil der Installer hier Kit-Pfade (bash\entry\…) auf
+      Projekt-Pfade (ralph.sh in der Wurzel) abbildet — der Bahn-Ordner ist an
+      dieser Stelle schon weg.
+    #>
+    param([string]$Pfad)
+    switch ($script:NurBahn) {
+        'bash' { return $Pfad -match '\.(ps1|psm1|cmd)$' }
+        'pwsh' { return $Pfad -match '\.sh$' }
+    }
+    return $false
+}
 
 # Zwei Anker seit der Bahn-Trennung: BAHN ist <kit>\pwsh (hier liegt dieses
 # Skript), KIT die Wurzel des Kits. Der Installer liest aus BEIDEN Bahnen —
@@ -291,11 +319,14 @@ function Kopiere-Infrastruktur {
             @{ Ordner = 'pwsh\entry'; Muster = '*.cmd' })) {
         foreach ($f in (Get-ChildItem (Join-Path $KIT $quelle.Ordner) -Filter $quelle.Muster -File -ErrorAction SilentlyContinue)) {
             if ($OhneConfig -and $f.Name -in @('team.config.sh', 'team.config.ps1')) { continue }
+            if (Test-BahnAbgewaehlt $f.Name) { continue }
             Kopiere $f.FullName $f.Name -Immer:$Immer
         }
     }
-    Kopiere (Join-Path $KIT 'bash\lib.sh')     'team/lib.sh'     -Immer:$Immer
-    Kopiere (Join-Path $KIT 'bash\redteam.sh') 'team/redteam.sh' -Immer:$Immer
+    foreach ($f in @('bash\lib.sh', 'bash\redteam.sh')) {
+        if (Test-BahnAbgewaehlt $f) { continue }
+        Kopiere (Join-Path $KIT $f) "team/$(Split-Path -Leaf $f)" -Immer:$Immer
+    }
     # *.psm1 UND *.ps1: team/redteam.ps1 ist die gemeinsame Sweep-Logik von
     # Harry und Marv. Sie fiel zuerst durch das Raster, weil unter team/ nur
     # nach lib-Modulen gesucht wurde — die Rollen starteten dann mit
@@ -307,6 +338,7 @@ function Kopiere-Infrastruktur {
     # pruefe-windows.ps1. Ein '*.ps1' ueber den Ordner kopierte die vier
     # Kit-Werkzeuge in das team/ des Zielprojekts.
     foreach ($f in @('pwsh\lib.psm1', 'pwsh\redteam.ps1')) {
+        if (Test-BahnAbgewaehlt $f) { continue }
         $voll = Join-Path $KIT $f
         if (Test-Path $voll) { Kopiere $voll "team/$(Split-Path -Leaf $f)" -Immer:$Immer }
     }
@@ -429,6 +461,27 @@ if ($Update) {
                 $Domaenen $commitEntscheid '' $testBestand $planBestand (Finde-Python)
 
     Kopiere-Infrastruktur -Immer -OhneConfig
+
+    # BL-119, die Gegenprobe zum Abwahl-Schalter: Ein Update OHNE Schalter
+    # macht das Projekt wieder vollstaendig. Der Haken sitzt an einer Stelle,
+    # die man leicht uebersieht — die Entrypoints kommen zurueck, die
+    # KONFIGURATION nicht: -OhneConfig oben schliesst team.config.* aus, weil
+    # sie Projektdaten traegt. Richtig, solange sie DA ist. Fehlt sie, ist
+    # "nicht anfassen" kein Schutz mehr, sondern eine halbe Bahn — ralph.sh
+    # laege da und faende keine Werte.
+    foreach ($paar in @(
+            @{ Quelle = 'bash\entry\team.config.sh';  Name = 'team.config.sh'  },
+            @{ Quelle = 'pwsh\entry\team.config.ps1'; Name = 'team.config.ps1' })) {
+        $quelle = Join-Path $KIT $paar.Quelle
+        if (-not (Test-Path $quelle))                { continue }
+        if (Test-BahnAbgewaehlt $paar.Name)          { continue }
+        if (Test-Path (Join-Path $Ziel $paar.Name))  { continue }
+        Kopiere $quelle $paar.Name -Immer
+        Fuelle-Datei (Join-Path $Ziel $paar.Name)
+        Gelb "  [!] $($paar.Name) fehlte und ist neu erzeugt worden — aus den Werten"
+        Write-Host "      der vorhandenen Konfiguration, nicht aus den Auslieferungswerten."
+        Write-Host "      Bitte gegenlesen: $(Join-Path $Ziel $paar.Name)"
+    }
 
     $fremdeTests = @()
     $zielTests = Join-Path $Ziel 'team\tests'
@@ -748,7 +801,15 @@ Setze-Werte $Projekt $Produktivcode $TestOrdner $PlanOrdner $SmokeTest `
 Kopf "A.2 — Dateien installieren"
 Kopiere-Infrastruktur
 $anzahlTests = @(Get-ChildItem (Join-Path $KIT 'geteilt\tests') -Filter 'test_*.py' -File).Count
-Gruen "  [ok] Entrypoints (Wurzel, beide Bahnen) + team/ (lib, tools, prompts, $anzahlTests Tests)"
+Gruen "  [ok] Entrypoints (Wurzel$(if ($NurBahn) { ", nur $NurBahn" } else { ", beide Bahnen" })) + team/ (lib, tools, prompts, $anzahlTests Tests)"
+if ($NurBahn) {
+    $andere = if ($NurBahn -eq 'pwsh') { 'bash' } else { 'pwsh' }
+    Gelb   "  [!] Nur die $NurBahn-Bahn installiert — die $andere-Bahn fehlt in"
+    Write-Host "    diesem Projekt, samt ihrer Konfiguration. Das ist deine Abwahl,"
+    Write-Host "    kein Versehen des Installers."
+    Write-Host "    Zurueckholen (macht das Projekt wieder vollstaendig):"
+    Write-Host "      pwsh -File `"$KIT\pwsh\install.ps1`" `"$Ziel`" -Update"
+}
 
 # ------------------------------------------------------------- A.0 Bootstrap
 Kopf "A.0 — Bootstrap-Dateien"

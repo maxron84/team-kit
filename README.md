@@ -174,11 +174,13 @@ Schwester-Repo, nicht Teil dieses Kits.
 ```bash
 # Linux und WSL
 bash bash/install.sh <zielpfad> [--nicht-interaktiv] [--update|--force]
+                                [--nur-bash|--nur-pwsh]
 ```
 
 ```powershell
 # Windows nativ (PowerShell 7, ohne WSL)
 pwsh -File pwsh\install.ps1 <zielpfad> [-NichtInteraktiv] [-Update|-Force]
+                                       [-NurBash|-NurPwsh]
 ```
 
 > **Beide Installer erzeugen aus denselben neun Antworten byte-identische
@@ -187,6 +189,22 @@ pwsh -File pwsh\install.ps1 <zielpfad> [-NichtInteraktiv] [-Update|-Force]
 > ein auf Linux eingerichtetes Projekt unter Windows nicht ohne Konfiguration
 > dasteht. Die pwsh-Bahn ist **gebaut, aber noch nicht auf Windows
 > abgenommen** — siehe [doku/einrichtung.md, *Belegstand*](doku/einrichtung.md#belegstand).
+
+**Nur eine Bahn installieren:** `--nur-bash` bzw. `--nur-pwsh` (PowerShell:
+`-NurBash` / `-NurPwsh`). Ein Projekt bekommt dann statt 29 Entrypoints nur
+die zehn der gewählten Bahn. **Default ist beides**, und das hat einen Grund:
+`team.config.sh` und `team.config.ps1` sind zwei Generate **einer** Quelle
+(denselben neun Antworten). Wer nur eine Bahn installiert, hat unter dem
+anderen System keine Konfiguration — und schreibt sie irgendwann von Hand.
+Genau dort fängt Drift an. Die Abwahl ist deshalb ausdrücklich und kommt vom
+Anwender, nie vom Installer.
+
+**Sie ist keine Einbahnstraße:** Ein späteres `--update` *ohne* Schalter macht
+das Projekt wieder vollständig — samt der fehlenden Konfiguration, erzeugt aus
+den Werten der vorhandenen, nicht aus den Auslieferungswerten. In einem
+einbahnigen Projekt bleiben die Team-Tests grün; die fehlende Bahn erscheint
+als **sichtbarer** Vermerk in der Testzusammenfassung („einbahnige Ablage"),
+nicht als Fehlschlag und nicht als stiller Übersprung.
 
 **Ein bestehendes Projekt auf eine neue Kit-Version heben:** `--update`. Es
 fasst **nur** die Infrastruktur an (Entrypoints außer `team.config.sh`,
@@ -322,11 +340,12 @@ bash/                   ALLES, was die Bash-Bahn ausmacht
 ├── kit-einrichten.sh   Vorflug-Prüfung zwischen Klon und Installation:
 │                       Bordmittel, Zeilenenden, Dateisystem (WSL!), Auth —
 │                       prüft mit Proben statt Annahmen, kostet nichts
-├── kit-test.sh         Selbstverifikation in 10 Stufen: installiert in ein
+├── kit-test.sh         Selbstverifikation in 11 Stufen: installiert in ein
 │                       Wegwerf-Repo, fährt dort die Tests zweimal (Ausliefe-
 │                       rungswerte und angepasste team.config.sh), prüft
-│                       Update-Pfad, Bestandslage, Regel-Inventar und die
-│                       Einrichtungsroutine — DAS Gate vor jedem Push
+│                       Update-Pfad, Bestandslage, Bahn-Abwahl samt
+│                       Rueckweg, Regel-Inventar und die Einrichtungs-
+│                       routine — DAS Gate vor jedem Push
 ├── lib.sh              Auth, Guard, Budget, 429-Mechanik, Kosten
 ├── redteam.sh          Gemeinsame Sweep-Logik von Harry und Marv
 ├── entry/              Entrypoints — landen in der WURZEL des Zielprojekts

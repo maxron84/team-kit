@@ -129,6 +129,37 @@ def kit_pfad(*teile):
     return kit if kit.exists() else projekt
 
 
+def bahnen_in_der_ablage():
+    """Welche Bahnen liegen hier ueberhaupt? — Rueckgabe z. B. {"bash"}.
+
+    Der Installer kennt seit BL-119 `--nur-bash` / `--nur-pwsh`: eine
+    ausdrueckliche ABWAHL durch den Anwender. Ein so installiertes Projekt
+    hat die andere Bahn nicht, und das ist kein Defekt. Tests, die beide
+    Bahnen brauchen, sollen dort UEBERSPRINGEN — aber sichtbar, mit einem
+    Grund, der die Abwahl nennt. Ein stiller Uebersprung liest sich am Ende
+    wie ein bestandener Nachweis.
+    """
+    gefunden = set()
+    for muster, bahn in (("*.sh", "bash"), ("bash/entry/*.sh", "bash"),
+                         ("*.ps1", "pwsh"), ("pwsh/entry/*.ps1", "pwsh")):
+        if any(REPO_ROOT.glob(muster)):
+            gefunden.add(bahn)
+    return gefunden
+
+
+def ueberspringe_ohne_beide_bahnen():
+    """Skip mit Begruendung, wenn eine Bahn abgewaehlt wurde."""
+    bahnen = bahnen_in_der_ablage()
+    if {"bash", "pwsh"} <= bahnen:
+        return
+    da = ", ".join(sorted(bahnen)) or "keine"
+    _QUOTE["einbahnig"].add(da)
+    pytest.skip(
+        f"einbahnige Ablage (vorhanden: {da}) — die andere Bahn ist mit "
+        f"--nur-bash/--nur-pwsh abgewaehlt worden. Zurueckholen: "
+        f"install mit --update ohne Schalter.")
+
+
 def kopiere_team_namensraum(ziel):
     """Baut ein PROJEKTfoermiges team/ aus der Ablage, die gerade vorliegt.
 
@@ -583,7 +614,8 @@ def _pwsh_bereit():
 
 # --- Fixtures und Bericht ----------------------------------------------------
 
-_QUOTE = {"beide": set(), "nur_bash": set(), "uebersprungen": set()}
+_QUOTE = {"beide": set(), "nur_bash": set(), "uebersprungen": set(),
+          "einbahnig": set()}
 
 
 @pytest.fixture(params=["bash", "pwsh"])
@@ -636,3 +668,11 @@ def pytest_terminal_summary(terminalreporter):
         terminalreporter.write_line(
             f"  bewusst nur bash           : {markiert}  "
             f"(jede Markierung gehoert in den Backlog)")
+    if _QUOTE["einbahnig"]:
+        terminalreporter.write_line(
+            f"  einbahnige Ablage          : nur "
+            f"{', '.join(sorted(_QUOTE['einbahnig']))} installiert — die "
+            f"andere Bahn ist abgewaehlt")
+        terminalreporter.write_line(
+            "                               (--update ohne Schalter holt sie "
+            "zurueck)")

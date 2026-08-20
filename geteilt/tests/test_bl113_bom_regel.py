@@ -46,6 +46,7 @@ WARUM HIER UND NICHT NUR IN kit-test.sh
     ist die Kodierung schon einmal verloren gegangen.
 """
 from pathlib import Path
+from conftest import ueberspringe_ohne_beide_bahnen
 
 WURZEL = Path(__file__).resolve().parents[2]
 BOM = b"\xef\xbb\xbf"
@@ -74,6 +75,7 @@ def _dateien(muster):
 
 
 def test_powershell_quelltext_traegt_bom():
+    ueberspringe_ohne_beide_bahnen()
     dateien = _dateien(MIT_BOM)
     assert dateien, "keine PowerShell-Dateien gefunden — Muster stimmt nicht mehr"
     ohne = [p.relative_to(WURZEL).as_posix()

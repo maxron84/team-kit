@@ -76,14 +76,14 @@ aufraeumen() {
 }
 trap aufraeumen EXIT
 
-kopf "1/10 — Wegwerf-Repo anlegen"
+kopf "1/11 — Wegwerf-Repo anlegen"
 git -C "$ZIEL" init -q
 # Lokale Identität, damit der Lauf auch ohne globale Git-Config committen kann.
 git -C "$ZIEL" config user.email "kit-test@localhost"
 git -C "$ZIEL" config user.name  "Kit-Selbsttest"
 gruen "  ✓ $ZIEL"
 
-kopf "2/10 — Kit installieren (nicht-interaktiv)"
+kopf "2/11 — Kit installieren (nicht-interaktiv)"
 # Ohne TEAM_INIT_*-Vorgaben: genau die Defaults, die ein Anwender bekäme.
 if ! bash "$KIT/bash/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.log" 2>&1; then
     rot "  ✗ install.sh schlug fehl:"
@@ -92,7 +92,7 @@ if ! bash "$KIT/bash/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.lo
 fi
 gruen "  ✓ $(grep -oE 'Fertig — [0-9]+ Dateien geschrieben' "$ZIEL/.install.log" | head -1)"
 
-kopf "3/10 — Ungefüllte Platzhalter suchen"
+kopf "3/11 — Ungefüllte Platzhalter suchen"
 # Ein übrig gebliebenes {{...}} heißt: Der Installer kennt die Datei nicht oder
 # der Platzhalter wurde umbenannt. Beides fällt sonst erst im Feld auf, wo die
 # Briefings die Pfade des Ursprungsprojekts nennen würden — falsche Guard-Grenze.
@@ -105,7 +105,7 @@ if [ -n "$RESTE" ]; then
 fi
 gruen "  ✓ keine"
 
-kopf "4/10 — Regressionstests in der Installation (Auslieferungswerte)"
+kopf "4/11 — Regressionstests in der Installation (Auslieferungswerte)"
 # Vor dem Testlauf committen — dieselbe Reihenfolge, die TEAM.md dem Anwender
 # vorschreibt. Ein Test, der den Git-Zustand liest, sieht damit den echten.
 git -C "$ZIEL" add -A
@@ -144,7 +144,7 @@ fi
 # Caps ("lieber großzügig ansetzen"), Commit-Präfixe, mehrere Domänen. Pfade
 # und Ordner bleiben unangetastet: Die sind die Ablage, gegen die die Tests
 # gelten dürfen, nicht der Regler, an dem ein Projekt dreht.
-kopf "5/10 — Regressionstests unter angepasster team.config.sh (BL-58)"
+kopf "5/11 — Regressionstests unter angepasster team.config.sh (BL-58)"
 sed -i \
     -e 's|^TEAM_ROLE_BUDGET_USD=.*|TEAM_ROLE_BUDGET_USD="${TEAM_ROLE_BUDGET_USD:-10}"|' \
     -e 's|^TEAM_ROLE_HARDCAP_USD=.*|TEAM_ROLE_HARDCAP_USD="${TEAM_ROLE_HARDCAP_USD:-20}"|' \
@@ -186,7 +186,7 @@ fi
 # einmaliges Handprotokoll: Wir tun so, als sei das Projekt in Betrieb
 # (Ledger, Kaskadenstand, Beutebuch-Fund, eigener Smoke-Test), fahren das
 # Update und pruefen, dass davon NICHTS angefasst wurde.
-kopf "6/10 — Update-Pfad schuetzt Projektdaten"
+kopf "6/11 — Update-Pfad schuetzt Projektdaten"
 echo '2026-08-01 | 1 | 9.4204 | abo | produkt | roles | Lauf' >> "$ZIEL/.budget-ledger"
 echo '### HM-1 — echter Fund' >> "$ZIEL/plans/beutebuch.md"
 echo '5' > "$ZIEL/.ralph-state"
@@ -317,7 +317,7 @@ esac
 # BL-51/BL-52: Die beiden Bestandsprojekt-Befunde. Der Installer ist die einzige
 # Stelle, an der sie auffallen koennen — in der Installation liegt er nicht mehr,
 # also gehoert der Nachweis hierher und nicht in team/tests/.
-kopf "7/10 — Einzug in eine gewachsene Codebasis (BL-51, BL-52)"
+kopf "7/11 — Einzug in eine gewachsene Codebasis (BL-51, BL-52)"
 BESTAND_REPO="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-bestand.XXXXXX")"
 bestand_aufraeumen() { [ "$BEHALTEN" -eq 1 ] || rm -rf "$BESTAND_REPO"; }
 trap 'aufraeumen; bestand_aufraeumen' EXIT
@@ -398,7 +398,68 @@ b_pruefe "im leeren Repo schweigt auch das Update" \
     "$(grep -c 'Ungeprueft in der Wurzel' "$ZIEL/.update.log")" "0"
 [ "$BESTAND_FEHLER" -eq 0 ] || exit 1
 
-kopf "8/10 — Regel-Inventar gegen die Regeldatei (A.10, BL-56)"
+kopf "8/11 — Abwahl einer Bahn und ihr Rueckweg (BL-119)"
+# Der Schalter --nur-bash/--nur-pwsh ist eine ausdrueckliche Abwahl durch den
+# Anwender. Was ihn ueberhaupt erst vertretbar macht, ist der RUECKWEG: Ein
+# spaeteres --update ohne Schalter muss das Projekt wieder vollstaendig
+# machen. Sonst waere die Abwahl eine Einbahnstrasse, und der Anwender saesse
+# mit einem halben Projekt da, ohne es zu merken.
+#
+# Beim ersten Bau ist genau das passiert: Die Entrypoints kamen zurueck, die
+# KONFIGURATION nicht — ein Update fasst team.config.* grundsaetzlich nicht
+# an. Richtig, solange sie da ist; fehlt sie, ist "nicht anfassen" kein
+# Schutz, sondern eine halbe Bahn. Deshalb steht der Rueckweg hier und nicht
+# in der Doku.
+A_REPO="$(mktemp -d)/projekt"
+mkdir -p "$A_REPO"
+git -C "$A_REPO" init -q
+git -C "$A_REPO" commit -q --allow-empty -m "init"
+
+bash "$KIT/bash/install.sh" "$A_REPO" --nicht-interaktiv --nur-bash \
+     > "$A_REPO/.abwahl.log" 2>&1 || { rot "  ✗ Installation mit --nur-bash schlug fehl"; exit 1; }
+
+a_pruefe() {
+    if [ "$2" = "$3" ]; then gruen "  ✓ $1"
+    else rot "  ✗ $1 — erwartet: $3, ist: $2"; exit 1; fi
+}
+a_pruefe "keine .ps1/.cmd im Projekt"  "$(ls "$A_REPO" | grep -cE '\.ps1$|\.cmd$')" "0"
+a_pruefe "die Bash-Bahn ist vollstaendig" "$(ls "$A_REPO"/*.sh | wc -l)" "10"
+a_pruefe "kein PowerShell-Kern in team/" \
+    "$(ls "$A_REPO/team" | grep -cE '\.psm1$|\.ps1$')" "0"
+a_pruefe "und die Abwahl steht im Protokoll" \
+    "$(grep -c 'Nur die bash-Bahn installiert' "$A_REPO/.abwahl.log")" "1"
+
+# Die Tests des Projekts duerfen in einer einbahnigen Ablage nicht ROT sein.
+# Eine abgewaehlte Bahn ist kein Defekt — aber der Uebersprung muss SICHTBAR
+# sein, sonst liest er sich am Ende wie ein bestandener Nachweis.
+( cd "$A_REPO" && python3 -m pytest team/tests -q > .einbahnig.log 2>&1 )
+a_pruefe "Tests bleiben gruen (kein Fehlschlag durch die fehlende Bahn)" \
+    "$(grep -cE '^[0-9]+ (failed|error)' "$A_REPO/.einbahnig.log")" "0"
+a_pruefe "und die Einbahnigkeit steht in der Zusammenfassung" \
+    "$(grep -c 'einbahnige Ablage' "$A_REPO/.einbahnig.log")" "1"
+
+# --- Der Rueckweg
+git -C "$A_REPO" add -A >/dev/null 2>&1
+git -C "$A_REPO" commit -q -m "einbahnig installiert"
+bash "$KIT/bash/install.sh" "$A_REPO" --update > "$A_REPO/.rueckweg.log" 2>&1 \
+    || { rot "  ✗ --update auf einem einbahnigen Projekt schlug fehl"; \
+         sed 's/\x1b\[[0-9;]*m//g' "$A_REPO/.rueckweg.log" | tail -20; exit 1; }
+a_pruefe "--update holt die pwsh-Bahn zurueck" \
+    "$(ls "$A_REPO" | grep -cE '\.ps1$|\.cmd$')" "19"
+a_pruefe "auch den PowerShell-Kern" \
+    "$(ls "$A_REPO/team" | grep -cE '\.psm1$|\.ps1$')" "2"
+a_pruefe "team.config.ps1 ist wieder da" \
+    "$([ -f "$A_REPO/team.config.ps1" ] && echo ja || echo nein)" "ja"
+# Der eigentliche Fund: Die Datei war da und trotzdem halb fertig.
+a_pruefe "und VOLLSTAENDIG gefuellt (kein Platzhalter uebrig)" \
+    "$(grep -c '{{' "$A_REPO/team.config.ps1")" "0"
+a_pruefe "mit den Werten des Projekts, nicht den Auslieferungswerten" \
+    "$(grep -c "TEAM_PROJEKT' 'projekt'" "$A_REPO/team.config.ps1")" "1"
+a_pruefe "und das Nachziehen ist gemeldet worden" \
+    "$(grep -c 'team.config.ps1 fehlte und ist neu erzeugt worden' "$A_REPO/.rueckweg.log")" "1"
+rm -rf "$(dirname "$A_REPO")"
+
+kopf "9/11 — Regel-Inventar gegen die Regeldatei (A.10, BL-56)"
 # Der Sicherheitsgurt vor dem Umbau der Regeldatei: Jedes NORM-Zitat muss
 # woertlich in bootstrap/CLAUDE.md.vorlage stehen, jeder Abschnitt im Inventar
 # vertreten sein. Prueft die VORLAGE, nicht die Installation — ein Feldprojekt
@@ -409,7 +470,7 @@ if ! python3 "$KIT/geteilt/kit-regelinventar.py"; then
     exit 1
 fi
 
-kopf "9/10 — Einrichtungsroutine (Klon → Maschine → Installer)"
+kopf "10/11 — Einrichtungsroutine (Klon → Maschine → Installer)"
 # kit-einrichten.sh steht VOR install.sh: Wer es kaputt ausliefert, blockiert
 # den Einstieg, noch bevor die Stufen 1–8 ueberhaupt zum Tragen kommen. Der
 # Weg wird deshalb hier durchgespielt — ohne Agenten-CLI und ohne Schreiben
@@ -492,7 +553,7 @@ e_pruefe "einrichtung.md fuehrt ihn im Belegstand" \
 
 [ "$E_FEHLER" -eq 0 ] || exit 1
 
-kopf "10/10 — pwsh-Bahn: Gleichstand der beiden Installer"
+kopf "11/11 — pwsh-Bahn: Gleichstand der beiden Installer"
 # Die Zusicherung, auf der die ganze pwsh-Bahn ruht: install.sh und
 # install.ps1 erzeugen aus DENSELBEN Antworten DASSELBE Projekt. Nicht
 # "aehnlich", nicht "funktional gleichwertig" — Byte fuer Byte dasselbe.

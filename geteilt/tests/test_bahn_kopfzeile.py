@@ -49,6 +49,7 @@ WAS IM KIT ANDERS GEPRUEFT WIRD ALS IM PROJEKT
 """
 import re
 from pathlib import Path
+from conftest import ueberspringe_ohne_beide_bahnen
 
 WURZEL = Path(__file__).resolve().parents[2]
 
@@ -200,6 +201,7 @@ def test_gegenstueck_existiert_und_liegt_auf_der_anderen_bahn():
     `.ps1`: Die Batch-Datei ist ein Shim auf ihre `.ps1` (dieselbe Bahn),
     ihr Gegenstueck auf der ANDEREN Bahn ist die `.sh`.
     """
+    ueberspringe_ohne_beide_bahnen()
     schlecht = []
     for p in _dateien():
         kennung = _kennung(p)
@@ -279,6 +281,7 @@ def test_beide_bahnen_sind_besetzt():
     umgezogen ist, ein Muster nicht mehr passt oder die Endungstabelle
     veraltet —, waeren alle Tests oben gruen und die Zusicherung leer.
     """
+    ueberspringe_ohne_beide_bahnen()
     bahnen = {k[0] for k in (_kennung(p) for p in _dateien()) if k}
     assert {"bash", "pwsh"} <= bahnen, (
         f"nur diese Bahnen gefunden: {sorted(bahnen) or 'keine'}")

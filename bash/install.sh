@@ -2,7 +2,8 @@
 # Bahn: bash | Gegenstueck: install.ps1
 # install.sh — installiert das T.E.A.M. in ein Zielprojekt.
 #
-# Aufruf:  bash install.sh <zielpfad> [--nicht-interaktiv] [--force|--update]
+# Aufruf:  bash bash/install.sh <zielpfad> [--nicht-interaktiv] [--force|--update]
+#                                          [--nur-bash|--nur-pwsh]
 #
 #   --nicht-interaktiv  Keine Rückfragen; Werte aus den TEAM_INIT_*-Umgebungs-
 #                       variablen oder den Defaults. Für Skripte und Tests.
@@ -37,16 +38,35 @@ ZIEL=""
 INTERAKTIV=1
 FORCE=0
 UPDATE=0
+# Welche Bahnen installiert werden. Default ist BEIDE — siehe die ausfuehrliche
+# Begruendung am Kopierblock: die zwei Konfigurationen sind zwei Generate EINER
+# Quelle, und wer nur eine Bahn bekommt, schreibt die andere irgendwann von
+# Hand. Die Abwahl ist deshalb ausdruecklich und kommt vom Anwender, nie vom
+# Installer (BL-119).
+NUR_BAHN=""
 
 for arg in "$@"; do
     case "$arg" in
         --nicht-interaktiv) INTERAKTIV=0 ;;
         --force)            FORCE=1 ;;
         --update)           UPDATE=1 ;;
+        --nur-bash)         NUR_BAHN="bash" ;;
+        --nur-pwsh)         NUR_BAHN="pwsh" ;;
         -*) echo "Unbekannte Option: $arg" >&2; exit 2 ;;
         *)  ZIEL="$arg" ;;
     esac
 done
+
+# Gehoert die Datei zu einer abgewaehlten Bahn? Entscheidet ueber die ENDUNG,
+# weil das Kit an dieser Stelle Kit-Pfade (bash/entry/…) auf Projekt-Pfade
+# (ralph.sh in der Wurzel) abbildet und der Bahn-Ordner damit weg ist.
+bahn_abgewaehlt() {
+    case "$NUR_BAHN" in
+        bash) case "$1" in *.ps1|*.psm1|*.cmd) return 0 ;; esac ;;
+        pwsh) case "$1" in *.sh) return 0 ;; esac ;;
+    esac
+    return 1
+}
 
 rot()  { printf '\033[31m%s\033[0m\n' "$*"; }
 gruen(){ printf '\033[32m%s\033[0m\n' "$*"; }
@@ -267,12 +287,19 @@ if [ "$UPDATE" -eq 1 ]; then
     fuelle_abs() {
         local datei="$1"
         [ -f "$datei" ] || return 0
+        # Die letzten vier kamen mit BL-119 dazu. Sie fehlten hier, solange
+        # der Update-Pfad nur BESTEHENDE Dateien nachrenderte — team.config.*
+        # fasst er ja nicht an. Seit er eine abgewaehlte Bahn zurueckholen
+        # kann, ERZEUGT er team.config.ps1, und dann zaehlt jeder Platzhalter:
+        # vier ungefuellte blieben stehen und die Datei war halb fertig.
         python3 - "$datei" "$PROJEKT" "$PRODUKTIVCODE" "$TEST_ORDNER" "$PLAN_ORDNER" \
                            "$SMOKE_TEST" "$TECH_STACK" "$DEPLOY" "$DEPLOY_AUSNAHMEN" \
-                           "$DOMAENEN" "$COMMIT_ENTSCHEID" <<'PY'
+                           "$DOMAENEN" "$COMMIT_ENTSCHEID" \
+                           "${TEAM_WEITERER_CODE:-}" "${TEAM_TEST_ORDNER_BESTAND:-}" \
+                           "${TEAM_PLAN_ORDNER_BESTAND:-}" <<'PY'
 import sys, pathlib
 (d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
- domaenen, commit) = sys.argv[1:12]
+ domaenen, commit, weiterer, test_bestand, plan_bestand) = sys.argv[1:15]
 # BL-113: siehe die Begruendung bei fuelle() weiter unten. Die Regel steht
 # hier ein zweites Mal, weil der Update-Pfad eine eigene Fuell-Routine hat —
 # und ein Update, das die Kodierung verliert, ist genau der Fall, in dem ein
@@ -286,7 +313,13 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{SMOKE_TEST}}", smoke or "TODO: noch keiner — Stufe 1 der ersten Kaskade"),
              ("{{TECH_STACK}}", stack), ("{{DEPLOY}}", deploy),
              ("{{DEPLOY_AUSNAHMEN}}", ausn), ("{{DOMAENEN}}", domaenen),
-             ("{{COMMIT_ENTSCHEID}}", commit)]:
+             ("{{COMMIT_ENTSCHEID}}", commit),
+             # Dieser Installer laeuft unter Linux, also python3; install.ps1
+             # traegt ein, was es auf der Maschine gefunden hat.
+             ("{{PYTHON}}", "python3"),
+             ("{{WEITERER_CODE}}", weiterer),
+             ("{{TEST_BESTAND}}", test_bestand),
+             ("{{PLAN_BESTAND}}", plan_bestand)]:
     t = t.replace(a, b)
 p.write_text(t, encoding=("utf-8-sig" if p.suffix in (".ps1", ".psm1")
                           else "utf-8"))
@@ -301,15 +334,49 @@ PY
     for f in "$KIT"/bash/entry/*.sh "$KIT"/pwsh/entry/*.ps1 "$KIT"/pwsh/entry/*.cmd; do
         [ -e "$f" ] || continue
         case "$(basename "$f")" in team.config.sh|team.config.ps1) continue ;; esac
+        bahn_abgewaehlt "$f" && continue
         kopiere "$f" "$(basename "$f")" 755
     done
-    kopiere "$KIT/bash/lib.sh"     "team/lib.sh"     755
-    kopiere "$KIT/bash/redteam.sh" "team/redteam.sh" 755
+    for f in "$KIT/bash/lib.sh" "$KIT/bash/redteam.sh"; do
+        bahn_abgewaehlt "$f" && continue
+        kopiere "$f" "team/$(basename "$f")" 755
+    done
     # Der PowerShell-Kern gehoert zur Infrastruktur wie lib.sh. Faende er hier
     # keine Erwaehnung, liefe ein Projekt nach `--update` auf einer Haelfte
     # veraltet weiter — und die Gleichstandspruefung in kit-test.sh (10/10)
     # meldete es erst hinterher.
-    for f in "$KIT/pwsh/lib.psm1" "$KIT/pwsh/redteam.ps1"; do [ -e "$f" ] || continue; kopiere "$f" "team/$(basename "$f")" 755; done
+    for f in "$KIT/pwsh/lib.psm1" "$KIT/pwsh/redteam.ps1"; do
+        [ -e "$f" ] || continue
+        bahn_abgewaehlt "$f" && continue
+        kopiere "$f" "team/$(basename "$f")" 755
+    done
+
+    # BL-119, die Gegenprobe zum Abwahl-Schalter: Ein Update OHNE Schalter
+    # macht das Projekt wieder vollstaendig — sonst waere `--nur-bash` eine
+    # Einbahnstrasse, und genau daran ist der Schalter beim ersten Versuch
+    # gescheitert. Der Haken sitzt an einer Stelle, die man leicht uebersieht:
+    # Die Entrypoints kommen zurueck, die KONFIGURATION nicht. Ein Update
+    # fasst team.config.* grundsaetzlich nicht an (Projektdaten, siehe unten)
+    # — richtig, solange sie DA ist. Fehlt sie, ist "nicht anfassen" kein
+    # Schutz mehr, sondern eine halbe Bahn: ralph.ps1 laege da und faende
+    # keine Werte.
+    #
+    # Erzeugt wird sie aus den Werten der VORHANDENEN Konfiguration (oben
+    # gesourct), nicht aus den Defaults — sonst bekaeme die zurueckgeholte
+    # Bahn andere Pfade als die, die schon laeuft. Das ist dieselbe Quelle
+    # wie bei der Erstinstallation, nur spaeter gelesen.
+    for paar in "bash/entry/team.config.sh:team.config.sh" \
+                "pwsh/entry/team.config.ps1:team.config.ps1"; do
+        quelle="$KIT/${paar%%:*}"; name="${paar##*:}"
+        [ -e "$quelle" ] || continue
+        bahn_abgewaehlt "$quelle" && continue
+        [ -e "$ZIEL/$name" ] && continue
+        kopiere "$quelle" "$name" 755
+        fuelle "$name"
+        gelb "  ! $name fehlte und ist neu erzeugt worden — aus den Werten von"
+        echo  "    team.config.sh, nicht aus den Auslieferungswerten. Bitte"
+        echo  "    gegenlesen: \$EDITOR \"$ZIEL/$name\""
+    done
     for f in "$KIT"/geteilt/tools/*.py;   do kopiere "$f" "team/tools/$(basename "$f")" 755; done
     for f in "$KIT"/geteilt/prompts/*.md; do kopiere "$f" "team/prompts/$(basename "$f")"; done
     # BL-12: Hier stand einmal ein pauschales rm auf team/tests/test_*.py, um
@@ -793,21 +860,32 @@ PY
 # irgendwer nachinstalliert.
 for f in "$KIT"/bash/entry/*.sh "$KIT"/pwsh/entry/*.ps1 "$KIT"/pwsh/entry/*.cmd; do
     [ -e "$f" ] || continue
+    bahn_abgewaehlt "$f" && continue
     kopiere "$f" "$(basename "$f")" 755
 done
 # Alles Aufgerufene in den team/-Namensraum. Damit berührt das Kit die
 # Konventionen des Projekts nicht: tests/ und scripts/ bleiben dem Projekt,
 # und kein stack-fremder Code landet in deinen Ordnern.
-kopiere "$KIT/bash/lib.sh"     "team/lib.sh"     755
-kopiere "$KIT/bash/redteam.sh" "team/redteam.sh" 755
-# Siehe Begruendung im Update-Pfad: der PowerShell-Kern ist Infrastruktur.
-for f in "$KIT/pwsh/lib.psm1" "$KIT/pwsh/redteam.ps1"; do [ -e "$f" ] || continue; kopiere "$f" "team/$(basename "$f")" 755; done
+for f in "$KIT/bash/lib.sh" "$KIT/bash/redteam.sh" \
+         "$KIT/pwsh/lib.psm1" "$KIT/pwsh/redteam.ps1"; do
+    [ -e "$f" ] || continue
+    bahn_abgewaehlt "$f" && continue
+    kopiere "$f" "team/$(basename "$f")" 755
+done
 for f in "$KIT"/geteilt/tools/*.py;      do kopiere "$f" "team/tools/$(basename "$f")" 755; done
 for f in "$KIT"/geteilt/prompts/*.md;    do kopiere "$f" "team/prompts/$(basename "$f")"; done
 for f in "$KIT"/geteilt/tests/test_*.py; do kopiere "$f" "team/tests/$(basename "$f")"; done
 # Siehe Begruendung im Update-Pfad: kein Test, aber Voraussetzung mehrerer.
 kopiere "$KIT/geteilt/tests/conftest.py" "team/tests/conftest.py"
 gruen "  ✓ Entrypoints (Wurzel) + team/ (lib, tools, prompts, $(ls "$KIT"/geteilt/tests/test_*.py | wc -l) Tests)"
+if [ -n "$NUR_BAHN" ]; then
+    ANDERE="pwsh"; [ "$NUR_BAHN" = "pwsh" ] && ANDERE="bash"
+    gelb "  ! Nur die ${NUR_BAHN}-Bahn installiert — die ${ANDERE}-Bahn fehlt in"
+    echo  "    diesem Projekt, samt ihrer Konfiguration. Das ist deine Abwahl,"
+    echo  "    kein Versehen des Installers."
+    echo  "    Zurueckholen (macht das Projekt wieder vollstaendig):"
+    echo  "      bash $KIT/bash/install.sh \"$ZIEL\" --update"
+fi
 
 # ---------------------------------------------------------------- A.0 Bootstrap
 kopf "A.0 — Bootstrap-Dateien"

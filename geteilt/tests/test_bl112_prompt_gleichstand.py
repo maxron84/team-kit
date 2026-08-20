@@ -44,6 +44,7 @@ import re
 from pathlib import Path
 
 import pytest
+from conftest import ueberspringe_ohne_beide_bahnen
 
 WURZEL = Path(__file__).resolve().parents[2]
 
@@ -255,6 +256,7 @@ def test_jede_ausnahme_wird_noch_gebraucht():
     Ausnahme kann echte Drift verschwinden. Hier faellt eine Ausnahme auf, die
     nichts mehr rettet: Ohne sie muesste irgendein Vergleich rot werden.
     """
+    ueberspringe_ohne_beide_bahnen()
     for ausnahme in AUSNAHMEN:
         ohne = [a for a in AUSNAHMEN if a is not ausnahme]
         gebraucht = False

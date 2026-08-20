@@ -894,12 +894,47 @@ Fehlschläge in der Kit-Ablage, Datei für Datei identisch mit dem Stand vor
 dem Umzug (die Tests setzen die installierte Ablage voraus, siehe
 `kit-test.sh`). In der Installation selbst: 431 grün, unverändert.
 
-**Was diese Stufe nicht tut:** Das Zielprojekt bekommt weiterhin **beide**
-Bahnen in die Wurzel installiert. Der Grund steht in `install.sh` und ist
-keine Bequemlichkeit: `team.config.sh` und `team.config.ps1` sind zwei
-Generate **einer** Quelle. Wer nur eine Bahn installierte, hätte unter dem
-anderen System keine Konfiguration — und schriebe sie von Hand. Genau dort
-fängt Drift an. Die bewusste **Abwahl** durch den Anwender ist `BL-119`.
+### Die Abwahl und ihr Rückweg (`BL-119`, 2026-08-20)
+
+Im Zielprojekt bleiben **beide** Bahnen der Default, und das ist keine
+Bequemlichkeit: `team.config.sh` und `team.config.ps1` sind zwei Generate
+**einer** Quelle (denselben neun Antworten). Wer nur eine Bahn installiert,
+hat unter dem anderen System keine Konfiguration — und schreibt sie
+irgendwann von Hand. Genau dort fängt Drift an.
+
+Der Wunsch aus dem Feld ist trotzdem berechtigt: „Warum liegen hier 19
+Dateien für ein System, das ich nie benutze?" Die Antwort ist ein Schalter,
+der die Abwahl beim **Anwender** lässt: `--nur-bash` / `--nur-pwsh`
+(`-NurBash` / `-NurPwsh`). Nicht der Installer entscheidet, was fehlt.
+
+**Was den Schalter erst vertretbar macht, ist der Rückweg.** Ein späteres
+`--update` ohne Schalter muss das Projekt wieder vollständig machen — sonst
+ist die Abwahl eine Einbahnstraße, und der Anwender sitzt mit einem halben
+Projekt da, ohne es zu merken. Beim ersten Bau ist genau das passiert, und
+der Haken saß an einer Stelle, die man leicht übersieht:
+
+> Die Entrypoints kamen zurück, die **Konfiguration** nicht. Ein Update fasst
+> `team.config.*` grundsätzlich nicht an (Projektdaten, wie das Ledger).
+> Richtig — solange sie da ist. **Fehlt** sie, ist „nicht anfassen" kein
+> Schutz mehr, sondern eine halbe Bahn: `ralph.ps1` läge da und fände keine
+> Werte.
+
+Der Update-Pfad erzeugt eine fehlende Bahn-Konfiguration deshalb neu, aus den
+Werten der **vorhandenen** (nicht aus den Auslieferungswerten), und sagt es.
+Dabei kam ein zweiter Fund heraus: Der Update-Pfad in `install.sh` hat eine
+**eigene** Füll-Routine, und die kannte nur 13 der 17 Platzhalter. Für ihre
+bisherige Aufgabe reichte das — sie renderte nur bestehende Dateien nach.
+Sobald sie eine Datei *erzeugt*, zählt jeder Platzhalter: vier blieben stehen,
+und die Datei war da und trotzdem halb fertig.
+
+**In einem einbahnigen Projekt bleiben die Tests grün.** Eine abgewählte Bahn
+ist kein Defekt — aber der Übersprung muss **sichtbar** sein, sonst liest er
+sich am Ende wie ein bestandener Nachweis. `conftest.py` meldet ihn in der
+Doppelbahn-Zusammenfassung („einbahnige Ablage: nur bash installiert — die
+andere Bahn ist abgewählt"), dieselbe Bauart wie bei `@pytest.mark.nur_bash`.
+
+Beides — Abwahl und Rückweg — steht als Stufe 8 in `kit-test.sh`, nicht in
+der Doku: Ein Rückweg, den niemand fährt, verrottet.
 
 ---
 
