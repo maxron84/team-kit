@@ -5,7 +5,7 @@
 # Dünner Launcher: findet das Kit-Repo und reicht alle Argumente durch.
 # Der eigentliche Installer lebt versioniert im Kit (<kit>/bash/install.sh).
 #
-# Aufruf:  bash <kit>/scripts/team-init.sh <zielpfad> [--nicht-interaktiv] [--update|--force]
+# Aufruf:  bash <kit>/bash/scripts/team-init.sh <zielpfad> [--nicht-interaktiv] [--update|--force]
 #
 #   --update   Bestehende Installation auf eine neue Kit-Version heben; fasst
 #              nur Infrastruktur an. Der richtige Weg für gelebte Projekte.
@@ -22,6 +22,24 @@
 #   1. $TEAM_KIT_PFAD              (ausdrücklich gesetzt gewinnt immer)
 #   2. Elternordner dieses Skripts (Symlink aufgelöst) — der Normalfall
 #   3. ~/Source/team-kit           (historischer Ort, letzter Versuch)
+#
+# WARUM DIESES SKRIPT MEHRERE ABLAGEN KENNT
+#     Es ist das EINZIGE Stück des Kits, von dem eine Kopie außerhalb des
+#     Repos liegen kann (unter ~/.claude/scripts/). Eine solche Kopie wird
+#     nicht mitgezogen, wenn sich im Kit etwas verschiebt — und genau das ist
+#     passiert: Der Umzug auf bash/ und pwsh/ hat jede ältere Kopie
+#     stillgelegt, weil sie <kit>/install.sh suchte. Der Anwender sah einen
+#     Launcher, der plötzlich behauptete, das Kit sei nicht da.
+#
+#     Deshalb rät dieses Skript nicht EINEN Ort, sondern kennt alle, an denen
+#     ein Installer je lag, und nimmt den ersten, den es findet. Eine Kopie
+#     beliebigen Alters funktioniert damit weiter — sie muss nur wissen, wo
+#     das Kit liegt, nicht wie es innen aufgebaut ist. Die Liste wächst nach
+#     unten; oben steht immer die aktuelle Ablage.
+#
+#     Der bessere Weg bleibt der Symlink (`kit-einrichten.sh --verknuepfen`):
+#     Der kann gar nicht erst veralten. Diese Liste ist der Fallschirm für
+#     die Kopien, die es trotzdem gibt.
 set -euo pipefail
 
 # Symlink-Kette auflösen — ohne `readlink -f`, das auf manchen Systemen
@@ -36,14 +54,33 @@ while [ -L "$QUELLE" ]; do
 done
 HIER="$(cd "$(dirname "$QUELLE")" && pwd)"
 
-for kandidat in "${TEAM_KIT_PFAD:-}" "$(cd "$HIER/../.." && pwd)" "$HOME/Source/team-kit"; do
+# Ablagen des Installers, neueste zuerst. `bash/install.sh` seit der
+# Bahn-Trennung, `install.sh` davor.
+INSTALLER_ORTE="bash/install.sh install.sh"
+
+# Kit-Kandidaten. Zwei Elternebenen, weil dieses Skript vor der Bahn-Trennung
+# unter <kit>/scripts/ lag und heute unter <kit>/bash/scripts/ — eine Kopie
+# aus der Zeit davor liegt entsprechend anders.
+KANDIDATEN="${TEAM_KIT_PFAD:-}
+$(cd "$HIER/../.." 2>/dev/null && pwd)
+$(cd "$HIER/.." 2>/dev/null && pwd)
+$HOME/Source/team-kit"
+
+GESUCHT=""
+while IFS= read -r kandidat; do
     [ -n "$kandidat" ] || continue
-    if [ -f "$kandidat/bash/install.sh" ]; then
-        exec bash "$kandidat/bash/install.sh" "$@"
-    fi
-done
+    for ort in $INSTALLER_ORTE; do
+        GESUCHT="$GESUCHT
+  $kandidat/$ort"
+        if [ -f "$kandidat/$ort" ]; then
+            exec bash "$kandidat/$ort" "$@"
+        fi
+    done
+done <<EOF
+$KANDIDATEN
+EOF
 
 printf '\033[31mFEHLER: T.E.A.M.-Starterkit nicht gefunden.\033[0m\n' >&2
-echo "  Gesucht in: ${TEAM_KIT_PFAD:+$TEAM_KIT_PFAD, }$(cd "$HIER/../.." && pwd), $HOME/Source/team-kit" >&2
+echo "  Gesucht in:$GESUCHT" >&2
 echo "  Anderer Ort? TEAM_KIT_PFAD=/pfad/zum/kit bash $0 ..." >&2
 exit 2

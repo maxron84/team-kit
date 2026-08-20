@@ -323,12 +323,30 @@ verknuepfe() {  # verknuepfe <quelle> <zielname>
         else warnung "$ziel zeigt woandershin: $(readlink "$ziel")" \
                      "Ersetzen:  ln -sfn \"$quelle\" \"$ziel\""; fi
     elif [ -e "$ziel" ]; then
-        # Nicht überschreiben: Das ist eine echte Datei, womöglich eine ältere
-        # Kopie aus der Zeit vor dem Klon. Sie läuft dem Kit hinterher, aber
-        # stillschweigend wegzuräumen ist schlimmer als sie zu melden.
-        warnung "$ziel ist eine echte Datei, keine Verknüpfung — nicht angefasst." \
-                "Sie läuft dem Kit hinterher, sobald sich hier etwas ändert." \
-                "Ersetzen:  ln -sfn \"$quelle\" \"$ziel\""
+        # Eine echte Datei statt einer Verknüpfung. Bis 2.10 wurde sie nur
+        # gemeldet — und genau das hat im Feld nicht gereicht: Die Meldung
+        # kommt nur, wenn jemand `--verknuepfen` fährt, und wer eine Kopie
+        # hat, hat es meist nie getan. Die Kopie lag dann jahrelang da und
+        # fiel erst auf, als der Umzug auf bash/ sie stilllegte.
+        #
+        # Ersetzt wird deshalb — aber NUR, was erkennbar vom Kit stammt. Die
+        # Marke ist der Bahn-Kopf, den jede Kit-Datei trägt (A.13). Was sie
+        # nicht trägt, hat jemand selbst geschrieben; das bleibt liegen und
+        # wird gemeldet. Eine fremde Datei wegzuräumen wäre schlimmer als
+        # jede veraltete Kopie.
+        if grep -q '^# Bahn: ' "$ziel" 2>/dev/null || \
+           grep -q 'T\.E\.A\.M\.-Starterkit' "$ziel" 2>/dev/null; then
+            local sicherung="$ziel.vor-verknuepfung"
+            cp "$ziel" "$sicherung"
+            ln -sfn "$quelle" "$ziel"
+            ok "Ersetzt: $ziel war eine Kopie des Kits → jetzt Verknüpfung"
+            echo "      Die alte Fassung liegt als $(basename "$sicherung") daneben."
+            echo "      Eine Verknüpfung kann nicht veralten — die Kopie konnte es."
+        else
+            warnung "$ziel ist eine echte Datei und stammt nicht erkennbar vom Kit." \
+                    "Nicht angefasst — sie könnte deine eigene sein." \
+                    "Ersetzen, wenn sie es doch ist:  ln -sfn \"$quelle\" \"$ziel\""
+        fi
     else
         mkdir -p "$HOME/.claude/scripts"
         ln -s "$quelle" "$ziel"

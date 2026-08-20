@@ -73,7 +73,7 @@ gruen(){ printf '\033[32m%s\033[0m\n' "$*"; }
 gelb() { printf '\033[33m%s\033[0m\n' "$*"; }
 kopf() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 
-[ -n "$ZIEL" ] || { rot "FEHLER: Kein Zielpfad angegeben."; echo "Aufruf: bash install.sh <zielpfad>"; exit 2; }
+[ -n "$ZIEL" ] || { rot "FEHLER: Kein Zielpfad angegeben."; echo "Aufruf: bash bash/install.sh <zielpfad>"; exit 2; }
 ZIEL="$(cd "$ZIEL" 2>/dev/null && pwd)" || { rot "FEHLER: Zielpfad existiert nicht: $ZIEL"; exit 2; }
 
 # BL-109: "Der Block ist da" heisst NICHT "der Block ist vollstaendig". Das
@@ -985,4 +985,35 @@ if [ -z "$SMOKE_TEST" ]; then
     gelb "Kaskade aus — sein Briefing kennt die Vorrangregel. Danach den Befehl"
     gelb "in team.config.sh bei TEAM_SMOKE_TEST eintragen."
 fi
+# ------------------------------------------------- Der Launcher ausserhalb
+# Das EINZIGE Stueck des Kits, von dem eine Kopie ausserhalb des Repos liegen
+# kann: ~/.claude/scripts/team-init.sh. Eine Verknuepfung kann nicht veralten,
+# eine Kopie schon — und sie meldet sich nicht von selbst, sondern behauptet
+# eines Tages, das Kit sei nicht da. Genau so ist der Umzug auf bash/ im Feld
+# aufgefallen: nicht durch eine Warnung, sondern durch einen Launcher, der
+# nicht mehr lief.
+#
+# Geprueft wird bei JEDEM Install, weil das der Moment ist, in dem sich die
+# Kit-Fassung aendert. GESCHRIEBEN wird hier nichts: Dieses Skript installiert
+# ein Projekt, und ein Projekt-Installer, der ungefragt im Home-Verzeichnis
+# aufraeumt, ist eine Ueberraschung, keine Hilfe. Repariert wird in
+# kit-einrichten.sh — dem Skript, das fuer die MASCHINE zustaendig ist (A.12).
+LAUNCHER="$HOME/.claude/scripts/team-init.sh"
+if [ -e "$LAUNCHER" ] || [ -L "$LAUNCHER" ]; then
+    if [ -L "$LAUNCHER" ] && [ ! -f "$LAUNCHER" ]; then
+        echo
+        gelb "Hinweis: ~/.claude/scripts/team-init.sh zeigt ins Leere"
+        gelb "  ($(readlink "$LAUNCHER"))."
+        gelb "  Wieder verknuepfen:  bash $KIT/bash/kit-einrichten.sh --verknuepfen"
+    elif [ ! -L "$LAUNCHER" ] && ! grep -q 'INSTALLER_ORTE' "$LAUNCHER" 2>/dev/null; then
+        echo
+        gelb "Hinweis: ~/.claude/scripts/team-init.sh ist eine KOPIE aus einer"
+        gelb "  aelteren Kit-Fassung, keine Verknuepfung. Sie kennt nur den"
+        gelb "  damaligen Ort des Installers und schlaegt fehl, sobald er sich"
+        gelb "  verschiebt — zuletzt beim Umzug auf bash/ und pwsh/."
+        gelb "  Ersetzen (legt eine Sicherung daneben):"
+        gelb "    bash $KIT/bash/kit-einrichten.sh --verknuepfen"
+    fi
+fi
+
 exit $FEHLER

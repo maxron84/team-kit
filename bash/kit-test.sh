@@ -529,6 +529,56 @@ e_pruefe "Launcher erreicht den Installer ueber einen Symlink (Exit 2)" "$E_EXIT
 e_pruefe "und es ist der Installer, der sich meldet" \
     "$(grep -c 'Kein Zielpfad angegeben' "$E_LOG")" "1"
 
+# c2) Der Launcher als KOPIE — der Fall, der im Feld weh getan hat.
+#     ~/.claude/scripts/team-init.sh ist das einzige Stueck des Kits, von dem
+#     eine Kopie ausserhalb des Repos liegen kann. Sie wird nicht mitgezogen,
+#     wenn sich im Kit etwas verschiebt: Der Umzug auf bash/ hat jede aeltere
+#     Kopie stillgelegt, weil sie <kit>/install.sh suchte. Der Anwender sah
+#     keinen Fehler des Kits, sondern einen Launcher, der behauptete, das Kit
+#     sei nicht da.
+#
+#     Der Launcher kennt deshalb ALLE Ablagen, an denen ein Installer je lag.
+#     Geprueft wird das an einer Kopie an einem FREMDEN Ort — der Symlink-Fall
+#     oben wuerde es nicht zeigen, weil er ueber den aufgeloesten Pfad laeuft.
+E_KOPIE="$(mktemp -d)"
+cp "$KIT/bash/scripts/team-init.sh" "$E_KOPIE/team-init.sh"
+E_EXIT=0
+TEAM_KIT_PFAD="$KIT" bash "$E_KOPIE/team-init.sh" >"$E_LOG" 2>&1 || E_EXIT=$?
+e_pruefe "Kopie an fremdem Ort erreicht den Installer (Exit 2)" "$E_EXIT" "2"
+
+#     Und derselbe Launcher in der ALTEN Ablage (<kit>/scripts/ statt
+#     <kit>/bash/scripts/): Eine Kopie von damals liegt eine Ebene hoeher.
+E_ALT="$(mktemp -d)"
+mkdir -p "$E_ALT/scripts" "$E_ALT/bash"
+cp "$KIT/bash/scripts/team-init.sh" "$E_ALT/scripts/"
+cp "$KIT/bash/install.sh"           "$E_ALT/bash/"
+E_EXIT=0
+bash "$E_ALT/scripts/team-init.sh" >"$E_LOG" 2>&1 || E_EXIT=$?
+e_pruefe "Kopie in der ALTEN Ablage findet den Installer trotzdem" "$E_EXIT" "2"
+rm -rf "$E_KOPIE" "$E_ALT"
+
+# c3) Und der Installer muss eine veraltete Kopie MELDEN — bei jedem Lauf,
+#     weil das der Moment ist, in dem sich die Kit-Fassung aendert. Geprueft
+#     mit einem eigenen HOME, damit die Probe das echte nicht anfasst.
+E_HOME="$(mktemp -d)"
+mkdir -p "$E_HOME/.claude/scripts"
+printf '#!/usr/bin/env bash\n# alte Kopie\nexec bash "$HOME/Source/team-kit/install.sh" "$@"\n' \
+    > "$E_HOME/.claude/scripts/team-init.sh"
+E_ZIEL="$(mktemp -d)/projekt"; mkdir -p "$E_ZIEL"
+git -C "$E_ZIEL" init -q; git -C "$E_ZIEL" commit -q --allow-empty -m init
+HOME="$E_HOME" bash "$KIT/bash/install.sh" "$E_ZIEL" --nicht-interaktiv >"$E_LOG" 2>&1 || true
+e_pruefe "Installer meldet eine veraltete Launcher-Kopie" \
+    "$(grep -c 'ist eine KOPIE aus einer' "$E_LOG")" "1"
+
+#     Die Gegenprobe, ohne die die Meldung wertlos waere: Der AKTUELLE
+#     Launcher darf sie NICHT ausloesen, sonst warnt der Installer immer und
+#     niemand liest die Warnung noch.
+cp "$KIT/bash/scripts/team-init.sh" "$E_HOME/.claude/scripts/team-init.sh"
+HOME="$E_HOME" bash "$KIT/bash/install.sh" "$E_ZIEL" --update >"$E_LOG" 2>&1 || true
+e_pruefe "und schweigt beim aktuellen Launcher" \
+    "$(grep -c 'ist eine KOPIE aus einer' "$E_LOG")" "0"
+rm -rf "$E_HOME" "$(dirname "$E_ZIEL")"
+
 # d) Der CRLF-Riegel: .gitattributes muss LF erzwingen, sonst haengt der
 #    Windows-Weg wieder an der Git-Konfiguration der fremden Maschine.
 e_pruefe ".gitattributes erzwingt LF" \

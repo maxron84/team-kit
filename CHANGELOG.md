@@ -6,6 +6,28 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Changed
 
+- **Der Launcher außerhalb des Repos kann nicht mehr still verrotten.**
+  `~/.claude/scripts/team-init.sh` ist das einzige Stück des Kits, von dem
+  eine Fassung außerhalb des Repos liegen kann. Ein Symlink kann nicht
+  veralten, eine **Kopie** schon — und sie meldet sich nicht, sondern
+  behauptet eines Tages, das Kit sei nicht da. Genau so ist der Umzug auf
+  `bash/` aufgefallen: nicht durch eine Warnung, sondern durch einen Launcher,
+  der nicht mehr lief.
+
+  Drei Maßnahmen: Der Launcher ist **ablage-tolerant** — er kennt alle Orte,
+  an denen ein Installer je lag, und sucht zwei Elternebenen ab; eine Kopie
+  beliebigen Alters läuft damit weiter, sie muss nur wissen *wo* das Kit
+  liegt, nicht *wie* es innen aufgebaut ist. `install.sh` **meldet** eine
+  veraltete Kopie bei jedem Lauf (schreibt aber nichts ins Home-Verzeichnis —
+  ein Projekt-Installer, der dort aufräumt, ist eine Überraschung).
+  `kit-einrichten.sh --verknuepfen` **repariert** sie jetzt, statt sie nur zu
+  melden, mit Sicherung daneben und nur bei erkennbaren Kit-Kopien.
+
+  Geprüft in `kit-test.sh` Stufe 10 an einer Kopie an **fremdem** Ort — der
+  Symlink-Fall läuft über den aufgelösten Pfad und würde den Fehler nie
+  zeigen — samt der Gegenprobe, dass der aktuelle Launcher die Meldung *nicht*
+  auslöst. `A.12.1`.
+
 - **Die Ablage trennt die beiden Bahnen — `bash/`, `pwsh/`, `geteilt/`.**
   ⚠️ **Der Installer heißt jetzt [`bash/install.sh`](bash/install.sh) bzw.
   [`pwsh/install.ps1`](pwsh/install.ps1).** In der Wurzel liegt kein Skript

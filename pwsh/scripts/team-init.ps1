@@ -27,21 +27,37 @@
 $ErrorActionPreference = 'Stop'
 
 $hier = Split-Path -Parent $PSCommandPath
+# Zwei Elternebenen, weil dieses Skript vor der Bahn-Trennung unter
+# <kit>\scripts\ lag und heute unter <kit>\pwsh\scripts\ — eine Kopie aus
+# der Zeit davor liegt entsprechend anders.
 $kandidaten = @(
     $env:TEAM_KIT_PFAD
     (Split-Path -Parent (Split-Path -Parent $hier))
+    (Split-Path -Parent $hier)
     (Join-Path $env:USERPROFILE 'Source\team-kit')
 ) | Where-Object { $_ }
 
+# Ablagen des Installers, neueste zuerst. Dieses Skript ist das EINZIGE
+# Stueck des Kits, von dem eine Kopie ausserhalb des Repos liegen kann
+# (unter %USERPROFILE%\.claude\scripts\). Eine solche Kopie wird nicht
+# mitgezogen, wenn sich im Kit etwas verschiebt — der Umzug auf bash\ und
+# pwsh\ hat jede aeltere Kopie stillgelegt, weil sie <kit>\install.ps1
+# suchte. Deshalb wird nicht EIN Ort geraten, sondern die Liste durchgegangen.
+$installerOrte = @('pwsh\install.ps1', 'install.ps1')
+$gesucht = @()
+
 foreach ($kandidat in $kandidaten) {
-    $installer = Join-Path $kandidat 'pwsh\install.ps1'
-    if (Test-Path $installer) {
-        & $installer @args
-        exit $LASTEXITCODE
+    foreach ($ort in $installerOrte) {
+        $installer = Join-Path $kandidat $ort
+        $gesucht += $installer
+        if (Test-Path $installer) {
+            & $installer @args
+            exit $LASTEXITCODE
+        }
     }
 }
 
 Write-Host "FEHLER: T.E.A.M.-Starterkit nicht gefunden." -ForegroundColor Red
-Write-Host "  Gesucht in: $($kandidaten -join ', ')"
+Write-Host "  Gesucht in:"; $gesucht | ForEach-Object { Write-Host "    $_" }
 Write-Host "  Anderer Ort? `$env:TEAM_KIT_PFAD = 'C:\pfad\zum\kit'; pwsh -File $PSCommandPath ..."
 exit 2

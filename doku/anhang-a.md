@@ -761,6 +761,50 @@ ist derselbe Grundsatz wie A.5 (Faktencheck vor Annahme): Die Pfadheuristik
 erklärt den Regelfall, die Probe entscheidet den Einzelfall — und sie greift
 auch auf einem Netzlaufwerk, an das die Heuristik nicht gedacht hat.
 
+### A.12.1 Das einzige Stück Kit außerhalb des Repos
+
+`~/.claude/scripts/team-init.sh` ist der Kurzbefehl, der den Installer von
+überall erreichbar macht. Er ist damit auch die **einzige** Datei des Kits, von
+der eine Fassung außerhalb des Repos liegen kann — und genau deshalb die
+einzige, die still verrotten kann. Ein Symlink kann das nicht; eine **Kopie**
+schon, und sie meldet sich nicht. Sie behauptet eines Tages, das Kit sei nicht
+da.
+
+**Genau so ist der Umzug auf `bash/` und `pwsh/` aufgefallen** — nicht durch
+eine Warnung des Kits, sondern durch einen Launcher, der nicht mehr lief. Die
+Kopie auf der Maschine stammte aus einer Fassung von vor dem Verknüpfungs-
+Mechanismus, suchte `<kit>/install.sh` und fand nichts mehr. Das Kit selbst war
+grün.
+
+Drei Maßnahmen, und keine ersetzt die andere:
+
+1. **Der Launcher ist ablage-tolerant.** Er rät nicht *einen* Ort, sondern
+   kennt alle, an denen ein Installer je lag (`bash/install.sh`, davor
+   `install.sh`), und sucht zwei Elternebenen ab — weil er selbst vor der
+   Bahn-Trennung eine Ebene höher lag. Eine Kopie beliebigen Alters
+   funktioniert damit weiter: Sie muss wissen, **wo** das Kit liegt, nicht
+   **wie** es innen aufgebaut ist. Die Liste wächst nach unten; oben steht
+   immer die aktuelle Ablage.
+2. **`install.sh` meldet eine veraltete Kopie bei jedem Lauf.** Das ist der
+   Moment, in dem sich die Kit-Fassung ändert — also der einzige, in dem die
+   Meldung ankommt. Geschrieben wird dort **nichts**: Ein Projekt-Installer,
+   der ungefragt im Home-Verzeichnis aufräumt, ist eine Überraschung, keine
+   Hilfe.
+3. **`kit-einrichten.sh --verknuepfen` repariert.** Bis 2.10 hat es eine echte
+   Datei nur *gemeldet* und nicht angefasst — vorsichtig gedacht, im Ergebnis
+   wirkungslos: Die Meldung kommt nur, wenn jemand `--verknuepfen` fährt, und
+   wer eine Kopie hat, hat es meist nie getan. Jetzt wird ersetzt, aber **nur
+   was erkennbar vom Kit stammt** (die Bahn-Kennung aus `A.13` als Marke), mit
+   einer Sicherung daneben. Was die Marke nicht trägt, hat jemand selbst
+   geschrieben und bleibt liegen: Eine fremde Datei wegzuräumen wäre schlimmer
+   als jede veraltete Kopie.
+
+Geprüft wird das in `kit-test.sh` Stufe 10 — und zwar an einer **Kopie an
+fremdem Ort**, nicht am Symlink: Der Symlink-Fall läuft über den aufgelösten
+Pfad und würde den Fehler nie zeigen. Dazu die Gegenprobe, ohne die die
+Meldung wertlos wäre: Der **aktuelle** Launcher darf sie nicht auslösen, sonst
+warnt der Installer immer und niemand liest die Warnung noch.
+
 **Wo die Probe selbst an ihre Grenze kommt: WSL 1.** Die Sperrprobe ist
 `flock -n <datei> true` — *ein* Prozess. Auf einem echten Kernel belegt das
 mit dem gelungenen Aufruf auch den wechselseitigen Ausschluss; auf einer
