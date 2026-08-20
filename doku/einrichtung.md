@@ -151,7 +151,14 @@ Fünf Abschnitte, in dieser Reihenfolge:
 4. **Auth** — legt auf Wunsch `~/.config/claude-team/` an (Abo als Prio 1).
 5. **Kurzbefehl** — verknüpft `bash/scripts/team-init.sh` und
    `bash/scripts/team-auth-setup.sh` nach `~/.claude/scripts/`, als **Symlink**, nie
-   als Kopie. Eine schon vorhandene echte Datei wird gemeldet, nicht ersetzt.
+   als Kopie: Eine Verknüpfung kann nicht veralten, eine Kopie schon — und sie
+   meldet sich nicht, sondern behauptet eines Tages, das Kit sei nicht da.
+
+   Liegt dort schon eine echte **Datei**, wird sie ersetzt, sofern sie
+   erkennbar vom Kit stammt; die alte Fassung bleibt als
+   `*.vor-verknuepfung` daneben liegen. Was nicht erkennbar vom Kit stammt,
+   bleibt unangetastet und wird gemeldet — deine eigene Datei wegzuräumen
+   wäre schlimmer als jede veraltete Kopie (`A.12.1`).
 
 Exit `0` = bereit (Warnungen möglich), `1` = mindestens ein harter Fehler.
 
@@ -183,7 +190,7 @@ eine Python-Erweiterung, das integrierte Terminal.
 ```bash
 npm install -g @anthropic-ai/claude-code     # eine von mehreren Installationsarten
 claude          # einmalig: /login → Konto wählen → /exit
-bash ~/Source/team-kit/scripts/team-auth-setup.sh
+bash ~/Source/team-kit/bash/scripts/team-auth-setup.sh
 ```
 
 `team-auth-setup.sh` ist idempotent. Es setzt `~/.config/claude-team/auth-mode`
@@ -540,17 +547,24 @@ Schreibweise.
 
 ```bash
 # Linux und WSL
-bash ~/Source/team-kit/install.sh ~/Source/mein-projekt
+bash ~/Source/team-kit/bash/install.sh ~/Source/mein-projekt
 # oder, nach --verknuepfen, von überall:
 bash ~/.claude/scripts/team-init.sh ~/Source/mein-projekt
 ```
 
 ```powershell
 # Windows nativ
-pwsh -File $HOME\Source\team-kit\install.ps1 $HOME\Source\mein-projekt
+pwsh -File $HOME\Source\team-kit\pwsh\install.ps1 $HOME\Source\mein-projekt
 # oder, nach -Verknuepfen, von überall:
 & "$env:USERPROFILE\.claude\scripts\team-init.cmd" $HOME\Source\mein-projekt
 ```
+
+**Nur eine Bahn installieren?** `--nur-bash` bzw. `--nur-pwsh` (PowerShell:
+`-NurBash` / `-NurPwsh`). Das Projekt bekommt dann statt 29 Entrypoints nur
+die zehn der gewählten Bahn. Es ist eine **Abwahl**, keine Empfehlung — der
+Grund steht im Kasten darunter. Sie ist keine Einbahnstraße: Ein späteres
+`--update` *ohne* Schalter macht das Projekt wieder vollständig, samt der
+fehlenden Konfiguration.
 
 > **Beide Installer schreiben BEIDE Konfigurationen** — `team.config.sh` *und*
 > `team.config.ps1`, aus denselben neun Antworten. Das gilt auch für
@@ -588,7 +602,7 @@ Ein bestehendes Projekt auf eine neue Kit-Version heben: `--update`. Nie
 
 ```bash
 # Linux und WSL — auf der Maschine
-bash ~/Source/team-kit/kit-einrichten.sh --nur-pruefen   # → "Alles grün", Exit 0 *
+bash ~/Source/team-kit/bash/kit-einrichten.sh --nur-pruefen   # → "Alles grün", Exit 0 *
 cd ~/Source/team-kit && bash bash/kit-test.sh                    # → 11/11, dauert ein paar Minuten
 
 # im Zielprojekt

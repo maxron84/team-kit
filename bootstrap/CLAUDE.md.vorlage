@@ -493,9 +493,11 @@ Installiert mit dem **T.E.A.M.-Starterkit**. Ablage:
 
 ```
 ./vollautomatik.sh ./halbautomatik.sh ./team-status.sh ./team-test.sh
-./ralph.sh ./frank.sh ./axel.sh ./harry.sh ./marv.sh    Entrypoints
-./team.config.sh                                        ALLE Projektwerte
-team/lib.sh  team/redteam.sh                            Bibliothek
+./ralph.sh ./frank.sh ./axel.sh ./harry.sh ./marv.sh    Entrypoints (Bash-Bahn)
+./*.ps1 + ./*.cmd, gleiche Namen                        dieselben, pwsh-Bahn
+./team.config.sh  ./team.config.ps1                     ALLE Projektwerte
+team/lib.sh  team/redteam.sh                            Bibliothek (Bash-Bahn)
+team/lib.psm1  team/redteam.ps1                         dieselbe, pwsh-Bahn
 team/tools/  kosten.py beutebuch.py                     Werkzeuge (Python)
 team/prompts/rolle-*.md                                 Rollen-Briefings
 team/tests/                                             Team-Regressionstests

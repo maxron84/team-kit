@@ -8,11 +8,12 @@
 #
 # WARUM ES DIESES SKRIPT GIBT
 #
-# Die Regressionstests unter team/tests/ (Stand 2.10.0: 369 Fälle in 57 Dateien)
+# Die Regressionstests unter team/tests/ (Stand 2.11.0: 476 Fälle in 65 Dateien)
 # setzen die INSTALLIERTE Ablage voraus: Entrypoints in der Repo-Wurzel,
 # CLAUDE.md und team.config.sh mit gefüllten Platzhaltern. Im Kit-Repo liegen
-# sie unter entry/ und bootstrap/ — `pytest team/tests` schlägt hier deshalb
-# fehl (Stand 2.6.0: 21 Fehler, 240 grün, 19 übersprungen), ohne dass
+# sie unter bash/entry/, pwsh/entry/ und bootstrap/ — `pytest geteilt/tests`
+# schlägt hier deshalb fehl (Stand 2.11.0: 21 Fehler, 390 grün, 65 über-
+# sprungen — dieselben 21 wie vor dem Bahn-Umzug), ohne dass
 # irgendetwas kaputt wäre. Ergebnis: Ein im Kit committeter Fix war bis zur
 # nächsten Feldinstallation ungeprüft. Genau so ging BL-1 (tote Fixphase) durch
 # drei Releases.
@@ -141,6 +142,28 @@ if [ "$RC" -ne 0 ]; then
 ✗ Kit-Selbstverifikation FEHLGESCHLAGEN (Exit $RC)."
     [ "$BEHALTEN" -eq 0 ] && echo "  Mit --behalten erneut laufen lassen, um im Repo nachzusehen." >&2
     exit "$RC"
+fi
+
+# Die beiden Zahlen, die im README stehen — nachgerechnet statt geglaubt.
+# "62 Testdateien" und "369 Tests" standen dort, waehrend es 65 und 476 waren.
+# Eine Zahl, die niemand nachrechnet, veraltet lautlos und liest sich trotzdem
+# wie eine Zusicherung (dieselbe Klasse wie die 75 Dateien in Schritt 2).
+#
+# Bewusst NICHT aus der Ausgabe von team-test.sh gezogen: Deren Exit-Code
+# traegt das Ergebnis des ganzen Schritts, und eine Pipeline davor hat schon
+# einmal genau diesen Code verschluckt (BL-59). Ein eigener collect-only-Lauf
+# kostet eine Sekunde und fasst nichts an.
+T_DATEIEN="$(ls "$ZIEL"/team/tests/test_*.py | wc -l | tr -d ' ')"
+T_FAELLE="$(python3 -m pytest "$ZIEL/team/tests" --collect-only -q 2>/dev/null \
+            | tail -1 | grep -oE '^[0-9]+' || true)"
+if grep -q "$T_DATEIEN Testdateien, $T_FAELLE Fälle" "$KIT/README.md" \
+   && grep -q "die $T_FAELLE Tests" "$KIT/README.md"; then
+    gruen "  ✓ README nennt dieselben Testzahlen ($T_DATEIEN Dateien, $T_FAELLE Fälle)"
+else
+    rot "  ✗ README nennt nicht '$T_DATEIEN Testdateien, $T_FAELLE Fälle' bzw. 'die $T_FAELLE Tests'"
+    echo "      Gemessen an der frischen Installation. Beide Stellen im README"
+    echo "      nachziehen — sonst steht dort wieder eine Zahl, die niemand prueft."
+    exit 1
 fi
 
 # BL-58: Schritt 4 prüft die Installation im AUSLIEFERUNGSZUSTAND — dort trägt

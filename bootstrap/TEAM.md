@@ -278,7 +278,17 @@ Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 **Welche Spalte für dich gilt:** die linke, wenn du unter Linux oder in einer
 WSL-Distro arbeitest; die rechte, wenn du Windows **ohne** WSL benutzt. Nicht
 das Betriebssystem entscheidet, sondern die Shell — WSL ist Windows und steht
-trotzdem links. Beide
+trotzdem links.
+
+**Fehlt eine der beiden Spalten in deinem Projekt?** Wenn hier keine `.cmd`-
+und `.ps1`-Dateien liegen (oder umgekehrt keine `.sh`), ist diese Bahn bei der
+Installation ausdrücklich **abgewählt** worden (`--nur-bash` / `--nur-pwsh`).
+Das ist kein Defekt. Zurückholen — macht das Projekt wieder vollständig, samt
+der fehlenden Konfiguration:
+
+```bash
+bash <kit-pfad>/bash/install.sh . --update
+``` Beide
 Spalten tun dasselbe — es sind zwei Schreibweisen, kein Funktionsunterschied.
 Die letzte Zeile steht bewusst als *(gleich)* da: Die Werkzeuge sind Python und
 werden auf beiden Wegen identisch aufgerufen.
@@ -358,13 +368,13 @@ Kit-Pfad ist der Ordner, aus dem installiert wurde (typisch
 ```bash
 # Linux und WSL
 git add -A && git commit -m "chore: vor Kit-Update"   # erst committen!
-bash <kit-pfad>/install.sh . --update
+bash <kit-pfad>/bash/install.sh . --update
 ```
 
 ```powershell
 # Windows ohne WSL
 git add -A; git commit -m "chore: vor Kit-Update"     # erst committen!
-pwsh -File <kit-pfad>\install.ps1 . -Update
+pwsh -File <kit-pfad>\pwsh\install.ps1 . -Update
 ```
 
 **`--update` fasst nur die Infrastruktur an** — Entrypoints, `team/lib.sh`,

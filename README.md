@@ -374,8 +374,9 @@ geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 │                       in denselben Dateien. Die pwsh-Bahn ist eine zweite
 │                       ORCHESTRIERUNG, kein zweiter Zustandscode
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-├── tests/              62 Testdateien — der Doppelbahn-Harnisch fährt jeden
-│                       Fall gegen BEIDE Bahnen, aus EINEM Testkörper
+├── tests/              65 Testdateien, 476 Fälle — der Doppelbahn-Harnisch
+│                       fährt jeden Fall gegen BEIDE Bahnen, aus EINEM
+│                       Testkörper
 └── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
                         bewacht die Vorlage, nicht die installierte CLAUDE.md
 
@@ -488,7 +489,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
   `team/lib.sh`); belegt ist er nicht. Ebenso wenig belegt ist bisher ein Lauf
   mit einem lokalen Open-Weights-Modell — das ist Ziel, nicht Zustand.
 - **Selbstverifikation**: `bash bash/kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 369 Tests — **zweimal**: einmal mit den
+  Wegwerf-Repo und fährt dort die 476 Tests — **zweimal**: einmal mit den
   Auslieferungswerten, einmal mit angepasster `team.config.sh` (Caps,
   Commit-Präfixe, zwei Domänen). Der zweite Lauf ist die Lehre aus `BL-58`: In
   einer frischen Installation stehen dieselben Werte wie in `team/lib.sh`, ein

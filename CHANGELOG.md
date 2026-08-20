@@ -149,6 +149,24 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Doku-Audit: sechs Stellen nannten Pfade oder Zahlen, die es nicht gibt.**
+  Am schwersten wog `doku/einrichtung.md`, Abschnitt *Die Einbindung* — die
+  meistbenutzten Befehle des ganzen Dokuments zeigten weiter auf
+  `~/Source/team-kit/install.sh`. `bootstrap/TEAM.md` landet in **jedem**
+  Zielprojekt und nannte `<kit-pfad>/install.sh` für das Update. Dazu drei
+  weitere Aufrufe und die Testzahlen im README (62/369 statt 65/476).
+
+  `bootstrap/TEAM.md` erklärt jetzt außerdem, was eine **fehlende Spalte** in
+  der Befehlstabelle bedeutet: Wer mit `--nur-bash` installiert hat, findet
+  dort keine `.cmd`-Befehle — kein Defekt, sondern die eigene Abwahl, samt
+  dem Befehl, der sie zurücknimmt. `bootstrap/CLAUDE.md.vorlage` führt die
+  pwsh-Bahn jetzt in der Dateikarte, `doku/einrichtung.md` den Abwahl-Schalter
+  und die neue Reparatur beim Verknüpfen.
+
+  Beide Zahlenpaare werden jetzt **nachgerechnet**: `kit-test.sh` misst
+  Dateizahl und Testzahlen an einer frischen Installation und vergleicht sie
+  mit dem README. Gegenprobe gefahren.
+
 - **„75 Dateien" stimmte seit Jahren nicht — es sind 117.** Die Zahl stand in
   README (zweimal) und `doku/einrichtung.md`. Eine Zahl, die niemand
   nachrechnet, veraltet lautlos und liest sich trotzdem wie eine Zusicherung.

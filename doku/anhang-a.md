@@ -853,10 +853,11 @@ zu erkennen — und ein `(bash)`-Commit an einer `.ps1` fällt auf.
 ### Warum die Kennung in jeder Datei steht
 
 Bis hierher war die Zugehörigkeit einer Datei nur an ihrer **Endung**
-abzulesen. Das reicht an drei Stellen nicht:
+abzulesen. Das reichte an drei Stellen nicht (der Stand vor dem Umzug, den
+der nächste Abschnitt beschreibt):
 
-1. `entry/` listet 29 Dateien alphabetisch verschränkt — `axel.cmd`,
-   `axel.ps1`, `axel.sh`, `frank.cmd`, … Der Ordner zeigt keine zwei Bahnen,
+1. `entry/` listete 29 Dateien alphabetisch verschränkt — `axel.cmd`,
+   `axel.ps1`, `axel.sh`, `frank.cmd`, … Der Ordner zeigte keine zwei Bahnen,
    sondern einen Haufen.
 2. Die Namensgleichheit `ralph.sh` ↔ `ralph.ps1` ↔ `ralph.cmd` ist die
    Kopplung, auf der die Doppelbahn-Testbahn ruht. Sie stand als
