@@ -173,7 +173,6 @@ Nutzung:
                                         Verben nacheinander aufruft.
 """
 import contextlib
-import fcntl
 import glob
 import json
 import math
@@ -182,7 +181,31 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from datetime import date
+
+# Dateisperren sind das EINZIGE plattformabhaengige Stueck dieser Datei
+# (BL-125). `fcntl` gibt es unter Windows nicht, `msvcrt` nicht unter Linux.
+# Ein UNGESCHUETZTES `import fcntl` auf Modulebene macht dabei nicht nur die
+# Sperre unbrauchbar, sondern die GANZE Datei: Unter Windows scheiterte damit
+# jeder Import von kosten.py — also jeder Kostenpfad der pwsh-Bahn
+# (--akteur-abschluss, --rollen-abschluss, --ralph-abschluss) und die
+# Sammlung von 21 Testdateien, die kosten.py importieren. Ein Modul, das ein
+# Betriebssystem nicht laden kann, faellt am lautesten und an der am
+# wenigsten aussagekraeftigen Stelle: beim Programmstart.
+#
+# Deshalb werden beide Module WEICH geladen, und die Entscheidung faellt
+# erst dort, wo wirklich gesperrt wird (_lock_belegen). Fehlt beides, ist
+# das ein benannter Fehler an der richtigen Stelle — und es wird bewusst
+# NICHTS ungesichert geschrieben (HM-48).
+try:
+    import fcntl  # POSIX
+except ModuleNotFoundError:  # pragma: no cover - plattformabhaengig
+    fcntl = None
+try:
+    import msvcrt  # Windows
+except ModuleNotFoundError:  # pragma: no cover - plattformabhaengig
+    msvcrt = None
 
 # Eichfaktor (BL-28, Kaskade 13/Stufe 42). Grundlage: die Architekten-Session
 # vom 2026-07-12 (Kaskade-12-Aushaertung + Budget-Modell-Doku +
@@ -899,22 +922,91 @@ def kaskade_aus_plan(repo="."):
     return treffer.group(1) if treffer else None
 
 
+# Wartefrist der Ledger-Sperre auf der Windows-Bahn (BL-125). POSIX `flock`
+# wartet von sich aus unbegrenzt; die Windows-Bytebereichssperre kennt kein
+# blockierendes Warten mit offenem Ende, das sich unterbrechen liesse
+# (msvcrt.LK_LOCK wartet stur 10 Sekunden und wirft dann), also wird hier
+# selbst gepollt. 30 Sekunden sind grosszuegig gegen den echten kritischen
+# Bereich — Lesen, Zeile ersetzen, Temp-Datei schreiben, os.replace, also
+# Millisekunden — und kurz genug, dass ein haengengebliebener Prozess einen
+# Lauf nicht unbemerkt stillstehen laesst.
+_LEDGER_LOCK_FRIST_S = 30.0
+_LEDGER_LOCK_TAKT_S = 0.02
+
+
+def _lock_belegen(fd, lock_pfad):
+    """Belegt die Sperre exklusiv — POSIX per `flock`, Windows per
+    Bytebereichssperre auf Byte 0 derselben Lock-Datei. Beide Wege sperren
+    handle-bezogen, also auch zwischen zwei Threads DESSELBEN Prozesses
+    (der Fall, den test_hm48_ledger_lock_race.py stellt).
+
+    Fehlt beides, wird NICHT ungesichert weitergeschrieben: Der Aufrufer
+    bekommt einen Fehler an der Stelle, an der die Zusicherung endet."""
+    if fcntl is not None:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        return
+    if msvcrt is not None:
+        frist = time.monotonic() + _LEDGER_LOCK_FRIST_S
+        while True:
+            try:
+                os.lseek(fd, 0, os.SEEK_SET)
+                msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+                return
+            except OSError:
+                if time.monotonic() >= frist:
+                    raise OSError(
+                        f"Ledger-Sperre '{lock_pfad}' war "
+                        f"{int(_LEDGER_LOCK_FRIST_S)} Sekunden lang von einem "
+                        "anderen Prozess gehalten — es wurde NICHTS "
+                        "geschrieben. Laeuft noch ein zweiter "
+                        "Abschluss-Aufruf? Wenn nicht, ist die Lock-Datei "
+                        "verwaist und kann von Hand entfernt werden.")
+                time.sleep(_LEDGER_LOCK_TAKT_S)
+    raise OSError(
+        "Kein Sperrmechanismus verfuegbar (weder fcntl noch msvcrt). Der "
+        "Ledger wird bewusst NICHT ohne Sperre geschrieben: Zwei "
+        "ueberlappende Abschluss-Aufrufe koennten sich sonst gegenseitig "
+        "eine gerade geschriebene Zeile herausreissen (HM-48).")
+
+
+def _lock_freigeben(fd):
+    """Gegenstueck zu _lock_belegen(). Auf beiden Bahnen faellt die Sperre
+    zwar auch mit dem os.close() weg; sie wird trotzdem ausdruecklich
+    freigegeben, damit die Freigabe an einer greppbaren Stelle steht."""
+    if fcntl is not None:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+    elif msvcrt is not None:
+        os.lseek(fd, 0, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+
+
 @contextlib.contextmanager
 def _ledger_lock(pfad):
     """Interprozess-Sperre um den Lesen+Schreiben-Kritikbereich von
-    _ledger_zeile_setzen() (HM-48): ein `flock` auf eine feste Lock-Datei
-    neben dem Ledger, EX-gehalten fuer die volle Read-Modify-Write-Spanne.
-    Serialisiert konkurrierende kosten.py-Prozesse (egal ob direkt oder ueber
-    team-status.sh/team/lib.sh aufgerufen) unabhaengig vom Aufrufer, statt
-    sich auf eine Sperre der Shell-Seite (team_lock()) zu verlassen, die
-    ohnehin nicht fuer alle drei Abschluss-Kommandos genutzt wurde."""
+    _ledger_zeile_setzen() (HM-48): eine exklusive Sperre auf eine feste
+    Lock-Datei neben dem Ledger, gehalten fuer die volle
+    Read-Modify-Write-Spanne. Serialisiert konkurrierende kosten.py-Prozesse
+    (egal ob direkt oder ueber team-status.sh/team/lib.sh aufgerufen)
+    unabhaengig vom Aufrufer, statt sich auf eine Sperre der Shell-Seite
+    (team_lock()) zu verlassen, die ohnehin nicht fuer alle drei
+    Abschluss-Kommandos genutzt wurde.
+
+    WELCHER Mechanismus das ist, entscheidet _lock_belegen() zur Laufzeit
+    (BL-125) — die Zusicherung ist auf beiden Bahnen dieselbe."""
     lock_pfad = pfad + ".lock"
     fd = os.open(lock_pfad, os.O_CREAT | os.O_RDWR, 0o644)
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX)
+        _lock_belegen(fd, lock_pfad)
+    except BaseException:
+        # Nicht belegt heisst: nicht freigeben. Ein LOCK_UN/LK_UNLCK auf
+        # eine nie gehaltene Sperre ist auf der Windows-Bahn selbst ein
+        # Fehler und wuerde die eigentliche Ursache verdecken.
+        os.close(fd)
+        raise
+    try:
         yield
     finally:
-        fcntl.flock(fd, fcntl.LOCK_UN)
+        _lock_freigeben(fd)
         os.close(fd)
 
 

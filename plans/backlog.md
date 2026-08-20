@@ -21,9 +21,11 @@ Funde ab `BL-6`. Verweise auf den Backlog eines **anderen** Projekts werden
 **Stand 2026-08-20: zwei offene Einträge** (`BL-117`, `BL-120`).
 `BL-120` ist am selben Tag beim Doku-Durchgang dazugekommen und hat mit dem
 Rest dieses Tages nichts zu tun: ein Gerüst, das erst eine Frage trägt.
-`BL-121` (Ordneranlage im Interview) und `BL-122` (Exit-Code als Ausnahme)
-sind am selben Tag entstanden und **noch am selben Tag abgetragen** worden —
-beide aus dem Feld, von einer echten Windows-Maschine. An diesem Tag sind
+`BL-121` (Ordneranlage im Interview), `BL-122` (Exit-Code als Ausnahme),
+`BL-123` (blanker `pwsh`-Aufruf), `BL-124` (pytest nicht gefunden) und
+`BL-125` (`kosten.py` unter Windows nicht ladbar) sind am selben Tag
+entstanden und **noch am selben Tag abgetragen** worden — alle fünf aus dem
+Feld, von derselben echten Windows-Maschine. An diesem Tag sind
 `BL-111`, `BL-112`, `BL-114`, `BL-115`, `BL-116`, `BL-118` und `BL-119`
 abgetragen worden. `BL-117` bleibt und ist beim Abtragen von `BL-112` als
 ausgewiesener Rest entstanden — die Hälfte der Zusicherung, die sich nur auf

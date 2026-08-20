@@ -8,7 +8,7 @@
 #
 # WARUM ES DIESES SKRIPT GIBT
 #
-# Die Regressionstests unter team/tests/ (Stand 2.11.0: 482 Fälle in 68 Dateien)
+# Die Regressionstests unter team/tests/ (Stand 2.11.0: 487 Fälle in 69 Dateien)
 # setzen die INSTALLIERTE Ablage voraus: Entrypoints in der Repo-Wurzel,
 # CLAUDE.md und team.config.sh mit gefüllten Platzhaltern. Im Kit-Repo liegen
 # sie unter bash/entry/, pwsh/entry/ und bootstrap/ — `pytest geteilt/tests`

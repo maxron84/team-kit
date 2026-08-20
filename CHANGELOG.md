@@ -6,6 +6,52 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-125` — `kosten.py` war unter Windows nicht ladbar, und das nahm alles
+  mit.** ⚠️ **Feldbefund, dieselbe Windows-Maschine wie `BL-122`…`BL-124`.**
+  `team-test.cmd` brach mit **21 Sammelfehlern** ab, alle mit demselben Satz
+  am Ende: `ModuleNotFoundError: No module named 'fcntl'`.
+
+  **Die sichtbare Hälfte war die harmlosere.** `fcntl` ist ein POSIX-Modul,
+  und es stand als **ungeschützter Import auf Modulebene**. Damit fiel nicht
+  die Sperre aus, für die es da war, sondern die **ganze Datei** — und mit ihr
+  jeder Kostenpfad der pwsh-Bahn: `--akteur-abschluss`, `--rollen-abschluss`,
+  `--ralph-abschluss`. Ein Lauf auf der nativen Windows-Bahn hätte seine
+  Kosten nie in den Ledger geschrieben. Aufgefallen ist es an den Tests, weil
+  21 Testdateien `kosten.py` importieren; getroffen hat es den Betrieb.
+
+  **Warum es so lange unsichtbar blieb:** Die pwsh-Bahn ist auf der
+  Entwicklungsmaschine nie gefahren (dort ist kein `pwsh`), und die
+  Testsuite lief dort unter Linux, wo `fcntl` selbstverständlich da ist. Ein
+  plattformgebundener Import fällt eben nicht dort auf, wo er geschrieben
+  wird.
+
+  Behoben, ohne die Zusicherung aufzugeben, für die die Sperre gebaut wurde
+  (**HM-48**: zwei überlappende Abschluss-Aufrufe dürfen sich keine Zeile
+  herausreißen). `fcntl` und `msvcrt` werden **weich** geladen; welcher
+  Mechanismus greift, entscheidet `_lock_belegen()` zur Laufzeit — `flock`
+  auf POSIX, eine Bytebereichssperre auf Byte 0 derselben Lock-Datei unter
+  Windows. Beide sperren handle-bezogen, also auch zwischen zwei Threads
+  desselben Prozesses. Weil die Windows-Sperre kein blockierendes Warten mit
+  offenem Ende kennt, wartet der Windows-Zweig **30 Sekunden** gepollt und
+  meldet danach mit Wortlaut, dass **nichts** geschrieben wurde. Fehlt beides,
+  wird ebenfalls nichts geschrieben: Ein stiller Schreibvorgang ohne Sperre
+  wäre `HM-48` zurück.
+
+  Unter Test: [`test_bl125_kosten_ohne_fcntl.py`](geteilt/tests/test_bl125_kosten_ohne_fcntl.py),
+  fünf Fälle. Der Windows-Fall wird **nachgestellt**, nicht abgewartet: ein
+  Import-Blocker versteckt `fcntl` (und `msvcrt`) genau so, wie Windows es
+  zeigt, und ein `msvcrt`-Doppel fährt die HM-48-Race auf dem Windows-Zweig —
+  beide Zeilen müssen überleben, und die Spur der Sperre muss sich
+  abwechseln. Der fünfte Fall prüft die **Klasse statt des Falls**: Kein
+  Werkzeug unter `team/tools/` darf ein plattformgebundenes Modul
+  ungeschützt auf Modulebene importieren. Gegenprobe gefahren: `kosten.py`
+  aus `HEAD` zurückgespielt, **alle fünf** Fälle fallen.
+
+  **Weiterhin blind geschrieben** wie `BL-122`…`BL-124`: Auf dieser Maschine
+  ist kein Windows. Der Windows-Zweig ist gegen ein Doppel bewiesen, nicht
+  gegen `msvcrt` selbst — der Rest, den `BL-117` ohnehin schon ausweist.
+
+
 - **`BL-124` — pytest war installiert, und das Kit meldete „nicht gefunden".**
   ⚠️ **Feldbefund, dieselbe Windows-Maschine wie `BL-122` und `BL-123`.**
   Gesucht wurde ein **Name im PATH**, statt die Fähigkeit zu proben.

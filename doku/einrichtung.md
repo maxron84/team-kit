@@ -7,7 +7,7 @@ gern verwechselt werden:
 | Vorgang | Was passiert | Wie oft |
 |---|---|---|
 | **Klonen und einrichten** | Das Kit-Repo landet auf der Maschine, die Bordmittel werden geprüft, die Auth des Agenten-Werkzeugs steht | einmal pro Maschine |
-| **Einbinden** | `install.sh` legt die 120 Dateien in ein **Zielprojekt** | einmal pro Projekt |
+| **Einbinden** | `install.sh` legt die 121 Dateien in ein **Zielprojekt** | einmal pro Projekt |
 
 Der kurze Weg steht ganz oben; alles darunter ist die Begründung und der
 Fehlerfall.
@@ -693,6 +693,7 @@ installiert, wie komme ich dazu?"* — steht in der [FAQ](faq.md).
 | `… cannot be loaded because running scripts is disabled` | Ausführungsrichtlinie `Restricted`/`AllSigned` | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` — kein Administrator nötig |
 | `The term 'claude' is not recognized` | `claude` ist ein `.cmd`-Shim; PATH-Änderung hat die laufende Shell nicht erreicht | **Neue** pwsh-Sitzung öffnen. **Das ist KEIN Auth-Fehler** — nicht verwechseln. Bleibt es dabei: [FAQ](faq.md#sie-ist-installiert-der-lauf-findet-sie-trotzdem-nicht) |
 | `python` öffnet den Microsoft Store | Store-Platzhalter statt Interpreter | Echtes Python installieren; Gegenprobe `python -c "print(1)"` |
+| `ModuleNotFoundError: No module named 'fcntl'` — bei `team-test.cmd` als Wand von Sammelfehlern, sonst bei jedem Kostenbefehl | `fcntl` ist ein POSIX-Modul; `kosten.py` importierte es ungeschützt und war unter Windows deshalb gar nicht ladbar (**BL-125**) | Im Kit behoben. Klon aktualisieren, dann `install.ps1 <ziel> --update` — die Datei liegt im Projekt unter `team/tools/` |
 | `Could not find file '…'` bei einem relativen Pfad | Ein Skript hat `Set-Location` gesetzt, aber `[System.IO.File]` folgt dem **Prozess**-Arbeitsverzeichnis, nicht der PowerShell-Position | Im Kit behoben (`Team-Pfad` in [`team/lib.psm1`](../pwsh/lib.psm1)); tritt eigener Code darauf, dieselbe Auflösung nutzen |
 | `.cmd` verhält sich sporadisch falsch (Labels, `goto`) | Batch-Datei mit reinem LF | `.gitattributes` erzwingt CRLF; ein Klon von vor dieser Regel: `git rm --cached -r .` und `git reset --hard` |
 | Sperre greift nicht / Lauf hängt | Klon auf Netzlaufwerk oder in einem Sync-Ordner (OneDrive) | Auf ein lokales Laufwerk verlegen. Unter Windows 11 Enterprise kann das Benutzerprofil per Richtlinie nach OneDrive umgeleitet sein |
