@@ -247,7 +247,7 @@ abgeschlossen — im Feld lagen so 33,89 USD ungebucht in den Logordnern, ohne
 dass irgendetwas rot wurde), und — die eigentliche Probe — **ergeben die
 archivierten Rohlogs mehr, als im Ledger steht?** Diese letzte Frage stellt die
 Gegenkennzahl aus einer **anderen** Quelle als das Ledger selbst. Genau daran
-hakte es dreimal: Die schwersten Kostenfehler des Kits (`BL-1`, `BL-4`, `BL-5`)
+hakte es dreimal: Die schwersten Kostenfehler des Kits (`Kit-BL-1`, `Kit-BL-4`, `Kit-BL-5`)
 sind alle **nicht** durch ein Werkzeug aufgefallen, sondern dadurch, dass ein
 Mensch den Bericht neben das Ledger hielt. Exit `4` heißt Warnbefunde, `0`
 sauber. Warnungen laufen bei jedem `--budget` ungefragt mit.
@@ -359,8 +359,8 @@ bleiben dürfen:
 
 | Wert | Wozu |
 |---|---|
-| `TEAM_WEITERER_CODE` | Code außerhalb von `{{PRODUKTIVCODE}}`, der mitgeprüft werden soll: Einstiegspunkt in der Wurzel, Build-/Deploy-Skripte. Was hier nicht steht, greift das Red Team **nie** an — und ein sauberer Sweep sieht trotzdem aus wie ein sauberes Projekt (`BL-52`). |
-| `TEAM_TEST_ORDNER_BESTAND` / `TEAM_PLAN_ORDNER_BESTAND` | Was beim Einzug schon in den beiden Schreibordnern lag. Der Guard schlägt dort **nicht** an — Harry, Marv und Axel dürfen dort schreiben und löschen. Die Einträge werden den Rollen im Prompt als fremdes Eigentum genannt: neue Dateien anlegen ja, Bestehendes anfassen nein (`BL-51`). |
+| `TEAM_WEITERER_CODE` | Code außerhalb von `{{PRODUKTIVCODE}}`, der mitgeprüft werden soll: Einstiegspunkt in der Wurzel, Build-/Deploy-Skripte. Was hier nicht steht, greift das Red Team **nie** an — und ein sauberer Sweep sieht trotzdem aus wie ein sauberes Projekt (`Kit-BL-52`). |
+| `TEAM_TEST_ORDNER_BESTAND` / `TEAM_PLAN_ORDNER_BESTAND` | Was beim Einzug schon in den beiden Schreibordnern lag. Der Guard schlägt dort **nicht** an — Harry, Marv und Axel dürfen dort schreiben und löschen. Die Einträge werden den Rollen im Prompt als fremdes Eigentum genannt: neue Dateien anlegen ja, Bestehendes anfassen nein (`Kit-BL-51`). |
 
 Der Installer füllt beides beim Einzug und warnt, wenn Plan- oder Test-Ordner
 belegt sind. **Die harte Variante** bleibt der eigene, leere Plan-Ordner

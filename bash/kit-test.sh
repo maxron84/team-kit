@@ -8,11 +8,11 @@
 #
 # WARUM ES DIESES SKRIPT GIBT
 #
-# Die Regressionstests unter team/tests/ (Stand 2026-08-21: 569 Fälle in 81 Dateien)
+# Die Regressionstests unter team/tests/ (Stand 2026-08-21: 572 Fälle in 82 Dateien)
 # setzen die INSTALLIERTE Ablage voraus: Entrypoints in der Repo-Wurzel,
 # CLAUDE.md und team.config.sh mit gefüllten Platzhaltern. Im Kit-Repo liegen
 # sie unter bash/entry/, pwsh/entry/ und bootstrap/ — `pytest geteilt/tests`
-# schlägt hier deshalb fehl (Stand 2026-08-21: 21 Fehler, 472 grün, 76 über-
+# schlägt hier deshalb fehl (Stand 2026-08-21: 21 Fehler, 475 grün, 76 über-
 # sprungen — dieselben 21 wie vor dem Bahn-Umzug), ohne dass
 # irgendetwas kaputt wäre. Ergebnis: Ein im Kit committeter Fix war bis zur
 # nächsten Feldinstallation ungeprüft. Genau so ging BL-1 (tote Fixphase) durch

@@ -69,7 +69,7 @@ nichts, was ich nachlesen kann.
 3. **`BUDGET_EMPFEHLUNG_USD` konservativ, aber nicht knauserig** — für einen
    kurzen Erstlauf etwa 15 USD. **Lieber nachziehen als zu tief starten:** Ein
    zu tiefer Deckel wirft bezahlte, plausible Arbeit per Rollback weg und
-   **vervielfacht** die Kosten, statt zu sparen (Feld-Lehre `HM-32`). Die
+   **vervielfacht** die Kosten, statt zu sparen (Feld-Lehre `Kit-HM-32`). Die
    Vollautomatik hebt den Lauf-Deckel aus dieser Zeile nur an, senkt ihn nie.
 4. **Nach dem Erstlauf ehrlich bewerten.** Abschnitt 2 des Abschluss-Protokolls
    („Bewertung des Bauwegs") ist beim ersten Mal der wichtigste: War der Loop
@@ -119,7 +119,7 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    `./team-status.sh --ledger-pruefen` (Exit `4` = Warnbefunde) und im
    Zweifel gegen `--budget`: Ein Bericht, der seine Kennzahl aus derselben
    Quelle zieht wie das Geprüfte, würde einen Fehler bestätigen statt ihn zu
-   zeigen (Feld-Lehre `BL-1`). `--ledger-pruefen` hält deshalb die
+   zeigen (Feld-Lehre `Kit-BL-1`). `--ledger-pruefen` hält deshalb die
    archivierten Rohlogs gegen das Ledger — eine **andere** Quelle. Bleibt ein
    Warnbefund stehen, gehört er samt Begründung ins Abschluss-Doc; ich
    schließe keine Kaskade mit einem unerklärten Befund ab.
@@ -148,7 +148,7 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    eine **neue** Sitzung fuer die naechste Kaskade. Geht das ausnahmsweise
    nicht, buche ich **Rohwert minus bereits gebucht** und schreibe die Rechnung
    in den Notiztext der Ledger-Zeile, damit sie nachvollziehbar bleibt
-   (`BL-116`, Feld-Fall `BL-120`). Das Werkzeug ist rollen-agnostisch —
+   (`Kit-BL-116`, Feld-Fall `BL-120` im Projekt `platformer`). Das Werkzeug ist rollen-agnostisch —
    `--akteur-abschluss <rolle> <auth:abo|api> <USD> <domaene> ["<notiz>"]`
    deckt jede interaktiv arbeitende Rolle ab (auch Frank-im-Abo);
    `--architekt-abschluss` ist der dünne Alias dafür. Steht für **dieselbe

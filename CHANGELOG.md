@@ -6,6 +6,60 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-140` — die Regeltexte zitierten den Kit-Backlog blank und verletzten
+  damit genau die Regel, die sie selbst aufstellen.**
+
+  `CLAUDE.md` schreibt vor: „Verweist eine Zeile auf den Backlog eines
+  **anderen** Projekts, wird sie als `Kit-BL-<N>` geschrieben, nie als blankes
+  `BL-<N>`." In derselben Datei standen dann bare Verweise auf Kit-Einträge.
+  Ein frisches Projekt fängt seinen eigenen Backlog bei `BL-1` an, während der
+  Regeltext im selben Repo unter `BL-1` eine Kit-Feldlehre meint — die Frage
+  „darf mein erster Eintrag `BL-1` heißen?" ließ sich aus den Regeltexten
+  **nicht** beantworten, weil beide Lesarten dort belegt waren.
+
+  **Der Fix ist nicht mechanisch — und das ist der eigentliche Fund.** Der
+  Backlog-Eintrag nannte ihn „mechanisch und einmalig". Beim Abtragen kamen
+  zwei Fälle heraus, die ein blindes Such-und-Ersetze **kaputt gemacht** hätte:
+
+  1. `HM-7` und `AX-3` im Glossar von `TEAM.md` sind **Formatbeispiele** für die
+     Nummerierung im Beutebuch des **Zielprojekts** („Trägt eine Nummer
+     (`HM-7`)"). Ein `Kit-`-Präfix wäre dort schlicht falsch.
+  2. `BL-120` im Architekten-Briefing meint **weder** das Kit **noch** das
+     Zielprojekt: `Kit-BL-116` nennt als Quelle das Feldprojekt `platformer`
+     und dessen dortiges `BL-120`. Das Kit-`BL-120` ist das FAQ-Gerüst — aus
+     einem **richtigen** Verweis wäre ein falscher geworden.
+
+  **Daraus folgt eine Regel mit drei Sorten, nicht zwei:**
+
+  | Schreibweise | meint |
+  |---|---|
+  | `BL-<N>` blank | meinen Backlog — den dieses Projekts |
+  | `Kit-BL-<N>` | den Backlog des Kits |
+  | `BL-<N>` im Projekt `<name>` | den eines **dritten** Projekts: benannt, nicht präfigiert |
+
+  Die Regel in `CLAUDE.md.vorlage` sagte nur zwei; sie ist als Tabelle
+  nachgezogen — samt der Warnung, dass die dritte Sorte genau der Fall ist, an
+  dem mechanisches Umbenennen scheitert. Umgestellt sind **14** Verweise, drei
+  bleiben bewusst blank.
+
+  **Unter Test, drei Fälle:** der Lint über alle **ausgelieferten** Regeltexte
+  (Vorlagen im Kit, gerenderte Dateien in einer Installation); eine
+  Ausnahmeliste, in der jeder Eintrag einen **Grund** trägt und die selbst
+  geprüft wird — ein verwaister Eintrag, dessen Stelle es nicht mehr gibt, wäre
+  eine stille Erlaubnis für die nächste blanke Nummer an derselben Stelle; und
+  die Gegenrichtung, dass die Regel überhaupt im Regeltext **steht**. Ein Lint,
+  der eine ungeschriebene Regel durchsetzt, überrascht nur beim nächsten
+  Textumbau.
+
+  **Was der Lint an sich selbst gefunden hat:** Die neue Notationstabelle stand
+  zuerst mit `BL-7` als Beispielzahl da und fiel durch die eigene Prüfung — zu
+  Recht: Eine Notationstabelle mit echter Nummer ist von einem Verweis auf
+  genau diesen Eintrag nicht zu unterscheiden. Sie führte vor, was sie
+  verbietet, und nennt jetzt `<N>`.
+
+  Mitgezogen: die Inventarzeile in `doku/regel-inventar.md` — `A.10` verlangt
+  das **benannte Nachziehen**, nicht das Unterlassen der Änderung.
+
 - **`BL-129` — „Tests bleiben grün in einbahniger Ablage" galt nur in der
   geprüften Richtung.**
 

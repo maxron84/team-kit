@@ -103,7 +103,7 @@ Problem **nicht erneut**.
   dokumentieren**.
 - Ein Fund wird sauber dokumentiert und **an Frank übergeben** (Finder ≠ Fixer).
 
-**Der Prüfumfang ist nicht automatisch ein einzelner Ordner** (`BL-52`). Liegt
+**Der Prüfumfang ist nicht automatisch ein einzelner Ordner** (`Kit-BL-52`). Liegt
 Code außerhalb von `{{PRODUKTIVCODE}}` — Einstiegspunkt in der Wurzel,
 Build-/Deploy-Skripte —, gehört er in `TEAM_WEITERER_CODE` in
 [`team.config.sh`](team.config.sh). Er wird dann mitgeprüft und ist zugleich
@@ -112,7 +112,7 @@ Sweep liest sich trotzdem wie ein sauberes Projekt. In einem frisch angelegten
 Projekt ist der Wert zu Recht leer; in einer gewachsenen Codebasis ist er der
 Unterschied zwischen „`{{PRODUKTIVCODE}}` ist sauber" und „geprüft".
 
-**Die Schreibzone ist nicht automatisch leeres Land** (`BL-51`). Test- und
+**Die Schreibzone ist nicht automatisch leeres Land** (`Kit-BL-51`). Test- und
 Plan-Ordner sind die einzigen Pfade, die das Red Team schreiben darf — dort
 schlägt der Guard **nicht** an. Zog das Team in eine gewachsene Codebasis ein,
 liegt dort fremdes Eigentum. Was beim Einzug schon da war, steht in
@@ -147,7 +147,7 @@ Plan-Ordner.
    `- **Status**: offen → an Frank übergeben` — `beutebuch.py list` zeigt den
    Fund weiter an, `first 'an Frank übergeben'` findet ihn **nicht**, und der
    nächste Frank-Lauf meldet „nichts zu tun", ohne dass irgendetwas auf den
-   Widerspruch hinweist (`BL-115`, im Feld genau so passiert). `beutebuch.py
+   Widerspruch hinweist (`Kit-BL-115`, im Feld genau so passiert). `beutebuch.py
    lint <HM-Nr>` meldet eine Statuszeile, die auf keinen Wert der Kette passt.
    Frank quittiert nach dem Fix mit `erledigt (Frank-Fix, <commit>)` und trägt
    den Fix in den `[Unreleased]`-Block ein.
@@ -213,7 +213,7 @@ zugeordnet, ohne dass es dafür eine Extra-Liste braucht.
   günstig für die Loop-Rollen) bleibt unberührt.
 
 **Nie im Dauer-Loop** (ein Fall pro Aufruf). Budget pro Fall im
-**Zwei-Schwellen-Modell** (`BL-30`, siehe `## Kostenkontrolle`): **Soft-Cap**
+**Zwei-Schwellen-Modell** (`Kit-BL-30`, siehe `## Kostenkontrolle`): **Soft-Cap**
 (`5`, Default 5 USD — **nur Hinweis**, kein Rollback) und
 **Hard-Cap** (`10`, Default 10 USD — Abbruch mit Rollback als
 Airbag). Nur bei nachgewiesenem Bedarf.
@@ -327,12 +327,27 @@ der Auslöser, auf den sie wartete, war längst gebaut. **Nebenbei ist der
 Regelfall, nicht die Ausnahme:** Eingelöst hat ihn eine Stufe aus einem ganz
 anderen Strang, und der Bauplan der Kaskade nennt so etwas nirgends.
 
-**Schreibweise fremder Backlog-Nummern.** Verweist eine Zeile auf den Backlog
-eines **anderen** Projekts (typisch: eine Meldung zurück ans Kit), wird sie als
-`Kit-BL-<N>` geschrieben, nie als blankes `BL-<N>`. Der Nummernraum ist sonst
-doppelt belegt — dieselbe Nummer bedeutet hier und dort etwas anderes, und wer
-(als Mensch oder Werkzeug) einen Verweis nachschlägt, landet im falschen
-Dokument.
+**Schreibweise fremder Backlog-Nummern.** Der Nummernraum ist sonst doppelt
+belegt — dieselbe Nummer bedeutet hier und dort etwas anderes, und wer (als
+Mensch oder Werkzeug) einen Verweis nachschlägt, landet im falschen Dokument.
+Es gibt **drei** Sorten, nicht zwei:
+
+| Schreibweise | meint |
+|---|---|
+| `BL-<N>` blank | **meinen** Backlog — den dieses Projekts |
+| `Kit-BL-<N>` | den Backlog des **Kits** (typisch: eine Meldung zurück ans Kit) |
+| `BL-<N>` im Projekt `<name>` | den eines **dritten** Projekts: Es wird **benannt**, nicht präfigiert |
+
+Die dritte Sorte ist nicht Feinheit, sondern der Fall, an dem ein mechanisches
+Umbenennen scheitert: Ein pauschales `Kit-` davor macht aus einem richtigen
+Verweis einen falschen. Ebenso wenig präfigiert werden **Formatbeispiele** —
+„trägt eine Nummer (`HM-<N>`)" zeigt die Schreibweise **deiner** Funde, nicht
+einen bestimmten Fund.
+
+Diese Tabelle nennt bewusst `<N>` statt einer Beispielzahl. Eine
+Notationstabelle, die eine echte Nummer einsetzt, ist selbst nicht mehr von
+einem Verweis auf genau diesen Eintrag zu unterscheiden — sie führt vor, was
+sie verbietet.
 
 > **Zentrale Werte gehören gegengeprobt, nicht gegrept (✅ Feld-Lehre, 2026-08-11).**
 > Ändert eine Stufe einen **zentralen Wert** (Konstante, Default, Schwellwert,
@@ -396,7 +411,7 @@ Abo. **Auch Axel und Der Architekt laufen Abo-first** — das starke Modell im A
 ist schlicht günstiger, die Budget-Caps bleiben als Airbag. **Keine** Rolle ist
 fest `api`. Modell und Auth sind zwei getrennte Achsen.
 
-**Session-Limit (429) — die dritte Fehlerklasse  ✅ erprobt (`BL-20`/`BL-25`):**
+**Session-Limit (429) — die dritte Fehlerklasse  ✅ erprobt (`Kit-BL-20`/`Kit-BL-25`):**
 Ein Session-Limit ist **weder** ein sauberer Erfolg **noch** ein „echter"
 Fehler, sondern eine eigene, klar benannte Klasse — sie weicht
 Guard/Read-Only-Regeln **nicht** auf.
@@ -413,7 +428,7 @@ Guard/Read-Only-Regeln **nicht** auf.
   erfolgreich erklärt, endet der Loop mit **Exit 43** statt „ECHTER Fehler".
   **Vorbeugend gilt für jede bauende Rolle:** Der Smoke-Test läuft im
   **Vordergrund**, nie als Hintergrund-Task und nie mit einem Wakeup darauf.
-- **Auslauf-Bremse gegen Leerlaufkosten (`TEAM_FIX_MAX_STAGNATION`, `BL-25`).**
+- **Auslauf-Bremse gegen Leerlaufkosten (`TEAM_FIX_MAX_STAGNATION`, `Kit-BL-25`).**
   Bleibt in der Frank↔Axel-Fixphase **weder** ein Fix **noch** eine neue Akte
   **noch** ein Statuswechsel, bricht die Phase nach N Runden ab, statt teuer
   leerzudrehen. **Kein** Aufweichen echter Fehler — die Bremse misst
@@ -429,7 +444,7 @@ Loop-Rollen, `TEAM_MODEL_STRONG` (Default `opus`) für Axel und Den Architekten
 getrennte Achsen: starkes Modell heißt **nicht** API — auch Axel und Der
 Architekt laufen Abo-first, siehe „Loop-Mechanik & Auth".
 
-**Budget-Modell (Zwei-Schwellen, ✅ erprobt, `BL-30`)**: Ein zentraler
+**Budget-Modell (Zwei-Schwellen, ✅ erprobt, `Kit-BL-30`)**: Ein zentraler
 **Soft-Cap** (`TEAM_ROLE_BUDGET_USD`, Default **5 USD**) gilt für **alle**
 Rollen; ein **Hard-Cap** (`TEAM_ROLE_HARDCAP_USD`, Default **10 USD**) nur für
 die iterierenden „Sorgenkinder" **Frank & Axel**. Beide zentral in
@@ -445,7 +460,7 @@ divergierender Defaults.
   kaputter Prompt) bricht mit Rollback+Cleanup ab. Grund: Ein zu tiefer Cap
   greift **nach** dem bereits bezahlten Aufruf und wirft plausible Arbeit per
   Rollback weg — er „sparte" nichts, sondern **vervielfachte** die Kosten
-  (realer Auslöser `HM-32`).
+  (realer Auslöser `Kit-HM-32`).
 - **Ralph/Harry/Marv:** sofortiger **Hard-Cap** beim Soft-Wert (kein
   Soft-Fenster) — Ralph stoppt nach dem Commit **vor** dem
   .ralph-state-Weiterschalten (kein Rollback, Mensch schaltet weiter),
