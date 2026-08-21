@@ -6,6 +6,57 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-120` — die FAQ trug eine Frage und war ein Versprechen.**
+
+  Die Seite war als Gerüst gebaut und beantwortete genau eine Frage. Der Eintrag
+  benannte drei Kandidaten — keine erfundenen, sondern genau die Stellen, an
+  denen im Doku-Audit eine Symptomzeile auf eine Erklärung zeigte, die es so
+  nicht gibt. Alle drei sind jetzt geschrieben.
+
+  **`42` / `43` — was mache ich jetzt?** Beides sind eigene Ausgänge neben `0`
+  und `1`, und die Antwort trennt sie scharf: `42` heißt **warten** (der Zustand
+  steht, es gibt nichts zu reparieren; drei Env-Stellschrauben, falls es zu früh
+  kommt), `43` heißt **nachsehen**. Die vier Entscheidungszeilen sind wörtlich
+  die Prüfungen, die `ralph.sh` beim Aussteigen ausgibt — inklusive der dritten,
+  die im Feld übersehen wurde: „Baum rot" heißt nicht „Stufe kaputt", es kommt
+  darauf an, **wo** er rot ist. Der Feldbetrag steht daneben: 19,47 USD in vier
+  Neubauten bereits bezahlter Arbeit.
+
+  **Wie hole ich eine abgewählte Bahn zurück?** Ein `--update` **ohne**
+  Schalter — und die Antwort nennt den Teil, der beim ersten Bau vergessen
+  wurde: die Konfiguration, erzeugt aus den Werten der **vorhandenen** Bahn
+  statt aus den Auslieferungswerten (sonst bekäme die zurückgeholte Bahn eine
+  andere Guard-Grenze als die laufende). Die eigentliche Falle steht als eigener
+  Abschnitt: Ein `--update` **mit** Schalter wählt nicht ab, es hört nur auf zu
+  aktualisieren — die Dateien bleiben liegen, veralten still, und die Testsuite
+  entscheidet an ihrer Anwesenheit, welche Bahn sie fährt.
+
+  **Warum kostet mein Lauf mehr als geschätzt?** Die Antwort beginnt nicht mit
+  einer Erklärung, sondern mit der Frage, **welche Zahl** der Leser überhaupt
+  liest: vier Zeilen des Kontostands mit ihrem jeweiligen Bezugsrahmen, weil die
+  häufigste Verwechslung die kaskadenscharfe Architektenzeile gegen die
+  lebenslange Summe ist (`Kit-BL-18`, im Feld 13 % zu viel). Dann der
+  `Churn-Proxy` als das, was er ist, mit dem Messweg daneben. Dann die Erklärung,
+  warum die Zahl höher ist als das Ergebnis vermuten lässt — mit einer
+  **gemessenen** Verhältniszahl statt einer Faustregel:
+
+  > 58 806 159 `cache_read`-Token gegen 210 804 erzeugte — rund **280 : 1**, aus
+  > dem Transkript der Sitzung, in der `Kit-BL-141` gebaut wurde.
+
+  Daraus drei Betriebsfolgen, und zuletzt der Fall, in dem eine Kaskade
+  **wirklich** doppelt zählt (fehlende Archivierung) samt der Prüfung, die eine
+  **andere** Quelle befragt.
+
+  **Das Gerüst darüber hinaus bleibt bewusst leer.** Der Eintrag sagt
+  ausdrücklich „bewusst *keine* Kaskade: Jede Frage soll erst geschrieben
+  werden, wenn sie wirklich gestellt wurde" — eine FAQ, die Fragen erfindet,
+  wird lang und trotzdem nicht gelesen.
+
+  Bauform der ersten Frage durchgehalten: Symptomtabelle mit den echten
+  Wortlauten, Einordnung vorweg, Schritt 0 (*ist es überhaupt dieser Fall?*),
+  Antwort mit **Entscheidungsspalte** statt Aufzählung, und ein eigener
+  Belegstand, der Gemessenes von Übernommenem trennt.
+
 - **`BL-141` — die Architekten-Kostenzeile war ein Zeilen-Churn-Proxy und lag im
   Feld 35 % zu niedrig.**
   ⚠️ **Feldbefund** aus `duke-itam-2026`, Kaskade 1: Die Zeile meldete

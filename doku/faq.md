@@ -17,6 +17,9 @@ Nachbarn, und die Arbeitsteilung ist scharf:
 | Frage | Kurz |
 |---|---|
 | [Claude-CLI nicht gefunden — wie installiere ich sie?](#claude-cli-nicht-gefunden--wie-installiere-ich-sie) | Installationswege für Linux, WSL und Windows nativ — und die drei Fälle, in denen sie installiert ist und der Lauf sie trotzdem nicht findet |
+| [Der Lauf endete mit `42` oder `43` — was mache ich jetzt?](#der-lauf-endete-mit-42-oder-43--was-mache-ich-jetzt) | Beides ist **kein** Fehler. `42` heißt warten, `43` heißt nachsehen — und `43` neu zu bauen hat im Feld viermal die bereits bezahlte Arbeit gekostet |
+| [Wie hole ich eine abgewählte Bahn zurück?](#wie-hole-ich-eine-abgewählte-bahn-zurück) | Ein `--update` **ohne** Schalter. Die Falle liegt nicht beim Zurückholen, sondern beim Abwählen im Update |
+| [Warum kostet mein Lauf mehr als geschätzt?](#warum-kostet-mein-lauf-mehr-als-geschätzt) | Meist keine Abweichung, sondern zwei verschiedene Zahlen — und eine davon war bis `Kit-BL-141` gar keine Messung |
 
 ---
 
@@ -202,6 +205,268 @@ env -u ANTHROPIC_API_KEY claude -p "sag ok" --output-format json
   Entwicklungsmaschine liegt die CLI im Node-Verzeichnis eines Flatpak-Editors
   und ist außerhalb von dessen Terminal unsichtbar.
 
+---
+
+## Der Lauf endete mit `42` oder `43` — was mache ich jetzt?
+
+**So sieht es aus:**
+
+| Exit | Zeile im Protokoll |
+|---|---|
+| `42` | `⏸ Session-Limit erreicht — Lauf pausiert (Ralph). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht).` |
+| `43` | `⚠ Stufe fertig, Quittung fehlt (BL-41) — Lauf gestoppt. NICHT neu bauen, bevor die von Ralph genannten zwei Prüfungen gelaufen sind.` |
+
+**Einordnung vorweg:** Beides sind **eigene Ausgänge neben `0` und `1`**, und
+genau das ist ihr Zweck. Ein Lauf, der pausiert, und ein Lauf, dessen Arbeit
+fertig ist und nur die Quittung vermissen lässt, sind **keine Fehler** — sie so
+zu behandeln kostet Geld. Die Fehlerbilder-Tabelle in
+[einrichtung.md](einrichtung.md#fehlerbilder) nennt die Codes; was zu **tun**
+ist, steht hier.
+
+### `42` — Session-Limit, der Lauf wartet auf dich
+
+Das Kontingent des Abos ist erschöpft. Das Kit hat das erkannt (HTTP 429 oder
+der Text „session limit"/„resets" in der Antwort), zuerst den **API-Fallback**
+versucht — der hat ein eigenes Kontingent —, dann eine begrenzte Zahl von
+Wiederholungen, und ist erst danach ausgestiegen.
+
+**Was du tust: nichts, außer später erneut starten.**
+
+```bash
+./vollautomatik.sh        # nimmt den Faden am Zeigerstand auf
+```
+
+Der Zustand steht: `.ralph-state` ist **nicht** fortgeschritten, kein
+Fehlversuchs-Zähler wurde erhöht, keine Stufe gilt als erledigt. Alle
+Rollen-Skripte reichen `42` unverändert durch, damit genau das gilt.
+
+> **Was du NICHT tust:** den Zeigerstand von Hand anfassen. Ein `42` hat nichts
+> verschoben — es gibt nichts zu reparieren.
+
+Wenn `42` **zu früh** kommt, sind drei Stellschrauben da. Sie stehen in der
+Konfiguration, nicht im Code:
+
+| Variable | Vorgabe | Wirkung |
+|---|---|---|
+| `TEAM_429_MAX_RETRIES` | `2` | Wie oft nach einem Limit erneut versucht wird |
+| `TEAM_429_MAX_WARTEN` | `1800` s | Längste Wartezeit auf den Reset; `0` schaltet den Auto-Retry ab |
+| `TEAM_429_PUFFER` | `30` s | Aufschlag auf den gemeldeten Reset-Zeitpunkt |
+
+Ist der Reset-Zeitpunkt unbekannt oder liegt er jenseits des Maximums, wartet
+das Kit **gar nicht** und geht sofort in den Pausen-Exit — lieber ein sauberes
+Warten durch dich als eine Stunde blockierter Prozess.
+
+### `43` — die Stufe ist fertig, nur die Quittung fehlt
+
+Die Rolle hat gearbeitet, das Log meldet Erfolg, aber das
+`<promise>`-Kennzeichen fehlt. Der häufigste Grund: Sie hat auf einen
+Hintergrund-Task gewartet, den es im headless-Betrieb nicht gibt.
+
+**Die Arbeit ist mit hoher Wahrscheinlichkeit fertig.** Deshalb protokolliert
+das Kit `43` ausdrücklich **nicht** als Fehler: Im Feld hat das Verwechseln mit
+„endete mit Fehler" viermal zum Neubau statt zum Nachsehen geführt — zusammen
+**19,47 USD** für Arbeit, die bereits bezahlt war (`Kit-BL-41`).
+
+**Schritt 0 — ist es überhaupt dieser Fall?** Die Rolle hat dir beim Aussteigen
+zwei Prüfungen genannt. Fahre sie, bevor du irgendetwas anderes tust:
+
+```bash
+git log -1 && git status                 # hat die Rolle committet?
+<dein Smoke-Test aus team.config.*>      # ist der Baum grün?
+```
+
+Dann entscheidest du **entlang des Ergebnisses**, nicht nach Gefühl:
+
+| Befund | Was das heißt | Was du tust |
+|---|---|---|
+| Committet **und** Baum grün | Die Stufe ist fertig, nur die Quittung fehlt | Von Hand quittieren: `echo <N+1> > .ralph-state`, dann erneut starten |
+| Baum rot, und rot sind **ausschließlich** die von dieser Stufe **neu angelegten** Testdateien (`git status` zeigt sie als `??`) | Der Testaufbau ist der wahrscheinlichere Schuldige als der Produktivcode | Den Aufbau von Hand reparieren — **ohne** eine Zusicherung abzuschwächen. Nicht neu bauen |
+| Rot ist **bestehender** Testbestand | Die Stufe hat etwas gebrochen | Jetzt ist Neubau richtig |
+| Nicht committet | Die Arbeit ist nicht da | Neu bauen |
+
+> **Die dritte Zeile ist die, die im Feld übersehen wurde.** „Baum rot" heißt
+> nicht automatisch „Stufe kaputt" — es kommt darauf an, **wo** er rot ist. Eine
+> Zusicherung abzuschwächen, damit die Suite grün wird, macht den Test wertlos
+> und den Befund unsichtbar.
+
+### Belegstand
+
+- **Beide Codes und ihre Behandlung stehen im Code des Kits und unter Test** —
+  `vollautomatik.sh` reicht `42` aus jeder Phase durch und behandelt `43` als
+  eigenen Ausgang; die vier Entscheidungszeilen oben sind wörtlich die
+  Prüfungen, die `ralph.sh` beim Aussteigen ausgibt.
+- **Die 19,47 USD sind ein Feldbetrag**, kein hergeleiteter — vier Neubauten
+  desselben Falls, bevor `Kit-BL-41` den eigenen Ausgang einführte.
+
+---
+
+## Wie hole ich eine abgewählte Bahn zurück?
+
+**So sieht es aus:** In deinem Projekt liegen nur `.sh`-Dateien und keine
+`.ps1`/`.cmd` (oder umgekehrt). `TEAM.md` zeigt eine Zwei-Bahnen-Tabelle, aber
+eine Spalte gibt es bei dir nicht.
+
+**Einordnung vorweg:** Das ist **kein Defekt**. Bei der Installation wurde
+`--nur-bash` bzw. `--nur-pwsh` gesetzt — eine ausdrückliche Abwahl. Wer sie
+trifft, trägt die Folge, statt sie geerbt zu bekommen; das ist der ganze Sinn
+des Schalters (`Kit-BL-119`).
+
+### Schritt 0 — ist es überhaupt eine Abwahl?
+
+```bash
+ls *.sh *.ps1 2>/dev/null | wc -l    # welche Bahnen liegen hier?
+ls team.config.*                     # eine Konfiguration je Bahn
+```
+
+Fehlt eine Bahn **vollständig** (Entrypoints *und* Bibliothek *und*
+Konfiguration), war es eine Abwahl. Fehlen nur einzelne Dateien, ist etwas
+anderes passiert — dann ist ein `--update` trotzdem der richtige nächste
+Schritt, aber lies dessen Bericht.
+
+### Der Rückweg: ein `--update` **ohne** Schalter
+
+```bash
+bash <kit-pfad>/bash/install.sh . --update
+```
+
+```powershell
+pwsh -File <kit-pfad>\pwsh\install.ps1 . -Update
+```
+
+Das Update macht das Projekt wieder vollständig — Entrypoints, Bibliothek **und
+die fehlende Konfiguration**. Die Konfiguration ist der Teil, der beim ersten
+Bau vergessen wurde: Ein Update fasst `team.config.*` grundsätzlich nicht an,
+also kamen die Entrypoints zurück und die Werte nicht. Der Update-Pfad
+**erzeugt** eine fehlende Bahn-Konfiguration heute neu — aus den Werten der
+**vorhandenen**, nicht aus den Auslieferungswerten. Sonst bekäme die
+zurückgeholte Bahn eine andere Guard-Grenze als die, die schon läuft, und der
+Guard schützte den falschen Ordner.
+
+Der Lauf sagt dir, dass er es getan hat:
+
+```
+team.config.ps1 fehlte und ist neu erzeugt worden
+Projektwerte aus team.config.sh gelesen
+```
+
+### Die eigentliche Falle liegt woanders
+
+**Ein `--update` MIT Schalter wählt nicht ab — es hört nur auf zu
+aktualisieren.** `--nur-pwsh` beim Update lässt die `.sh`-Dateien **liegen**;
+sie veralten dann still. Und die Testsuite entscheidet **an ihrer Anwesenheit**,
+welche Bahn sie fährt. Ein so behandeltes Projekt fährt also Tests gegen
+Dateien, die niemand mehr pflegt.
+
+Beide Installer melden das inzwischen ausdrücklich. **Gelöscht wird nichts** —
+eine Datei, die das Kit nicht angelegt hat, löscht es auch nicht
+(`Kit-BL-12`).
+
+> **Wenn du eine Bahn wirklich loswerden willst**, ist das eine Entscheidung für
+> dich und `git rm`, nicht für den Installer. Er meldet den Zustand; er räumt
+> ihn nicht auf.
+
+### Belegstand
+
+- **Der Rückweg ist unter Test**, in beiden Richtungen: `kit-test.sh` Stufe 8
+  baut je eine einbahnige Ablage, fährt dort die Suite und holt die fehlende
+  Bahn per `--update` zurück — inklusive der Zusicherung, dass die
+  Konfiguration mit den **Projektwerten** wiederkommt und keine Platzhalter
+  übrig bleiben.
+- **Dass die Tests in einer einbahnigen Ablage grün bleiben**, gilt seit
+  `Kit-BL-129` für **beide** Richtungen; vorher war nur eine geprüft.
+
+---
+
+## Warum kostet mein Lauf mehr als geschätzt?
+
+**So sieht es aus:** `--budget` zeigt eine Zahl, die Konsole oder dein Gefühl
+zeigen eine andere.
+
+**Einordnung vorweg:** Meistens ist das **keine Abweichung, sondern zwei
+verschiedene Zahlen.** Lies zuerst die Beschriftung, dann die Zahl.
+
+### Schritt 0 — welche Zahl liest du überhaupt?
+
+```bash
+./team-status.sh --budget
+```
+
+| Zeile | Was sie ist | Bezugsrahmen |
+|---|---|---|
+| `Ralph-Logs`, `Team-Logs` | **Abgerechnete** Beträge aus den Rohlogs der headless gelaufenen Rollen | seit dem letzten Closeout |
+| `Architekt K<N> (echt, im Gesamt enthalten)` | Eine **gebuchte Ledger-Zeile** dieser Kaskade | **eine** Kaskade |
+| `Architekt K<N> (Churn-Proxy, nicht im Gesamt enthalten)` | **Keine Messung** — siehe unten | **eine** Kaskade |
+| `Gesamt-Kontostand (inkl. Ledger)` | Lebenslange Summe | seit Projektbeginn |
+
+**Die häufigste Verwechslung** ist die dritte gegen die vierte Zeile: Der
+Architektenwert gilt für **eine** Kaskade, die Zeilen daneben kumulieren
+lebenslang. Im Feld ergab der beim Wort genommene Kontostand einmal 81,27 statt
+71,57 USD — 13 % zu viel, weil der Architekt ein zweites Mal addiert wurde
+(`Kit-BL-18`). Deshalb sagt die Zeile selbst, ob sie im Gesamt schon steckt.
+
+### Der Churn-Proxy ist keine Schätzung deines Verbrauchs
+
+Steht dort `Churn-Proxy`, ist die Zahl **Zeilen-Churn mal Eichfaktor** — sie
+misst die **Größe des Diffs**, nicht die Arbeit. Eine Sitzung mit viel Lesen,
+Prüfen und Gegenproben wird systematisch unterschätzt; im Feld lag sie **35 %
+zu niedrig** (`Kit-BL-141`).
+
+**Gemessen wird so:**
+
+```
+<dein Python> team/tools/kosten.py sitzung-messen --projekt .
+```
+
+Das Werkzeug liest das Sitzungstranskript, dedupliziert über die
+Nachrichten-ID und **eicht sich an den abgerechneten Läufen deines Projekts**.
+Sagt es „Preistabelle stimmt nicht mehr", ist die Zahl **ungeeicht** — dann
+nicht buchen, sondern die Tabelle nachziehen (Exit `2`).
+
+### Warum die Zahl höher ist, als das Ergebnis vermuten lässt
+
+Der **Löwenanteil entfällt auf das erneute Vorlegen des Kontexts**, nicht auf
+den erzeugten Text. Eine lange Sitzung legt bei jedem Schritt den gesamten
+bisherigen Verlauf wieder vor. In einer gemessenen Bau-Sitzung dieses Kits
+standen rund 58 Millionen `cache_read`-Token gegen 211 000 erzeugte — ein
+Verhältnis von etwa 280 zu 1.
+
+Daraus folgen drei Dinge, die im Betrieb wirklich helfen:
+
+| Beobachtung | Was sie bedeutet |
+|---|---|
+| Kosten wachsen **überproportional** zur Sitzungslänge | Eine Kaskade je Sitzung abschließen, nicht drei |
+| Ein Aufruf kann **mehrfach** stattfinden | Jeder Versuch ist bezahlt. Das Kit summiert deshalb **alle** Versuchs-Logs, nicht nur den letzten (`Kit-BL-55`) |
+| Der Pro-Lauf-Deckel greift **nicht** gegen den Gesamtstand | Er ist die operative Grenze **eines** Laufs; der Gesamtstand ist dokumentiert, nicht durchgesetzt |
+
+### Wenn eine Kaskade wirklich doppelt zählt
+
+Dann fehlt die **Archivierung** der Rohlogs. Reihenfolge im Closeout:
+Ledger-Zeile anhängen → **direkt danach** archivieren. Fehlt der zweite Schritt,
+zählt jede abgeschlossene Kaskade doppelt, weil die Logs im gezählten Pfad
+liegen bleiben. `--rollen-abschluss` tut beides in **einem** Aufruf — genau
+deshalb.
+
+Prüfen statt glauben:
+
+```bash
+./team-status.sh --ledger-pruefen
+```
+
+Exit `4` heißt Warnbefunde. Die Prüfung hält die **archivierten Rohlogs** gegen
+das Ledger, also eine **andere** Quelle — ein Bericht, der seine Kennzahl aus
+derselben Quelle zieht wie das Geprüfte, bestätigt einen Fehler, statt ihn zu
+zeigen.
+
+### Belegstand
+
+- **Die Verhältniszahl 280 : 1 ist gemessen**, nicht geschätzt: aus dem
+  Transkript der Sitzung, in der `Kit-BL-141` gebaut wurde (58 806 159
+  `cache_read`-Token gegen 210 804 erzeugte).
+- **Die 35 % und die 13 % sind Feldbeträge** aus `duke-itam-2026` bzw.
+  `platformer`, keine Modellrechnungen.
+- **Die Preistabelle des Messwerkzeugs ist gegen die Herstellerangaben
+  geprüft** und eicht sich zusätzlich an den abgerechneten Läufen des Projekts
+  selbst — weicht sie ab, sagt das Werkzeug es, statt eine Zahl zu buchen.
 ---
 
 ## Verwandte Seiten
