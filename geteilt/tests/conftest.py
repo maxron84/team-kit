@@ -859,6 +859,29 @@ class Schale:
 # --- Verfuegbarkeit ----------------------------------------------------------
 
 
+def _fehlt_oder_abgewaehlt(bahn, datei):
+    """Warum eine fehlende Bibliothek ZWEI verschiedene Lagen sein kann.
+
+    BL-129: Der Grund stand vorher als "team/lib.sh fehlt in dieser Ablage" —
+    ein Satz, der nach Defekt klingt. In einem mit `--nur-pwsh` installierten
+    Projekt ist er aber die WAHRHEIT ueber eine bewusste Abwahl des Anwenders
+    (BL-119), und die ist kein Fehler. Wer den Unterschied nicht liest, sucht
+    nach einer kaputten Installation, die es nicht gibt.
+
+    Unterschieden wird an der ANDEREN Bahn: Liegt sie da, war es eine Abwahl.
+    Liegt keine von beiden, ist die Ablage wirklich unvollstaendig — dann soll
+    der Satz auch so klingen.
+    """
+    andere = {"bash": "pwsh", "pwsh": "bash"}[bahn]
+    if andere in bahnen_in_der_ablage():
+        # Kurz genug fuer die Zusammenfassungszeile: Sie steht neben einer Zahl
+        # und wird ueberflogen, nicht studiert. Der Rueckweg gehoert trotzdem
+        # hinein — ohne ihn liest sich die Abwahl wie eine Sackgasse.
+        return (f"in dieser Ablage abgewaehlt (--nur-{andere}) — "
+                f"--update ohne Schalter holt sie zurueck")
+    return f"{datei} fehlt in dieser Ablage"
+
+
 def _bash_bereit():
     """Warum das eine eigene Frage ist: Auf einem POSIX-Wirt ist sie immer mit
     Ja beantwortet, unter nativem Windows nicht zwingend.
@@ -876,7 +899,7 @@ def _bash_bereit():
                        "bewusst nicht benutzt) — Git for Windows installieren "
                        "oder die Suite in einer WSL-Distro fahren")
     if not kit_pfad("lib.sh").is_file():
-        return False, "team/lib.sh fehlt in dieser Ablage"
+        return False, _fehlt_oder_abgewaehlt("bash", "team/lib.sh")
     return True, ""
 
 
@@ -890,7 +913,7 @@ def _pwsh_bereit():
     if shutil.which("pwsh") is None:
         return False, "pwsh nicht installiert"
     if not kit_pfad("lib.psm1").is_file():
-        return False, "team/lib.psm1 fehlt noch (Stufe 3)"
+        return False, _fehlt_oder_abgewaehlt("pwsh", "team/lib.psm1")
     return True, ""
 
 

@@ -698,6 +698,39 @@ a_pruefe "keine .sh im Projekt" "$(ls "$B_REPO" | grep -cE '\.sh$')" "0"
 a_pruefe "und der Selbsttest meldet KEINEN Syntaxfehler ueber das Glob-Muster" \
     "$(grep -c 'Syntaxfehler: \*.sh' "$B_REPO/.abwahl.log")" "0"
 
+# BL-129, abgetragen 2026-08-21: Hier stand jahrelang "BEWUSST NICHT geprueft
+# — sie sind es nicht (109 rot)". Das war ehrlich und es war eine Luecke: Die
+# Zusicherung "Tests bleiben gruen in einbahniger Ablage" galt nur in der
+# Richtung, die oben geprueft wird (--nur-bash). Die andere blieb offen, weil
+# ein Test, der EINE Bahn FAEHRT, keinen Uebersprung fuer IHR Fehlen hatte —
+# er lief los und scheiterte an einer Datei, die es dort nicht gibt.
+#
+# Aufgeloest haben es BL-130 und BL-133 nebenbei: Seit die Tests ihre Umgebung
+# ueber basis_umgebung() beziehen und der Harnisch Module mit bash-Abhaengigkeit
+# beim Einsammeln ueberspringt, ist die Ablage gruen. Nachgemessen statt
+# angenommen: 198 gruen, 371 uebersprungen, NULL rot.
+#
+# Der Uebersprung MUSS sichtbar sein. Ein stiller Uebersprung von 371 Faellen
+# liest sich am Ende wie ein bestandener Nachweis, und das waere schlimmer als
+# das rote Bild, das er ersetzt — deshalb steht die Quotenzeile mit unter Test
+# und nicht nur die Farbe.
+( cd "$B_REPO" && "$KIT_PYTHON" -m pytest team/tests -q > .einbahnig.log 2>&1 ) \
+    || { rot "  ✗ Tests in einer nur-pwsh-Ablage sind ROT (BL-129)"; \
+         tail -25 "$B_REPO/.einbahnig.log" >&2; exit 1; }
+a_pruefe "Tests bleiben gruen (kein Fehlschlag durch die fehlende Bahn)" \
+    "$(grep -cE '^[0-9]+ (failed|error)' "$B_REPO/.einbahnig.log")" "0"
+a_pruefe "und die Einbahnigkeit steht in der Zusammenfassung" \
+    "$(grep -c 'einbahnige Ablage' "$B_REPO/.einbahnig.log")" "1"
+# Der eigentliche Inhalt von BL-129: Die uebersprungene Bahn wird BENANNT und
+# GEZAEHLT. Ohne die Zahl bliebe unsichtbar, wie viel der Nachweis ausgelassen
+# hat.
+a_pruefe "die abgewaehlte bash-Bahn ist als Uebersprung ausgewiesen" \
+    "$(grep -c 'bash-Bahn uebersprungen' "$B_REPO/.einbahnig.log")" "1"
+a_pruefe "und der Grund nennt die ABWAHL, nicht einen Defekt" \
+    "$(grep -c 'in dieser Ablage abgewaehlt (--nur-pwsh)' "$B_REPO/.einbahnig.log")" "1"
+a_pruefe "samt Rueckweg" \
+    "$(grep -c 'update ohne Schalter holt sie zurueck' "$B_REPO/.einbahnig.log")" "2"
+
 git -C "$B_REPO" add -A >/dev/null 2>&1
 git -C "$B_REPO" commit -q -m "einbahnig pwsh installiert"
 bash "$KIT/bash/install.sh" "$B_REPO" --update > "$B_REPO/.rueckweg.log" 2>&1 \
@@ -718,10 +751,6 @@ a_pruefe "und die Quelle steht im Protokoll" \
     "$(grep -c 'Projektwerte aus team.config.ps1 gelesen' "$B_REPO/.rueckweg.log")" "1"
 a_pruefe "das Nachziehen ist gemeldet worden" \
     "$(grep -c 'team.config.sh fehlte und ist neu erzeugt worden' "$B_REPO/.rueckweg.log")" "1"
-# BEWUSST NICHT geprueft: dass die Tests in einer nur-pwsh-Ablage gruen
-# bleiben. Sie sind es nicht (109 rot) — die bash-getriebenen Faelle laufen
-# dort ins Leere. Das ist ein EIGENER, offener Punkt (BL-129) und wird hier
-# nicht stillschweigend mitbehauptet.
 rm -rf "$(dirname "$B_REPO")"
 
 kopf "9/11 — Regel-Inventar gegen die Regeldatei (A.10, BL-56)"

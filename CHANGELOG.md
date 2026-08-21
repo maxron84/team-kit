@@ -6,6 +6,55 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-129` — „Tests bleiben grün in einbahniger Ablage" galt nur in der
+  geprüften Richtung.**
+
+  **Nachgemessen statt übernommen.** Der Eintrag nannte **109 rote Tests** in
+  einer mit `--nur-pwsh` installierten Ablage. Heute sind es:
+
+  ```
+  198 passed, 371 skipped     (0 failed)
+  ```
+
+  Die Roten sind zwischen dem Aufnehmen des Eintrags und heute verschwunden,
+  **ohne dass jemand `BL-129` bearbeitet hätte**: `BL-130` (Sammeltest gegen
+  Plattformannahmen) und `BL-133` (`basis_umgebung()`, plus der Übersprung von
+  Modulen mit bash-Abhängigkeit beim **Einsammeln**) haben den Mechanismus
+  nebenbei mitgebracht.
+
+  **Der eigentliche Abtrag ist die Zusicherung.** In `kit-test.sh` stand
+  wörtlich:
+
+  > BEWUSST NICHT geprüft: dass die Tests in einer nur-pwsh-Ablage grün
+  > bleiben. Sie sind es nicht (109 rot).
+
+  Ein Satz, der nach dem Verschwinden seiner Ursache still zur **Falschaussage**
+  wurde — und den Nachweis weiter ausließ. Stufe 8 fährt die Suite jetzt in
+  **beiden** Richtungen, und zwar **vor** dem `--update`, das die abgewählte
+  Bahn zurückholt. Der erste Entwurf stand dahinter und hätte eine
+  **vollständige** Installation gemessen: ein Nachweis, der genau das nicht
+  prüft, was er behauptet.
+
+  **Fünf Zusicherungen statt einer Farbe:** grün; Einbahnigkeit in der
+  Zusammenfassung; die abgewählte Bahn als Übersprung **ausgewiesen**; der Grund
+  nennt die **Abwahl** statt eines Defekts; und der Rückweg steht daneben. Ein
+  stiller Übersprung von 371 Fällen liest sich am Ende wie ein bestandener
+  Nachweis — schlimmer als das rote Bild, das er ersetzt.
+
+  **Nebenfund, mitbehoben.** Der Übersprungsgrund lautete `team/lib.sh fehlt in
+  dieser Ablage` — ein Satz, der nach kaputter Installation klingt, während er
+  in Wahrheit eine bewusste Abwahl des Anwenders beschreibt (`BL-119`). Wer den
+  Unterschied nicht liest, sucht nach einem Defekt, den es nicht gibt. Er
+  unterscheidet die beiden Lagen jetzt an der **anderen** Bahn: Liegt sie da,
+  war es eine Abwahl; liegt keine von beiden, ist die Ablage wirklich
+  unvollständig — und dann darf der Satz auch so klingen.
+
+  Der in `BL-129` geplante `ueberspringe_ohne_bahn()`-Helfer kam mit `BL-143`
+  bereits ins Repo: `BL-142` hatte sofort einen neuen Fall erzeugt. Der Bedarf
+  ist **strukturell**, nicht historisch — `ueberspringe_ohne_beide_bahnen()`
+  trifft nur Tests, die beide Bahnen **vergleichen**, nicht die, die **eine**
+  fahren.
+
 - **`BL-143` — der Alias `--architekt-abschluss` buchte fest `auth=api`: gegen
   die eigene Regel, und mit sichtbarer Geldwirkung.**
   ⚠️ **Feldbefund** aus `duke-itam-2026`, Closeout der ersten Kaskade. Das
