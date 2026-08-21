@@ -27,6 +27,36 @@ Import-Module ./team/lib.psm1 -Force -DisableNameChecking
 
 $ralphCapWert = team_ralph_cap
 
+function Rest-Ohne-Erstes {
+    <#
+      Gibt $Liste ohne ihr erstes Element zurueck — IMMER als Array.
+
+      BL-142: Hier stand dreimal `$rest = if ($rest.Count -gt 1) {
+      @($rest[1..($rest.Count - 1)]) } else { @() }`. Der `@(...)`-Ausdruck
+      erzeugt zwar ein Array, aber die Rueckgabe aus einem if-BLOCK laeuft
+      durch die Ausgabepipeline, und die entpackt ein EINELEMENTIGES Array zu
+      seinem Element. Bei genau zwei Notizen wurde $rest damit zum String.
+
+      Der Fehlermodus ist keiner, den man beim Lesen sieht: Ein String HAT eine
+      Count-Property (Wert 1), die Bedingung `$rest.Count` traegt also weiter —
+      erst `$rest[0]` liefert dann einen [Char] statt einer Zeichenkette, und
+      `.StartsWith()` gibt es dort nicht. Die Meldung im Feld lautete
+      "[System.Char] does not contain a method named 'StartsWith'", gefolgt von
+      "Unbekannter Modus 'K'" — dem ersten Zeichen der zweiten Notiz.
+
+      Das unaere Komma ist der Grund, warum diese Funktion ueberhaupt existiert:
+      `return ,$neu` legt das Array in ein einelementiges Array, die Pipeline
+      entpackt genau diese eine Schicht, und beim Aufrufer kommt das Array
+      unversehrt an. Ohne das Komma haette die Funktion denselben Fehler wie
+      die drei Zeilen, die sie ersetzt.
+    #>
+    param([object]$Liste)
+    $n = @($Liste).Count
+    if ($n -le 1) { return ,@() }
+    $neu = @($Liste)[1..($n - 1)]
+    return ,@($neu)
+}
+
 function Status-ArchitektZeile {
     <#
       "beschriftung<TAB>USD" der Architekt-Kennzahl — EINE Quelle fuer BEIDE
@@ -256,7 +286,7 @@ function Status-AkteurAbschluss {
     $notiz = ''
     if ($rest.Count -and $rest[0] -and -not $rest[0].StartsWith('--')) {
         $notiz = $rest[0]
-        $rest = if ($rest.Count -gt 1) { @($rest[1..($rest.Count - 1)]) } else { @() }
+        $rest = Rest-Ohne-Erstes $rest
     }
     team_akteur_abschluss $rolle $auth $usd $domaene $notiz '.budget-ledger' '.' @rest
     return $LASTEXITCODE
@@ -289,10 +319,10 @@ function Status-RollenAbschluss {
     $notiz = ''
     $bauNotiz = ''
     if ($rest.Count -and $rest[0] -and -not $rest[0].StartsWith('--')) {
-        $notiz = $rest[0]; $rest = if ($rest.Count -gt 1) { @($rest[1..($rest.Count - 1)]) } else { @() }
+        $notiz = $rest[0]; $rest = Rest-Ohne-Erstes $rest
     }
     if ($rest.Count -and $rest[0] -and -not $rest[0].StartsWith('--')) {
-        $bauNotiz = $rest[0]; $rest = if ($rest.Count -gt 1) { @($rest[1..($rest.Count - 1)]) } else { @() }
+        $bauNotiz = $rest[0]; $rest = Rest-Ohne-Erstes $rest
     }
     $modus = if ($rest.Count) { $rest[0] } else { '' }
     if ($modus -and $modus -notin @('--addieren', '--ersetzen')) {

@@ -865,6 +865,21 @@ def bash_schale():
     return Schale("bash")
 
 
+def verlange_pwsh():
+    """Skip mit Begruendung, wenn auf diesem Wirt kein PowerShell 7 liegt.
+
+    Das Gegenstueck zu verlange_bash(), fuer Tests, die ausserhalb der
+    `schale`-Fixture selbst ein pwsh starten. Es gab es bisher nicht, weil die
+    pwsh-Bahn ihre Faelle ueber die parametrisierte Fixture fuhr — ein Test,
+    der NUR pwsh braucht (BL-142: ein Fehler, den es auf der bash-Bahn gar
+    nicht geben kann), hatte keinen Uebersprung mit Grund.
+    """
+    bereit, grund = _pwsh_bereit()
+    if not bereit:
+        _QUOTE["uebersprungen"].add("nur-pwsh")
+        pytest.skip(f"pwsh-Bahn nicht verfuegbar: {grund}")
+
+
 def verlange_bash():
     """Skip mit Begruendung, wenn auf diesem Wirt keine echte Bash liegt.
 

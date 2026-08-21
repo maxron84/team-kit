@@ -6,6 +6,71 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-142` — `--rollen-abschluss` mit BEIDEN Notizen brach immer ab: also
+  genau bei dem Aufruf, den die Doku vorgibt.**
+  ⚠️ **Feldbefund** aus `duke-itam-2026`, Closeout der ersten Kaskade, erster
+  echter Kostenabschluss eines Projekts:
+
+  ```
+  Method invocation failed because [System.Char] does not contain
+  a method named 'StartsWith'.
+  Unbekannter Modus 'K'
+  ```
+
+  Das `K` ist das **erste Zeichen der zweiten Notiz**.
+
+  **Die Ursache ist eine Sprachregel, kein Tippfehler.** In
+  `Status-RollenAbschluss` stand zweimal — und in `Status-AkteurAbschluss` ein
+  drittes Mal:
+
+  ```powershell
+  $rest = if ($rest.Count -gt 1) { @($rest[1..($rest.Count - 1)]) } else { @() }
+  ```
+
+  Der `@(…)`-Ausdruck erzeugt ein Array, aber die Rückgabe aus einem
+  if-**Block** läuft durch die Ausgabepipeline, und die entpackt ein
+  **einelementiges** Array zu seinem Element. Bei genau zwei Notizen wurde
+  `$rest` damit zum String. Sichtbar ist das beim Lesen nicht: Ein String *hat*
+  eine `Count`-Property mit Wert 1, die Bedingung trägt also weiter — erst
+  `$rest[0]` liefert dann einen `[Char]`.
+
+  **Warum es niemand vorher traf.** Die Fälle laufen auseinander, und nur einer
+  ist kaputt:
+
+  | Aufruf | `$rest` wird | |
+  |---|---|---|
+  | zwei Notizen, kein Schalter | `String` | **kaputt** |
+  | eine Notiz | `$null` | läuft durch |
+  | zwei Notizen + `--addieren` | `Object[]` | funktioniert |
+
+  Die vorhandenen Testfälle benutzten entweder eine Notiz oder hängten einen
+  Schalter an. Genau der dokumentierte Aufruf war der ungetestete.
+
+  **Der Fix ist eine Funktion, keine drei reparierten Zeilen.**
+  `Rest-Ohne-Erstes` gibt mit dem **unären Komma** zurück (`return ,@($neu)`) —
+  ohne das hätte sie denselben Fehler wie die Zeilen, die sie ersetzt, denn
+  auch eine Funktionsrückgabe läuft durch die Pipeline. Die übrigen fünf
+  `$x = if (…) { @(…) }` im Kit sind gegengeprüft: Alle liefern in beiden
+  Zweigen ein dreielementiges Literal und werden nur in `foreach` benutzt —
+  Ausnahmen mit Beleg, keine offenen Reste.
+
+  **Unter Test, vier Ebenen:** Quelltext-Riegel gegen die Rückkehr des Idioms
+  (läuft auf jedem Wirt); Verhalten der echten Funktion, über den
+  **Syntaxbaum** aus der echten Datei geholt statt nachgebaut; **Gegenbeweis**,
+  dass das alte Idiom wirklich einen String liefert; und der Aufruf aus der
+  Doku end-to-end gegen ein Fixture-Projekt — zwei Notizen, kein
+  Modus-Schalter.
+
+  **Was die Gegenprobe zusätzlich gefunden hat:** Der erste Quelltext-Riegel
+  verlangte den Zeilenanfang und hätte damit genau **eine** der drei Stellen
+  gesehen — zwei standen als zweite Anweisung hinter einem Semikolon.
+  Aufgefallen beim Zurückdrehen einer einzelnen Stelle, nicht beim Lesen. Der
+  Riegel kennt jetzt beide Formen und ist gegen alle drei einzeln geprüft.
+
+  Neu im Harnisch: `verlange_pwsh()` — das Gegenstück zu `verlange_bash()`. Es
+  fehlte, weil die pwsh-Bahn ihre Fälle bisher über die parametrisierte Fixture
+  fuhr; ein Test, der **nur** pwsh braucht, hatte keinen Übersprung mit Grund.
+
 - **`BL-144` — der Selbsttest der bash-Bahn war seit `BL-136` rot, und die
   Meldung zeigte auf die falsche Stelle.**
 
