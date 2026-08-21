@@ -6,6 +6,72 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-144` — der Selbsttest der bash-Bahn war seit `BL-136` rot, und die
+  Meldung zeigte auf die falsche Stelle.**
+
+  `BL-136` hat `gitattributes_abgleich()` in `bash/install.sh` gebaut, wörtlich
+  in der Bauart von `gitignore_abgleich()`: gleiche Struktur, gleiche Quittung.
+
+  ```
+    ✓ .gitignore enthält den Block vollständig
+    ✓ .gitattributes enthält den Block vollständig
+  ```
+
+  Damit hatte diese Zeile ab sofort **zwei Absender**. Stufe 6 von
+  `kit-test.sh` zählt sie seit `BL-109` ungefiltert und erwartet `1`:
+
+  ```
+    ✗ und ausdruecklich als vollstaendig quittiert — erwartet '1', ist '2'
+  ```
+
+  Der Lauf brach bei 6/11 ab, unter der Beschriftung einer Prüfung über das
+  `.gitignore` — an dem nichts falsch war.
+
+  **Dahinter lag der teurere Teil.** `.gitattributes` hatte in
+  `bash/kit-test.sh` **überhaupt keine Abdeckung**. Der Melde-Zweig — die
+  Hälfte, für die `BL-136` geschrieben wurde, weil `--update` Projektdateien
+  grundsätzlich nicht anfasst — wurde in der bash-Bahn nie gefahren. Ein
+  Projekt, das den Block vom Installationstag trägt und seither nur `--update`
+  gesehen hat, ist genau der Fall aus `BL-109`, und er war auf dieser Bahn
+  ungeprüft.
+
+  **Warum es niemandem auffiel.** Die Ursache steht im Commit von `BL-136`
+  selbst: Als Nachweis ist dort „kit-test.ps1 alle 6 Schritte gruen (EXIT 0)"
+  ausgewiesen. `kit-test.ps1` hat diese Prüfung nicht — sie ist einer von 11
+  Schritten, die nur `kit-test.sh` fährt. Dieselbe Bauart wie `BL-129` bis
+  `BL-131`, nur spiegelverkehrt: Dort blieb die pwsh-Bahn ungeprüft, weil auf
+  dem Bauwirt kein `pwsh` liegt; hier blieb die **bash**-Bahn ungeprüft, weil
+  auf dem Fundwirt keine bash-Verifikation gefahren wurde. Eine
+  Zwei-Bahnen-Zusicherung, die abwechselnd auf je einer Bahn belegt wird, ist
+  auf keiner belegt.
+
+  **Der Fix, zwei Teile — und der zweite ist der eigentliche.**
+
+  1. Die vier Prüfungen nennen jetzt ihre Datei (`.gitignore liegt … hinter
+     der Vorlage` statt `hinter der Vorlage`), statt eine Meldung zu zählen,
+     die inzwischen mehreren gehört. Eine Zählung über einen Meldungstext ohne
+     Absender ist ein stiller Kopplungspunkt: Der nächste Abgleich derselben
+     Bauart — `.editorconfig`, `.mailmap`, was auch immer — hätte den Lauf
+     erneut an einer fremden Stelle abgebrochen.
+  2. Die sechs `.gitignore`-Zusicherungen sind für `.gitattributes`
+     gespiegelt, samt der beiden Zeilen, an denen der Melde-Zweig hängt: der
+     genannten Zeilenzahl und `git add --renormalize .`. Ohne den zweiten
+     Schritt wirkt der Nachtrag erst beim nächsten Klon — also genau der
+     Abstand zwischen Ursache und Wirkung, den `BL-136` schließen wollte. Ein
+     Nachweis, der ihn nicht mitprüft, lässt die teure Hälfte offen.
+     Präpariert wird dafür, wie beim `.gitignore`, eine um zwei Zeilen
+     zurückgebliebene Datei — `*.psm1` und `*.bat`, je eine aus dem LF- und
+     eine aus dem CRLF-Teil, damit beide Regelblöcke getroffen sind.
+
+  **Gegenprobe in beide Richtungen gefahren, nicht behauptet:** mit intaktem
+  Melde-Zweig treffen alle sechs Zusicherungen ihre Sollwerte; mit
+  ausgebautem Melde-Zweig fällt der Treffer auf `0` und die Prüfung wird rot.
+  Damit ist belegt, dass sie etwas absichert und nicht nur beschreibt, was
+  ohnehin gilt (Bauart `BL-14`).
+
+  Nachweis: `kit-test.sh` 11/11, Exit 0 — Stufe 6 jetzt 30 statt 22
+  Zusicherungen.
+
 - **`BL-138` — ein grüner Lauf, der als roter endete: am Aufräumen.**
   ⚠️ **Feldbefund**, gemeldet vom Anwender beim ersten eigenen Testlauf in
   `duke-itam-2026`. Das Fortschrittsband war makellos — 542 Zeichen, 228

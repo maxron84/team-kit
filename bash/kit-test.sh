@@ -380,6 +380,11 @@ printf '\n# lokaler Fix, noch nicht ans Kit gemeldet\n' >> "$ZIEL/team/tools/beu
 # hat. Der Block ist vorhanden, zwei seither dazugekommene Zeilen fehlen. Der
 # Installer hat das bisher als "enthaelt den Block bereits" abgehakt.
 sed -i '/^\.team-focus-harry$/d; /^\.team-focus-marv$/d' "$ZIEL/.gitignore"
+# BL-136 hat dieselbe Bauart fuer die .gitattributes gebaut, aber nur die
+# pwsh-Bahn hat sie nachgewiesen. Dieselbe Lage hier: Block vorhanden, zwei
+# Zeilen der Vorlage fehlen. Ohne diesen Griff faehrt der Melde-Zweig von
+# gitattributes_abgleich() in der bash-Bahn ueberhaupt nie.
+sed -i '/^\*\.psm1[[:space:]]/d; /^\*\.bat[[:space:]]/d' "$ZIEL/.gitattributes"
 
 if ! bash "$KIT/bash/install.sh" "$ZIEL" --update > "$ZIEL/.update.log" 2>&1; then
     rot "  ✗ install.sh --update schlug fehl:"
@@ -460,9 +465,9 @@ esac
 # Fall ist der teure: Das Update meldete bisher Erfolg und liess das Projekt
 # trotzdem auf dem Fragmentstand seines Installationstages zurueck.
 pruefe "veraltetes .gitignore wird gemeldet" \
-       "$(grep -c 'hinter der Vorlage' "$ZIEL/.update.log")" "1"
+       "$(grep -c '\.gitignore liegt .* hinter der Vorlage' "$ZIEL/.update.log")" "1"
 pruefe "mit der richtigen Zeilenzahl" \
-       "$(grep -c 'liegt 2 Zeile(n) hinter der Vorlage' "$ZIEL/.update.log")" "1"
+       "$(grep -c '\.gitignore liegt 2 Zeile(n) hinter der Vorlage' "$ZIEL/.update.log")" "1"
 # Je zweimal: einmal in der Aufzaehlung, einmal im nachtragbaren Befehl.
 pruefe "erste fehlende Zeile namentlich genannt" \
        "$(grep -c '\.team-focus-harry' "$ZIEL/.update.log")" "2"
@@ -472,18 +477,44 @@ pruefe "zweite fehlende Zeile namentlich genannt" \
 # entfernte sein. Die Meldung ist die risikofreie Haelfte.
 pruefe ".gitignore wird NICHT von selbst ergaenzt" \
        "$(grep -c 'team-focus' "$ZIEL/.gitignore")" "0"
+
+# BL-136, dieselben vier Zusicherungen fuer die .gitattributes. Sie fehlten:
+# Der Fix ist am 2026-08-21 nur gegen kit-test.ps1 (6 Schritte) nachgewiesen
+# worden, und die bash-Bahn hat die Datei seither ueberhaupt nicht angefasst.
+# Genau die Luecke, an der der Fehlbetrag bis zum naechsten Feldlauf sitzt.
+pruefe "veraltete .gitattributes wird gemeldet" \
+       "$(grep -c '\.gitattributes liegt .* hinter der Vorlage' "$ZIEL/.update.log")" "1"
+pruefe "mit der richtigen Zeilenzahl" \
+       "$(grep -c '\.gitattributes liegt 2 Zeile(n) hinter der Vorlage' "$ZIEL/.update.log")" "1"
+# Je zweimal wie oben: Aufzaehlung und nachtragbarer Befehl.
+pruefe "fehlende LF-Zeile namentlich genannt" \
+       "$(grep -c '\*\.psm1' "$ZIEL/.update.log")" "2"
+pruefe "fehlende CRLF-Zeile namentlich genannt" \
+       "$(grep -c '\*\.bat' "$ZIEL/.update.log")" "2"
+# Der zweite Schritt gehoert zur Meldung: Ohne `add --renormalize` wirkt der
+# Nachtrag erst beim naechsten Klon — genau der Abstand zwischen Ursache und
+# Wirkung, den BL-136 schliessen wollte.
+pruefe "und der Renormalisierungs-Schritt dazu" \
+       "$(grep -c 'add --renormalize' "$ZIEL/.update.log")" "1"
+pruefe ".gitattributes wird NICHT von selbst ergaenzt" \
+       "$(grep -c '^\*\.psm1' "$ZIEL/.gitattributes")" "0"
 # Gegenprobe: Eine Meldung, die immer erscheint, ist keine (Bauart BL-14).
 # Mit vollstaendigem Fragment muss derselbe Lauf schweigen.
 printf '.team-focus-harry\n.team-focus-marv\n' >> "$ZIEL/.gitignore"
+printf '*.psm1  text eol=lf\n*.bat   text eol=crlf\n' >> "$ZIEL/.gitattributes"
 if ! bash "$KIT/bash/install.sh" "$ZIEL" --update > "$ZIEL/.update2.log" 2>&1; then
     rot "  ✗ zweiter install.sh --update (Gegenprobe) schlug fehl:"
     tail -20 "$ZIEL/.update2.log" >&2
     exit 1
 fi
 pruefe "vollstaendiges .gitignore wird nicht angemahnt" \
-       "$(grep -c 'hinter der Vorlage' "$ZIEL/.update2.log")" "0"
+       "$(grep -c '\.gitignore liegt .* hinter der Vorlage' "$ZIEL/.update2.log")" "0"
 pruefe "und ausdruecklich als vollstaendig quittiert" \
-       "$(grep -c 'enthält den Block vollständig' "$ZIEL/.update2.log")" "1"
+       "$(grep -c '\.gitignore enthält den Block vollständig' "$ZIEL/.update2.log")" "1"
+pruefe "vollstaendige .gitattributes wird nicht angemahnt" \
+       "$(grep -c '\.gitattributes liegt .* hinter der Vorlage' "$ZIEL/.update2.log")" "0"
+pruefe "und ausdruecklich als vollstaendig quittiert" \
+       "$(grep -c '\.gitattributes enthält den Block vollständig' "$ZIEL/.update2.log")" "1"
 # Auch dieser Lauf legt eine Kit-Fassung zum Abgleich ab — mit aufraeumen,
 # sonst bleibt je Selbsttest ein Verzeichnis in /tmp liegen.
 ABGLEICH2="$(grep -oE 'diff [^"]*-u "[^"]+"' "$ZIEL/.update2.log" | head -1 \
