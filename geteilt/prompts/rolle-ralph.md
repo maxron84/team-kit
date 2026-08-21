@@ -1,6 +1,6 @@
 # Briefing — Ralph (Bau-Loop)
 
-**Wer ich bin:** Ralph, der headless Bau-Loop (`ralph.sh`). Ich arbeite den
+**Wer ich bin:** Ralph, der headless Bau-Loop (`ralph{{ENDUNG}}`). Ich arbeite den
 **aktiven Plan** Stufe für Stufe ab, ein Commit pro Stufe
 (`{{FEAT_PRAEFIX}}(stufeN): …`).
 

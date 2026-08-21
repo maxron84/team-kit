@@ -45,6 +45,38 @@ UPDATE=0
 # Installer (BL-119).
 NUR_BAHN=""
 
+# BL-139: Die Regeltexte nennen Pfade — und in einer einbahnigen Ablage nennen
+# sie damit Dateien, die es dort nicht gibt. Im Feld (duke-itam-2026, mit
+# --nur-pwsh installiert) waren das 14 tote .sh-Pfade in CLAUDE.md und 23 in
+# TEAM.md. Am teuersten team.config.sh: Der Regeltext schickte jede Rolle
+# dorthin, um TEAM_SMOKE_TEST nachzutragen, waehrend team/lib.psm1
+# team.config.ps1 liest — zwei einander widersprechende Anweisungen im selben
+# Systemprompt, und der Fehlermodus ist STILL. Wer der Regel folgt, legt eine
+# Datei an, die nie gelesen wird: kein Abbruch, keine Meldung, der Wert wirkt
+# einfach nicht.
+#
+# Gebaut als Platzhalter statt als Nachbearbeitung der fertigen Datei: Die
+# Vorlage sagt dann selbst, welche Stellen bahnabhaengig sind, und eine neu
+# dazugeschriebene Zeile faellt im Test auf, statt still die alte Bahn zu
+# nennen. Die Zwei-Bahnen-Tabelle in TEAM.md und der Ablage-Block in
+# CLAUDE.md.vorlage bleiben ausdruecklich literal — sie STELLEN die Bahnen
+# GEGENUEBER, das ist ihr Zweck.
+#
+# Vorbelegt ist die bash-Bahn: In einer zweibahnigen Ablage (dem Default) liegt
+# beides, und der gerenderte Text bleibt damit Byte fuer Byte der von vorher.
+# Nur --nur-pwsh aendert etwas.
+bahn_werte() {
+    if [ "$NUR_BAHN" = "pwsh" ]; then
+        BAHN_RUF='.\'         ; BAHN_ENDUNG='.cmd'
+        BAHN_KONFIG='team.config.ps1'
+        BAHN_LIB='team/lib.psm1'; BAHN_REDTEAM='team/redteam.ps1'
+    else
+        BAHN_RUF='./'          ; BAHN_ENDUNG='.sh'
+        BAHN_KONFIG='team.config.sh'
+        BAHN_LIB='team/lib.sh' ; BAHN_REDTEAM='team/redteam.sh'
+    fi
+}
+
 for arg in "$@"; do
     case "$arg" in
         --nicht-interaktiv) INTERAKTIV=0 ;;
@@ -56,6 +88,9 @@ for arg in "$@"; do
         *)  ZIEL="$arg" ;;
     esac
 done
+
+# BL-139: Erst JETZT stehen die Schalter fest — vorher waeren die Werte geraten.
+bahn_werte
 
 # Gehoert die Datei zu einer abgewaehlten Bahn? Entscheidet ueber die ENDUNG,
 # weil das Kit an dieser Stelle Kit-Pfade (bash/entry/…) auf Projekt-Pfade
@@ -526,11 +561,14 @@ if [ "$UPDATE" -eq 1 ]; then
                            "$SMOKE_TEST" "$TECH_STACK" "$DEPLOY" "$DEPLOY_AUSNAHMEN" \
                            "$DOMAENEN" "$COMMIT_ENTSCHEID" \
                            "${TEAM_WEITERER_CODE:-}" "${TEAM_TEST_ORDNER_BESTAND:-}" \
-                           "${TEAM_PLAN_ORDNER_BESTAND:-}" "$PYTHON" <<'PY'
+                           "${TEAM_PLAN_ORDNER_BESTAND:-}" "$PYTHON" \
+                           "$BAHN_RUF" "$BAHN_ENDUNG" "$BAHN_KONFIG" \
+                           "$BAHN_LIB" "$BAHN_REDTEAM" <<'PY'
 import sys, pathlib
 (d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
  domaenen, commit, weiterer, test_bestand, plan_bestand,
- python_name) = sys.argv[1:16]
+ python_name, bahn_ruf, bahn_endung, bahn_konfig,
+ bahn_lib, bahn_redteam) = sys.argv[1:21]
 # BL-113: siehe die Begruendung bei fuelle() weiter unten. Die Regel steht
 # hier ein zweites Mal, weil der Update-Pfad eine eigene Fuell-Routine hat —
 # und ein Update, das die Kodierung verliert, ist genau der Fall, in dem ein
@@ -550,7 +588,12 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{PYTHON}}", python_name),
              ("{{WEITERER_CODE}}", weiterer),
              ("{{TEST_BESTAND}}", test_bestand),
-             ("{{PLAN_BESTAND}}", plan_bestand)]:
+             ("{{PLAN_BESTAND}}", plan_bestand),
+             # BL-139: die bahnabhaengigen Pfade. In einer einbahnigen Ablage
+             # nannte der Regeltext sonst Dateien, die es dort nicht gibt.
+             ("{{RUF}}", bahn_ruf), ("{{ENDUNG}}", bahn_endung),
+             ("{{KONFIG}}", bahn_konfig), ("{{LIB}}", bahn_lib),
+             ("{{REDTEAM}}", bahn_redteam)]:
     t = t.replace(a, b)
 # BL-137: schreiben OHNE Uebersetzung der Zeilenenden.
 #
@@ -1190,11 +1233,14 @@ fuelle() {
     "$PYTHON" - "$datei" "$PROJEKT" "$PRODUKTIVCODE" "$TEST_ORDNER" "$PLAN_ORDNER" \
                        "$SMOKE_TEST" "$TECH_STACK" "$DEPLOY" "$DEPLOY_AUSNAHMEN" \
                        "$DOMAENEN" "$COMMIT_ENTSCHEID" "$WEITERER_CODE" \
-                       "$TEST_ORDNER_BESTAND" "$PLAN_ORDNER_BESTAND" "$PYTHON" <<'PY'
+                       "$TEST_ORDNER_BESTAND" "$PLAN_ORDNER_BESTAND" "$PYTHON" \
+                       "$BAHN_RUF" "$BAHN_ENDUNG" "$BAHN_KONFIG" \
+                       "$BAHN_LIB" "$BAHN_REDTEAM" <<'PY'
 import sys, pathlib
 (d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
  domaenen, commit, weiterer, test_bestand, plan_bestand,
- python_name) = sys.argv[1:16]
+ python_name, bahn_ruf, bahn_endung, bahn_konfig,
+ bahn_lib, bahn_redteam) = sys.argv[1:21]
 # BL-113: utf-8-sig liest ein vorhandenes BOM weg, statt es als ﻿ mitten
 # in den Text zu nehmen. Ob beim Schreiben wieder eines hinkommt, entscheidet
 # unten allein die Endung — nicht der Zufall, was in der Vorlage stand.
@@ -1217,7 +1263,12 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              # zerreisst.
              ("{{WEITERER_CODE}}", weiterer),
              ("{{TEST_BESTAND}}", test_bestand),
-             ("{{PLAN_BESTAND}}", plan_bestand)]:
+             ("{{PLAN_BESTAND}}", plan_bestand),
+             # BL-139: die bahnabhaengigen Pfade. In einer einbahnigen Ablage
+             # nannte der Regeltext sonst Dateien, die es dort nicht gibt.
+             ("{{RUF}}", bahn_ruf), ("{{ENDUNG}}", bahn_endung),
+             ("{{KONFIG}}", bahn_konfig), ("{{LIB}}", bahn_lib),
+             ("{{REDTEAM}}", bahn_redteam)]:
     t = t.replace(a, b)
 # BL-113 — die Kodierungsregel des Kits, zeichengleich mit Team-Kodierung in
 # install.ps1: PowerShell-Quelltext MIT BOM, alles andere OHNE.

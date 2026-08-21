@@ -62,7 +62,7 @@ Senior-Entwicklers** (des **Strippenzieher**). Jede Instanz sollte wissen,
 
 | Rolle | Wer/Was | Aufgabe | Kern-Prinzip |
 |-------|---------|---------|--------------|
-| **Ralph** | Der headless Bau-Loop ([`ralph.sh`](ralph.sh)) | Arbeitet den **aktiven Plan** Stufe für Stufe ab, ein Commit pro Stufe (`{{FEAT_PRAEFIX}}(stufeN): …`). | Nimmt **keine** Features aus späteren Stufen vorweg. Liest vor jeder Stufe den `[Unreleased]`-Block und baut dort gelistete Fixes **nicht erneut**. ✅ erprobt |
+| **Ralph** | Der headless Bau-Loop ([`ralph{{ENDUNG}}`](ralph{{ENDUNG}})) | Arbeitet den **aktiven Plan** Stufe für Stufe ab, ein Commit pro Stufe (`{{FEAT_PRAEFIX}}(stufeN): …`). | Nimmt **keine** Features aus späteren Stufen vorweg. Liest vor jeder Stufe den `[Unreleased]`-Block und baut dort gelistete Fixes **nicht erneut**. ✅ erprobt |
 | **Der Architekt** | Planungs-Instanz (interaktiv, Architect-Mode) | **Plant Kaskaden**, schreibt Plan-Dokumente unter [`{{PLAN_ORDNER}}`]({{PLAN_ORDNER}}), pflegt Roadmap/Backlog, setzt Caps. Trifft die Struktur-Entscheidungen, die Ralph ausführt. **Commit-Regel dieses Projekts:** {{COMMIT_ENTSCHEID}} | Spec ist Wahrheit vor Annahmen. **Pflicht vor jedem Entwurf:** `[Unreleased]` + `Frank-Fix`-Zeilen abgleichen. **Modell stark (`opus`); Auth Abo-first**. Kosten daher **Abo-Gegenwert**, erfasst per Live-Schätzung statt Konsolenwert (siehe `## Kostenkontrolle`). Greift **normalerweise nicht** selbst in Produktivcode ein. ✅ erprobt |
 | **Frank der Fixer** | Spontane Out-of-Loop-Bugfixes | Behebt **akut auffallende** Bugs/UX-Reibungen **außerhalb** des Loops, ohne auf die nächste Kaskade zu warten. | Jeder Fix folgt dem **Dreisatz** (Commit `{{FIX_PRAEFIX}}: …` → CHANGELOG → Backlog). Der **Normalweg** für Ad-hoc-Fixes. ✅ erprobt |
 | **Harry** | Read-Only Red Team — **Security/Pentest** | Versucht die App **bewusst auszuhebeln**: Auth/PINs/Tokens umgehen, Angriffsfläche der Netz-Schnittstellen, Pfad-/Injection-Tricks, Datenlecks in Logs/Exports. | **Rührt keinen Produktivcode an.** Nur lesen, angreifen, dokumentieren — dann Übergabe an Frank. ✅ erprobt (manuell) |
@@ -106,7 +106,7 @@ Problem **nicht erneut**.
 **Der Prüfumfang ist nicht automatisch ein einzelner Ordner** (`Kit-BL-52`). Liegt
 Code außerhalb von `{{PRODUKTIVCODE}}` — Einstiegspunkt in der Wurzel,
 Build-/Deploy-Skripte —, gehört er in `TEAM_WEITERER_CODE` in
-[`team.config.sh`](team.config.sh). Er wird dann mitgeprüft und ist zugleich
+[`{{KONFIG}}`]({{KONFIG}}). Er wird dann mitgeprüft und ist zugleich
 genauso tabu. Steht er dort nicht, wird er **nie angegriffen**, und ein sauberer
 Sweep liest sich trotzdem wie ein sauberes Projekt. In einem frisch angelegten
 Projekt ist der Wert zu Recht leer; in einer gewachsenen Codebasis ist er der
@@ -391,7 +391,7 @@ Voll-Read** obendrauf (bei ~20–30 Aufrufen je Kaskade). Verbindlich:
 ## Loop-Mechanik & Auth (Ralph)
 
 > **Das meiste hieran macht die Shell, nicht die Rolle.** Auth-Auflösung,
-> Retry-Deckel und Cap-Durchsetzung laufen in `team/lib.sh`, **bevor** eine
+> Retry-Deckel und Cap-Durchsetzung laufen in `{{LIB}}`, **bevor** eine
 > Rolle startet — sie kann daran nichts ändern. Hier stehen deshalb nur die
 > Sätze, nach denen eine Rolle **handelt**. Einrichtung und Fehlersuche für den
 > Menschen: [`TEAM.md`](TEAM.md). Warum es so gebaut ist: `doku/anhang-a.md`
@@ -440,7 +440,7 @@ Guard/Read-Only-Regeln **nicht** auf.
 
 **Modell / Plattform**: `TEAM_MODEL_LOOP` (Default `sonnet`) für die
 Loop-Rollen, `TEAM_MODEL_STRONG` (Default `opus`) für Axel und Den Architekten
-— beide in [`team/lib.sh`](team/lib.sh). **Modell** und **Auth** sind zwei
+— beide in [`{{LIB}}`]({{LIB}}). **Modell** und **Auth** sind zwei
 getrennte Achsen: starkes Modell heißt **nicht** API — auch Axel und Der
 Architekt laufen Abo-first, siehe „Loop-Mechanik & Auth".
 
@@ -448,7 +448,7 @@ Architekt laufen Abo-first, siehe „Loop-Mechanik & Auth".
 **Soft-Cap** (`TEAM_ROLE_BUDGET_USD`, Default **5 USD**) gilt für **alle**
 Rollen; ein **Hard-Cap** (`TEAM_ROLE_HARDCAP_USD`, Default **10 USD**) nur für
 die iterierenden „Sorgenkinder" **Frank & Axel**. Beide zentral in
-[`team.config.sh`](team.config.sh) — **eine** Zahl statt mehrerer
+[`{{KONFIG}}`]({{KONFIG}}) — **eine** Zahl statt mehrerer
 divergierender Defaults.
 **Warnschwelle**: 80 % des Soft-Caps — reiner Hinweis, kein Abbruch.
 
@@ -524,7 +524,7 @@ das Kit legt dort nichts ab. `python3` ist damit eine Abhängigkeit der
 **Team-Infrastruktur** — auf einer Ebene mit `git`, `flock` und der Agenten-CLI —
 nicht deines Projekts.
 
-- **Team-Tests laufen getrennt**: `./team-test.sh` (pytest). Der Testbefehl
+- **Team-Tests laufen getrennt**: `{{RUF}}team-test{{ENDUNG}}` (pytest). Der Testbefehl
   deines Projekts bleibt `{{SMOKE_TEST}}`.
 - **Bedienung für den Menschen**: [`TEAM.md`](TEAM.md) — liegt hier im Projekt.
 - **Warum das Kit so gebaut ist**: `doku/anhang-a.md` **im Kit-Repo**. Diese

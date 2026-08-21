@@ -59,7 +59,7 @@ nichts, was ich nachlesen kann.
    ausgesprochen habe.
 
 **Die erste Kaskade eines Projekts — Sonderregeln:**
-1. **Der Smoke-Test hat Vorrang.** Steht in `team.config.sh` bei
+1. **Der Smoke-Test hat Vorrang.** Steht in `{{KONFIG}}` bei
    `TEAM_SMOKE_TEST` noch ein TODO, ist sein Bau **Stufe 1** — vor jedem
    Feature. Ohne ihn kann Ralph keine Stufe abschließen und Frank keinen Fix
    verifizieren; das Team arbeitet bis dahin ohne Sicherheitsnetz.
@@ -100,8 +100,8 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    Prosa; ein bewusster Rückblick ist keiner. Er ist absichtlich schmal
    gehalten und meldet lieber einen Fall zu wenig als dauernd das Falsche.
 2. **Kostenabschluss** — erst **jetzt**, niemals in einer Loop-Stufe:
-   `./team-status.sh --rollen-abschluss <N> <domaene>` und meine eigene Sitzung
-   per `./team-status.sh --architekt-abschluss <USD> <domaene> "<notiz>"`.
+   `{{RUF}}team-status{{ENDUNG}} --rollen-abschluss <N> <domaene>` und meine eigene Sitzung
+   per `{{RUF}}team-status{{ENDUNG}} --architekt-abschluss <USD> <domaene> "<notiz>"`.
    Ohne diesen Schritt sind meine Kosten strukturell unerfasst.
    Der erste Befehl bucht **beide** Laufquellen als zwei Zeilen (`roles` für
    Harry/Marv/Frank/Axel, `ralph` für die Baukosten) und archiviert beide
@@ -116,7 +116,7 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    `Gesamt` schon steckt (`geschätzt` = nicht enthalten, `echt` = enthalten).
    Sobald ich gebucht habe, darf ich sie **nicht** noch einmal draufrechnen.
    **Ich prüfe den Abschluss, statt ihn zu glauben** — mit
-   `./team-status.sh --ledger-pruefen` (Exit `4` = Warnbefunde) und im
+   `{{RUF}}team-status{{ENDUNG}} --ledger-pruefen` (Exit `4` = Warnbefunde) und im
    Zweifel gegen `--budget`: Ein Bericht, der seine Kennzahl aus derselben
    Quelle zieht wie das Geprüfte, würde einen Fehler bestätigen statt ihn zu
    zeigen (Feld-Lehre `Kit-BL-1`). `--ledger-pruefen` hält deshalb die
@@ -164,7 +164,7 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
 3. **Domänen nur, wenn es sie wirklich gibt.** Das Ledger trägt je Zeile eine
    `domaene`/`rolle`; **eine** Domäne ist der Normalfall. Mehrere lohnen nur für
    fachlich getrennte Stränge **dieses** Projekts (z. B. `backend frontend`),
-   einzutragen unter `TEAM_DOMAENEN` in `team.config.sh`. Eine Kennzahl, die
+   einzutragen unter `TEAM_DOMAENEN` in `{{KONFIG}}`. Eine Kennzahl, die
    immer null zeigt, erzieht dazu, den ganzen Block zu überlesen.
 
 **Keine fortgeschriebene Kosten-Prosaseite.** Eine erzählende `wiki/kosten.md`

@@ -113,7 +113,7 @@ pro Lauf überschreiben, ohne irgendetwas neu zu installieren:
 | stark | `TEAM_MODEL_STRONG` | `opus` | Axel — und deine Architekten-Sitzung |
 
 ```bash
-TEAM_MODEL_LOOP=opus ./vollautomatik.sh     # eine Kaskade auf der starken Stufe
+TEAM_MODEL_LOOP=opus {{RUF}}vollautomatik{{ENDUNG}}     # eine Kaskade auf der starken Stufe
 ```
 
 Die Defaults sind **Defaults, keine Voraussetzung**. Vorausgesetzt sind
@@ -126,7 +126,7 @@ das austauschen lässt (Hintergrund: `README.md`, Abschnitt **Modelle**).
 
 **Kosten sind der Grund für die Trennung.** Die schwache Stufe trägt die Masse
 der Aufrufe. Wer sie hochdreht, dreht die Rechnung mit hoch — deshalb steht der
-Kontostand in `./team-status.sh --budget` und nicht im Kleingedruckten.
+Kontostand in `{{RUF}}team-status{{ENDUNG}} --budget` und nicht im Kleingedruckten.
 
 > **T.E.A.M. international** — für Projekte auf Englisch oder Italienisch bleiben
 > die Initialen **T-E-A-M** zwingend erhalten, ebenso die selbstironische Pointe
@@ -164,7 +164,7 @@ einen stillen Fehlstart.
 ### 3. Laufen lassen
 
 ```bash
-TEAM_BUDGET_USD=15 ./vollautomatik.sh
+TEAM_BUDGET_USD=15 {{RUF}}vollautomatik{{ENDUNG}}
 ```
 
 Fährt die ganze Kaskade: Ralph baut → Red Team greift an → Frank fixt →
@@ -173,15 +173,15 @@ Axel knackt die harten Fälle → Abschlussbericht.
 Vorsichtiger, Schritt für Schritt mit Halt bei dir:
 
 ```bash
-./halbautomatik.sh          # zeigt den empfohlenen nächsten Schritt
-./halbautomatik.sh ralph    # nur diesen einen Schritt
+{{RUF}}halbautomatik{{ENDUNG}}          # zeigt den empfohlenen nächsten Schritt
+{{RUF}}halbautomatik{{ENDUNG}} ralph    # nur diesen einen Schritt
 ```
 
 ### 4. Closeout — Pflicht, nicht Kür
 
 ```bash
-./team-status.sh --rollen-abschluss <N> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"]
-./team-status.sh --architekt-abschluss <USD> <domaene> "Kaskade N geplant"
+{{RUF}}team-status{{ENDUNG}} --rollen-abschluss <N> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"]
+{{RUF}}team-status{{ENDUNG}} --architekt-abschluss <USD> <domaene> "Kaskade N geplant"
 ```
 
 Der zweite Befehl bucht als **Abo-Gegenwert** (`auth = abo`) — das ist die
@@ -221,7 +221,7 @@ gehört **nach** den Lauf, niemals in eine Loop-Stufe.
 
 **Was `<domaene>` ist:** der Arbeitsstrang, auf den die Kosten gebucht werden —
 bei den meisten Projekten schlicht `produkt`. **Dieses Projekt führt genau eine
-Domäne**, solange du in `team.config.sh` nichts anderes einträgst. Mehrere sind
+Domäne**, solange du in `{{KONFIG}}` nichts anderes einträgst. Mehrere sind
 nur sinnvoll, wenn *dieses* Projekt fachlich getrennte Stränge hat (etwa
 `backend frontend`). Eine eigene Domäne für die Arbeit am T.E.A.M. brauchst du
 **nicht**: Am Team wird hier nicht entwickelt — was dir am Team auffällt, geht
@@ -236,7 +236,7 @@ den Fall, dass die alte Zeile schlicht falsch war.
 **Prüfen statt glauben:**
 
 ```bash
-./team-status.sh --ledger-pruefen
+{{RUF}}team-status{{ENDUNG}} --ledger-pruefen
 ```
 
 Sagt dir, ob für jede Kaskade alles gebucht ist: fehlt eine Zeile je Quelle
@@ -302,7 +302,7 @@ Spalten tun dasselbe — es sind zwei Schreibweisen, kein Funktionsunterschied.
 Die letzte Zeile steht bewusst als *(gleich)* da: Die Werkzeuge sind Python und
 werden auf beiden Wegen identisch aufgerufen.
 
-`./team-test.sh` prüft **nicht** dein Projekt. Dein Testbefehl ist:
+`{{RUF}}team-test{{ENDUNG}}` prüft **nicht** dein Projekt. Dein Testbefehl ist:
 `{{SMOKE_TEST}}`
 
 > **Regel: Der Smoke-Test darf keine Umgebung setzen, die die Doku nicht nennt.**
@@ -340,7 +340,7 @@ nennt die zwei Prüfungen, die vorher zu machen sind.
 ## Wo was liegt
 
 ```
-team.config.sh          ALLE Projektwerte — der einzige Ort zum Ändern
+{{KONFIG}}          ALLE Projektwerte — der einzige Ort zum Ändern
 CLAUDE.md               Regeln für die KI-Rollen (geltendes Recht)
 {{PLAN_ORDNER}}/        Kaskaden-Pläne, Beutebuch, Ermittlungsakten, Roadmap
 team/                   Team-Infrastruktur (lib, tools, prompts, tests)
@@ -349,12 +349,12 @@ team/                   Team-Infrastruktur (lib, tools, prompts, tests)
 .ralph-state            nächste zu bauende Stufe
 ```
 
-**Einen Wert ändern?** Immer in `team.config.sh`. Er wirkt sofort in allen
+**Einen Wert ändern?** Immer in `{{KONFIG}}`. Er wirkt sofort in allen
 Rollen, ohne Neuinstallation.
 
 ### Zog das Team in eine gewachsene Codebasis ein?
 
-Zwei Werte in `team.config.sh` tragen dann Gewicht, die im neuen Projekt leer
+Zwei Werte in `{{KONFIG}}` tragen dann Gewicht, die im neuen Projekt leer
 bleiben dürfen:
 
 | Wert | Wozu |
@@ -386,9 +386,10 @@ git add -A; git commit -m "chore: vor Kit-Update"     # erst committen!
 pwsh -File <kit-pfad>\pwsh\install.ps1 . -Update
 ```
 
-**`--update` fasst nur die Infrastruktur an** — Entrypoints, `team/lib.sh`,
+**`--update` fasst nur die Infrastruktur an** — Entrypoints, `{{LIB}}`,
 die Werkzeuge, die Rollen-Briefings, die Team-Tests. **Unangetastet bleiben**
-deine Projektdaten: `team.config.sh`, `team.config.ps1`, `CLAUDE.md`, `CHANGELOG.md`,
+deine Projektdaten: deine Konfiguration (`team.config.*` — je Bahn eine),
+`CLAUDE.md`, `CHANGELOG.md`,
 `.budget-ledger`, `.ralph-state` und der ganze Plan-Ordner. Der Lauf listet am
 Ende beides auf.
 

@@ -6,6 +6,68 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-139` — in einer einbahnigen Ablage nannten die Regeltexte die andere
+  Bahn und schickten jede Rolle an Dateien, die es dort nicht gibt.**
+  ⚠️ **Feldbefund** aus `duke-itam-2026`, mit `--nur-pwsh` installiert.
+  `CLAUDE.md` nannte **14** verschiedene `.sh`-Pfade, **keiner** existierte;
+  `TEAM.md` kam auf 23 Nennungen. Gemessen, nicht vermutet:
+
+  ```bash
+  for f in $(grep -oE '[A-Za-z0-9_./-]+\.sh' CLAUDE.md | sort -u); do
+      test -e "$f" || echo FEHLT $f
+  done          # -> 14 von 14 fehlend
+  ```
+
+  **Die teuerste Stelle ist nicht die auffälligste.** Ein `./ralph.sh`, das es
+  nicht gibt, scheitert sichtbar. `team.config.sh` nicht: Der Regeltext
+  schickte jede Rolle dorthin, um `TEAM_SMOKE_TEST` nachzutragen — während
+  `team/lib.psm1` `team.config.ps1` liest und das in seiner eigenen Warnung
+  auch so sagt. **Zwei einander widersprechende Anweisungen im selben
+  Systemprompt.** Wer der Regel folgt, legt eine Datei an, die nie gelesen
+  wird: kein Abbruch, keine Meldung, der Wert wirkt einfach nicht. Bei
+  `TEAM_SMOKE_TEST` läuft das Team dann ohne Sicherheitsnetz weiter und meldet
+  in jedem Prompt „kein Smoke-Test konfiguriert", obwohl gerade einer
+  eingetragen wurde.
+
+  **Gebaut als Platzhalter, nicht als bahn-neutrale Prosa.** Die Vorlagen
+  tragen an den bahnabhängigen Stellen `{{RUF}}`, `{{ENDUNG}}`, `{{KONFIG}}`,
+  `{{LIB}}`, `{{REDTEAM}}`; beide Installer füllen sie beim Rendern. Der Grund
+  für diesen Zuschnitt: Bahn-neutrale Prosa kostet die **kopierbaren Befehle**
+  (aus `./ralph.sh` würde „der Entrypoint ralph"), und eine Nachbearbeitung der
+  fertigen Datei sieht der Vorlage nicht an, welche Stellen bahnabhängig
+  **sind** — eine neu dazugeschriebene Zeile nähme still die alte Bahn. Mit
+  Platzhaltern sagt die Vorlage es selbst, und der Test fängt die neue Zeile.
+
+  **Vorbelegt ist die bash-Bahn**, damit die zweibahnige Ablage — der Default —
+  Byte für Byte den Text von vorher bekommt. Nur eine Abwahl ändert etwas.
+
+  **Zwei Regionen bleiben ausdrücklich literal:** die Zwei-Bahnen-Tabelle in
+  `TEAM.md` und der Ablage-Block in `CLAUDE.md`. Dort ist es ihre Aufgabe,
+  beide Bahnen zu nennen. Erkannt werden sie an ihren **Überschriften**, nicht
+  an Zeilennummern — und ein eigener Test schlägt an, wenn eine Region
+  umbenannt wird. Sonst schützte die Ausnahme nach dem nächsten Umbau lautlos
+  die falsche Stelle.
+
+  **Unter Test, drei Fälle, gefahren in allen drei Ablagen** (`--nur-pwsh`,
+  `--nur-bash`, zweibahnig): jeder genannte Pfad liegt auch da; die
+  Konfiguration eigens (der **stille** Fall); und die Gegenrichtung über die
+  Regionen. **Gegenprobe:** Eine einzige zurückgedrehte Stelle lässt beide
+  Zusicherungen fallen.
+
+  **Was der Lauf zusätzlich gefunden hat — die Spiegelseite, die das Feld nie
+  sehen konnte.** In `TEAM.md` stand „Unangetastet bleiben deine Projektdaten:
+  `team.config.sh`, `team.config.ps1`, …". In einer `--nur-bash`-Ablage ist der
+  zweite Name tot; in einer `--nur-pwsh`-Ablage hätte der Platzhalter denselben
+  Namen **zweimal** gerendert. Das Feld meldete nur die pwsh-Richtung — die
+  bash-Richtung fiel erst auf, weil der Test **beide** fährt. Jetzt steht dort
+  `team.config.*`, je Bahn eine.
+
+  **Nebenfund an der eigenen Zusicherung:** Der erste Pfad-Regex hatte den
+  Punkt weder in der Zeichenklasse noch in der Vorausschau und zerlegte
+  `team.config.sh` in ein `config.sh`, das es nirgends gibt — zehn gemeldete
+  tote Pfade, die alle derselbe lebende waren. Ein Wächter mit Fehlalarmen wird
+  stillgelegt (Bauart `BL-14`).
+
 - **`BL-140` — die Regeltexte zitierten den Kit-Backlog blank und verletzten
   damit genau die Regel, die sie selbst aufstellen.**
 

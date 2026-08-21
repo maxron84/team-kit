@@ -224,6 +224,28 @@ function Setze-Werte {
         '{{TEST_BESTAND}}'     = $TestBestand
         '{{PLAN_BESTAND}}'     = $PlanBestand
     }
+    # BL-139: die bahnabhaengigen Pfade. Nannten die Regeltexte frueher fest,
+    # und in einer einbahnigen Ablage schickten sie damit jede Rolle an Dateien,
+    # die es dort nicht gibt — still, ohne Meldung. Am teuersten war
+    # team.config.sh: Der Regeltext verlangte Eintraege dort, waehrend
+    # team/lib.psm1 team.config.ps1 liest.
+    #
+    # Vorbelegt ist die bash-Bahn, wie in install.sh: In einer zweibahnigen
+    # Ablage (dem Default) liegt beides, und der gerenderte Text bleibt Byte
+    # fuer Byte der von vorher. Nur die Abwahl der bash-Bahn aendert etwas.
+    if ($script:NurBahn -eq 'pwsh') {
+        $script:Werte['{{RUF}}']     = '.\'
+        $script:Werte['{{ENDUNG}}']  = '.cmd'
+        $script:Werte['{{KONFIG}}']  = 'team.config.ps1'
+        $script:Werte['{{LIB}}']     = 'team/lib.psm1'
+        $script:Werte['{{REDTEAM}}'] = 'team/redteam.ps1'
+    } else {
+        $script:Werte['{{RUF}}']     = './'
+        $script:Werte['{{ENDUNG}}']  = '.sh'
+        $script:Werte['{{KONFIG}}']  = 'team.config.sh'
+        $script:Werte['{{LIB}}']     = 'team/lib.sh'
+        $script:Werte['{{REDTEAM}}'] = 'team/redteam.sh'
+    }
 }
 
 function Finde-Python {
