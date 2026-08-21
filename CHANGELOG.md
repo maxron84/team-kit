@@ -6,6 +6,56 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-136` — die Regel gegen `bad interpreter` schützte das Kit, nicht die
+  Projekte.** ⚠️ **Feldbefund**, aufgefallen beim Committen von
+  `duke-itam-2026`: Git meldete für jede Datei
+  `LF will be replaced by CRLF the next time Git touches it`.
+
+  Das Kit-Repo trägt seit Langem eine `.gitattributes` mit
+  `* text=auto eol=lf`, und ihr Kopf nennt den Grund ausdrücklich: Unter Git
+  for Windows ist `core.autocrlf=true` der Auslieferungswert, ein Klon landet
+  dann mit CRLF im Arbeitsbaum, an der Shebang-Zeile hängt ein
+  Wagenrücklauf, und bash sucht einen Interpreter, dessen Name auf genau
+  dieses unsichtbare Zeichen endet:
+
+  ```
+  bash: ./ralph.sh: /usr/bin/env: bad interpreter: No such file or directory
+  ```
+
+  Nur: Diese Datei liegt im **Kit**. Kein Installer hat je eine in ein
+  Zielprojekt gelegt — es gab dafür nicht einmal eine Vorlage. Die Regel
+  schützte damit genau den Ort nicht, an dem das Kit im Feld läuft.
+
+  **Warum es so lange unbemerkt blieb.** Der Fall entsteht *nicht* bei der
+  Installation — der Installer schreibt mit LF, und unmittelbar danach läuft
+  alles. Er entsteht beim nächsten **Klon oder Checkout**: später, meist auf
+  einer anderen Maschine, mit einer Meldung, die nach einer kaputten
+  Installation aussieht statt nach einer Zeileneinstellung. Und auf einem
+  POSIX-Wirt steht `core.autocrlf` per Default auf `false` — wer das Kit
+  unter Linux entwickelt, sieht den Fall nie. Dieselbe Blindstelle wie bei
+  `BL-126` und `BL-129`…`BL-131`.
+
+  Neu: [`bootstrap/gitattributes.fragment`](bootstrap/gitattributes.fragment),
+  in beiden Installern behandelt wie das `gitignore.fragment` — bei der
+  **Erstinstallation** ergänzt, beim **Update** gemeldet, weil die Datei dem
+  Projekt gehört (Bauart `BL-109`). Die Meldung nennt auch den zweiten
+  Schritt, `git add --renormalize .`: Ohne ihn wirkt der Nachtrag erst beim
+  nächsten Klon, und der Abstand zwischen Ursache und Wirkung entstünde noch
+  einmal.
+
+  **Das Fragment hält sich zurück.** `* text=auto eol=lf` ist im Kit-Repo
+  richtig und als Vorlage falsch: Es gälte für den Code des Projekts mit, und
+  ob der LF oder CRLF trägt, ist nicht die Entscheidung des Teams. Geregelt
+  werden die Dateiarten, die das Kit *mitbringt* — dieselbe Zurückhaltung,
+  die `gitignore.fragment` seit jeher übt.
+
+  Unter Test:
+  [`test_bl136_zeilenenden_im_zielprojekt.py`](geteilt/tests/test_bl136_zeilenenden_im_zielprojekt.py) —
+  am Quelltext, weil der Fall auf dem Wirt, auf dem die Suite meistens läuft,
+  gar nicht herstellbar ist. Mitgeprüft wird die Reihenfolge: In
+  `.gitattributes` gewinnt die spätere Zeile, und stünde die Sammelregel
+  hinter der `.cmd`-Ausnahme, wäre diese stillschweigend aufgehoben.
+
 - **`BL-135` — die pwsh-Bahn rechnete in der OEM-Codepage der Konsole.**
   ⚠️ **Feldbefund**, gefunden von [`pwsh/kit-test.ps1`](pwsh/kit-test.ps1)
   Schritt 6 — und zwar erst, **nachdem** `BL-134` den Schritt davor repariert

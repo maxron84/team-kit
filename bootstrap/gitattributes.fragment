@@ -1,0 +1,37 @@
+# --- T.E.A.M.-Zeilenenden (T.E.A.M.-Starterkit) -------------------------------
+# WARUM DIESE ZEILEN HIER STEHEN (BL-136)
+#
+# Das Kit besteht aus Shell-Skripten, die unter Windows regelmässig mit Git for
+# Windows geklont werden. Dort ist `core.autocrlf=true` der Auslieferungswert:
+# Der Klon landet mit CRLF im Arbeitsbaum, und die erste Zeile jedes Skripts
+# wird zu `#!/usr/bin/env bash\r`. Bash sucht dann einen Interpreter, der
+# buchstäblich `bash\r` heisst, und meldet
+#
+#     bash: ./ralph.sh: /usr/bin/env: bad interpreter: No such file or directory
+#
+# — ein Fehlerbild, das nach einer kaputten Installation aussieht und keines
+# ist. Der Installer SCHREIBT die Dateien mit LF; der Fall entsteht erst beim
+# nächsten Klon oder Checkout, also lange nach der Einrichtung und meist auf
+# einer anderen Maschine als der, auf der eingerichtet wurde.
+#
+# Das Kit-Repo hält diese Regel seit Langem für sich selbst. In den
+# ZIELPROJEKTEN fehlte sie — die Datei schützte also genau dort nicht, wo das
+# Kit im Feld läuft.
+#
+# BEWUSST NICHT `* text=auto eol=lf` WIE IM KIT-REPO
+# Das gälte für DEIN Projekt mit, und ob dein Code LF oder CRLF trägt, ist
+# deine Entscheidung und nicht die des Teams. Geregelt werden die Dateiarten,
+# die das Kit mitbringt — dieselbe Zurückhaltung wie beim .gitignore-Fragment.
+*.sh    text eol=lf
+*.ps1   text eol=lf
+*.psm1  text eol=lf
+team/** text eol=lf
+
+# Ausnahme für die Shims: `.cmd` und `.bat` liest der Kommandozeilen-
+# interpreter zeilenweise, und zwar WÄHREND der Ausführung. Bei reinem LF
+# verhalten sich `goto`, Labels und mehrzeilige Blöcke unzuverlässig — mal
+# läuft es, mal springt es ins Leere. Das Fehlerbild ist sporadisch und sieht
+# nach einem Logikfehler aus. Steht hinter `team/**`, damit die Regel auch
+# dort gilt (spätere Zeile gewinnt).
+*.cmd   text eol=crlf
+*.bat   text eol=crlf

@@ -121,6 +121,56 @@ gitignore_abgleich() {  # gitignore_abgleich <ergaenzen|melden>
     gelb "      printf '%s\\n'$nachtrag >> \"$ZIEL/.gitignore\""
 }
 
+# gitattributes_abgleich — die Zeilenenden, mit denen das Projekt AUSCHECKT.
+#
+# BL-136, dieselbe Bauart wie gitignore_abgleich und aus demselben Grund
+# geschrieben. Das Kit-Repo haelt diese Regel seit Langem fuer sich selbst; die
+# ZIELPROJEKTE bekamen nie eine .gitattributes. Sie schuetzte damit genau dort
+# nicht, wo das Kit im Feld laeuft.
+#
+# Der Fall entsteht NICHT bei der Installation — der Installer schreibt mit LF.
+# Er entsteht beim naechsten Klon oder Checkout, unter Git for Windows mit dem
+# Auslieferungswert core.autocrlf=true: Dann traegt jede .sh CRLF, an die
+# Shebang-Zeile haengt sich ein Wagenruecklauf, und bash sucht einen
+# Interpreter, dessen Name auf genau dieses unsichtbare Zeichen endet. Die
+# Meldung lautet "bad interpreter" und sieht nach einer kaputten Installation
+# aus. Weit weg von der Ursache, auf einer anderen Maschine, oft Wochen
+# spaeter.
+#
+# Ergaenzt wird nur bei der ERSTINSTALLATION, gemeldet beim Update — die Datei
+# gehoert dem Projekt (Bauart BL-109).
+gitattributes_abgleich() {  # gitattributes_abgleich <ergaenzen|melden>
+    local zeile z fehlende="" nachtrag="" fehlzahl=0
+    if [ "$1" = "ergaenzen" ] && \
+       ! grep -q "T.E.A.M.-Zeilenenden" "$ZIEL/.gitattributes" 2>/dev/null; then
+        cat "$KIT/bootstrap/gitattributes.fragment" >> "$ZIEL/.gitattributes"
+        gruen "  ✓ .gitattributes ergänzt"
+        return 0
+    fi
+    # Zeile fuer Zeile wie beim .gitignore: Der Block kann dastehen und
+    # trotzdem die Haelfte der Vorlage vermissen.
+    while IFS= read -r zeile || [ -n "$zeile" ]; do
+        case "$zeile" in ''|'#'*) continue ;; esac
+        if ! grep -Fxq -- "$zeile" "$ZIEL/.gitattributes" 2>/dev/null; then
+            fehlende="$fehlende$zeile
+"
+            nachtrag="$nachtrag '$zeile'"
+            fehlzahl=$((fehlzahl + 1))
+        fi
+    done < "$KIT/bootstrap/gitattributes.fragment"
+    if [ "$fehlzahl" -eq 0 ]; then
+        gruen "  ✓ .gitattributes enthält den Block vollständig"
+        return 0
+    fi
+    gelb "  ! .gitattributes liegt $fehlzahl Zeile(n) hinter der Vorlage — es fehlen:"
+    printf '%s' "$fehlende" | while IFS= read -r z; do gelb "      $z"; done
+    gelb "    Nicht automatisch ergänzt (die Datei gehört dem Projekt) —"
+    gelb "    nachtragen mit:"
+    gelb "      printf '%s\\n'$nachtrag >> \"$ZIEL/.gitattributes\""
+    gelb "    Danach EINMAL neu einlesen, sonst wirkt es erst beim nächsten"
+    gelb "    Klon:  git -C \"$ZIEL\" add --renormalize ."
+}
+
 # python_abgleich — steht in der Konfiguration ein Interpreter, der ANTWORTET?
 #
 # BL-133, derselbe Schnitt wie BL-109 bei der .gitignore: "--update fasst
@@ -614,6 +664,12 @@ PY
     # waehrend der Installer Erfolg meldete. Gemeldet, nicht ergaenzt.
     kopf ".gitignore gegen die Vorlage (BL-109)"
     gitignore_abgleich melden
+
+    # BL-136: dieselbe Bauart, dieselbe Begruendung. Ein Projekt ohne diese
+    # Regel checkt seine .sh unter Windows mit CRLF aus, und jeder Aufruf
+    # endet mit "bad interpreter" — weit weg von der Ursache.
+    kopf ".gitattributes gegen die Vorlage (BL-136)"
+    gitattributes_abgleich melden
 
     # BL-133: dieselbe Bauart wie die Zeile darueber — was --update nicht
     # anfasst, muss es trotzdem ANSEHEN. Ein Interpretername, der auf
@@ -1226,6 +1282,7 @@ done
 
 # ---------------------------------------------------------------- .gitignore
 gitignore_abgleich ergaenzen
+gitattributes_abgleich ergaenzen
 
 # ---------------------------------------------------------------- Selbsttest
 kopf "Selbsttest"

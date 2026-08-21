@@ -320,6 +320,54 @@ function Python-Fuer-Config {
 }
 
 # --- .gitignore ----------------------------------------------------------------
+function Gitattributes-Abgleich {
+    <#
+      BL-136, dieselbe Bauart wie Gitignore-Abgleich und aus demselben Grund
+      geschrieben. Das Kit-Repo haelt diese Regel seit Langem fuer sich selbst;
+      die ZIELPROJEKTE bekamen nie eine .gitattributes. Sie schuetzte damit
+      genau dort nicht, wo das Kit im Feld laeuft.
+
+      Der Fall entsteht NICHT bei der Installation — der Installer schreibt mit
+      LF. Er entsteht beim naechsten Klon oder Checkout, unter Git for Windows
+      mit dem Auslieferungswert core.autocrlf=true: Dann traegt jede .sh CRLF,
+      an die Shebang-Zeile haengt sich ein Wagenruecklauf, und bash sucht einen
+      Interpreter, dessen Name auf genau dieses unsichtbare Zeichen endet. Die
+      Meldung lautet "bad interpreter" und sieht nach einer kaputten
+      Installation aus. Weit weg von der Ursache, auf einer anderen Maschine,
+      oft Wochen spaeter.
+
+      Ergaenzt wird nur bei der ERSTINSTALLATION, gemeldet beim Update — die
+      Datei gehoert dem Projekt.
+    #>
+    param([ValidateSet('ergaenzen', 'melden')][string]$Modus)
+    $fragment = Join-Path $KIT 'bootstrap\gitattributes.fragment'
+    $datei = Join-Path $Ziel '.gitattributes'
+    $vorhanden = if (Test-Path $datei) { [System.IO.File]::ReadAllText($datei) } else { "" }
+
+    if ($Modus -eq 'ergaenzen' -and $vorhanden -notmatch 'T\.E\.A\.M\.-Zeilenenden') {
+        Add-Content -Path $datei -Value ([System.IO.File]::ReadAllText($fragment)) -NoNewline
+        Gruen "  [ok] .gitattributes ergaenzt"
+        return
+    }
+    $bestand = @($vorhanden -split "`r?`n")
+    $fehlende = @()
+    foreach ($zeile in ([System.IO.File]::ReadAllLines($fragment))) {
+        if (-not $zeile.Trim() -or $zeile.TrimStart().StartsWith('#')) { continue }
+        if ($bestand -notcontains $zeile) { $fehlende += $zeile }
+    }
+    if ($fehlende.Count -eq 0) {
+        Gruen "  [ok] .gitattributes enthaelt den Block vollstaendig"
+        return
+    }
+    Gelb "  [!] .gitattributes liegt $($fehlende.Count) Zeile(n) hinter der Vorlage — es fehlen:"
+    foreach ($z in $fehlende) { Gelb "        $z" }
+    Gelb "    Nicht automatisch ergaenzt (die Datei gehoert dem Projekt) —"
+    Gelb "    nachtragen mit:"
+    Gelb "      `"$($fehlende -join "``n")`" | Add-Content `"$datei`""
+    Gelb "    Danach EINMAL neu einlesen, sonst wirkt es erst beim naechsten"
+    Gelb "    Klon:  git -C `"$Ziel`" add --renormalize ."
+}
+
 function Gitignore-Abgleich {
     <#
       BL-109: "Der Block ist da" heisst NICHT "der Block ist vollstaendig". Das
@@ -730,6 +778,12 @@ if ($Update) {
 
     Kopf ".gitignore gegen die Vorlage (BL-109)"
     Gitignore-Abgleich melden
+
+    # BL-136: dieselbe Bauart, dieselbe Begruendung. Ein Projekt ohne diese
+    # Regel checkt seine .sh unter Windows mit CRLF aus, und jeder Aufruf
+    # endet mit "bad interpreter" — weit weg von der Ursache.
+    Kopf ".gitattributes gegen die Vorlage (BL-136)"
+    Gitattributes-Abgleich melden
 
     # BL-133: dieselbe Bauart wie die Zeile darueber — was -Update nicht
     # anfasst, muss es trotzdem ANSEHEN. Ein Interpretername, der auf dieser
@@ -1182,6 +1236,7 @@ foreach ($f in (Get-ChildItem (Join-Path $Ziel 'team\prompts') -Filter '*.md' -F
 
 # ----------------------------------------------------------------- .gitignore
 Gitignore-Abgleich ergaenzen
+Gitattributes-Abgleich ergaenzen
 
 # ----------------------------------------------------------------- Selbsttest
 Kopf "Selbsttest"
