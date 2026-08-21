@@ -61,9 +61,68 @@ gruen(){ printf '\033[32m%s\033[0m\n' "$*"; }
 gelb() { printf '\033[33m%s\033[0m\n' "$*"; }
 kopf() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 
-if ! command -v pytest >/dev/null 2>&1; then
+# KIT_PYTHON: der Name, unter dem Python auf DIESER Maschine antwortet.
+#
+# BL-137. BL-131 hat den festen `python3` aus lib.sh, der Konfigurationsvorlage
+# und install.sh geholt, BL-133 aus den Entrypoints. Die WERKZEUGE DES KITS
+# SELBST — dieses Skript und kit-einrichten.sh — standen auf keiner der beiden
+# Listen, und zwar mit derselben Begruendung wie damals: "die faehrt ja nur
+# unter Linux".
+#
+# Sie faehrt hier nicht unter Linux. Unter Git for Windows ist `python3` der
+# App-Execution-Alias aus dem Microsoft Store: Er startet, meldet "Python was
+# not found" und endet mit 49. Die Wirkung ist dieselbe wie ueberall sonst in
+# dieser Reihe — nur an der teuersten Stelle: Die Selbstverifikation des Kits
+# war auf einer Windows-Maschine ueberhaupt nicht fahrbar. Wer dort etwas am
+# Kit aendert, hat gar keine Moeglichkeit, es zu pruefen; "ungeprueft" ist der
+# Zustand, aus dem im Feld die teuren Fehler kommen.
+#
+# Reihenfolge und Probe sind zeichengleich mit finde_python() in install.sh und
+# Finde-Python in install.ps1: Unter Windows `python` VOR `python3`, sonst
+# umgekehrt, und geprueft wird START UND VERSION — `command -v` allein findet
+# auch den Store-Alias (Lehre BL-122).
+kit_python() {
+    local kandidaten="python3 python py"
+    case "$(uname -s 2>/dev/null)" in
+        MINGW*|MSYS*|CYGWIN*|Windows*) kandidaten="python python3 py" ;;
+    esac
+    local py
+    for py in $kandidaten; do
+        command -v "$py" >/dev/null 2>&1 || continue
+        if "$py" -c 'import sys; sys.exit(0 if sys.version_info[:2] >= (3, 8) else 1)' \
+                >/dev/null 2>&1; then
+            printf '%s' "$py"; return 0
+        fi
+    done
+    return 1
+}
+
+if ! KIT_PYTHON="$(kit_python)"; then
+    rot "FEHLER: Kein lauffaehiges Python 3.8+ gefunden."
+    echo '  Geprueft wurde START UND VERSION, nicht blosse Anwesenheit: Unter' >&2
+    echo '  Windows ist "python3" der App-Execution-Alias aus dem Microsoft' >&2
+    echo '  Store. Er beantwortet "command -v", ohne einen Interpreter zu' >&2
+    echo '  starten (Lehre BL-122).' >&2
+    exit 2
+fi
+
+# BL-137, zweite Haelfte: pytest wird AUFGELOEST, nicht vorausgesetzt.
+#
+# Hier stand `command -v pytest`. Das ist genau das Anti-Muster, gegen das
+# BL-124 steht: `pip install --user pytest` legt die ausfuehrbare Datei in
+# ein Scripts-/bin-Verzeichnis, das oft NICHT im PATH steht — pip warnt beim
+# Installieren sogar davor. Das Modul ist dann installiert, `command -v`
+# findet trotzdem nichts, und dieses Skript empfahl daraufhin genau die
+# Installation, die den Zustand erzeugt hatte. Auf der Windows-Maschine war
+# das der ZWEITE Grund, warum die Selbstverifikation der Bash-Bahn dort nicht
+# fahrbar war — noch vor der ersten Pruefung.
+#
+# Der Weg ueber den Interpreter findet es in beiden Faellen und benutzt
+# garantiert DASSELBE Python wie die uebrigen Kit-Werkzeuge.
+if ! "$KIT_PYTHON" -m pytest --version >/dev/null 2>&1; then
     rot "pytest nicht gefunden — die Selbstverifikation braucht es."
-    echo "  Installation: pip install --user pytest" >&2
+    echo "  Gesucht wurde als MODUL: $KIT_PYTHON -m pytest" >&2
+    echo "  Installation: $KIT_PYTHON -m pip install --user pytest" >&2
     exit 2
 fi
 
@@ -230,7 +289,7 @@ fi
 # einmal genau diesen Code verschluckt (BL-59). Ein eigener collect-only-Lauf
 # kostet eine Sekunde und fasst nichts an.
 T_DATEIEN="$(ls "$ZIEL"/team/tests/test_*.py | wc -l | tr -d ' ')"
-T_FAELLE="$(python3 -m pytest "$ZIEL/team/tests" --collect-only -q 2>/dev/null \
+T_FAELLE="$("$KIT_PYTHON" -m pytest "$ZIEL/team/tests" --collect-only -q 2>/dev/null \
             | tail -1 | grep -oE '^[0-9]+' || true)"
 if grep -q "$T_DATEIEN Testdateien, $T_FAELLE Fälle" "$KIT/README.md" \
    && grep -q "die $T_FAELLE Tests" "$KIT/README.md"; then
@@ -363,12 +422,16 @@ pruefe "keine offenen Platzhalter in den Briefings" \
 # genau die Arbeit, die der Hinweis abnehmen wollte (Bauart BL-44).
 pruefe "Abgleich-Hinweis nennt keinen Platzhalter mehr" \
        "$(grep -c 'diff <(…)' "$ZIEL/.update.log")" "0"
-ABGLEICH_BEFEHL="$(grep -oE 'diff -u "[^"]+" "[^"]+"' "$ZIEL/.update.log" | head -1)"
+# BL-137: `diff [^"]*-u` statt `diff -u` — der Befehl traegt seit dem Fix
+# --strip-trailing-cr zwischen Kommando und Flagge. Ein Muster, das den
+# Befehl bis aufs Zeichen festnagelt, prueft nicht den Hinweis, sondern
+# seine Schreibweise, und macht jede Verbesserung daran zum Testfehler.
+ABGLEICH_BEFEHL="$(grep -oE 'diff [^"]*-u "[^"]+" "[^"]+"' "$ZIEL/.update.log" | head -1)"
 pruefe "Abgleich-Hinweis nennt einen diff-Befehl" \
        "$([ -n "$ABGLEICH_BEFEHL" ] && echo ja || echo nein)" "ja"
 # Die genannte gerenderte Vorlage muss existieren UND gefuellt sein — ein Pfad
 # auf eine geloeschte Datei waere derselbe Fehler in gruen.
-ABGLEICH_QUELLE="$(printf '%s' "$ABGLEICH_BEFEHL" | sed -E 's/^diff -u "([^"]+)".*/\1/')"
+ABGLEICH_QUELLE="$(printf '%s' "$ABGLEICH_BEFEHL" | sed -E 's/^diff [^"]*-u "([^"]+)".*/\1/')"
 pruefe "die genannte Kit-Fassung liegt wirklich da" \
        "$([ -f "$ABGLEICH_QUELLE" ] && echo da || echo weg)" "da"
 # `grep -c` gibt bei null Treffern "0" aus UND Exit 1 zurueck — ein `|| echo 99`
@@ -423,8 +486,8 @@ pruefe "und ausdruecklich als vollstaendig quittiert" \
        "$(grep -c 'enthält den Block vollständig' "$ZIEL/.update2.log")" "1"
 # Auch dieser Lauf legt eine Kit-Fassung zum Abgleich ab — mit aufraeumen,
 # sonst bleibt je Selbsttest ein Verzeichnis in /tmp liegen.
-ABGLEICH2="$(grep -oE 'diff -u "[^"]+"' "$ZIEL/.update2.log" | head -1 \
-             | sed -E 's/^diff -u "([^"]+)"/\1/')"
+ABGLEICH2="$(grep -oE 'diff [^"]*-u "[^"]+"' "$ZIEL/.update2.log" | head -1 \
+             | sed -E 's/^diff [^"]*-u "([^"]+)"/\1/')"
 case "$ABGLEICH2" in
     */team-kit-abgleich-*/*) rm -rf "$(dirname "$ABGLEICH2")" ;;
 esac
@@ -549,7 +612,7 @@ a_pruefe "und die Abwahl steht im Protokoll" \
 # Die Tests des Projekts duerfen in einer einbahnigen Ablage nicht ROT sein.
 # Eine abgewaehlte Bahn ist kein Defekt — aber der Uebersprung muss SICHTBAR
 # sein, sonst liest er sich am Ende wie ein bestandener Nachweis.
-( cd "$A_REPO" && python3 -m pytest team/tests -q > .einbahnig.log 2>&1 )
+( cd "$A_REPO" && "$KIT_PYTHON" -m pytest team/tests -q > .einbahnig.log 2>&1 )
 a_pruefe "Tests bleiben gruen (kein Fehlschlag durch die fehlende Bahn)" \
     "$(grep -cE '^[0-9]+ (failed|error)' "$A_REPO/.einbahnig.log")" "0"
 a_pruefe "und die Einbahnigkeit steht in der Zusammenfassung" \
@@ -636,7 +699,7 @@ kopf "9/11 — Regel-Inventar gegen die Regeldatei (A.10, BL-56)"
 # vertreten sein. Prueft die VORLAGE, nicht die Installation — ein Feldprojekt
 # darf seine CLAUDE.md umformulieren (so haelt es test_bl55 ausdruecklich
 # fest), die Vorlage darf es nicht unbemerkt.
-if ! python3 "$KIT/geteilt/kit-regelinventar.py"; then
+if ! "$KIT_PYTHON" "$KIT/geteilt/kit-regelinventar.py"; then
     rot "  ✗ Regel-Inventar und Regeldatei stehen auseinander."
     exit 1
 fi
@@ -665,7 +728,12 @@ bash "$KIT/bash/kit-einrichten.sh" --nur-pruefen --nicht-interaktiv >"$E_LOG" 2>
 e_pruefe "--nur-pruefen laeuft durch (Exit 0)" "$E_EXIT" "0"
 e_pruefe "und fasst nichts an (keine Verknuepfung angelegt)" \
     "$(grep -c 'uebersprungen wegen --nur-pruefen\|übersprungen wegen --nur-pruefen' "$E_LOG")" "1"
-for pflicht in git python3 flock bash; do
+# BL-137: 'Python' statt 'python3'. kit-einrichten.sh nennt seit dieser
+# Fassung den GEFUNDENEN Namen ('Python 3.13 (als python)') statt eines
+# festen — die Beschriftung hier muss mitziehen, sonst prueft dieser Schritt
+# auf eine Zeile, die es nicht mehr gibt, und meldet die Einrichtungsroutine
+# als kaputt, obwohl sie richtig geworden ist.
+for pflicht in git Python flock bash; do
     e_pruefe "Bordmittel geprueft: $pflicht" \
         "$(grep -cE "✓ $pflicht|✗ $pflicht" "$E_LOG")" "1"
 done

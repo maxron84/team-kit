@@ -7,7 +7,7 @@ gern verwechselt werden:
 | Vorgang | Was passiert | Wie oft |
 |---|---|---|
 | **Klonen und einrichten** | Das Kit-Repo landet auf der Maschine, die Bordmittel werden geprüft, die Auth des Agenten-Werkzeugs steht | einmal pro Maschine |
-| **Einbinden** | `install.sh` legt die 129 Dateien in ein **Zielprojekt** | einmal pro Projekt |
+| **Einbinden** | `install.sh` legt die 131 Dateien in ein **Zielprojekt** | einmal pro Projekt |
 
 Der kurze Weg steht ganz oben; alles darunter ist die Begründung und der
 Fehlerfall.
@@ -697,6 +697,8 @@ installiert, wie komme ich dazu?"* — steht in der [FAQ](faq.md).
 | `Could not find file '…'` bei einem relativen Pfad | Ein Skript hat `Set-Location` gesetzt, aber `[System.IO.File]` folgt dem **Prozess**-Arbeitsverzeichnis, nicht der PowerShell-Position | Im Kit behoben (`Team-Pfad` in [`team/lib.psm1`](../pwsh/lib.psm1)); tritt eigener Code darauf, dieselbe Auflösung nutzen |
 | `.cmd` verhält sich sporadisch falsch (Labels, `goto`) | Batch-Datei mit reinem LF | `.gitattributes` erzwingt CRLF; ein Klon von vor dieser Regel: `git rm --cached -r .` und `git reset --hard` |
 | Sperre greift nicht / Lauf hängt | Klon auf Netzlaufwerk oder in einem Sync-Ordner (OneDrive) | Auf ein lokales Laufwerk verlegen. Unter Windows 11 Enterprise kann das Benutzerprofil per Richtlinie nach OneDrive umgeleitet sein |
+| Nach `[100%]` eine Wand aus Traceback, endend in `PermissionError: [WinError 5] Access is denied: …\.git\objects\…` | **Der Lauf ist bestanden** — der Fehler kommt aus pytests Aufräumen *danach*. Git legt lose Objekte schreibgeschützt an; unter Windows blockiert `FILE_ATTRIBUTE_READONLY` das Löschen, unter POSIX zählt nur das Recht am Verzeichnis (**BL-138**) | Im Kit behoben. Bis das Update durch ist: **nicht abbrechen**, pytest arbeitet sich durch (Minuten). Oder vorher `Remove-Item -Recurse -Force $env:TEMP\pytest-of-$env:USERNAME\garbage-*` — nur wenn kein Lauf offen ist |
+| `git status` meldet `CRLF will be replaced by LF` für `team.config.*` oder die Rollen-Briefings | Der **Bash**-Installer füllte die Platzhalter mit `write_text()`, das unter Windows jedes `\n` übersetzt (**BL-137**). Der pwsh-Installer war nie betroffen | Im Kit behoben. Klon aktualisieren, dann `install.ps1 <ziel> -Update`; die Dateien werden beim nächsten Füllen normalisiert. Bereits eingecheckte Wagenrückläufe: `git add --renormalize .` |
 | Kosten stehen auf `0.0000`, obwohl ein Lauf lief | Kostenlog mit BOM oder UTF-16 — `kosten.py` fängt den Lesefehler ab und zählt still null | Mit `pwsh` **7** fahren, nicht mit `powershell` (5.1) |
 | Statusbericht bricht mit „Error formatting a string" ab | In `[Console]::Out.WriteLine('{0} {1}' -f $a, $b)` ist das Komma der Argumenttrenner der **Methode** | Format-Ausdruck in eigene Klammern setzen. Im Kit behoben |
 

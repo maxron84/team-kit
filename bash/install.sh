@@ -552,8 +552,22 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{TEST_BESTAND}}", test_bestand),
              ("{{PLAN_BESTAND}}", plan_bestand)]:
     t = t.replace(a, b)
-p.write_text(t, encoding=("utf-8-sig" if p.suffix in (".ps1", ".psm1")
-                          else "utf-8"))
+# BL-137: schreiben OHNE Uebersetzung der Zeilenenden.
+#
+# `write_text()` oeffnet im Textmodus mit `newline=None`, und der uebersetzt
+# unter Windows JEDES "\n" in "\r\n" — im ganzen Text, nicht nur an den
+# ersetzten Stellen, denn `fuelle()` liest die Datei ganz und schreibt sie
+# ganz zurueck. Gemessen an einer frischen Installation unter Git for
+# Windows: team.config.sh 181 Wagenruecklaeufe, team.config.ps1 157, jedes
+# Rollen-Briefing 33. Betroffen war ausschliesslich, was hier durchlief;
+# was nur kopiert wurde, blieb heil.
+#
+# `p.open(..., newline="")` und nicht `write_text(..., newline=...)`:
+# Letzteres gibt es erst ab Python 3.10, das Kit verlangt 3.8.
+with p.open("w", newline="",
+            encoding=("utf-8-sig" if p.suffix in (".ps1", ".psm1")
+                      else "utf-8")) as fh:
+    fh.write(t)
 PY
     }
     fuelle() { fuelle_abs "$ZIEL/$1"; }
@@ -737,10 +751,22 @@ PY
         gerendert="$ABGLEICH_DIR/$name"
         cp "$quelle" "$gerendert"
         fuelle_abs "$gerendert"
-        if ! diff -q "$gerendert" "$ziel" >/dev/null 2>&1; then
-            zeilen="$(diff "$gerendert" "$ziel" | grep -c '^[<>]' || true)"
+        # BL-137: --strip-trailing-cr, weil der Vergleich sonst am Zeilenende
+        # haengenbleibt statt am Inhalt. Die frisch gerenderte Fassung traegt
+        # seit diesem Fix LF; eine VOR dem Fix unter Windows installierte
+        # traegt CRLF. Ohne die Flagge meldete dieser Abgleich dann JEDE Zeile
+        # als abgewichen und stellte den Anwender vor eine Inhaltsaenderung,
+        # die keine ist. Ein stiller Fehler, gegen einen lauten Fehlalarm
+        # getauscht, ist kein Fortschritt (Bauart BL-14).
+        #
+        # Die Flagge steht auch im Befehl, den die Meldung zum Nachsehen
+        # nennt: Wer dort ein anderes Bild sieht als der Installer, sucht den
+        # Fehler an der falschen Stelle.
+        if ! diff --strip-trailing-cr -q "$gerendert" "$ziel" >/dev/null 2>&1; then
+            zeilen="$(diff --strip-trailing-cr "$gerendert" "$ziel" \
+                      | grep -c '^[<>]' || true)"
             echo "  ! $name weicht von der Kit-Fassung ab ($zeilen Zeilen)"
-            echo "      diff -u \"$gerendert\" \"$ziel\""
+            echo "      diff --strip-trailing-cr -u \"$gerendert\" \"$ziel\""
             ABGLEICH=$((ABGLEICH + 1))
         else
             rm -f "$gerendert"
@@ -1209,8 +1235,14 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
 #
 # Dass dieser Installer unter Linux laeuft, aendert daran nichts: Er schreibt
 # team.config.ps1 fuer eine Maschine, auf der er selbst nie sein wird.
-p.write_text(t, encoding=("utf-8-sig" if p.suffix in (".ps1", ".psm1")
-                          else "utf-8"))
+# BL-137, dieselbe Begruendung wie in der Fuell-Routine der Erstinstallation:
+# `newline=""`, weil der Textmodus unter Windows sonst jedes "\n" uebersetzt.
+# Der Update-Pfad hat seine eigene Routine und braucht deshalb seine eigene
+# Zeile — genau die Doppelung, die schon bei BL-113 hier stand.
+with p.open("w", newline="",
+            encoding=("utf-8-sig" if p.suffix in (".ps1", ".psm1")
+                      else "utf-8")) as fh:
+    fh.write(t)
 PY
 }
 

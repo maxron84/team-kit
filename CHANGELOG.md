@@ -6,6 +6,142 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-138` — ein grüner Lauf, der als roter endete: am Aufräumen.**
+  ⚠️ **Feldbefund**, gemeldet vom Anwender beim ersten eigenen Testlauf in
+  `duke-itam-2026`. Das Fortschrittsband war makellos — 542 Zeichen, 228
+  Punkte, 314 `s`, kein `F`, kein `E`. Unmittelbar hinter `[100%]` begann
+  eine Wand aus Traceback:
+
+  ```
+  PermissionError: [WinError 5] Access is denied:
+      …\pytest-of-…\garbage-8ed10858-…\repo\.git\objects\48\54f1a4…
+  ```
+
+  und endete in einem `KeyboardInterrupt` — der Anwender hat abgebrochen und
+  damit einen bestandenen Lauf als gescheitert gesehen.
+
+  **Die Kette, nachgemessen statt vermutet.** Die Kit-Tests legen echte
+  Git-Repos in `tmp_path` an; sie müssen es, denn ein Guard-Test gegen einen
+  erfundenen Git-Zustand prüft nichts. Git schreibt lose Objekte
+  **schreibgeschützt** — gezählt in einem liegengebliebenen Ordner: **989 von
+  5622 Dateien, ausnahmslos unter `.git/objects`**. pytest hebt die letzten
+  drei Laufordner auf und räumt am Sitzungsende die älteren weg. Und dort
+  trennen sich die Plattformen:
+
+  | | `unlink()` auf einer schreibgeschützten Datei |
+  |---|---|
+  | POSIX | **geht** — geprüft wird das Schreibrecht am *Verzeichnis* |
+  | Windows | `ERROR_ACCESS_DENIED (5)` — `FILE_ATTRIBUTE_READONLY` blockiert |
+
+  pytest fängt den Fehler ab und versucht es erneut, `chmod` plus Retry,
+  **einzeln pro Datei**. Bei 989 Objekten auf NTFS dauert das minutenlang,
+  und zwar schweigend.
+
+  **Warum das ein Kit-Fehler ist und kein pytest-Fehler.** pytest räumt auf,
+  was ihm übergeben wird. Übergeben hat es das Kit — mit einem Schreibschutz,
+  den das Kit selbst verursacht hat, indem es Git in den Wegwerfbereich
+  laufen ließ. Wer einen Bereich als wegwerfbar deklariert, schuldet ihm auch,
+  dass er wegwerfbar bleibt. Derselbe Zuschnitt wie `BL-130`: eine Annahme
+  des **Prüfstands** über die Plattform, nicht über den Prüfling.
+
+  **Warum der Schaden mit der Zeit wächst.** Der Fehler tritt nicht bei dem
+  Lauf auf, der ihn verursacht, sondern drei Läufe später — zu einem
+  Zeitpunkt, an dem niemand mehr an den Lauf denkt, der ihn hinterlassen hat.
+  Dieselbe Verzögerungsbauart wie `BL-136`, dort über den Klon.
+
+  Neu in [`geteilt/tests/conftest.py`](geteilt/tests/conftest.py):
+  `schreibschutz_loesen()` und ein `pytest_sessionfinish` mit `tryfirst=True`
+  — `_pytest.tmpdir` räumt im selben Hook auf, der Schreibschutz muss also
+  vorher weg sein. Angefasst wird nur der Bereich *dieser* Sitzung, und nur,
+  wenn er überhaupt entstanden ist (`_basetemp` statt `getbasetemp()`, denn
+  Letzteres legt den Ordner an).
+
+  Unter Test:
+  [`test_bl138_wegwerfbereich_bleibt_wegwerfbar.py`](geteilt/tests/test_bl138_wegwerfbereich_bleibt_wegwerfbar.py) —
+  mit Gegenbeweis, dass die Löschung *ohne* das Lösen unter Windows wirklich
+  scheitert, sonst bliebe offen, ob die Zusicherung etwas absichert oder nur
+  beschreibt, was ohnehin gilt.
+
+- **`BL-137` — `BL-129` hat eine Schreibstelle geheilt. Es waren fünf.**
+  ⚠️ **Feldbefund**, aufgefallen beim ersten Lauf von
+  [`bash/kit-test.sh`](bash/kit-test.sh) unter Git for Windows: Mitten in den
+  Regressionstests stand, zwischen den Punkten, eine Zeile von Git —
+  `warning: in the working copy of 'team.config.sh', CRLF will be replaced by
+  LF the next time Git touches it`, und zwar für genau acht Dateien einer
+  frischen Installation. Gemessen im Wegwerf-Repo:
+
+  ```
+  team.config.sh                 181 Wagenrückläufe
+  team.config.ps1                157
+  team/prompts/rolle-*.md (6×)    33 je Datei
+  ralph.sh, team/lib.sh            0
+  ```
+
+  Die Trennlinie ist scharf und nennt den Täter: betroffen ist
+  **ausschließlich**, was durch `fuelle()` gelaufen ist — die Routine, die
+  die Platzhalter ersetzt. Wer nur kopiert wurde, ist heil geblieben.
+
+  **Die Ursache.** `Path.write_text()` öffnet im Textmodus mit
+  `newline=None`, und der übersetzt beim Schreiben jedes `\n` in `os.linesep`
+  — unter Windows in `\r\n`. Nicht die geänderte Zeile allein: `fuelle()`
+  liest die Datei ganz und schreibt sie ganz zurück, also bekommt jede Zeile
+  ihr Byte, auch die, an der nie ein Platzhalter stand.
+
+  Es ist zeichengleich der Fehler aus `BL-129` — dort `os.fdopen(fd, "w")` in
+  `kosten.py`. Dieselbe Schicht, dieselbe Vorgabe, dasselbe Byte; damals nur
+  an der Fundstelle behoben und nicht nach den Geschwistern gesucht. Die
+  Bauart von `BL-131` und `BL-133`: ein Fund, der als Einzelstelle behandelt
+  wird, obwohl er ein Muster ist.
+
+  **Warum es trotzdem nicht sofort knallte.** Git-Bash entfernt unter MSYS
+  die Wagenrückläufe beim `source`; die Werte kommen richtig an. Genau
+  deshalb meldete der Selbsttest 519 Fälle grün, während Git danebenstand und
+  die Verletzung ansagte. Ein Fehler, den die nächste Schicht repariert, ist
+  keiner, der weg ist — er ist einer, der auf eine Schicht wartet, die es
+  nicht tut. Die wartende Schicht heißt Commit: Vor `BL-136` trug kein
+  Zielprojekt eine `.gitattributes`, eine unter Windows installierte
+  `team.config.sh` ging also **mit** CRLF ins Repo, und der nächste Klon auf
+  einer POSIX-Maschine bekam sie zurück, wie sie eingecheckt war.
+
+  **Die dritte Stelle: `beutebuch.py`.** `archiviere` schreibt aktives Buch
+  und Archiv neu, `set` das aktive Buch — alle drei lesen mit `read_text`
+  (universal newlines) und schrieben mit `write_text` (Übersetzung). Ein
+  einziges `beutebuch.py set HM-1 erledigt` rüstete damit das *ganze*
+  Beutebuch um. Anders als bei den Konfigurationen fängt hier nichts auf: Das
+  Beutebuch liegt unter dem Plan-Ordner, dessen Name konfigurierbar ist — das
+  Fragment aus `BL-136` kann es nicht mit einer festen Regel treffen
+  (nachgemessen im Feldprojekt: `attr/` leer).
+
+  **Die pwsh-Bahn hatte den Fehler nie.** [`pwsh/install.ps1`](pwsh/install.ps1)
+  schreibt über `[System.IO.File]::WriteAllText`, und das übersetzt keine
+  Zeilenenden. Getroffen hat es die Bahn, von der alle annahmen, sie laufe
+  ohnehin nur unter Linux — dieselbe Annahme wie in `BL-131` und `BL-133`,
+  nur andersherum.
+
+  Behoben mit `p.open("w", …, newline="")` an allen fünf Stellen — nicht mit
+  `write_text(…, newline=…)`, denn den Parameter gibt es erst ab Python 3.10,
+  und das Kit verlangt 3.8.
+
+  **Der Abgleich musste mitziehen.** `--update` rendert die Kit-Fassung von
+  `TEAM.md`/`CLAUDE.md` frisch und vergleicht sie gegen die installierte.
+  Nach diesem Fix ist die frische LF und eine vorher installierte CRLF —
+  `diff` hätte **jede** Zeile als abgewichen gemeldet und den Anwender vor
+  eine Inhaltsänderung gestellt, die keine ist. Ein stiller Fehler, gegen
+  einen lauten Fehlalarm getauscht, ist kein Fortschritt (Bauart `BL-14`).
+  `--strip-trailing-cr` steht deshalb auch in dem Befehl, den die Meldung zum
+  Nachsehen nennt: Wer dort ein anderes Bild sieht als der Installer, sucht
+  an der falschen Stelle.
+
+  Unter Test:
+  [`test_bl137_zeilenenden_beim_schreiben.py`](geteilt/tests/test_bl137_zeilenenden_beim_schreiben.py)
+  — Verhalten *und* Quelltext nebeneinander, mit derselben Begründung wie bei
+  `BL-129`: Unter Linux ist `os.linesep` schon `\n`, ein reiner
+  Verhaltenstest wäre auf der Maschine, auf der das Kit meistens gebaut wird,
+  auch ohne den Fix grün. Die Quelltext-Zusicherungen prüfen über den
+  Syntaxbaum statt über Textsuche — der erste Entwurf schlug an der Stelle
+  an, die den Fehler *erklärt*, und hätte gefordert, die Begründung zu
+  löschen.
+
 - **`BL-136` — die Regel gegen `bad interpreter` schützte das Kit, nicht die
   Projekte.** ⚠️ **Feldbefund**, aufgefallen beim Committen von
   `duke-itam-2026`: Git meldete für jede Datei

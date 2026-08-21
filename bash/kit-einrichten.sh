@@ -160,20 +160,53 @@ else
            "Debian/Ubuntu:  sudo apt install git"
 fi
 
-# python3: Abhängigkeit der TEAM-Infrastruktur (team/tools/), nicht des Projekts.
-if command -v python3 >/dev/null 2>&1; then
-    PY_VERSION="$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null || echo '?')"
-    if python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)' 2>/dev/null; then
-        ok "python3 $PY_VERSION"
-    else
-        fehler "python3 $PY_VERSION ist zu alt (gebraucht wird 3.8 oder neuer)." \
-               "team/tools/kosten.py und beutebuch.py setzen es voraus."
+# Python: Abhängigkeit der TEAM-Infrastruktur (team/tools/), nicht des Projekts.
+#
+# BL-137: Gesucht wird nach dem Namen, unter dem der Interpreter auf DIESER
+# Maschine antwortet — nicht nach `python3`. Unter Windows legen weder
+# python.org noch winget ein python3.exe an; was dort unter dem Namen
+# antwortet, ist der App-Execution-Alias aus dem Microsoft Store. Er
+# beantwortet `command -v`, startet aber keinen Interpreter: Diese Prüfung
+# meldete deshalb auf einer Maschine MIT Python "python3 fehlt" und empfahl
+# `apt install python3`.
+#
+# Geprüft wird START UND VERSION, nicht Anwesenheit (Lehre BL-122), und die
+# Reihenfolge entscheidet die Plattform — zeichengleich mit finde_python() in
+# install.sh. Die Meldung nennt den GEFUNDENEN Namen: Wer hier "Python 3.13
+# (als python)" liest, weiß, was er in team.config.sh erwarten darf.
+EINR_PY=""
+EINR_PY_KANDIDATEN="python3 python py"
+case "$(uname -s 2>/dev/null)" in
+    MINGW*|MSYS*|CYGWIN*|Windows*) EINR_PY_KANDIDATEN="python python3 py" ;;
+esac
+for _py in $EINR_PY_KANDIDATEN; do
+    command -v "$_py" >/dev/null 2>&1 || continue
+    if "$_py" -c 'import sys; sys.exit(0 if sys.version_info[:2] >= (3, 8) else 1)' \
+            >/dev/null 2>&1; then
+        EINR_PY="$_py"; break
     fi
+done
+if [ -n "$EINR_PY" ]; then
+    ok "Python $("$EINR_PY" -c 'import sys; print("%d.%d" % sys.version_info[:2])') (als $EINR_PY)"
 else
-    fehler "python3 fehlt." \
-           "Die Team-Werkzeuge (Kosten, Beutebuch) sind Python — das ist eine" \
-           "Abhängigkeit der Infrastruktur, nicht deines Projekts." \
-           "Debian/Ubuntu:  sudo apt install python3"
+    # Zwischen "gar nicht da" und "da, aber zu alt" unterscheiden — die
+    # Abhilfe ist eine andere, und eine Meldung, die beides gleich nennt,
+    # schickt den Menschen in die falsche Richtung.
+    EINR_PY_ALT=""
+    for _py in $EINR_PY_KANDIDATEN; do
+        command -v "$_py" >/dev/null 2>&1 || continue
+        if "$_py" -c 'import sys' >/dev/null 2>&1; then EINR_PY_ALT="$_py"; break; fi
+    done
+    if [ -n "$EINR_PY_ALT" ]; then
+        fehler "Python $("$EINR_PY_ALT" -c 'import sys; print("%d.%d" % sys.version_info[:2])') ist zu alt (gebraucht wird 3.8 oder neuer)." \
+               "team/tools/kosten.py und beutebuch.py setzen es voraus."
+    else
+        fehler "Python fehlt (gesucht als: $EINR_PY_KANDIDATEN)." \
+               "Die Team-Werkzeuge (Kosten, Beutebuch) sind Python — das ist eine" \
+               "Abhängigkeit der Infrastruktur, nicht deines Projekts." \
+               "Debian/Ubuntu:  sudo apt install python3" \
+               "Windows:        winget install Python.Python.3.12"
+    fi
 fi
 
 if command -v flock >/dev/null 2>&1; then

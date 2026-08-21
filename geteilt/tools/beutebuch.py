@@ -130,6 +130,34 @@ def _lies_zeilen(pfad):
     return pfad.read_text(encoding="utf-8").splitlines()
 
 
+def _schreibe(pfad, inhalt):
+    """Schreibt eine Textdatei mit LF — auf JEDER Plattform (BL-137).
+
+    `Path.write_text()` oeffnet im Textmodus mit `newline=None`, und der
+    uebersetzt beim Schreiben jedes "\\n" in `os.linesep`, unter Windows also
+    in "\\r\\n". Alle Schreibwege hier schreiben die Datei GANZ neu; betroffen
+    waeren also nicht die geaenderten Zeilen, sondern alle. Ein einziges
+    `beutebuch.py set HM-1 erledigt` haette das gesamte Beutebuch umgeruesst.
+
+    Es ist zeichengleich der Fehler aus BL-129 — dort `os.fdopen(fd, "w")` in
+    `kosten.py`. Dieselbe Schicht, dieselbe Vorgabe, dasselbe Byte; damals nur
+    an der Stelle behoben, an der der Fund gemacht wurde.
+
+    Anders als bei den Konfigurationen faengt hier nichts auf: Das Beutebuch
+    liegt unter dem Plan-Ordner, dessen Name konfigurierbar ist. Das
+    `.gitattributes`-Fragment aus BL-136 kann es nicht mit einer festen Regel
+    treffen (nachgemessen im Feldprojekt: `attr/` leer) — was hier geschrieben
+    wird, wird genau so eingecheckt.
+
+    Beim Lesen gilt weiter `read_text` mit universal newlines. Ein Buch, das
+    vor diesem Fix CRLF bekommen hat, wird dadurch beim naechsten Schreiben
+    normalisiert statt vererbt.
+    """
+    pfad = Path(pfad)
+    with pfad.open("w", encoding="utf-8", newline="") as fh:
+        fh.write(inhalt)
+
+
 def block_text(hm_soll, pfad=BEUTEBUCH):
     """Liefert den rohen Textblock '### HM-<n> …' bis vor den nächsten
     '### '/'## '-Header, oder None, wenn hm_soll dort nicht existiert."""
@@ -239,13 +267,13 @@ def archiviere(aktiv_pfad=BEUTEBUCH, archiv_pfad=ARCHIV, dry_run=False):
     for b in verschieben:
         entfernen.update(range(b["start"], b["ende"]))
     neue_aktiv_zeilen = [z for i, z in enumerate(zeilen) if i not in entfernen]
-    aktiv_pfad.write_text("\n".join(neue_aktiv_zeilen) + "\n", encoding="utf-8")
+    _schreibe(aktiv_pfad, "\n".join(neue_aktiv_zeilen) + "\n")
 
     archiv_pfad = Path(archiv_pfad)
     bestehend = archiv_pfad.read_text(encoding="utf-8").rstrip("\n") if archiv_pfad.is_file() else ""
     neue_bloecke = "\n\n".join("\n".join(b["core"]) for b in verschieben)
     inhalt = f"{bestehend}\n\n{neue_bloecke}\n" if bestehend else f"{neue_bloecke}\n"
-    archiv_pfad.write_text(inhalt, encoding="utf-8")
+    _schreibe(archiv_pfad, inhalt)
 
     return [b["hm"] for b in verschieben]
 
@@ -466,7 +494,7 @@ def main() -> int:
                 alt = zeilen[zeilennr]
                 ende = "\n" if alt.endswith("\n") else ""
                 zeilen[zeilennr] = STATUS_RE.sub(rf"\g<1>{status_neu}", alt.rstrip("\n")) + ende
-                aktiv_pfad.write_text("".join(zeilen), encoding="utf-8")
+                _schreibe(aktiv_pfad, "".join(zeilen))
                 return 0
         print(f"FEHLER: {hm_soll} nicht im Beutebuch gefunden.", file=sys.stderr)
         return 1

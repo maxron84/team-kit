@@ -81,6 +81,7 @@ DIE DOPPELBAHN-QUOTE
 """
 import os
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -939,3 +940,76 @@ def pytest_terminal_summary(terminalreporter):
         terminalreporter.write_line(
             "                               (--update ohne Schalter holt sie "
             "zurueck)")
+
+
+def schreibschutz_loesen(wurzel):
+    """Nimmt unterhalb von `wurzel` jeder Datei den Schreibschutz.
+
+    BL-138. Die Kit-Tests legen echte Git-Repos in `tmp_path` an. Git schreibt
+    lose Objekte SCHREIBGESCHUETZT — nachgemessen an einem liegengebliebenen
+    Lauf: 989 von 5622 Dateien, ausnahmslos unter `.git/objects`. Das ist kein
+    Versehen, sondern Absicht: Ein Objekt ist unveraenderlich.
+
+    Und genau hier laufen die Plattformen auseinander:
+
+        POSIX    unlink() prueft das Schreibrecht am VERZEICHNIS.
+                 Der Modus der Datei selbst ist gleichgueltig — es geht.
+        Windows  DeleteFile scheitert mit ERROR_ACCESS_DENIED (5), sobald
+                 FILE_ATTRIBUTE_READONLY gesetzt ist.
+
+    pytest hebt die letzten drei Laufordner auf und raeumt am Sitzungsende die
+    aelteren weg. Unter Windows scheitert dieses Aufraeumen an jedem einzelnen
+    Git-Objekt. pytest faengt das ab und versucht es erneut — chmod plus
+    Retry, EINZELN fuer jede der 989 Dateien. Auf NTFS dauert das minutenlang.
+
+    Das Fehlerbild im Feld war entsprechend irrefuehrend: Ein Lauf meldete
+    542 Faelle, 228 bestanden, 314 uebersprungen, KEINEN Fehlschlag — und
+    danach eine Wand aus Traceback, endend in `PermissionError: [WinError 5]`.
+    Wer da abbricht (der Anwender tat es), sieht einen gruenen Lauf als roten.
+    Wer nicht abbricht, wartet. Beides falsch, und beides erst auf Windows.
+
+    Deshalb steht das Aufraeumen hier und nicht in einem einzelnen Test: Es
+    ist eine Eigenschaft des PRUEFSTANDS, dass sein Wegwerfbereich wegwerfbar
+    bleiben muss. Dieselbe Ueberlegung wie in BL-130.
+
+    Fehler werden geschluckt: Diese Funktion laeuft NACH dem letzten Test.
+    Sie darf ein Ergebnis aufraeumen, aber niemals eines erzeugen.
+    """
+    if not IST_WINDOWS:
+        return 0
+    geaendert = 0
+    for pfad in wurzel.rglob("*"):
+        try:
+            if not pfad.is_file():
+                continue
+            modus = pfad.stat().st_mode
+            if modus & stat.S_IWRITE:
+                continue
+            os.chmod(pfad, modus | stat.S_IWRITE)
+            geaendert += 1
+        except OSError:
+            pass
+    return geaendert
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_sessionfinish(session):
+    """Den Wegwerfbereich dieser Sitzung wegwerfbar hinterlassen (BL-138).
+
+    `tryfirst`, weil `_pytest.tmpdir` im selben Hook aufraeumt: Der
+    Schreibschutz muss weg sein, BEVOR dort jemand loeschen will.
+
+    Angefasst wird nur der Bereich DIESER Sitzung, und nur, wenn er ueberhaupt
+    entstanden ist — `_basetemp` statt `getbasetemp()`, denn Letzteres legt
+    den Ordner an. Ein Lauf, in dem kein Test `tmp_path` gebraucht hat, soll
+    keinen hinterlassen.
+
+    Aeltere Ordner bleiben unberuehrt. Sie aufzuraeumen ist pytests Aufgabe,
+    und nach dieser Fassung kann pytest das auch: Was diese Sitzung anlegt,
+    ist in drei Sitzungen loeschbar.
+    """
+    fabrik = getattr(session.config, "_tmp_path_factory", None)
+    basis = getattr(fabrik, "_basetemp", None)
+    if basis is None:
+        return
+    schreibschutz_loesen(basis)
