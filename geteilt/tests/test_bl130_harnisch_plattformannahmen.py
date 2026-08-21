@@ -189,6 +189,17 @@ VERBOTEN = (
     (re.compile(r"""\}:\{env\['PATH'\]\}"""),
      'PATH mit ":" zusammengesetzt — unter Windows trennt ";". '
      'Stattdessen: pfad_voran(bin_dir, env).'),
+    # BL-133: die fuenfte Annahme, die dieser Sammeltest zunaechst nicht
+    # gesehen hat. `basis_umgebung()` gab es schon, aber neun Testdateien
+    # bauten ihre Umgebung weiter selbst — mit einem PATH aus vier festen
+    # POSIX-Verzeichnissen. Unter Windows liegt dort nichts: kein git, kein
+    # python, keine Agenten-CLI. Der Kindprozess startet trotzdem und
+    # scheitert erst an der ersten Fremdleistung, also weit weg von der
+    # Ursache. Und weil die Umgebung dann selbst gebaut ist, fehlt ihr auch
+    # TEAM_PYTHON — derselbe Fund noch einmal von der anderen Seite.
+    (re.compile(r'"PATH":\s*"/'),
+     'PATH als feste POSIX-Liste — unter Windows liegt dort weder git noch '
+     'python. Stattdessen: basis_umgebung(**zusatz) aus conftest.'),
 )
 
 # conftest.py loest diese vier Annahmen auf und muss sie dafuer nennen duerfen;

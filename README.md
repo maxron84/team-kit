@@ -375,7 +375,7 @@ geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 │                       in denselben Dateien. Die pwsh-Bahn ist eine zweite
 │                       ORCHESTRIERUNG, kein zweiter Zustandscode
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-├── tests/              74 Testdateien, 515 Fälle — der Doppelbahn-Harnisch
+├── tests/              76 Testdateien, 533 Fälle — der Doppelbahn-Harnisch
 │                       fährt jeden Fall gegen BEIDE Bahnen, aus EINEM
 │                       Testkörper
 └── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
@@ -442,8 +442,16 @@ Grund für den eigenen Plan-Ordner — siehe `BL-51` oben.
 | `./team-status.sh --altlast [N]` | `.\team-status.cmd --altlast [N]` | Produktivdateien, die seit N Kaskaden in keinem Diff lagen — die Auswahlhilfe für einen Altlast-Sweep (`BL-40`) |
 | `./team-test.sh` | `.\team-test.cmd` | Regressionstests der Team-Infrastruktur (pytest) |
 | `bash <kit>/bash/install.sh . --update` | `pwsh -File <kit>\pwsh\install.ps1 . -Update` | Auf eine neue Kit-Version heben, ohne Projektdaten anzufassen |
-| `python3 team/tools/beutebuch.py list` | *(gleich)* | Alle Funde mit Status |
-| `python3 team/tools/zitat_lint.py` | *(gleich)* | Plandateien, die einen erledigten Backlog-Eintrag noch als offene Frage zitieren (`BL-50`) |
+| `python3 team/tools/beutebuch.py list` | `python team\tools\beutebuch.py list` | Alle Funde mit Status |
+| `python3 team/tools/zitat_lint.py` | `python team\tools\zitat_lint.py` | Plandateien, die einen erledigten Backlog-Eintrag noch als offene Frage zitieren (`BL-50`) |
+
+> **Der Interpretername gehört der Maschine, nicht der Bahn** (`BL-131`,
+> `BL-133`). Unter Windows legen weder python.org noch winget ein
+> `python3.exe` an; was dort unter dem Namen antwortet, ist der
+> App-Execution-Alias aus dem Microsoft Store — er startet den Store und
+> meldet *„Python was not found"*. Welcher Name auf **deiner** Maschine
+> gilt, steht in `team.config.sh` bzw. `team.config.ps1`; der Installer
+> hat ihn dort eingetragen.
 
 **Welche Spalte gilt, entscheidet die Shell, nicht das Betriebssystem.** Wer
 unter Windows in einer WSL-Distro arbeitet, steht in der **linken** Spalte —
@@ -492,7 +500,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
   `team/lib.sh`); belegt ist er nicht. Ebenso wenig belegt ist bisher ein Lauf
   mit einem lokalen Open-Weights-Modell — das ist Ziel, nicht Zustand.
 - **Selbstverifikation**: `bash bash/kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 515 Tests — **zweimal**: einmal mit den
+  Wegwerf-Repo und fährt dort die 533 Tests — **zweimal**: einmal mit den
   Auslieferungswerten, einmal mit angepasster `team.config.sh` (Caps,
   Commit-Präfixe, zwei Domänen). Der zweite Lauf ist die Lehre aus `BL-58`: In
   einer frischen Installation stehen dieselben Werte wie in `team/lib.sh`, ein

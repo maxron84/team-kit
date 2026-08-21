@@ -52,6 +52,43 @@
 # Entrypoints.
 $PSNativeCommandUseErrorActionPreference = $false
 
+# --- Zeichenkodierung an der Prozessgrenze ------------------------------------
+# BL-135. [Console]::OutputEncoding ist unter Windows die OEM-Codepage der
+# Konsole — auf dieser Maschine 850. PowerShell benutzt sie fuer ZWEIERLEI,
+# und beides war falsch.
+#
+# BEIM SCHREIBEN. Die Rollen melden mit [Console]::Out.WriteLine (Vertrag
+# Punkt 5). cp850 kennt keinen Geviertstrich; .NET ersetzt ihn beim Kodieren
+# still durch einen Bindestrich. Aus "DRY-RUN — kein Claude-Aufruf" wird im
+# umgelenkten Log "DRY-RUN - kein Claude-Aufruf", und jede Umlautmeldung wird
+# zu Zeichensalat. Das ist die harmlose Haelfte.
+#
+# BEIM LESEN, und hier haengt eine ENTSCHEIDUNG daran. PowerShell dekodiert
+# die Ausgabe nativer Prozesse mit derselben Kodierung. Die Werkzeuge unter
+# team/tools/ schreiben seit BL-133 ausdruecklich UTF-8; als cp850 gelesen
+# wird aus dem "ue" in "ueberholt" (U+00FC) das Paar U+251C U+255D. Der
+# Filter in vollautomatik.ps1
+#
+#     Where-Object { $_ -notmatch 'erledigt|ueberholt' }
+#
+# trifft dann nicht mehr, und ein ueberholter Fund gilt weiter als OFFENE
+# ARBEIT — die Fixphase arbeitet an etwas, das erledigt ist. "erledigt" ist
+# reines ASCII und funktionierte; nur der Umlaut fiel durch. Genau die Bauart
+# Fehler, die kein Mensch sieht: kein Abbruch, keine Meldung, nur eine
+# Entscheidung, die anders ausfaellt.
+#
+# Vor BL-133 war derselbe Pfad ebenso kaputt (die Werkzeuge schrieben cp1252,
+# gelesen als cp850 wurde aus dem Umlaut ein U+00B3) — der Fund ist also
+# aelter als die Werkzeugseite und wird hier zum ersten Mal ganz geschlossen.
+#
+# OHNE BOM: Das ist eine Kodierung fuer einen STROM, nicht fuer eine Datei.
+# Ein BOM stuende sonst vor der ersten Ausgabezeile jeder Rolle.
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+# Die Gegenrichtung: was PowerShell an native Prozesse UEBERGIBT. Ohne diese
+# Zeile geht ein Argument mit Umlaut — ein Statuswert, ein Dateiname — in der
+# alten Codepage hinaus, waehrend die Werkzeuge UTF-8 erwarten.
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+
 # --- Projekt-Konfiguration ----------------------------------------------------
 # Zuerst gelesen, damit die Team-Default-Zuweisungen unten sie stehen lassen.
 # Fehlt die Datei, laufen die Rollen mit den Defaults dieser Bibliothek weiter —

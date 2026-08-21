@@ -27,7 +27,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import BASH, kit_pfad
+from conftest import BASH, basis_umgebung, kit_pfad
 
 WURZEL = Path(__file__).resolve().parents[2]
 TEAM_LIB = kit_pfad("lib.sh")
@@ -68,7 +68,7 @@ def test_leeres_log_wird_zum_ersatzzettel(tmp_path):
     ergebnis = subprocess.run(
         [BASH, "-c", f'source "{TEAM_LIB}"; '
                        f'team_versuch_melden ralph "{leer}" $(( $(date +%s) - 2820 ))'],
-        cwd=WURZEL, env={"HOME": str(Path.home()), "PATH": "/usr/bin:/bin"},
+        cwd=WURZEL, env=basis_umgebung(),
         capture_output=True, text=True, encoding="utf-8", errors="replace")
     daten = json.loads(leer.read_text(encoding="utf-8"))
     assert daten["team_versuch"] == "verworfen"
@@ -90,7 +90,7 @@ def test_brauchbares_log_bleibt_unangetastet(tmp_path):
     gut.write_text(original, encoding="utf-8")
     ergebnis = subprocess.run(
         [BASH, "-c", f'source "{TEAM_LIB}"; team_versuch_melden ralph "{gut}" 0'],
-        cwd=WURZEL, env={"HOME": str(Path.home()), "PATH": "/usr/bin:/bin"},
+        cwd=WURZEL, env=basis_umgebung(),
         capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert gut.read_text(encoding="utf-8") == original
     assert "VERWORFENER VERSUCH" not in ergebnis.stderr

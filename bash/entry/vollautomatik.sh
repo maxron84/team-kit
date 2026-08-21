@@ -122,13 +122,13 @@ KULANZ_GEWAEHRT=0
 budget_ok() {
     local kulanz="${1:-nein}" jetzt deckel_kulant
     jetzt="$(lauf_kosten)"
-    if ! python3 -c "import sys; sys.exit(0 if float('$jetzt') >= float('$TEAM_BUDGET_USD') else 1)"; then
+    if ! "$TEAM_PYTHON" -c "import sys; sys.exit(0 if float('$jetzt') >= float('$TEAM_BUDGET_USD') else 1)"; then
         return 0
     fi
     if [ "$kulanz" = "kulanz" ] && [ "$KULANZ_GEWAEHRT" -eq 0 ] \
        && $TEAM_BEUTEBUCH_TOOL first 'an Frank übergeben' >/dev/null 2>&1; then
-        deckel_kulant="$(python3 -c "print(float('$TEAM_BUDGET_USD') * (1 + $TEAM_BUDGET_KULANZ_PROZENT / 100))")"
-        if python3 -c "import sys; sys.exit(0 if float('$jetzt') < float('$deckel_kulant') else 1)"; then
+        deckel_kulant="$("$TEAM_PYTHON" -c "print(float('$TEAM_BUDGET_USD') * (1 + $TEAM_BUDGET_KULANZ_PROZENT / 100))")"
+        if "$TEAM_PYTHON" -c "import sys; sys.exit(0 if float('$jetzt') < float('$deckel_kulant') else 1)"; then
             KULANZ_GEWAEHRT=1
             log "LAUF-BUDGET erreicht ($jetzt USD >= $TEAM_BUDGET_USD USD), aber ein Fund ist in Bearbeitung — die angefangene Runde laeuft im Kulanzband bis $deckel_kulant USD zu Ende (+$TEAM_BUDGET_KULANZ_PROZENT %, BL-23). DANACH harter Stopp."
             return 0

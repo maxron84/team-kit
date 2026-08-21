@@ -33,7 +33,8 @@ from pathlib import Path
 
 import pytest
 
-from conftest import Ausgabe, BASH, FangUndMelde, kit_pfad, werkzeug_wert
+from conftest import (Ausgabe, BASH, FangUndMelde, basis_umgebung, kit_pfad,
+                      werkzeug_wert)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 KOSTEN_PY = kit_pfad("tools", "kosten.py")
@@ -121,7 +122,7 @@ def _status(repo, *argumente):
     ergebnis = subprocess.run(
         [BASH, str(repo / "team-status.sh"), *argumente],
         capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(repo),
-        env={"HOME": str(Path.home()), "PATH": "/usr/local/bin:/usr/bin:/bin"},
+        env=basis_umgebung(),
     )
     assert ergebnis.returncode == 0, ergebnis.stderr
     return ergebnis.stdout

@@ -184,6 +184,30 @@ import tempfile
 import time
 from datetime import date
 
+# BL-133: Die AUSGABE dieses Werkzeugs ist UTF-8 — unabhaengig von der Locale
+# des Wirts.
+#
+# Gelesen und geschrieben wird hier ueberall mit ausdruecklichem
+# `encoding="utf-8"` (BL-113, BL-129). Fuer stdout/stderr galt weiter Pythons
+# Default, und der ist unter Windows die ANSI-Codepage der Maschine — auf einem
+# deutschen System cp1252. Ein "an Frank uebergeben" verliess das Werkzeug
+# damit als cp1252-Bytes; jeder Aufrufer im Kit liest UTF-8 und bekam an der
+# Stelle des Umlauts ein Ersatzzeichen. Der Vergleich mit dem Statuswert aus
+# dem Beutebuch schlug dann fehl, und `frank.sh` meldete "Kein Fund mit Status
+# 'an Frank uebergeben'" — vor einem Beutebuch, in dem genau der stand.
+#
+# Warum hier und nicht per PYTHONIOENCODING: Das muesste jeder Aufrufer setzen
+# (lib.sh, lib.psm1, die Entrypoints, der Harnisch, der Mensch auf der
+# Kommandozeile). Eine Zusicherung, die an fuenf Stellen wiederholt werden
+# muss, ist eine, die eine Stelle vergisst.
+for _strom in (sys.stdout, sys.stderr):
+    try:
+        _strom.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError, OSError):
+        # Ein umgelenkter Strom (pytest-capture) ist kein TextIOWrapper. Er
+        # ist dann auch nicht das Problem, gegen das dieser Block steht.
+        pass
+
 # Dateisperren sind das EINZIGE plattformabhaengige Stueck dieser Datei
 # (BL-125). `fcntl` gibt es unter Windows nicht, `msvcrt` nicht unter Linux.
 # Ein UNGESCHUETZTES `import fcntl` auf Modulebene macht dabei nicht nur die

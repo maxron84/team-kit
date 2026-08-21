@@ -187,12 +187,12 @@ status_budget() {
     # dritte Zeile statt geraten aufgeteilt zu werden. Werte defensiv als
     # eigene argv-Elemente an python3 (kein rohes ${…}-Interpolieren — BL-23/
     # HM-17).
-    api_gesamt="$(python3 -c "
+    api_gesamt="$("$TEAM_PYTHON" -c "
 import sys
 a, b = (float(x) for x in sys.argv[1:3])
 print(f'{a + b:.4f}')
 " "$api" "$ledger_api")"
-    abo_gesamt="$(python3 -c "
+    abo_gesamt="$("$TEAM_PYTHON" -c "
 import sys
 a, b = (float(x) for x in sys.argv[1:3])
 print(f'{a + b:.4f}')
@@ -226,12 +226,12 @@ print(f'{a + b:.4f}')
         for _d in $_domaenen_liste; do
             _wert="$(team_ledger_domaene "$_d")"
             printf "    📦 %-30s: %s USD\n" "$_d" "$_wert"
-            _summe_domaenen="$(python3 -c "
+            _summe_domaenen="$("$TEAM_PYTHON" -c "
 import sys
 print(f'{float(sys.argv[1]) + float(sys.argv[2]):.4f}')
 " "$_summe_domaenen" "$_wert")"
         done
-        ledger_unzugeordnet="$(python3 -c "
+        ledger_unzugeordnet="$("$TEAM_PYTHON" -c "
 import sys
 g, d = (float(x) for x in sys.argv[1:3])
 print(f'{g - d:.4f}')
@@ -250,7 +250,7 @@ print(f'{g - d:.4f}')
     # (kein rohes ${…}-Interpolieren → kein SyntaxError bei leerem Wert).
     empfehlung="$(team_budget_empfehlung)"
     if [ -n "$empfehlung" ]; then
-        python3 -c "
+        "$TEAM_PYTHON" -c "
 import sys
 d = float(sys.argv[1]) if sys.argv[1] else 0.0
 print(f'  Empf. Pro-Lauf-Deckel (naechster Lauf): {d:.2f} USD')

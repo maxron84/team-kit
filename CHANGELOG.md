@@ -6,6 +6,174 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-135` — die pwsh-Bahn rechnete in der OEM-Codepage der Konsole.**
+  ⚠️ **Feldbefund**, gefunden von [`pwsh/kit-test.ps1`](pwsh/kit-test.ps1)
+  Schritt 6 — und zwar erst, **nachdem** `BL-134` den Schritt davor repariert
+  hatte. Bis dahin stieg der Selbsttest in Schritt 5 aus und hat Schritt 6 nie
+  erreicht.
+
+  `[Console]::OutputEncoding` ist unter Windows die OEM-Codepage der Konsole
+  (auf der Fundmaschine **850** — noch einmal eine andere als die cp1252 aus
+  `BL-133`). PowerShell benutzt sie für **zweierlei**:
+
+  **Beim Schreiben** — die harmlose Hälfte. Die Rollen melden mit
+  `[Console]::Out.WriteLine` (Aufrufkonvention Punkt 5). cp850 kennt keinen
+  Geviertstrich; .NET ersetzt ihn beim Kodieren still durch einen Bindestrich.
+  Aus `[ralph] DRY-RUN — kein Claude-Aufruf.` wurde im umgelenkten Log
+  `[ralph] DRY-RUN - kein Claude-Aufruf.` Kein Fehler, keine Meldung, ein
+  anderes Zeichen.
+
+  **Beim Lesen** — und hier hängt eine **Entscheidung** daran. PowerShell
+  dekodiert die Ausgabe *nativer* Prozesse mit derselben Kodierung. Die
+  Werkzeuge unter [`geteilt/tools/`](geteilt/tools/) schreiben seit `BL-133`
+  ausdrücklich UTF-8; als cp850 gelesen wird aus dem `ü` in `überholt`
+  (U+00FC) das Zeichenpaar `├╝` (U+251C U+255D). Der Filter in
+  [`vollautomatik.ps1`](pwsh/entry/vollautomatik.ps1)
+
+  ```powershell
+  Where-Object { $_ -and $_ -notmatch 'erledigt|überholt' }
+  ```
+
+  trifft dann nicht mehr: Ein **überholter Fund bleibt in der Liste der
+  offenen Arbeit stehen**, und die Fixphase arbeitet an etwas, das erledigt
+  ist. `erledigt` ist reines ASCII und funktionierte die ganze Zeit — nur der
+  Umlaut fiel durch.
+
+  **Nicht die Schuld von `BL-133`.** Naheliegender Verdacht, und er ist falsch:
+  Vorher schrieben die Werkzeuge cp1252, als cp850 gelesen wurde aus dem
+  Umlaut `³`. Auch kein Treffer. Der Pfad war vorher kaputt und danach — nur
+  mit einem anderen falschen Zeichen. Was `BL-133` geändert hat: Die
+  Werkzeugseite spricht jetzt **eindeutig** UTF-8, und damit ist die Leseseite
+  überhaupt erst reparierbar. Zwei Enden einer Leitung; eines allein
+  festzuziehen genügt nie.
+
+  Behoben in [`pwsh/lib.psm1`](pwsh/lib.psm1) — dort und nicht in den
+  Entrypoints, weil die Bibliothek die eine Stelle ist, die **jede** Rolle
+  durchläuft. `[Console]::OutputEncoding` und `$OutputEncoding` (die
+  Gegenrichtung: was an native Prozesse *übergeben* wird) auf UTF-8, beide
+  **ohne BOM** — das ist eine Kodierung für einen Strom, nicht für eine Datei.
+
+  Unter Test:
+  [`test_bl135_kodierung_an_der_prozessgrenze.py`](geteilt/tests/test_bl135_kodierung_an_der_prozessgrenze.py) —
+  am **Verhalten**, mit gestellter Codepage 850. Ein Test, der auf eine
+  cp850-Konsole *wartet*, liefe genau einmal: auf der Maschine, auf der der
+  Fund schon gemacht ist.
+
+  **Die Empfängerseite gehört dazu — eine Leitung hat zwei Enden.** Nach dem
+  Fix auf der Schreibseite fiel im Selbsttest eine Prüfung, die vorher grün
+  war: `kit-test.ps1` fängt einen kompletten Vollautomatik-Lauf auf und
+  vergleicht ihn mit Mustern aus Umlauten und Geviertstrichen. Die Rollen
+  schrieben nun korrekt UTF-8 — der auffangende Prozess dekodierte weiter
+  cp850, und aus `über RALPH_CAP` wurde `├╝ber RALPH_CAP`. Die Prüfung fiel,
+  obwohl der Lauf richtig war.
+
+  Das **Produkt war davon nicht betroffen**:
+  [`vollautomatik.ps1`](pwsh/entry/vollautomatik.ps1) importiert `lib.psm1`,
+  bevor es in `Rolle-Starten` auffängt, und erbt die Einstellung damit. Vier
+  eigenständige pwsh-Skripte taten es nicht — `install.ps1`,
+  `kit-einrichten.ps1`, `pruefe-windows.ps1`, `team-auth-setup.ps1` — und
+  `kit-test.ps1` als fünftes. Alle fünf setzen die Kodierung jetzt selbst.
+  Gefunden hat sie nicht das Auge, sondern der Wächter, der zu diesem Zweck
+  dazukam: *wer Prozessausgabe auffängt und `lib.psm1` nicht importiert, muss
+  UTF-8 selbst einstellen.*
+
+- **`BL-134` — der Selbsttest praeparierte sich seinen eigenen roten Test.**
+  Gefunden beim ersten Lauf von [`pwsh/kit-test.ps1`](pwsh/kit-test.ps1) auf
+  der Zielmaschine. Schritt 5 stellt einen gelebten Projektstand her, um zu
+  belegen, dass `-Update` Projektdaten nicht anfasst — und schreibt dafür den
+  Smoke-Test in **beide** Konfigurationen zurück. Die Zeile für `team.config.sh`
+  ist korrekt BOM-los; die zwei Zeilen tiefer für `team.config.ps1` war
+  mitkopiert und damit ebenfalls BOM-los. Für PowerShell-Quelltext ist das
+  genau die Verletzung, gegen die `BL-113` steht.
+
+  Die Folge war kein Zeichenfehler, sondern ein **Abbruch mit falschem
+  Fingerzeig**: Der anschließende `install.ps1 -Update` fährt seinerseits die
+  Regressionstests, die meldeten `test_powershell_quelltext_traegt_bom` als
+  Fehlschlag (`1 failed, 512 passed`), und `kit-test.ps1` brach mit
+  *„install.ps1 -Update schlug fehl"* ab. Der Installer hatte nichts falsch
+  gemacht — die Vorbereitung hatte die Datei kaputtgemacht. Das ist die
+  teuerste Bauart Fehlschlag: volle Laufzeit (2 × 13 min) für einen Befund,
+  der auf die falsche Stelle zeigt.
+
+  Unter Test:
+  [`test_bl113_bom_regel.py`](geteilt/tests/test_bl113_bom_regel.py) —
+  `test_wer_powershell_quelltext_SCHREIBT_setzt_das_bom`. Die Regel bindet
+  nicht mehr nur die **ausgelieferten** Dateien, sondern jede Stelle im Kit,
+  die zur Laufzeit eine `.ps1` schreibt. Geprüft wird am Quelltext: Die Wirkung
+  ist nur unter Windows PowerShell 5.1 sichtbar, die Verwechslung aber überall.
+  Datenschreiber (Ledger, Kostenlogs, Beutebuch) sind ausgenommen und müssen es
+  sein — dort ist BOM-los richtig.
+
+- **`BL-133` — der Windows-Lauf war rot, und keiner der 68 Fehlschläge kam aus
+  dem Kit.** ⚠️ **Feldbefund, dritter Windows-Lauf** (`duke-itam-2026`,
+  `68 failed, 436 passed`). **65** dieser Fehlschläge trugen wörtlich dieselbe
+  Zeile: *„Python was not found …"*. Das ist `BL-131`, und der war abgetragen —
+  nur nicht überall. `BL-131` hat **drei** Orte gezählt; der Name stand an
+  **vier weiteren**:
+
+  * **Die Entrypoints.** [`bash/entry/team-status.sh`](bash/entry/team-status.sh)
+    fünfmal, [`bash/entry/vollautomatik.sh`](bash/entry/vollautomatik.sh)
+    dreimal — beide sourcen `team/lib.sh` und *hätten* `$TEAM_PYTHON` gehabt.
+    Die Wirkung war ungleich: Im Statusskript wurden aus Beträgen **leere**
+    Zeichenketten (`real via API abgerechnet:  USD`) — nicht null, nicht
+    Fehler, leer. In `vollautomatik.sh` saß der Aufruf in `budget_ok`; der
+    Store-Alias endet mit **49**, also ≠ 0, und das las die Bedingung als
+    *„Deckel nicht überschritten"*. Der Lauf lief weiter, und zwar genau dann,
+    wenn er hätte anhalten sollen.
+  * **Der Harnisch.** `lib.sh` nimmt den Namen aus `team.config.sh`; der
+    Harnisch ist aber kein installiertes Projekt. Er sourct die Bibliothek
+    direkt, und dann greift deren POSIX-Default. Für die zwei Werkzeugzeilen
+    löste `werkzeug_wert()` das längst auf — für die **dreizehn Aufrufe in der
+    Bibliothek** hatte es niemand nachgezogen. `basis_umgebung()` trägt
+    `TEAM_PYTHON` jetzt mit, wie im Feld die Konfiguration.
+  * **Neun einzelne Testdateien**, die ihre Umgebung weiter selbst bauten —
+    mit einem Suchpfad aus festen POSIX-Verzeichnissen. Unter Windows liegt
+    dort nichts: kein `git`, kein `python`, keine Agenten-CLI. Die fünfte
+    Annahme, die der Sammeltest aus `BL-130` noch nicht kannte.
+  * **Die Konfiguration eines gelebten Projekts** — der bittere Teil. `--update`
+    fasst `team.config.*` bewusst nicht an (Projektdaten). Ein Projekt, das
+    **vor** `BL-122`/`BL-131` eingerichtet wurde, trägt darin `python3`; die
+    Vorlagen hatten damals gar keinen Platzhalter, es gab nichts zu füllen.
+    Diese Projekte bekommen die Heilung also **nie**, auf **keiner** Bahn: Im
+    Feldprojekt war `team.config.ps1` genauso betroffen wie `team.config.sh` —
+    und die pwsh-Bahn ist dort die einzige, die benutzt wird.
+
+  Beide Installer prüfen den konfigurierten Interpreter jetzt im Update-Pfad,
+  in der Bauart von `BL-109` (`.gitignore`-Abgleich): geprüft wird der
+  **Start**, nicht die Existenz (`command -v` *findet* den Alias — Lehre
+  `BL-122`); **gemeldet**, nicht repariert, mit der nachzutragenden Zeile
+  daneben. Ebenso gemeldet wird seit jetzt, dass `--nur-pwsh`/`--nur-bash` beim
+  **Update** die Dateien der abgewählten Bahn nur nicht mehr aktualisiert, sie
+  aber liegen lässt — und die Testsuite entscheidet an genau dieser Anwesenheit,
+  welche Bahn sie fährt. Gelöscht wird nichts (Lehre `BL-12`).
+
+- **`BL-133` (zweiter Fund) — die Python-Werkzeuge schrieben ihre Ausgabe in der
+  Locale des Wirts.** Drei Fehlschläge desselben Laufs trugen nicht *„Python was
+  not found"*, sondern ein Ersatzzeichen mitten im Wort:
+  `assert 'an Frank übergeben' in '… an Frank �bergeben …'`.
+
+  Gelesen und geschrieben wird in [`geteilt/tools/`](geteilt/tools/) überall mit
+  ausdrücklichem `encoding="utf-8"` (`BL-113`, `BL-129`) — für `stdout`/`stderr`
+  galt weiter Pythons Default, und der ist unter Windows die ANSI-Codepage der
+  Maschine. Der Statuswert verließ das Werkzeug als cp1252-Bytes, der Aufrufer
+  liest UTF-8, aus dem Umlaut wurde `U+FFFD`.
+
+  Die Wirkung war kein Zeichenfehler, sondern ein **falsches Urteil**:
+  `frank.sh` verglich den zurückgegebenen Status mit *„an Frank übergeben"*,
+  fand keine Übereinstimmung und meldete *„Kein Fund … nichts zu tun."* — vor
+  einem Beutebuch, in dem genau der stand. Die Fixphase lief an jedem
+  übergebenen Fund vorbei: dieselbe Wirkung wie `BL-1`, aus einer völlig
+  anderen Richtung. Alle drei Werkzeuge stellen ihre Ausgabeströme jetzt beim
+  Start auf UTF-8 — nicht per `PYTHONIOENCODING`, denn das müsste jeder
+  Aufrufer setzen, und eine Zusicherung, die an fünf Stellen wiederholt werden
+  muss, ist eine, die eine Stelle vergisst.
+
+  Unter Test:
+  [`test_bl133_interpreter_und_ausgabe.py`](geteilt/tests/test_bl133_interpreter_und_ausgabe.py) —
+  hier **am Verhalten** und nicht am Quelltext, weil beide Fälle auch auf einem
+  Linux-Wirt fallen, sobald jemand sie zurückdreht. Die Locale wird dafür
+  gestellt (`PYTHONIOENCODING=cp1252`) statt vorausgesetzt.
+
 - **`BL-131` — die Bash-Bahn verdrahtete `python3`, auch unter Windows.**
   ⚠️ **Feldbefund, zweiter Windows-Lauf.** An drei Stellen stand der Name des
   Interpreters fest im Text, jedes Mal mit derselben Begründung: *„dieser

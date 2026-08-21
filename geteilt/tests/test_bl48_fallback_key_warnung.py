@@ -21,7 +21,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from conftest import BASH, kit_pfad
+from conftest import BASH, basis_umgebung, kit_pfad
 
 WURZEL = Path(__file__).resolve().parents[2]
 TEAM_LIB = kit_pfad("lib.sh")
@@ -30,7 +30,7 @@ BASHRC_SATZ = "den Key aus .bashrc/der Shell-Env nehmen"
 
 
 def _run(script, env_extra):
-    env = {"HOME": str(Path.home()), "PATH": "/usr/bin:/bin"}
+    env = basis_umgebung()
     env.update(env_extra)
     return subprocess.run([BASH, "-c", f'source "{TEAM_LIB}"\n{script}'],
                           cwd=WURZEL, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")

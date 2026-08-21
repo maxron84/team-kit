@@ -60,6 +60,15 @@ $ErrorActionPreference = 'Stop'
 # $LASTEXITCODE lesen, entscheiden. Ohne diese Zeile ist jede dieser
 # Entscheidungen unerreichbar — der Abbruch kommt vorher.
 $PSNativeCommandUseErrorActionPreference = $false
+# BL-135: Dieses Skript faengt die Ausgabe nativer Prozesse auf. PowerShell
+# dekodiert sie mit [Console]::OutputEncoding, und das ist unter Windows die
+# OEM-Codepage der Konsole (auf der Fundmaschine 850). Alles im Kit spricht
+# UTF-8 — als cp850 gelesen wird aus einem Umlaut ein Paar Rahmenzeichen, und
+# aus einem Geviertstrich drei Zeichen. Wer lib.psm1 importiert, erbt die
+# Einstellung von dort; diese Datei tut es nicht und setzt sie deshalb selbst.
+# Ohne BOM: Das ist eine Kodierung fuer einen STROM, nicht fuer eine Datei.
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 
 if ($NurBash -and $NurPwsh) {
     Write-Host "FEHLER: -NurBash und -NurPwsh schliessen einander aus." -ForegroundColor Red
@@ -352,6 +361,94 @@ function Gitignore-Abgleich {
     Gelb "      `"$($fehlende -join "``n")`" | Add-Content `"$datei`""
 }
 
+function Python-Aus-Config {
+    <#
+      Der Interpretername, auf den eine INSTALLIERTE Konfiguration zeigt.
+      Gelesen wird die Werkzeugzeile, nicht die Variable: In der .sh kann sie
+      auf $TEAM_PYTHON zeigen (dann wird der eine Zeile hoeher aufgeloest), in
+      der .ps1 steht der Name direkt im Default von Team-Wert.
+    #>
+    param([string]$Pfad)
+    $text = [System.IO.File]::ReadAllText($Pfad)
+    if ($text -notmatch '[-:"''$ ]([A-Za-z0-9_.]+) team/tools/kosten\.py') { return '' }
+    $name = $Matches[1]
+    if ($name -eq 'TEAM_PYTHON') {
+        # Der optionale Wagenruecklauf vor dem Zeilenanker: Eine
+        # team.config.sh, die unter Windows liegt, hat CRLF. .NET liest die
+        # Datei roh, und der Anker im Mehrzeilenmodus steht VOR dem
+        # Zeilenvorschub, also HINTER dem Wagenruecklauf. Ohne ihn findet der
+        # Ausdruck die Zeile auf genau der Plattform nicht, fuer die er
+        # gebaut ist.
+        if ($text -match '(?m)^TEAM_PYTHON="\$\{TEAM_PYTHON:-(.*)\}"\r?$') { $name = $Matches[1] }
+        else { return '' }
+    }
+    return $name
+}
+
+function Python-Abgleich {
+    <#
+      BL-133, derselbe Schnitt wie BL-109 bei der .gitignore: "-Update fasst
+      team.config.* nicht an" ist richtig; "sieht sie gar nicht an" war es
+      nicht.
+
+      Ein Projekt, das vor BL-122/BL-131 eingerichtet wurde, traegt in BEIDEN
+      Konfigurationen den Namen `python3` — die Vorlagen hatten damals gar
+      keinen Platzhalter, es gab nichts zu fuellen. Unter Windows ist dieser
+      Name nicht abwesend, sondern BELEGT: der App-Execution-Alias aus dem
+      Microsoft Store. Er startet, schreibt "Python was not found" und endet
+      mit 49.
+
+      Die Wirkung ist deshalb keine Fehlermeldung, sondern eine LEERE Zahl.
+      `.\team-status.ps1 -Budget` zeigte "Ralph-Logs (Bau, o. Archiv):
+      USD" — nicht null, nicht Fehler, leer. Der Kostenpfad war seit dem
+      Installationstag tot, und jedes Update meldete Erfolg.
+
+      Geprueft wird der START, nicht die Existenz (Lehre BL-122). Gemeldet,
+      nicht repariert: Die Konfiguration traegt Projektdaten, und der Nachtrag
+      steht als kopierbare Zeile daneben.
+    #>
+    $kaputt = $false
+    $gefunden = $false
+    foreach ($name in @('team.config.sh', 'team.config.ps1')) {
+        $pfad = Join-Path $Ziel $name
+        if (-not (Test-Path $pfad)) { continue }
+        $gefunden = $true
+        $interpreter = Python-Aus-Config $pfad
+        if (-not $interpreter) {
+            Gelb "  [!] ${name}: kein Interpretername auffindbar — bitte die Zeile"
+            Gelb "      mit team/tools/kosten.py von Hand ansehen."
+            continue
+        }
+        $laeuft = $false
+        if (Get-Command $interpreter -ErrorAction SilentlyContinue) {
+            try {
+                & $interpreter -c 'import sys; sys.exit(0 if sys.version_info[:2] >= (3, 8) else 1)' 2>$null | Out-Null
+                $laeuft = ($LASTEXITCODE -eq 0)
+            } catch { $laeuft = $false }
+        }
+        if ($laeuft) {
+            Gruen "  [ok] ${name}: '$interpreter' startet und ist Python 3.8+"
+            continue
+        }
+        $kaputt = $true
+        Rot  "  [x] ${name}: '$interpreter' antwortet auf dieser Maschine nicht."
+        $hier = Finde-Python
+        if ($hier) { Gelb "      Hier laeuft Python unter dem Namen '$hier'." }
+        else       { Gelb "      Es liess sich auch kein anderer Name finden — Python fehlt."; $hier = 'python' }
+        Gelb "      Nachtragen (-Update fasst die Datei nicht an):"
+        if ($name -eq 'team.config.sh') {
+            Gelb "        TEAM_PYTHON=`"`${TEAM_PYTHON:-$hier}`""
+            Gelb "        TEAM_BEUTEBUCH_TOOL=`"`${TEAM_BEUTEBUCH_TOOL:-`$TEAM_PYTHON team/tools/beutebuch.py}`""
+            Gelb "        TEAM_KOSTEN_TOOL=`"`${TEAM_KOSTEN_TOOL:-`$TEAM_PYTHON team/tools/kosten.py}`""
+        } else {
+            Gelb "        `$TEAM_BEUTEBUCH_TOOL = Team-Wert 'TEAM_BEUTEBUCH_TOOL' '$hier team/tools/beutebuch.py'"
+            Gelb "        `$TEAM_KOSTEN_TOOL    = Team-Wert 'TEAM_KOSTEN_TOOL'    '$hier team/tools/kosten.py'"
+        }
+    }
+    if (-not $gefunden) { Gelb "  [!] keine Konfiguration gefunden" }
+    return (-not $kaputt)
+}
+
 # --- Kopieren -------------------------------------------------------------------
 $script:Geschrieben = 0
 $script:Uebersprungen = 0
@@ -633,6 +730,51 @@ if ($Update) {
 
     Kopf ".gitignore gegen die Vorlage (BL-109)"
     Gitignore-Abgleich melden
+
+    # BL-133: dieselbe Bauart wie die Zeile darueber — was -Update nicht
+    # anfasst, muss es trotzdem ANSEHEN. Ein Interpretername, der auf dieser
+    # Maschine nicht startet, macht den Kostenpfad tot und die Anzeige leer,
+    # ohne je einen Fehler zu melden.
+    Kopf "Interpreter der Team-Werkzeuge (BL-131/BL-133)"
+    Python-Abgleich | Out-Null
+
+    # BL-133: Die Abwahl einer Bahn wirkt bisher nur bei der ERSTinstallation.
+    # Test-BahnAbgewaehlt laesst den Installer die Dateien der anderen Bahn
+    # ueberspringen — was schon daliegt, bleibt liegen. Fuer ein bestehendes
+    # zweibahniges Projekt heisst -NurPwsh beim Update also "ab jetzt nicht
+    # mehr aktualisieren", nicht "weg damit". Der Unterschied ist folgenreich:
+    # Die Testsuite entscheidet an der ANWESENHEIT der Dateien, welche Bahn
+    # sie faehrt (conftest: bahnen_in_der_ablage) — sie faehrt also weiter
+    # eine Bahn, die der Anwender gerade abgewaehlt hat, mit einer Bibliothek,
+    # die von diesem Update an veraltet.
+    #
+    # Geloescht wird trotzdem nichts (Lehre BL-12: Ein pauschales Loeschen des
+    # Installers hat im Feld einen projekteigenen Test mitgenommen). Genannt
+    # wird es, mit dem Befehl daneben.
+    if ($script:NurBahn) {
+        $reste = @()
+        # Der relative Name wird gebaut, nicht ausgerechnet: Resolve-Path
+        # -RelativeBasePath gibt es erst ab PowerShell 7.4, und der Installer
+        # laeuft auch darunter.
+        foreach ($paar in @(@{ Ordner = $Ziel; Praefix = '' },
+                            @{ Ordner = (Join-Path $Ziel 'team'); Praefix = 'team/' })) {
+            if (-not (Test-Path $paar.Ordner)) { continue }
+            foreach ($f in (Get-ChildItem $paar.Ordner -File)) {
+                if (Test-BahnAbgewaehlt $f.Name) { $reste += "$($paar.Praefix)$($f.Name)" }
+            }
+        }
+        if ($reste.Count) {
+            Kopf "Abgewaehlte Bahn liegt noch da (BL-119/BL-133)"
+            $schalter = if ($script:NurBahn -eq 'pwsh') { '-NurPwsh' } else { '-NurBash' }
+            Write-Host "  $schalter hat diese Dateien nicht mehr aktualisiert,"
+            Write-Host "  aber auch nicht entfernt:"
+            foreach ($r in $reste) { Write-Host "    - $r" }
+            Gelb "  Solange sie liegen, faehrt .\team-test.ps1 die andere Bahn"
+            Gelb "  weiter — mit einer Bibliothek, die ab jetzt veraltet. Entfernen"
+            Gelb "  (bewusst nicht automatisch, Lehre BL-12):"
+            Gelb "    git -C '$Ziel' rm $($reste -join ' ')"
+        }
+    }
 
     Kopf "Selbsttest"
     $fehler = 0

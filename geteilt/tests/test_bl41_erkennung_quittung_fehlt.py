@@ -31,7 +31,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import (BASH, entrypoint_aufruf, kit_pfad,
+from conftest import (BASH, basis_umgebung, entrypoint_aufruf, kit_pfad,
                       kopiere_team_namensraum, pfad_voran)
 
 WURZEL = Path(__file__).resolve().parents[2]
@@ -44,7 +44,7 @@ K33_RESULT = ("The smoke test (compileall + full pytest suite, headless) is "
 
 
 def _lib(script, env_extra=None):
-    env = {"HOME": str(Path.home()), "PATH": "/usr/bin:/bin"}
+    env = basis_umgebung()
     env.update(env_extra or {})
     return subprocess.run([BASH, "-c", f'source "{TEAM_LIB}"\n{script}'],
                           cwd=WURZEL, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")

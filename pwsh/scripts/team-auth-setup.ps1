@@ -39,6 +39,15 @@ $ErrorActionPreference = 'Stop'
 # $LASTEXITCODE lesen, entscheiden. Ohne diese Zeile ist jede dieser
 # Entscheidungen unerreichbar — der Abbruch kommt vorher.
 $PSNativeCommandUseErrorActionPreference = $false
+# BL-135: Dieses Skript faengt die Ausgabe nativer Prozesse auf. PowerShell
+# dekodiert sie mit [Console]::OutputEncoding, und das ist unter Windows die
+# OEM-Codepage der Konsole (auf der Fundmaschine 850). Alles im Kit spricht
+# UTF-8 — als cp850 gelesen wird aus einem Umlaut ein Paar Rahmenzeichen, und
+# aus einem Geviertstrich drei Zeichen. Wer lib.psm1 importiert, erbt die
+# Einstellung von dort; diese Datei tut es nicht und setzt sie deshalb selbst.
+# Ohne BOM: Das ist eine Kodierung fuer einen STROM, nicht fuer eine Datei.
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 
 function Team-CfgDir {
     # %APPDATA% ist der richtige Ort unter Windows. Der Rueckfall haelt das

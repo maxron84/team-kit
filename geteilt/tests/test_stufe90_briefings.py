@@ -14,7 +14,7 @@ import sys
 import re
 from pathlib import Path
 
-from conftest import BASH, kit_pfad
+from conftest import BASH, basis_umgebung, kit_pfad
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 TEAM_LIB = kit_pfad("lib.sh")
@@ -58,7 +58,7 @@ EISERNE_REGEL_ZEILEN = {
 
 
 def _run(bash_script, cwd):
-    env = {"HOME": str(Path.home()), "PATH": "/usr/bin:/bin"}
+    env = basis_umgebung()
     result = subprocess.run(
         [BASH, "-c", bash_script],
         cwd=cwd,

@@ -213,6 +213,24 @@ def werkzeug_wert(relativer_pfad):
     return f"{PYTHON_BEFEHL} {relativer_pfad}"
 
 
+# BL-133: TEAM_PYTHON ist eine Angabe ueber die MASCHINE, kein Testwert.
+#
+# BL-131 hat den festen `python3` aus `lib.sh` entfernt und durch
+# `"$TEAM_PYTHON"` ersetzt — dreizehnmal. Den WERT traegt seither
+# `team.config.sh`, gefuellt vom Installer aus dem, was er auf der Maschine
+# wirklich gefunden hat. Nur: Der Harnisch ist kein installiertes Projekt. Er
+# sourct `lib.sh` direkt, und dann greift deren eigener POSIX-Default
+# `python3` — unter Windows der App-Execution-Alias aus dem Microsoft Store.
+#
+# Die Folge war ein Lauf, in dem 65 Fehlschlaege dieselbe Zeile trugen
+# ("Python was not found") und kein einziger davon aus dem Kit kam: BL-130
+# in neuer Gestalt. Der Harnisch nimmt hier deshalb dieselbe Rolle ein wie
+# `team.config.sh` im Feld — er sagt, wie der Interpreter auf DIESER Maschine
+# heisst. `werkzeug_wert()` tut fuer die beiden Werkzeugzeilen laengst
+# dasselbe; die dreizehn Aufrufe in `lib.sh` hatte niemand nachgezogen.
+os.environ.setdefault("TEAM_PYTHON", PYTHON_BEFEHL)
+
+
 # Die Variablen, ohne die ein Windows-Kindprozess nicht arbeiten kann. Die
 # Minimal-Umgebung in `Schale.lauf` ist Absicht — sie haelt TEAM_*-Werte der
 # Wirtssitzung aus dem Test heraus. Diese Liste erweitert sie um genau das,
@@ -235,7 +253,13 @@ def basis_umgebung(**zusatz):
     meldet "The term 'git' is not recognized".
     """
     umgebung = {"HOME": str(Path.home()),
-                "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin")}
+                "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
+                # BL-133: kein TEAM_*-Wert der Wirtssitzung, sondern eine
+                # Angabe ueber die Maschine — dieselbe, die im Feld der
+                # Installer in team.config.sh schreibt. Ohne sie faellt
+                # `lib.sh` auf ihren POSIX-Default `python3` zurueck, und der
+                # ist unter Windows der Store-Alias (BL-131).
+                "TEAM_PYTHON": os.environ.get("TEAM_PYTHON", PYTHON_BEFEHL)}
     if IST_WINDOWS:
         for name in _WINDOWS_GRUNDAUSSTATTUNG:
             wert = os.environ.get(name)

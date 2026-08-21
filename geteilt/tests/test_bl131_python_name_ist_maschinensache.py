@@ -95,6 +95,48 @@ def test_lib_sh_ruft_python_nicht_mehr_unter_festem_namen():
         'endet mit 49 und "Python was not found".\n  ' + "\n  ".join(funde))
 
 
+def test_die_entrypoints_rufen_python_nicht_unter_festem_namen():
+    """BL-133: Der Fund war groesser, als BL-131 ihn gefasst hat.
+
+    Gezaehlt und geheilt wurden damals DREI Orte — `lib.sh`, die
+    Konfigurationsvorlage, der Installer. Die Entrypoints standen nicht auf
+    der Liste, und in zweien von ihnen stand der feste Name weiter:
+
+      * `team-status.sh` — fuenfmal, im Budget-Block. Wirkung: Der
+        Kontostand zeigte unter Windows LEERE Betraege ("real via API
+        abgerechnet:  USD"). Nicht null, nicht Fehler — leer. Eine Anzeige,
+        die bei kaputter Messung eine leere Zahl zeigt, sieht aus wie ein
+        Projekt, das noch nichts ausgegeben hat.
+      * `vollautomatik.sh` — dreimal, in `budget_ok`. Das ist die
+        Durchsetzung des Budget-Deckels selbst. Der Aufruf endete mit 49,
+        also ungleich 0, und das las die Bedingung als "Deckel NICHT
+        ueberschritten": Der Lauf lief weiter, und zwar genau dann, wenn er
+        haette anhalten sollen.
+
+    Beide sourcen `team/lib.sh` und haben `$TEAM_PYTHON` damit vor der ersten
+    Verwendung. Es hat sie nur niemand angefasst.
+    """
+    funde = []
+    for quelle in sorted((WURZEL / "bash" / "entry").glob("*.sh")) or \
+            sorted(WURZEL.glob("*.sh")):
+        # team-test.sh sucht den Interpreter selbst — sie laeuft VOR jeder
+        # Konfiguration und darf (muss) Kandidaten beim Namen nennen.
+        if quelle.name == "team-test.sh":
+            continue
+        for nummer, zeile in enumerate(
+                quelle.read_text(encoding="utf-8").splitlines(), 1):
+            ohne_kommentar = zeile.split("#", 1)[0]
+            if "TEAM_PYTHON=" in ohne_kommentar:
+                continue
+            if re.search(r"(?<![\w./$-])python3?(?=\s+(?:-c|-m|-\s|-\b|\S))",
+                         ohne_kommentar):
+                funde.append(f"{quelle.name}:{nummer}: {zeile.strip()}")
+    assert not funde, (
+        "Diese Entrypoints rufen Python unter einem festen Namen auf. Unter "
+        "Windows ist `python3` der Store-Alias: Exit 49, leere Ausgabe "
+        "(BL-133).\n  " + "\n  ".join(funde))
+
+
 def test_lib_sh_setzt_den_default_greppbar():
     """Vertrag Punkt 6: Der eigene Default der Bibliothek steht in einer Zeile,
     die ein Test statisch lesen kann."""
@@ -204,7 +246,16 @@ def test_resolver_ueberspringt_einen_store_alias(tmp_path):
         "the Microsoft Store' >&2\n"
         "exit 49\n", encoding="utf-8")
     alias.chmod(0o755)
-    (fake / "python").symlink_to(sys.executable)
+    # BL-133: ein WEITERLEITENDES SKRIPT, kein Symlink. `os.symlink` verlangt
+    # unter Windows entweder Administratorrechte oder den aktivierten
+    # Entwicklermodus; ohne beides endet der Test mit
+    # "WinError 1314: A required privilege is not held by the client" — also
+    # rot aus einem Grund, der mit dem Geprueften nichts zu tun hat. Genau die
+    # Bauart Fehlschlag, gegen die BL-130 steht.
+    echt = fake / "python"
+    echt.write_text(f'#!/bin/sh\nexec "{sys.executable}" "$@"\n',
+                    encoding="utf-8")
+    echt.chmod(0o755)
 
     ergebnis = subprocess.run(
         [BASH, "-c", block.group(0) + "\nfinde_python\n"],

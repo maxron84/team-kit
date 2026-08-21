@@ -121,6 +121,86 @@ gitignore_abgleich() {  # gitignore_abgleich <ergaenzen|melden>
     gelb "      printf '%s\\n'$nachtrag >> \"$ZIEL/.gitignore\""
 }
 
+# python_abgleich — steht in der Konfiguration ein Interpreter, der ANTWORTET?
+#
+# BL-133, derselbe Schnitt wie BL-109 bei der .gitignore: "--update fasst
+# team.config.* nicht an" ist richtig; "sieht sie gar nicht an" war es nicht.
+#
+# Ein Projekt, das vor BL-122/BL-131 eingerichtet wurde, traegt in BEIDEN
+# Konfigurationen den Namen `python3` — die Vorlagen hatten damals gar keinen
+# Platzhalter, es gab nichts zu fuellen. Unter Windows ist dieser Name nicht
+# abwesend, sondern BELEGT: der App-Execution-Alias aus dem Microsoft Store.
+# Er startet, schreibt "Python was not found" und endet mit 49.
+#
+# Die Wirkung ist deshalb keine Fehlermeldung, sondern eine LEERE Zahl.
+# `team-status --budget` zeigte "real via API abgerechnet:  USD" — nicht null,
+# nicht Fehler, leer. Der komplette Kostenpfad war seit dem Installationstag
+# tot, und jedes Update meldete Erfolg.
+#
+# Geprueft wird der START, nicht die Existenz: `command -v` findet den Alias
+# (das ist die Lehre aus BL-122). Gemeldet, nicht repariert — die
+# Konfiguration traegt Projektdaten; der Nachtrag steht als kopierbare Zeile
+# daneben.
+python_aus_config() {  # python_aus_config <konfigdatei>
+    local name
+    name="$(sed -n 's/.*[-:"'"'"'$ ]\([A-Za-z0-9_.]*\) team\/tools\/kosten\.py.*/\1/p' \
+            "$1" | head -1)"
+    if [ "$name" = "TEAM_PYTHON" ]; then
+        # Die Werkzeugzeile zeigt auf die Variable — der Name steht eine Zeile
+        # hoeher. `tr -d` davor, weil dieser Ausdruck als einziger am
+        # ZEILENENDE ankert: Eine team.config.sh, die unter Windows liegt, hat
+        # CRLF, und dann steht zwischen `}"` und dem Anker noch ein
+        # Wagenruecklauf. Das sed aus Git for Windows nimmt ihn von sich aus
+        # weg, GNU sed unter Linux nicht — der Fall waere also ausgerechnet
+        # dort rot, wo diese Bahn zu Hause ist.
+        name="$(tr -d '\r' < "$1" \
+                | sed -n 's/^TEAM_PYTHON="\${TEAM_PYTHON:-\(.*\)}"$/\1/p' | head -1)"
+    fi
+    printf '%s' "$name"
+}
+
+python_abgleich() {
+    local datei name gefunden=0 kaputt=0
+    for datei in "$ZIEL/team.config.sh" "$ZIEL/team.config.ps1"; do
+        [ -f "$datei" ] || continue
+        gefunden=1
+        name="$(python_aus_config "$datei")"
+        if [ -z "$name" ]; then
+            gelb "  ! $(basename "$datei"): kein Interpretername auffindbar —"
+            gelb "    bitte die Zeile mit team/tools/kosten.py von Hand ansehen."
+            continue
+        fi
+        if command -v "$name" >/dev/null 2>&1 && \
+           "$name" -c 'import sys; sys.exit(0 if sys.version_info[:2] >= (3, 8) else 1)' \
+                >/dev/null 2>&1; then
+            gruen "  ✓ $(basename "$datei"): '$name' startet und ist Python 3.8+"
+            continue
+        fi
+        kaputt=1
+        rot   "  ✗ $(basename "$datei"): '$name' antwortet auf dieser Maschine nicht."
+        if [ "$PYTHON_GEFUNDEN" -eq 1 ]; then
+            gelb "    Hier laeuft Python unter dem Namen '$PYTHON'."
+        else
+            gelb "    Es liess sich auch kein anderer Name finden — Python fehlt."
+        fi
+        case "$(basename "$datei")" in
+            team.config.sh)
+                gelb "    Nachtragen (--update fasst die Datei nicht an):"
+                gelb "      TEAM_PYTHON=\"\${TEAM_PYTHON:-$PYTHON}\""
+                gelb "      TEAM_BEUTEBUCH_TOOL=\"\${TEAM_BEUTEBUCH_TOOL:-\$TEAM_PYTHON team/tools/beutebuch.py}\""
+                gelb "      TEAM_KOSTEN_TOOL=\"\${TEAM_KOSTEN_TOOL:-\$TEAM_PYTHON team/tools/kosten.py}\""
+                ;;
+            team.config.ps1)
+                gelb "    Nachtragen (--update fasst die Datei nicht an):"
+                gelb "      \$TEAM_BEUTEBUCH_TOOL = Team-Wert 'TEAM_BEUTEBUCH_TOOL' '$PYTHON team/tools/beutebuch.py'"
+                gelb "      \$TEAM_KOSTEN_TOOL    = Team-Wert 'TEAM_KOSTEN_TOOL'    '$PYTHON team/tools/kosten.py'"
+                ;;
+        esac
+    done
+    [ "$gefunden" -eq 1 ] || gelb "  ! keine Konfiguration gefunden"
+    [ "$kaputt" -eq 0 ]
+}
+
 if [ "$UPDATE" -eq 1 ] && [ "$FORCE" -eq 1 ]; then
     rot "FEHLER: --update und --force schliessen sich aus."
     echo "  --update hebt ein gelebtes Projekt sicher auf eine neue Kit-Version."
@@ -534,6 +614,45 @@ PY
     # waehrend der Installer Erfolg meldete. Gemeldet, nicht ergaenzt.
     kopf ".gitignore gegen die Vorlage (BL-109)"
     gitignore_abgleich melden
+
+    # BL-133: dieselbe Bauart wie die Zeile darueber — was --update nicht
+    # anfasst, muss es trotzdem ANSEHEN. Ein Interpretername, der auf
+    # dieser Maschine nicht startet, macht den Kostenpfad tot und die
+    # Anzeige leer, ohne je einen Fehler zu melden.
+    kopf "Interpreter der Team-Werkzeuge (BL-131/BL-133)"
+    python_abgleich || true
+
+    # BL-133: Die Abwahl einer Bahn wirkt bisher nur bei der ERSTinstallation.
+    # `bahn_abgewaehlt` laesst den Installer die Dateien der anderen Bahn
+    # ueberspringen — was schon daliegt, bleibt liegen. Fuer ein bestehendes
+    # zweibahniges Projekt heisst `--nur-pwsh` beim Update also: "ab jetzt
+    # nicht mehr aktualisieren", nicht "weg damit". Der Unterschied ist
+    # folgenreich: Die Testsuite entscheidet an der ANWESENHEIT der Dateien,
+    # welche Bahn sie faehrt (conftest: bahnen_in_der_ablage), und faehrt
+    # damit weiter eine Bahn, die der Anwender gerade abgewaehlt hat — mit
+    # einer Bibliothek, die von diesem Update an veraltet.
+    #
+    # Geloescht wird trotzdem nichts. Das ist die Lehre aus BL-12: Ein
+    # pauschales rm des Installers hat im Feld einen projekteigenen Test
+    # mitgenommen. Genannt wird es, mit dem Befehl daneben.
+    if [ -n "$NUR_BAHN" ]; then
+        RESTE=""
+        for f in "$ZIEL"/* "$ZIEL"/team/*; do
+            [ -f "$f" ] || continue
+            bahn_abgewaehlt "$f" || continue
+            RESTE="$RESTE ${f#"$ZIEL"/}"
+        done
+        if [ -n "$RESTE" ]; then
+            kopf "Abgewaehlte Bahn liegt noch da (BL-119/BL-133)"
+            echo "  --nur-$NUR_BAHN hat diese Dateien nicht mehr aktualisiert,"
+            echo "  aber auch nicht entfernt:"
+            for r in $RESTE; do echo "    · $r"; done
+            gelb "  Solange sie liegen, faehrt ./team-test die andere Bahn weiter —"
+            gelb "  mit einer Bibliothek, die ab jetzt veraltet. Entfernen (bewusst"
+            gelb "  nicht automatisch, Lehre BL-12):"
+            gelb "    git -C \"$ZIEL\" rm$(printf ' %s' $RESTE)"
+        fi
+    fi
 
     # Doku-Dateien tragen Projektanpassungen (gefuellte TODOs, eigene
     # Abschnitte) und werden deshalb NICHT ueberschrieben. Der Mensch muss

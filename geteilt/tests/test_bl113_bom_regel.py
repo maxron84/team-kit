@@ -97,6 +97,49 @@ def test_shell_und_python_tragen_kein_bom():
         "0.0000: " + ", ".join(mit))
 
 
+def test_wer_powershell_quelltext_SCHREIBT_setzt_das_bom():
+    """BL-134: Die Regel bindet nicht nur die ausgelieferten Dateien, sondern
+    auch jede Stelle, die zur Laufzeit eine `.ps1` schreibt.
+
+    Der Fall, an dem es auffiel: `kit-test.ps1` praeparierte in Schritt 5 eine
+    `team.config.ps1` — und nahm dafuer die Kodierungszeile mit, die zwei
+    Zeilen hoeher fuer die `team.config.sh` steht, also OHNE BOM. Der
+    Selbsttest hat sich damit seinen eigenen roten Test gebaut: Der
+    anschliessende `install.ps1 -Update` fuhr die Regressionstests, die
+    meldeten `test_powershell_quelltext_traegt_bom` als Fehlschlag, und
+    kit-test.ps1 brach mit "install.ps1 -Update schlug fehl" ab. Der
+    Installer hatte nichts falsch gemacht.
+
+    Das ist die teuerste Bauart Fehlschlag: volle Laufzeit, und der Finger
+    zeigt auf die falsche Stelle. Geprueft wird deshalb am QUELLTEXT — die
+    Wirkung ist nur auf einer Maschine mit Windows PowerShell 5.1 sichtbar,
+    die Verwechslung aber ueberall.
+
+    Datenschreiber sind ausgenommen und muessen es sein: Ledger, Kostenlogs
+    und Beutebuch tragen KEIN BOM (die Gegenrichtung dieses Tests).
+    """
+    quellen = _dateien(("pwsh/*.ps1", "pwsh/*.psm1", "pwsh/entry/*.ps1",
+                        "pwsh/scripts/*.ps1", "*.ps1", "team/*.ps1",
+                        "team/*.psm1"))
+    if not quellen:
+        return  # Bash-only-Installation: nichts zu pruefen
+    funde = []
+    for pfad in quellen:
+        zeilen = pfad.read_text(encoding="utf-8-sig").splitlines()
+        for nummer, zeile in enumerate(zeilen, 1):
+            if "UTF8Encoding($false)" not in zeile.replace(" ", ""):
+                continue
+            # Das Ziel steht im WriteAllText darueber, nicht in dieser Zeile.
+            umfeld = " ".join(zeilen[max(0, nummer - 4):nummer])
+            if ".ps1" in umfeld or ".psm1" in umfeld:
+                funde.append(f"{pfad.relative_to(WURZEL).as_posix()}:{nummer}")
+    assert not funde, (
+        "Hier wird PowerShell-Quelltext OHNE BOM geschrieben. Windows "
+        "PowerShell 5.1 liest die Datei danach in der ANSI-Codepage, und der "
+        "naechste Lauf meldet Syntaxfehler in deutscher Prosa (BL-113/BL-134):"
+        "\n  " + "\n  ".join(funde))
+
+
 def test_batchdateien_sind_reines_ascii():
     """`.cmd` liest der Kommandozeileninterpreter in der OEM-Codepage.
 

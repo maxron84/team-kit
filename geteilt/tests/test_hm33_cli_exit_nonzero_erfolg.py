@@ -17,7 +17,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from conftest import BASH, kit_pfad
+from conftest import BASH, basis_umgebung, kit_pfad
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 TEAM_LIB = kit_pfad("lib.sh")
@@ -35,14 +35,12 @@ team_claude "testrolle" "sonnet" "{out_path}" "testprompt"
 echo "EXITCODE:$?"
 echo "TEAM_LAST_OUT:$TEAM_LAST_OUT"
 '''
-    env = {
-        "HOME": str(Path.home()),
-        "PATH": "/usr/bin:/bin",
-        "AUTH_MODE": "api",
-        "ANTHROPIC_API_KEY": "sk-ant-dummy-test-key",
-        "STUB_JSON": stub_json,
-        "STUB_EXIT": str(stub_exit),
-    }
+    env = basis_umgebung(
+        AUTH_MODE="api",
+        ANTHROPIC_API_KEY="sk-ant-dummy-test-key",
+        STUB_JSON=stub_json,
+        STUB_EXIT=str(stub_exit),
+    )
     return subprocess.run(
         [BASH, "-c", script],
         cwd=REPO_ROOT,

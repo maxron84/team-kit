@@ -31,6 +31,24 @@ $ErrorActionPreference = 'Continue'
 # $LASTEXITCODE lesen, entscheiden. Ohne diese Zeile ist jede dieser
 # Entscheidungen unerreichbar — der Abbruch kommt vorher.
 $PSNativeCommandUseErrorActionPreference = $false
+# BL-135, Empfaengerseite. Dieses Skript FAENGT die Ausgabe fremder Prozesse
+# auf — den Installer, pytest, und in Schritt 6 einen kompletten
+# Vollautomatik-Lauf — und vergleicht sie anschliessend mit Mustern, in denen
+# Umlaute und Geviertstriche stehen. PowerShell dekodiert die Ausgabe nativer
+# Prozesse mit [Console]::OutputEncoding, und das ist unter Windows die
+# OEM-Codepage der Konsole.
+#
+# Die Rollen schreiben seit BL-135 ausdruecklich UTF-8 (lib.psm1). Als cp850
+# gelesen wird daraus "├╝ber RALPH_CAP" statt "über RALPH_CAP" — und die
+# Pruefung faellt, obwohl der Lauf richtig war. Genau so ist dieser Schritt
+# beim fuenften Anlauf rot geworden, nachdem die Schreibseite gefixt war:
+# Eine Leitung hat zwei Enden, und beide muessen dieselbe Kodierung sprechen.
+#
+# lib.psm1 setzt dieselbe Zeile fuer alle Entrypoints; die erben es damit vom
+# Import. Dieses Skript importiert die Bibliothek NICHT (es prueft sie), also
+# steht sie hier eigens.
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 # Seit der Bahn-Trennung: BAHN ist <kit>\pwsh, KIT die Wurzel des Kits.
 $BAHN = Split-Path -Parent $PSCommandPath
 $KIT  = Split-Path -Parent $BAHN
@@ -180,8 +198,24 @@ try {
         (New-Object System.Text.UTF8Encoding($false)))
     $confPs = (Get-Content -Raw 'team.config.ps1') -replace "(?m)^\`$TEAM_SMOKE_TEST = .*$",
               "`$TEAM_SMOKE_TEST = Team-Wert 'TEAM_SMOKE_TEST' './smoke.ps1'"
+    # BL-134: MIT BOM — und das ist nicht dieselbe Zeile wie zwei hoeher.
+    #
+    # Die Zeile darueber schreibt eine .sh und muss BOM-los sein; diese hier
+    # schreibt PowerShell-Quelltext und muss ein BOM tragen (BL-113,
+    # .gitattributes). Kopiert wurde trotzdem die obere. Die Folge: Der
+    # Selbsttest praeparierte sich seinen eigenen roten Test — Schritt 5 fuhr
+    # `install.ps1 -Update`, dessen Regressionslauf meldete
+    # `test_powershell_quelltext_traegt_bom` als Fehlschlag, und kit-test.ps1
+    # brach mit "install.ps1 -Update schlug fehl" ab. Der Installer hatte
+    # nichts falsch gemacht; die Vorbereitung hatte die Datei kaputtgemacht.
+    #
+    # Ein Selbsttest, der seinen eigenen Befund erzeugt, ist die teuerste
+    # Bauart: Er kostet die volle Laufzeit und zeigt auf die falsche Stelle.
+    # Und die Regel, die er verletzte, ist keine Formsache — Windows
+    # PowerShell 5.1 liest eine .ps1 ohne BOM in der ANSI-Codepage, und jeder
+    # Geviertstrich darin schliesst dann seine Zeichenkette mitten im Satz.
     [System.IO.File]::WriteAllText((Join-Path $ziel 'team.config.ps1'), $confPs,
-        (New-Object System.Text.UTF8Encoding($false)))
+        (New-Object System.Text.UTF8Encoding($true)))
     # Ein Test, den das Kit nicht kennt — wie ihn ein Projekt schreibt, das
     # eine Luecke im Team selbst schliesst, bevor der Fund im Kit ankommt.
     Set-Content -Path 'team/tests/test_projekteigener_fund.py' `

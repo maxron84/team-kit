@@ -29,7 +29,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import BASH, kit_pfad
+from conftest import BASH, basis_umgebung, kit_pfad
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TEAM_LIB = kit_pfad("lib.sh")
@@ -40,7 +40,7 @@ def _bash(skript, cwd):
     return subprocess.run(
         [BASH, "-c", skript],
         cwd=cwd,
-        env={"HOME": str(Path.home()), "PATH": "/usr/local/bin:/usr/bin:/bin"},
+        env=basis_umgebung(),
         capture_output=True,
         text=True, encoding="utf-8", errors="replace",
     )
