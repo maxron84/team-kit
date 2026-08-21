@@ -59,7 +59,13 @@ def test_erster_aufruf_legt_genau_eine_architekt_zeile_an(tmp_path):
     assert len(architekt_zeilen) == 1
     assert architekt_zeilen[0]["usd"] == 16.50
     assert architekt_zeilen[0]["domaene"] == "team"
-    assert architekt_zeilen[0]["auth"] == "api"
+    # BL-143: Hier stand "api". Die Zeile war ab der Abo-Umstellung KEINE
+    # Zusicherung mehr, sondern eine festgeschriebene Fehlbuchung — sie hielt
+    # den Alias auf einer Achse, gegen die die Regeltexte seither ausdruecklich
+    # stehen ("keine Rolle ist mehr fest api"). Im Feld sind so 16,3990 USD in
+    # der Zeile "real via API abgerechnet" gelandet. Ein gruener Test war Teil
+    # des Grundes, warum es niemandem auffiel.
+    assert architekt_zeilen[0]["auth"] == "abo"
 
     summe = kosten.ledger_summe(str(ledger), rolle="architekt")
     assert summe == 16.50

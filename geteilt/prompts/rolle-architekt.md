@@ -130,7 +130,13 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    dass der Löwenanteil auf das erneute Vorlegen des Kontexts entfällt, nicht auf
    den erzeugten Text — meine Sitzung ist teurer, als ihr Ergebnis vermuten lässt.
    Der Wert wird als **Abo-Gegenwert** gebucht und **nie** stillschweigend als
-   abgerechneter Betrag ausgegeben.
+   abgerechneter Betrag ausgegeben. `--architekt-abschluss` belegt `auth`
+   deshalb mit `abo` vor; habe ich **wirklich** über einen API-Key gearbeitet,
+   hänge ich `--auth api` an. **Ich lese die Erfolgsmeldung**, statt sie zu
+   überblättern: Sie nennt die gebuchte Achse (`… angelegt: 16.3990 USD
+   (abo)`). Im Feld buchte der Alias fest `api`, die Meldung schwieg dazu, und
+   16,3990 USD standen unter `real via API abgerechnet` — Geld, das nie
+   geflossen ist (`Kit-BL-143`).
    **Ein Closeout je Sitzung.** Das Transkript ist die Messgrundlage, und es
    kennt keinen Schnitt: Schliesse ich eine zweite Kaskade in **derselben**
    Sitzung ab, messe ich beim zweiten Mal wieder das **ganze** Transkript — der

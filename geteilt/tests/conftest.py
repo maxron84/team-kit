@@ -332,6 +332,29 @@ def kit_pfad(*teile):
     return kit if kit.exists() else projekt
 
 
+def entrypoint_pfad(name):
+    """Loest einen ENTRYPOINT in beiden Ablagen auf ('team-status.sh').
+
+    kit_pfad() kann das nicht und soll es auch nicht: Es kennt die
+    Team-INFRASTRUKTUR (lib, tools, prompts, tests), und die liegt in der
+    Installation geschlossen unter team/. Die Entrypoints liegen dort in der
+    WURZEL und im Kit nach Bahn getrennt unter bash/entry/ bzw. pwsh/entry/ —
+    eine andere Regel, die kit_pfad() nur verwaschen wuerde.
+
+    Rueckgabe ist der Pfad der Ablage, die gerade vorliegt; existiert er
+    nirgends, der Pfad der INSTALLATION — damit eine Fehlermeldung den Ort
+    nennt, an dem der Leser die Datei erwartet.
+    """
+    installiert = REPO_ROOT / name
+    if installiert.is_file():
+        return installiert
+    for bahn in ("bash", "pwsh"):
+        kit = REPO_ROOT / bahn / "entry" / name
+        if kit.is_file():
+            return kit
+    return installiert
+
+
 def bahnen_in_der_ablage():
     """Welche Bahnen liegen hier ueberhaupt? — Rueckgabe z. B. {"bash"}.
 
@@ -361,6 +384,43 @@ def ueberspringe_ohne_beide_bahnen():
         f"einbahnige Ablage (vorhanden: {da}) — die andere Bahn ist mit "
         f"--nur-bash/--nur-pwsh abgewaehlt worden. Zurueckholen: "
         f"install mit --update ohne Schalter.")
+
+
+def ueberspringe_ohne_bahn(bahn):
+    """Skip mit Begruendung, wenn GENAU DIESE Bahn nicht in der Ablage liegt.
+
+    BL-129: `ueberspringe_ohne_beide_bahnen()` gab es schon, aber es trifft nur
+    Tests, die BEIDE Bahnen VERGLEICHEN. Ein Test, der EINE Bahn FAEHRT, hatte
+    keinen Uebersprung fuer IHR Fehlen — er lief los und scheiterte an einer
+    Datei, die es in dieser Ablage nicht gibt. In einer mit `--nur-pwsh`
+    installierten Ablage waren so 109 von 487 Faellen rot, ohne dass irgendetwas
+    kaputt war.
+
+    Der Unterschied ist die Frage, die der Test stellt:
+
+        vergleicht beide Bahnen  -> ueberspringe_ohne_beide_bahnen()
+        faehrt EINE Bahn         -> ueberspringe_ohne_bahn("<bahn>")
+
+    Der Uebersprung ist ABSICHTLICH sichtbar (Zusammenfassung unten): Ein
+    stiller Uebersprung von 109 Faellen liest sich am Ende wie ein bestandener
+    Nachweis, und das waere schlimmer als das rote Bild, das er ersetzt.
+    """
+    if bahn in bahnen_in_der_ablage():
+        return
+    da = ", ".join(sorted(bahnen_in_der_ablage())) or "keine"
+    # Die ZAHL ist der Punkt: BL-129 wurde entdeckt, weil 109 Faelle rot waren.
+    # Waeren sie still uebersprungen worden, haette niemand hingesehen. pytest
+    # legt die laufende Kennung in die Umgebung — das ist der einzige Weg, sie
+    # ohne Fixture zu erfahren, und ein Fixture waere ein Zwang fuer jeden
+    # Aufrufer.
+    kennung = os.environ.get("PYTEST_CURRENT_TEST", "unbekannt").split(" ")[0]
+    _QUOTE["fehlende_bahn"].setdefault(bahn, {"wo": set(), "faelle": set()})
+    _QUOTE["fehlende_bahn"][bahn]["wo"].add(da)
+    _QUOTE["fehlende_bahn"][bahn]["faelle"].add(kennung.split("[")[0])
+    pytest.skip(
+        f"die {bahn}-Bahn liegt nicht in dieser Ablage (vorhanden: {da}) — "
+        f"mit --nur-bash/--nur-pwsh abgewaehlt. Zurueckholen: install mit "
+        f"--update ohne Schalter.")
 
 
 def kopiere_team_namensraum(ziel):
@@ -837,7 +897,7 @@ def _pwsh_bereit():
 # --- Fixtures und Bericht ----------------------------------------------------
 
 _QUOTE = {"beide": set(), "nur_bash": set(), "uebersprungen": set(),
-          "einbahnig": set(), "ohne_bash": set()}
+          "einbahnig": set(), "ohne_bash": set(), "fehlende_bahn": {}}
 
 
 @pytest.fixture(params=["bash", "pwsh"])
@@ -947,6 +1007,11 @@ def pytest_terminal_summary(terminalreporter):
         terminalreporter.write_line(
             f"  bash-Bahn uebersprungen    : {len(_QUOTE['ohne_bash'])}  "
             f"({_bash_bereit()[1]})")
+    for bahn, stand in sorted(_QUOTE["fehlende_bahn"].items()):
+        terminalreporter.write_line(
+            f"  {bahn}-Bahn nicht installiert: {len(stand['faelle'])}  "
+            f"(vorhanden: {', '.join(sorted(stand['wo']))} — "
+            f"--update ohne Schalter holt sie zurueck)")
     if _QUOTE["einbahnig"]:
         terminalreporter.write_line(
             f"  einbahnige Ablage          : nur "

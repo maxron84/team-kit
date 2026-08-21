@@ -81,15 +81,12 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from conftest import kit_pfad, verlange_pwsh, werkzeug_wert
+from conftest import (entrypoint_pfad, kit_pfad, ueberspringe_ohne_bahn,
+                      verlange_pwsh, werkzeug_wert)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-STATUS_PS1 = kit_pfad("entry", "team-status.ps1")
-if not STATUS_PS1.is_file():
-    STATUS_PS1 = REPO_ROOT / "pwsh" / "entry" / "team-status.ps1"
-if not STATUS_PS1.is_file():
-    STATUS_PS1 = REPO_ROOT / "team-status.ps1"
+STATUS_PS1 = entrypoint_pfad("team-status.ps1")
 
 # `$name = if (` als Zuweisung. Der Regex FINDET nur den Anfang — ob der
 # Ausdruck ein Array liefert, entscheidet _spanne() weiter unten.
@@ -142,7 +139,15 @@ def _spanne(text, start):
 
 
 def test_kein_array_aus_einem_if_block_mehr():
-    """(1) Quelltext — laeuft auf jedem Wirt, auch ohne pwsh."""
+    """(1) Quelltext — laeuft auf jedem WIRT, auch ohne pwsh installiert.
+
+    Braucht aber die pwsh-Bahn in der ABLAGE: In einem mit --nur-bash
+    installierten Projekt gibt es team-status.ps1 nicht, und ein Test, der eine
+    fehlende Bahn liest, ist genau der Fall aus BL-129. Der erste Entwurf hatte
+    diesen Uebersprung nicht und legte den Selbsttest in Stufe 8 lahm — dort,
+    wo eine einbahnige Ablage gebaut und ihre Testsuite gefahren wird.
+    """
+    ueberspringe_ohne_bahn("pwsh")
     assert STATUS_PS1.is_file(), f"team-status.ps1 nicht gefunden ({STATUS_PS1})"
     text = _quelltext()
     treffer = []
@@ -164,12 +169,21 @@ def test_die_drei_stellen_benutzen_den_helfer():
     Ohne diese Zusicherung liesse sich (1) dadurch gruen machen, dass jemand
     die Zeilen loescht statt sie zu reparieren.
     """
+    ueberspringe_ohne_bahn("pwsh")
     text = _quelltext()
     assert "function Rest-Ohne-Erstes" in text, "die Hilfsfunktion fehlt"
-    assert text.count("Rest-Ohne-Erstes $rest") == 3, (
+    # Untergrenze, keine feste Zahl: BL-142 nannte DREI Stellen (zwei in
+    # Status-RollenAbschluss fuer Notiz und Bau-Notiz, eine in
+    # Status-AkteurAbschluss), BL-143 hat als vierte Status-ArchitektAbschluss
+    # dazugebracht. Eine exakte Zahl waere hier eine Zusicherung ueber die
+    # GROESSE der Datei und muesste bei jedem neuen Wrapper nachgezogen werden —
+    # sie wuerde rot, wo nichts kaputt ist. Was zaehlt, ist die Untergrenze
+    # zusammen mit dem Riegel oben: Der verbietet das alte Idiom ueberall,
+    # diese Zeile verhindert, dass man ihn durch LOESCHEN gruen macht.
+    stellen = text.count("Rest-Ohne-Erstes $rest")
+    assert stellen >= 3, (
         "BL-142 nannte DREI Stellen: zwei in Status-RollenAbschluss (Notiz "
-        "und Bau-Notiz), eine in Status-AkteurAbschluss. Gefunden: "
-        f"{text.count('Rest-Ohne-Erstes $rest')}")
+        f"und Bau-Notiz), eine in Status-AkteurAbschluss. Gefunden: {stellen}")
     assert re.search(r"return\s*,", text), (
         "Rest-Ohne-Erstes muss mit dem UNAEREN KOMMA zurueckgeben — sonst "
         "entpackt die Pipeline die Rueckgabe der FUNKTION, und der Fehler "

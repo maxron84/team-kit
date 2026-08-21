@@ -244,18 +244,35 @@ function Status-Budget {
 }
 
 function Status-ArchitektAbschluss {
-    # A1-Ersetzung (BL-28): haengt die echte Architekt-Ledger-Zeile an und
-    # ersetzt dabei eine vorhandene Zeile derselben Kaskade (Idempotenz).
+    <#
+      A1-Ersetzung (BL-28): haengt die echte Architekt-Ledger-Zeile an und
+      ersetzt dabei eine vorhandene Zeile derselben Kaskade (Idempotenz).
+
+      BL-143: Dieser Wrapper las ausschliesslich die ersten DREI Argumente —
+      genau der Fehler, den BL-26 fuer --akteur-abschluss abgetragen hat, hier
+      nur nie nachgezogen. Das Architekten-Briefing sagt woertlich "Schalter
+      des Werkzeugs — --kaskade, --addieren, --ersetzen — haenge ich hinten an;
+      der Wrapper reicht sie durch", und fuer DIESEN Wrapper stimmte das nicht.
+      Aufgefallen ist es erst, als --auth ueberhaupt etwas zu uebergeben hatte.
+    #>
     param([string[]]$Argumente)
     $usd = if ($Argumente.Count -ge 1) { $Argumente[0] } else { '' }
     $domaene = if ($Argumente.Count -ge 2) { $Argumente[1] } else { '' }
-    $notiz = if ($Argumente.Count -ge 3) { $Argumente[2] } else { '' }
     if (-not $usd -or -not $domaene) {
-        Team-Fehler 'Nutzung: team-status --architekt-abschluss <USD> <domaene> ["<notiz>"]'
+        Team-Fehler 'Nutzung: team-status --architekt-abschluss <USD> <domaene> ["<notiz>"] [weitere kosten.py-Schalter]'
         return 1
+    }
+    $rest = @()
+    if ($Argumente.Count -gt 2) { $rest = @($Argumente[2..($Argumente.Count - 1)]) }
+    # Ein Argument, das mit -- beginnt, ist NIE die Notiz (Lehre BL-26).
+    $notiz = ''
+    if ($rest.Count -and $rest[0] -and -not $rest[0].StartsWith('--')) {
+        $notiz = $rest[0]
+        $rest = Rest-Ohne-Erstes $rest      # BL-142
     }
     $a = @('architekt-abschluss', '--usd', $usd, '--domaene', $domaene)
     if ($notiz) { $a += @('--notiz', $notiz) }
+    if ($rest.Count) { $a += $rest }
     Team-Werkzeug $TEAM_KOSTEN_TOOL $a
     return $LASTEXITCODE
 }

@@ -70,11 +70,13 @@ Nutzung:
                                         echten Konsolenwert). --repo zeigt auf
                                         ein anderes Arbeitsverzeichnis (Tests).
     kosten.py architekt-abschluss --usd USD --domaene <domaene>
-              [--kaskade N] [--notiz TEXT] [--pfad PFAD] [--repo DIR]
+              [--auth abo|api] [--kaskade N] [--notiz TEXT] [--pfad PFAD]
+              [--repo DIR]
                                         A1-Ersetzung (BL-28, Kaskade 13/
                                         Stufe 43): haengt die ECHTE
-                                        Architekt-Ledger-Zeile an (auth=api,
-                                        rolle=architekt) fuer die Kaskade, die
+                                        Architekt-Ledger-Zeile an
+                                        (rolle=architekt, auth VORBELEGT mit
+                                        abo — BL-143) fuer die Kaskade, die
                                         der Strippenzieher aus der Anthropic-
                                         Konsole abliest. Ohne --kaskade wird
                                         die Nummer aus .ralph-plan abgeleitet
@@ -91,10 +93,21 @@ Nutzung:
                                         veraendern (Lehre aus BL-23/HM-17:
                                         keine rohe Interpolation). Duenner
                                         Alias auf akteur-abschluss mit
-                                        --rolle architekt --auth api
-                                        vorbelegt (BL-33, Stufe 50) —
-                                        bleibt unveraendert, rueckwaerts-
-                                        kompatibel.
+                                        --rolle architekt vorbelegt (BL-33,
+                                        Stufe 50).
+
+                                        BL-143: --auth war hier FEST "api"
+                                        und buchte damit gegen die eigene
+                                        Regel ("keine Rolle ist mehr fest
+                                        api"); im Feld landeten 16,3990 USD
+                                        Abo-Gegenwert in der Zeile "real via
+                                        API abgerechnet". Jetzt vorbelegt mit
+                                        "abo" und ueberschreibbar, fuer den
+                                        Architekten, der wirklich ueber einen
+                                        API-Key gearbeitet hat. Die
+                                        Erfolgsmeldung NENNT die Achse —
+                                        ohne sie liest sich ein Fehlgriff
+                                        nicht.
     kosten.py akteur-abschluss --usd USD --domaene <domaene>
               --rolle ROLLE --auth abo|api
               [--kaskade N] [--notiz TEXT] [--pfad PFAD] [--repo DIR]
@@ -1623,7 +1636,23 @@ def _main(argv):
         domaene = None
         kaskade = None
         rolle = "architekt" if befehl == "architekt-abschluss" else None
-        auth = "api" if befehl == "architekt-abschluss" else None
+        # BL-143: Hier stand `"api" if befehl == "architekt-abschluss"`. Der
+        # Alias buchte damit FEST die API-Achse — gegen die Regel, die seit der
+        # Abo-Umstellung in CLAUDE.md und im Architekten-Briefing steht: "Auch
+        # Axel und Der Architekt laufen Abo-first — KEINE Rolle ist mehr fest
+        # api", und der Architektenwert sei "als Abo-Gegenwert zu buchen und NIE
+        # stillschweigend als abgerechneter Betrag auszugeben".
+        #
+        # Im Feld (duke-itam-2026, Kaskade 1) landeten so 16,3990 USD in der
+        # Zeile "real via API abgerechnet" des Kontostands — echtes Geld, das
+        # nie geflossen ist. Gemerkt hat es niemand beim Buchen, sondern erst
+        # beim Lesen der geschriebenen Ledger-Zeile: Die Erfolgsmeldung nannte
+        # die Auth-Achse nicht (siehe unten, dieselbe BL-Nummer).
+        #
+        # Vorbelegung statt Festlegung: --auth bleibt ueberschreibbar, damit ein
+        # Architekt, der TATSAECHLICH ueber einen API-Key gearbeitet hat, das
+        # sagen kann. Der haeufige Fall ist die Vorgabe, der seltene der Schalter.
+        auth = "abo" if befehl == "architekt-abschluss" else None
         notiz = ""
         pfad = ".budget-ledger"
         repo = "."
@@ -1661,7 +1690,7 @@ def _main(argv):
                     return 1
                 rolle = rest[i + 1]
                 i += 2
-            elif befehl == "akteur-abschluss" and rest[i] == "--auth":
+            elif rest[i] == "--auth":   # BL-143: beide Befehle, nicht nur akteur
                 if i + 1 >= len(rest):
                     print("Fehler: --auth braucht einen Wert (abo|api)",
                           file=sys.stderr)
@@ -1724,8 +1753,13 @@ def _main(argv):
             aktion = "angelegt"
         else:
             aktion = "addiert" if bestand == "addieren" else "ersetzt"
+        # BL-143: Die Achse GEHOERT in die Meldung. Vorher las sich ein
+        # Fehlgriff nicht — "Architekt-Zeile Kaskade 1 (produkt) angelegt:
+        # 16.3990 USD" ist wahr und verschweigt genau das Feld, in dem der
+        # Fehler sass. Die Roles-/Ralph-Zeilen nennen ihre Achse laengst
+        # ("abo 4.5571 / api 0.0000"); ausgerechnet diese nicht.
         print(f"{rolle.capitalize()}-Zeile Kaskade {kaskade} ({domaene}) "
-              f"{aktion}: {usd:.4f} USD")
+              f"{aktion}: {usd:.4f} USD ({auth})")
         return 0
 
     # BL-4: ralph-abschluss ist derselbe Mechanismus mit anderer Quelle und

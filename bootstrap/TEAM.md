@@ -184,6 +184,15 @@ Vorsichtiger, Schritt für Schritt mit Halt bei dir:
 ./team-status.sh --architekt-abschluss <USD> <domaene> "Kaskade N geplant"
 ```
 
+Der zweite Befehl bucht als **Abo-Gegenwert** (`auth = abo`) — das ist die
+Vorbelegung, weil im Abo kein Geld fließt und die Zeile `real via API
+abgerechnet` im Kontostand genau das behaupten würde. Hast du **wirklich** über
+einen API-Key gearbeitet, hängst du `--auth api` an. Die Erfolgsmeldung nennt
+die Achse, die sie gebucht hat (`… angelegt: 16.3990 USD (abo)`) — lies sie,
+statt sie zu überblättern: Im Feld sind so 16,3990 USD in die falsche Spalte
+gewandert, und aufgefallen ist es erst beim Nachlesen der Ledger-Zeile
+(`Kit-BL-143`).
+
 Der erste Befehl schließt **beide** Kostenquellen des Laufs ab und schreibt
 dafür **zwei** Ledger-Zeilen: `roles` für Harry/Marv/Frank/Axel und `ralph`
 für die Baukosten. Die Rohlogs werden dabei archiviert, damit der Kontostand

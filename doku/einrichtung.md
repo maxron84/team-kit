@@ -7,7 +7,7 @@ gern verwechselt werden:
 | Vorgang | Was passiert | Wie oft |
 |---|---|---|
 | **Klonen und einrichten** | Das Kit-Repo landet auf der Maschine, die Bordmittel werden geprüft, die Auth des Agenten-Werkzeugs steht | einmal pro Maschine |
-| **Einbinden** | `install.sh` legt die 131 Dateien in ein **Zielprojekt** | einmal pro Projekt |
+| **Einbinden** | `install.sh` legt die 133 Dateien in ein **Zielprojekt** | einmal pro Projekt |
 
 Der kurze Weg steht ganz oben; alles darunter ist die Begründung und der
 Fehlerfall.

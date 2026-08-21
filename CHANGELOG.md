@@ -6,6 +6,71 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-143` — der Alias `--architekt-abschluss` buchte fest `auth=api`: gegen
+  die eigene Regel, und mit sichtbarer Geldwirkung.**
+  ⚠️ **Feldbefund** aus `duke-itam-2026`, Closeout der ersten Kaskade. Das
+  Werkzeug meldete
+
+  ```
+  Architekt-Zeile Kaskade 1 (produkt) angelegt: 16.3990 USD
+  ```
+
+  und schrieb dabei `auth = api`. Im Kontostand landeten die 16,3990 USD damit
+  in der Zeile **`real via API abgerechnet`** — echtes Geld, das nie geflossen
+  ist. Der Architekt lief im Abo.
+
+  **Warum das ein Regelbruch ist.** `CLAUDE.md` und das Architekten-Briefing
+  sagen seit der Abo-Umstellung ausdrücklich: „Auch Axel und Der Architekt
+  laufen Abo-first — **keine** Rolle ist mehr fest `api`", und der
+  Architektenwert sei „als **Abo-Gegenwert** zu buchen und **nie**
+  stillschweigend als abgerechneter Betrag auszugeben". Der Alias tat genau
+  Letzteres — an der einen Stelle, die `TEAM.md` und das Briefing als den
+  **normalen** Weg nennen.
+
+  **Warum es niemandem auffiel: die Meldung schwieg zur Achse.** Der Satz oben
+  ist wahr und verschweigt genau das Feld, in dem der Fehler saß. Gemerkt wurde
+  es erst beim **Lesen der geschriebenen Ledger-Zeile** — also nicht durch das
+  Werkzeug, sondern trotz seiner Meldung. Die Roles- und Ralph-Zeilen nennen
+  ihre Achse längst (`abo 4.5571 / api 0.0000`); ausgerechnet diese nicht.
+
+  **Der Fund, ohne den der Fix wirkungslos geblieben wäre.** Beide Wrapper —
+  `status_architekt_abschluss` (bash) und `Status-ArchitektAbschluss` (pwsh) —
+  lasen ausschließlich die ersten **drei** Argumente; jedes weitere fiel
+  kommentarlos weg. Das ist zeichengleich der Fehler, den `BL-26` für
+  `--akteur-abschluss` abgetragen hat, hier nur nie nachgezogen. Verschärfend:
+  Das Briefing behauptet wörtlich, der Wrapper reiche die Schalter durch. Ein
+  `--auth`, das der Alias erbt, aber der Wrapper wegwirft, wäre ein Fix, der
+  sich nur im Unit-Test beweist.
+
+  **Gebaut:** Vorbelegung `abo` statt Festlegung `api` (`--auth` bleibt
+  überschreibbar — der häufige Fall ist die Vorgabe, der seltene der Schalter);
+  die Erfolgsmeldung nennt die Achse, für **beide** Verben; die Durchreiche in
+  beiden Wrappern nach dem `BL-26`-Muster; `TEAM.md` und Architekten-Briefing
+  nachgezogen.
+
+  **Unter Test, sieben Fälle am Verhalten** gegen ein echtes Fixture-Ledger,
+  plus ein Lint über die Vorlagen: Kein Regeltext darf wieder `auth=api`
+  versprechen — und `TEAM.md` darf zur Vorbelegung auch nicht einfach
+  **schweigen**, denn eine stille Vorbelegung wäre nur die freundlichere
+  Fassung desselben Problems. **Gegenprobe dreifach gefahren:** Vorbelegung
+  zurückgedreht, Achse aus der Meldung entfernt, Durchreiche wieder ausgebaut —
+  jedes Mal wird genau der zuständige Fall rot.
+
+  **Zwei Nebenfunde, beide behoben.** `test_stufe43_architekt_abschluss.py`
+  sicherte `auth == "api"` zu und schrieb die Fehlbuchung damit **fest** — ein
+  grüner Test war Teil des Grundes, warum es niemandem auffiel. Und der
+  `BL-130`-Wächter suchte **zeilenweise**, wodurch seine Vorausschau
+  `text=True(?!\s*,\s*encoding=)` bei einem völlig korrekten, über zwei Zeilen
+  gesetzten Aufruf **Fehlalarm** schlug. Ein Wächter, der an einer richtigen
+  Stelle rot wird, wird nicht befolgt, sondern abgeschaltet — er liest jetzt
+  den ganzen Text und leitet die Zeilennummer daraus ab, in beide Richtungen
+  gegengeprüft.
+
+  Neu im Harnisch: `entrypoint_pfad()`. `kit_pfad()` kann Entrypoints nicht
+  auflösen und soll es nicht — sie folgen einer anderen Ablageregel (Wurzel in
+  der Installation, `bash/entry/` bzw. `pwsh/entry/` im Kit) als die
+  Team-Infrastruktur.
+
 - **`BL-142` — `--rollen-abschluss` mit BEIDEN Notizen brach immer ab: also
   genau bei dem Aufruf, den die Doku vorgibt.**
   ⚠️ **Feldbefund** aus `duke-itam-2026`, Closeout der ersten Kaskade, erster
