@@ -184,6 +184,20 @@ Vorsichtiger, Schritt für Schritt mit Halt bei dir:
 {{RUF}}team-status{{ENDUNG}} --architekt-abschluss <USD> <domaene> "Kaskade N geplant"
 ```
 
+**Woher `<USD>` kommt.** Im Abo gibt es keinen Konsolenwert — gemessen wird aus
+dem Sitzungstranskript, nicht geschätzt:
+
+```
+{{PYTHON}} team/tools/kosten.py sitzung-messen --projekt .
+```
+
+Das Werkzeug eicht sich an den abgerechneten Läufen deines Projekts. Sagt es
+„Preistabelle stimmt nicht mehr", ist die Zahl **ungeeicht** — nicht buchen,
+sondern die Tabelle nachziehen (Exit `2`). Die Zeile `Architekt (Churn-Proxy)`
+im Kontostand ist **keine** Messung: Sie rechnet Zeilen-Churn mal Eichfaktor und
+misst damit die Größe des Diffs, nicht die Arbeit. Im Feld lag sie 35 % zu
+niedrig (`Kit-BL-141`).
+
 Der zweite Befehl bucht als **Abo-Gegenwert** (`auth = abo`) — das ist die
 Vorbelegung, weil im Abo kein Geld fließt und die Zeile `real via API
 abgerechnet` im Kontostand genau das behaupten würde. Hast du **wirklich** über

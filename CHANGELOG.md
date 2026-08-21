@@ -6,6 +6,77 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`BL-141` — die Architekten-Kostenzeile war ein Zeilen-Churn-Proxy und lag im
+  Feld 35 % zu niedrig.**
+  ⚠️ **Feldbefund** aus `duke-itam-2026`, Kaskade 1: Die Zeile meldete
+  **7,6861 USD**; die Messung aus dem Sitzungstranskript ergab **11,7582 USD**.
+
+  `architekt_schaetzung()` rechnet `git_churn(…) × Eichfaktor` — das misst die
+  **Größe des Diffs**, nicht die Arbeit. Eine Sitzung mit viel Lesen, Prüfen und
+  Gegenproben und wenig geschriebenem Text wird systematisch unterschätzt. Das
+  Architekten-Briefing verlangt die Transkript-Messung ausdrücklich, aber **kein
+  Werkzeug des Kits konnte sie** — also schrieb sich jeder Architekt das Skript
+  neu, oder er nahm die Churn-Zahl und buchte sie als gemessen.
+
+  **Neu: `kosten.py sitzung-messen --projekt .`** — im Kit, nicht als Skript
+  daneben.
+
+  **Die drei Fallen, alle drei unter Test:**
+
+  1. **Deduplikation über die Nachrichten-ID.** Eine Antwort erzeugt mehrere
+     Transkriptzeilen mit derselben `usage`-Angabe. Mit Gegenrichtung: Ein Fix,
+     der *alles* verwirft, wäre sonst grün — und die gebuchte Zahl null statt
+     zu hoch.
+  2. **Cache-Write nach Laufzeit getrennt** (1h = 2,0× Input, 5m = 1,25×).
+     Ältere Transkripte ohne Aufschlüsselung werden konservativ als 5m
+     gebucht — also eher zu niedrig. Eine zu niedrige Zahl fällt beim Abgleich
+     auf; eine zu hohe wird geglaubt.
+  3. **Basispreis am Modell**, längster Präfix, damit datierte Varianten und
+     Plattform-Präfixe (`anthropic.claude-…`) mitlaufen. Ein unbekanntes Modell
+     wird **namentlich genannt und aus der Summe gelassen**, statt geraten.
+
+  **Die Preise sind nicht aus dem Gedächtnis geschrieben**, sondern gegen die
+  Referenz des Anbieters geholt — und sie bestätigen die Feldmessung exakt:
+
+  | | Vielfaches vom Input |
+  |---|---|
+  | Output | 5,0× |
+  | Cache-Write 1h | 2,0× |
+  | Cache-Write 5m | 1,25× |
+  | Cache-Read | 0,1× |
+
+  Nur der Basispreis hängt am Modell. Das hält die Tabelle klein und den Fehler
+  unwahrscheinlich.
+
+  **Der eigentliche Inhalt ist die Selbstprüfung.** Eine Preistabelle im
+  Quelltext ist eine Behauptung. `preise_nachrechnen()` rechnet die
+  **abgerechneten** headless-Läufe des Projekts mit **demselben Code** nach und
+  vergleicht gegen deren `total_cost_usd`:
+
+  ```
+  ! Preistabelle stimmt nicht mehr: 1 von 1 nachgerechneten Laeufen weicht ab.
+      b.json: abgerechnet 45.0000, gerechnet 30.0000 (33.3 % daneben)
+    Die Zahl unten ist damit UNGEEICHT.
+  ```
+
+  Exit `2`. Das Werkzeug verschluckt die Zahl nicht — aber es lässt sie auch
+  nicht als Messung durchgehen. **Gegengeprüft in beide Richtungen:** eine
+  stimmige Tabelle wird ausdrücklich quittiert (eine Meldung, die immer
+  erscheint, ist keine — Bauart `BL-14`), eine um 50 % falsche schlägt an; ein
+  Log ohne `modelUsage` und ein Log mit unbekanntem Modell sind **kein**
+  Befund, sonst meldete jedes ältere Projekt eine veraltete Tabelle.
+
+  **Am echten Feld belegt, nicht nur an Fixtures.** Gegen das Transkript der
+  Bau-Sitzung gefahren: 483 rohe Sätze, **242 nach Dedup** — mehr als die
+  Hälfte Duplikate. Der Löwenanteil liegt auf `cache_read`, genau wie das
+  Briefing vorhersagt.
+
+  **Beschriftung nachgezogen:** Die Churn-Zeile heißt `Churn-Proxy` statt
+  `geschätzt` (beide Bahnen); drei Tests, die die alte Beschriftung
+  festschrieben, sind mitgezogen. `TEAM.md` und das Architekten-Briefing nennen
+  jetzt den gemessenen Weg samt der Regel, eine ungeeichte Zahl **nicht** zu
+  buchen — damit ist der dokumentierte Weg auch der richtige.
+
 - **`BL-139` — in einer einbahnigen Ablage nannten die Regeltexte die andere
   Bahn und schickten jede Rolle an Dateien, die es dort nicht gibt.**
   ⚠️ **Feldbefund** aus `duke-itam-2026`, mit `--nur-pwsh` installiert.

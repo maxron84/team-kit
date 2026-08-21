@@ -124,9 +124,21 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    Warnbefund stehen, gehört er samt Begründung ins Abschluss-Doc; ich
    schließe keine Kaskade mit einem unerklärten Befund ab.
    **Woher `<USD>` kommt:** Im Abo gibt es keinen Konsolenwert. Ich **messe** ihn
-   aus dem Sitzungstranskript der CLI (Antworten über die Nachrichten-ID
-   deduplizieren, Preismodell an einem headless-Lauf mit bekanntem Konsolenwert
-   eichen) und schätze nur dann, wenn kein Transkript vorliegt. Rechne damit,
+   aus dem Sitzungstranskript der CLI — dafür gibt es ein Werkzeug, ich schreibe
+   mir keins:
+
+   ```
+   {{PYTHON}} team/tools/kosten.py sitzung-messen --projekt .
+   ```
+
+   Es dedupliziert über die Nachrichten-ID (roh sind über die Hälfte der Sätze
+   Duplikate — wer Zeilen zählt, bucht mehr als das Doppelte), trennt Cache-Write
+   nach Laufzeit und **eicht sich selbst** an den abgerechneten headless-Läufen
+   des Projekts. Meldet es „Preistabelle stimmt nicht mehr", ist die Zahl
+   **ungeeicht** und ich buche sie nicht — dann gehört die Preistabelle
+   nachgezogen. Exit `2` heißt genau das. Nennt es ein Modell, das es nicht
+   kennt, fehlt dessen Anteil in der Summe, und es sagt das.
+   Ich schätze nur dann, wenn kein Transkript vorliegt. Rechne damit,
    dass der Löwenanteil auf das erneute Vorlegen des Kontexts entfällt, nicht auf
    den erzeugten Text — meine Sitzung ist teurer, als ihr Ergebnis vermuten lässt.
    Der Wert wird als **Abo-Gegenwert** gebucht und **nie** stillschweigend als

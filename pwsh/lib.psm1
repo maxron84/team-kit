@@ -689,7 +689,8 @@ function team_architekt_stand {
             return
         }
     }
-    Write-Output "$(team_architekt_schaetzung)`tgeschätzt"
+    # BL-141: siehe lib.sh — der Wert ist ein Churn-Proxy, keine Messung.
+    Write-Output "$(team_architekt_schaetzung)`tChurn-Proxy"
 }
 
 function team_kontostand_gesamt {

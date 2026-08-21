@@ -947,6 +947,253 @@ def architekt_schaetzung(seit, pfade=("plans", "CLAUDE.md"), repo="."):
     return churn, churn * ARCHITEKT_USD_PRO_CHURN_ZEILE
 
 
+# --- BL-141: Sitzungskosten MESSEN statt schaetzen -------------------------
+#
+# architekt_schaetzung() oben rechnet Zeilen-Churn mal Eichfaktor. Das misst
+# die GROESSE DES DIFFS, nicht die Arbeit: Eine Sitzung mit viel Lesen, Pruefen
+# und Gegenproben und wenig geschriebenem Text wird systematisch unterschaetzt,
+# eine Prosa-Sitzung ueberschaetzt. Im Feld (duke-itam-2026, Kaskade 1) meldete
+# die Zeile 7,6861 USD; die Messung aus dem Sitzungstranskript ergab 11,7582 —
+# 35 % zu niedrig.
+#
+# Das Architekten-Briefing verlangt die Transkript-Messung ausdruecklich, aber
+# KEIN Werkzeug des Kits konnte sie. Also schrieb sich jeder Architekt das
+# Skript neu, oder er nahm die Churn-Zahl und buchte sie als gemessen.
+#
+# DIE DREI FALLEN, ALLE DREI IM FELD GETRETEN
+#
+#   (1) Ueber die NACHRICHTEN-ID deduplizieren. Eine Antwort erzeugt mehrere
+#       Transkriptzeilen mit DERSELBEN usage-Angabe. Wer Zeilen zaehlt,
+#       ueberschaetzt grob — im Feld 172 rohe Saetze, nach Dedup 76.
+#   (2) Cache-Write nach LAUFZEIT trennen. 1h kostet das 2,0-Fache des Inputs,
+#       5m nur das 1,25-Fache. Das Transkript gibt beide getrennt her.
+#   (3) Den Basispreis am MODELL festmachen und sagen, wenn die ID unbekannt
+#       ist. Eine stille Annahme ist hier teurer als eine Luecke.
+PREIS_VIELFACHE = {
+    # Nur der BASISPREIS haengt am Modell; diese vier Verhaeltnisse gelten
+    # modelluebergreifend. Gegengeprueft an der Preistabelle des Anbieters
+    # (Opus 5: 5 USD Input / 25 USD Output je Mio Token) UND an acht
+    # headless-Laeufen des Kits, deren abgerechnete total_cost_usd sich damit
+    # reproduzieren liessen.
+    "output":         5.00,
+    "cache_write_1h": 2.00,
+    "cache_write_5m": 1.25,
+    "cache_read":     0.10,
+}
+
+# USD je 1 Mio INPUT-Token, nach Modell-ID. Laengster Praefix gewinnt, damit
+# datierte Varianten (claude-opus-5-20260101) und Plattform-Praefixe
+# (anthropic.claude-opus-5 auf Bedrock) mitlaufen, ohne die Tabelle zu
+# verdoppeln.
+PREIS_INPUT_USD_PRO_MTOK = {
+    "claude-fable-5":   10.00,
+    "claude-mythos-5":  10.00,
+    "claude-opus-5":     5.00,
+    "claude-opus-4-8":   5.00,
+    "claude-opus-4-7":   5.00,
+    "claude-opus-4-6":   5.00,
+    "claude-opus-4-5":   5.00,
+    "claude-sonnet-5":   3.00,
+    "claude-sonnet-4-6": 3.00,
+    "claude-sonnet-4-5": 3.00,
+    "claude-haiku-4-5":  1.00,
+}
+
+
+def modell_basispreis(modell_id):
+    """Basispreis je Mio Input-Token, oder None bei unbekannter ID.
+
+    None ist ein Ergebnis, kein Fehler: Der Aufrufer weist die unbekannte ID
+    aus, statt einen Preis zu raten. Eine geratene Zahl waere hier genau der
+    Fehler, den BL-141 abtraegt — sie sieht aus wie eine Messung.
+    """
+    if not modell_id:
+        return None
+    kern = str(modell_id).split(".")[-1]        # Bedrock: anthropic.claude-...
+    treffer = [n for n in PREIS_INPUT_USD_PRO_MTOK if kern.startswith(n)]
+    if not treffer:
+        return None
+    return PREIS_INPUT_USD_PRO_MTOK[max(treffer, key=len)]
+
+
+def _tokenkuebel():
+    return {"input": 0, "output": 0, "cache_read": 0,
+            "cache_write_5m": 0, "cache_write_1h": 0}
+
+
+def _usage_addieren(kuebel, usage):
+    kuebel["input"] += usage.get("input_tokens", 0) or 0
+    kuebel["output"] += usage.get("output_tokens", 0) or 0
+    kuebel["cache_read"] += usage.get("cache_read_input_tokens", 0) or 0
+    erstellung = usage.get("cache_creation") or {}
+    if erstellung:
+        kuebel["cache_write_5m"] += erstellung.get("ephemeral_5m_input_tokens", 0) or 0
+        kuebel["cache_write_1h"] += erstellung.get("ephemeral_1h_input_tokens", 0) or 0
+    else:
+        # Aeltere Transkripte tragen nur die Summe. Konservativ als 5m buchen:
+        # Das ist der GUENSTIGERE Satz, die Zahl faellt also eher zu niedrig
+        # aus als zu hoch — und eine zu niedrige gebuchte Zahl faellt beim
+        # Abgleich auf, eine zu hohe wird geglaubt.
+        kuebel["cache_write_5m"] += usage.get("cache_creation_input_tokens", 0) or 0
+
+
+def sitzung_messen(pfade):
+    """Liest Transkripte und gibt (je_modell, antworten, doppelt) zurueck.
+
+    je_modell bildet die Modell-ID auf einen Token-Kuebel ab. Getrennt gehalten,
+    weil eine Sitzung das Modell wechseln kann und der Basispreis daran haengt —
+    ein gemeinsamer Kuebel waere mit dem ersten Wechsel falsch.
+    """
+    gesehen = set()
+    je_modell = {}
+    antworten = doppelt = 0
+    for pfad in pfade:
+        with open(pfad, encoding="utf-8") as f:
+            for zeile in f:
+                try:
+                    d = json.loads(zeile)
+                except ValueError:
+                    continue                     # halbe Zeile am Dateiende
+                nachricht = d.get("message")
+                if not isinstance(nachricht, dict):
+                    continue
+                usage = nachricht.get("usage")
+                if not usage:
+                    continue
+                # Falle (1): ueber die Nachrichten-ID, nicht ueber die Zeile.
+                kennung = (nachricht.get("id") or d.get("requestId")
+                           or d.get("uuid"))
+                if kennung in gesehen:
+                    doppelt += 1
+                    continue
+                gesehen.add(kennung)
+                antworten += 1
+                modell = nachricht.get("model") or "unbekannt"
+                _usage_addieren(je_modell.setdefault(modell, _tokenkuebel()),
+                                usage)
+    return je_modell, antworten, doppelt
+
+
+def kosten_aus_tokens(kuebel, basispreis):
+    """USD fuer einen Token-Kuebel bei gegebenem Basispreis je Mio Input."""
+    gesamt = kuebel["input"] / 1_000_000 * basispreis
+    for art, faktor in PREIS_VIELFACHE.items():
+        gesamt += kuebel[art] / 1_000_000 * basispreis * faktor
+    return gesamt
+
+
+def sitzung_kosten(je_modell):
+    """(gesamt_usd, zeilen, unbekannte_modelle).
+
+    Unbekannte Modelle gehen NICHT in die Summe ein und werden namentlich
+    zurueckgegeben. Der Aufrufer muss sie nennen; eine Summe, die stillschweigend
+    Teile auslaesst, ist schlimmer als gar keine.
+    """
+    gesamt = 0.0
+    zeilen = []
+    unbekannt = []
+    for modell, kuebel in sorted(je_modell.items()):
+        preis = modell_basispreis(modell)
+        if preis is None:
+            unbekannt.append(modell)
+            continue
+        usd = kosten_aus_tokens(kuebel, preis)
+        gesamt += usd
+        zeilen.append((modell, preis, kuebel, usd))
+    return gesamt, zeilen, unbekannt
+
+
+def transkripte_aus_projekt(projektpfad):
+    """Das zuletzt geaenderte CLI-Transkript zu einem Projektpfad.
+
+    Die Agenten-CLI legt Transkripte unter ~/.claude/projects/<slug>/<id>.jsonl
+    ab, wobei <slug> der Projektpfad mit Bindestrichen statt Trennzeichen ist.
+    Die Kodierung ist VERLUSTBEHAFTET: Sowohl "/" als auch "_" werden zu "-",
+    zwei verschiedene Projekte koennen also denselben Ordner ergeben. Das ist
+    nicht zu reparieren (die Umkehrung ist mehrdeutig) — deshalb gibt diese
+    Funktion den Pfad zurueck, den sie gelesen hat, und der Aufrufer DRUCKT ihn.
+    Wer die Zahl bucht, sieht dann, woher sie stammt.
+    """
+    wurzel = os.path.join(os.path.expanduser("~"), ".claude", "projects")
+    voll = os.path.abspath(os.path.expanduser(projektpfad))
+    ordner = os.path.join(wurzel, voll.replace(os.sep, "-").replace("_", "-"))
+    if not os.path.isdir(ordner):
+        return []
+    dateien = [os.path.join(ordner, d) for d in os.listdir(ordner)
+               if d.endswith(".jsonl")]
+    if not dateien:
+        return []
+    return [max(dateien, key=os.path.getmtime)]
+
+
+def preise_nachrechnen(logs):
+    """Rechnet die headless-Logs mit DEMSELBEN Code nach und vergleicht.
+
+    Das ist die Gegenprobe, die die Messung erst gueltig macht. Die Logs des
+    Kits (.ralph-logs/*.json, .team-logs/*.json) tragen BEIDES: dieselbe
+    usage-Struktur wie das Transkript UND den abgerechneten `total_cost_usd`,
+    je Modell aufgeschluesselt in `modelUsage`. Das sind fertige Eichpunkte —
+    ohne sie waere die Preistabelle eine Behauptung.
+
+    Weicht die Rechnung ab, ist die Tabelle veraltet, und das WERKZEUG SAGT DAS,
+    statt eine falsche Zahl zu buchen. Genau diese Richtung ist der Punkt: Der
+    teure Fehler ist nicht die falsche Zahl, sondern die falsche Zahl, die wie
+    eine Messung aussieht.
+
+    Rueckgabe: Liste von (pfad, gemeldet_usd, gerechnet_usd, abweichung_relativ)
+    — nur fuer Logs, die BEIDE Angaben tragen. Ein Log ohne modelUsage ist
+    kein Befund, sondern nur kein Eichpunkt.
+    """
+    befunde = []
+    for pfad in logs:
+        try:
+            with open(pfad, encoding="utf-8") as f:
+                d = json.load(f)
+        except (ValueError, OSError):
+            continue
+        gemeldet = d.get("total_cost_usd")
+        nutzung = d.get("modelUsage")
+        if gemeldet is None or not isinstance(nutzung, dict) or not nutzung:
+            continue
+        gerechnet = 0.0
+        vollstaendig = True
+        for modell, u in nutzung.items():
+            preis = modell_basispreis(modell)
+            if preis is None:
+                vollstaendig = False
+                break
+            kuebel = _tokenkuebel()
+            _usage_addieren(kuebel, u)
+            gerechnet += kosten_aus_tokens(kuebel, preis)
+        if not vollstaendig:
+            continue
+        # Relativ, nicht absolut: Ein Cent Abweichung ist bei 0,05 USD ein
+        # Befund und bei 50 USD Rundung.
+        nenner = gemeldet if gemeldet else 1.0
+        befunde.append((pfad, gemeldet, gerechnet,
+                        abs(gerechnet - gemeldet) / nenner))
+    return befunde
+
+
+# Wieviel Abweichung noch Rundung ist. Die acht Feld-Laeufe reproduzierten auf
+# 4e-16 genau; ein Promille ist dagegen sehr grosszuegig und trifft trotzdem
+# jede echte Preisaenderung, weil die in Sprüngen von 20 % und mehr kommt.
+PREIS_TOLERANZ = 0.001
+
+
+def logs_einsammeln(repo="."):
+    """Alle headless-Logs des Projekts, archivierte eingeschlossen."""
+    treffer = []
+    for ordner in (".ralph-logs", ".team-logs"):
+        wurzel = os.path.join(repo, ordner)
+        if not os.path.isdir(wurzel):
+            continue
+        for pfad, _, dateien in os.walk(wurzel):
+            treffer.extend(os.path.join(pfad, d) for d in sorted(dateien)
+                           if d.endswith(".json"))
+    return sorted(treffer)
+
+
 def kaskade_aus_plan(repo="."):
     """Leitet die Kaskaden-Nummer aus der Zeiger-Datei .ralph-plan ab (Muster
     "ralph-kaskade-<N>-..." im Dateinamen). None, wenn die Datei fehlt oder
@@ -1596,6 +1843,84 @@ def _main(argv):
         print(f"-- {len(warnungen)} Warnung(en), "
               f"{len(befunde) - len(warnungen)} Hinweis(e).")
         return 4 if warnungen else 0
+
+    if befehl == "sitzung-messen":
+        # BL-141: der Weg, den das Architekten-Briefing verlangt und den bis
+        # hierher kein Werkzeug des Kits gehen konnte.
+        pfade = []
+        projekt = None
+        i = 0
+        while i < len(rest):
+            if rest[i] == "--projekt":
+                if i + 1 >= len(rest):
+                    print("Fehler: --projekt braucht einen Pfad", file=sys.stderr)
+                    return 1
+                projekt = rest[i + 1]
+                i += 2
+            else:
+                pfade.append(rest[i])
+                i += 1
+        if projekt:
+            gefunden = transkripte_aus_projekt(projekt)
+            if not gefunden:
+                print(f"Fehler: kein Transkript zu {projekt} gefunden",
+                      file=sys.stderr)
+                return 1
+            pfade = gefunden
+        if not pfade:
+            print("Nutzung: kosten.py sitzung-messen (--projekt PFAD | TRANSKRIPT...)",
+                  file=sys.stderr)
+            return 1
+
+        # ZUERST die Gegenprobe, dann die Zahl. Andersherum liest der Mensch
+        # die Summe und ueberblaettert die Warnung darunter.
+        befunde = preise_nachrechnen(logs_einsammeln("."))
+        schief = [b for b in befunde if b[3] > PREIS_TOLERANZ]
+        if befunde:
+            if schief:
+                print(f"  ! Preistabelle stimmt nicht mehr: {len(schief)} von "
+                      f"{len(befunde)} nachgerechneten Laeufen weichen ab.",
+                      file=sys.stderr)
+                for pfad, gemeldet, gerechnet, rel in schief[:3]:
+                    print(f"      {os.path.basename(pfad)}: abgerechnet "
+                          f"{gemeldet:.4f}, gerechnet {gerechnet:.4f} "
+                          f"({rel * 100:.1f} % daneben)", file=sys.stderr)
+                print("    Die Zahl unten ist damit UNGEEICHT. Preistabelle in "
+                      "kosten.py nachziehen, bevor du sie buchst.",
+                      file=sys.stderr)
+            else:
+                print(f"  ✓ Preistabelle geeicht an {len(befunde)} "
+                      f"abgerechneten Laeufen dieses Projekts")
+        else:
+            print("  ! Keine abgerechneten Laeufe zum Eichen gefunden — die "
+                  "Zahl unten ruht allein auf der Preistabelle.",
+                  file=sys.stderr)
+
+        je_modell, antworten, doppelt = sitzung_messen(pfade)
+        if not antworten:
+            print("Fehler: keine Nutzungsdaten im Transkript", file=sys.stderr)
+            return 1
+        gesamt, zeilen, unbekannt = sitzung_kosten(je_modell)
+        for pfad in pfade:
+            print(f"  gelesen: {pfad}")
+        print(f"  Antworten: {antworten}  (Duplikate verworfen: {doppelt})")
+        for modell, preis, kuebel, usd in zeilen:
+            print(f"    {modell}  ({preis:.2f} USD/Mio Input)")
+            for art in ("input", "output", "cache_read",
+                        "cache_write_5m", "cache_write_1h"):
+                print(f"      {art:<15} {kuebel[art]:>12,} Tok")
+            print(f"      {'= Summe':<15} {usd:>12.4f} USD")
+        for modell in unbekannt:
+            print(f"  ! Modell '{modell}' steht nicht in der Preistabelle — "
+                  f"seine Token sind in der Summe NICHT enthalten.",
+                  file=sys.stderr)
+        print(f"  GESAMT: {gesamt:.4f} USD")
+        print("  Im Abo ist das ein Abo-Gegenwert, kein abgerechneter Betrag.")
+        print(f"  Buchen: team-status --akteur-abschluss architekt abo "
+              f"{gesamt:.4f} <domaene> \"<notiz>\"")
+        print("  Erst NACH dem letzten Schritt messen — mittendrin gemessen "
+              "untertreibt der Wert systematisch.")
+        return 2 if (schief or unbekannt) else 0
 
     if befehl == "architekt-schaetzung":
         seit = None

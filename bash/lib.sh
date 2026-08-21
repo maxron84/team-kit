@@ -1333,7 +1333,12 @@ team_architekt_stand() {
             return 0
         fi
     fi
-    printf '%s\tgeschätzt\n' "$(team_architekt_schaetzung)"
+    # BL-141: NICHT mehr "geschätzt" — der Wert ist Zeilen-Churn mal
+    # Eichfaktor, misst also die Groesse des Diffs und nicht die Arbeit.
+    # Im Feld lag er 35 % zu niedrig, und die alte Beschriftung liess
+    # offen, woraus geschaetzt wurde. Gemessen wird mit
+    # `kosten.py sitzung-messen`.
+    printf '%s\tChurn-Proxy\n' "$(team_architekt_schaetzung)"
 }
 
 # team_architekt_schaetzung: A2-Live-Schaetzung der Architekt-Kosten (BL-28,

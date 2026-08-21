@@ -195,7 +195,11 @@ def test_geschaetzter_wert_bleibt_ausserhalb_des_gesamt(tmp_path):
     ausgabe = _budget(repo)
     zeile = _zeile_mit(ausgabe, "Architekt")
 
-    assert "geschätzt" in zeile
+    # BL-141: Die Beschriftung heisst jetzt "Churn-Proxy". "geschätzt" liess
+    # offen, WORAUS geschaetzt wurde, und lud im Feld dazu ein, die Zahl
+    # fuer eine Messung zu halten — sie lag dort 35 % zu niedrig. Gemessen
+    # wird mit `kosten.py sitzung-messen`.
+    assert "Churn-Proxy" in zeile
     assert "nicht im Gesamt enthalten" in zeile
     gesamt = _betrag(_zeile_mit(ausgabe, "Gesamt (Basis + laufend)"))
     assert gesamt == pytest.approx(
