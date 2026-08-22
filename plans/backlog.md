@@ -18,13 +18,42 @@ Funde ab `BL-6`. Verweise auf den Backlog eines **anderen** Projekts werden
 > Begründung jedes erledigten Punktes — sie wird nachgeschlagen, nicht
 > mitgelesen. Diese Datei trägt nur, woran noch Arbeit hängt (`BL-53`).
 
-**Abtrag 2026-08-21 (Kit-Sitzung nach dem Windows-Pull), laufend.** Der Pull
-selbst hat einen eigenen Fund mitgebracht (`BL-144`, Selbsttest der bash-Bahn
-seit `BL-136` rot). Seither abgetragen: `BL-144`, `BL-142`, `BL-143`, `BL-129`, `BL-140`,
-`BL-139`, `BL-141`, `BL-120`. Damit sind alle fünf Feldmeldungen des Tages
-abgetragen — und vom Stand davor bleibt nur `BL-117`. Die Reihenfolge
-folgt der Wirkung, nicht der Nummer — zuerst, was den dokumentierten Weg
-blockiert, dann was falsch bucht, dann was falsch anleitet.
+**Abtrag 2026-08-21 (Kit-Sitzung nach dem Windows-Pull), abgeschlossen.** Der
+Pull selbst hat einen eigenen Fund mitgebracht (`BL-144`: Der Selbsttest der
+bash-Bahn war seit `BL-136` rot, weil dessen Erfolgsmeldung einen zweiten
+Absender bekam — nachgewiesen war der Fix nur gegen `kit-test.ps1`, das diesen
+Schritt gar nicht fährt). Abgetragen in dieser Reihenfolge, die der **Wirkung**
+folgt und nicht der Nummer — zuerst, was den dokumentierten Weg blockiert, dann
+was falsch bucht, dann was falsch anleitet:
+
+`BL-144` · `BL-142` · `BL-143` · `BL-129` · `BL-140` · `BL-139` · `BL-141` ·
+`BL-120`.
+
+**Damit sind alle fünf Feldmeldungen des Tages abgetragen**, dazu die drei
+älteren, die es sein konnten. **Offen bleibt genau einer: `BL-117`** — und er
+bleibt es aus dem Grund, den er selbst nennt. Er verlangt eine Maschine mit
+PowerShell 7; auf der Entwicklungsmaschine liegt keine. Ihn hier blind zu
+schreiben wäre genau der Fehler, vor dem er warnt: „ein blind geschriebener
+Test, dessen erste Ausführung auf einer fremden Maschine stattfindet, wird dort
+*angepasst* statt gelesen". Das ist die Lehre aus `BL-113`, und sie hat dieses
+Repo bereits einmal Geld gekostet. Er gehört auf die Windows-Maschine.
+
+**Was der Abtrag über die Einträge hinaus gefunden hat** — jeder dieser Punkte
+ist erst beim Bauen aufgefallen, nicht beim Lesen:
+
+| Fund | Wo |
+|---|---|
+| `--architekt-abschluss` warf **alle** Zusatzschalter weg, auf beiden Bahnen — derselbe Fehler wie `BL-26`, nur nie nachgezogen. Ein `--auth`, das der Alias erbt, aber der Wrapper wegwirft, wäre ein Fix, der sich nur im Unit-Test beweist | `BL-143` |
+| Ein grüner Test schrieb die Fehlbuchung **fest** (`auth == "api"`) und war Teil des Grundes, warum sie niemandem auffiel | `BL-143` |
+| Der `BL-130`-Wächter suchte zeilenweise und schlug an einem **korrekten** Aufruf Fehlalarm — ein Wächter mit Fehlalarmen wird abgeschaltet | `BL-143` |
+| `BL-129` war zur Hälfte schon von `BL-130`/`BL-133` miterledigt; die 109 roten Tests waren null. Was **wirklich** fehlte, war die Zusicherung — und der Satz „bewusst nicht geprüft" war still zur Falschaussage geworden | `BL-129` |
+| Der Fix zu `BL-140` ist **nicht** mechanisch: Zwei Stellen hätte ein Such-und-Ersetze kaputtgemacht, und daraus folgt eine Regel mit **drei** Sorten statt zwei | `BL-140` |
+| Die Spiegelseite von `BL-139` in der `--nur-bash`-Richtung — vom Feld nie gemeldet, weil dort nur pwsh läuft | `BL-139` |
+
+Und zweimal hat eine neue Zusicherung **sich selbst** gefangen, bevor sie etwas
+anderes fangen konnte: Der `BL-142`-Riegel hätte eine von drei Stellen gesehen
+(zwei standen hinter einem Semikolon), und die `BL-140`-Notationstabelle fiel
+durch die eigene Prüfung, weil sie eine echte Nummer als Beispiel nannte.
 
 **Stand 2026-08-21: fünf Meldungen aus dem Feld dazu** (`BL-139` bis `BL-143`),
 alle aus `duke-itam-2026` — einer frischen, mit `--nur-pwsh` installierten
