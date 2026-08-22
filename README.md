@@ -198,7 +198,7 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 | **`Feld C`** | Fremde, **gewachsene** Codebasis: Python/tkinter, Einstiegspunkt in der Wurzel, `src/`, `bin/`, gewachsene `tests/`, belegtes `plans/` | Gelesen (2026-08-11) und installiert (2026-08-13). **Keine** Kaskade — belegt ist der Einzug, nicht der Betrieb |
 
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen vier Quellen
-kommen die Backlog-Einträge `BL-1`…`BL-147`; was davon behoben ist, steht im
+kommen die Backlog-Einträge `BL-1`…`BL-148`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
 [plans/backlog-archiv.md](plans/backlog-archiv.md) (94 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
