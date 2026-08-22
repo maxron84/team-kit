@@ -323,17 +323,30 @@ Konfiguration), war es eine Abwahl. Fehlen nur einzelne Dateien, ist etwas
 anderes passiert — dann ist ein `--update` trotzdem der richtige nächste
 Schritt, aber lies dessen Bericht.
 
-### Der Rückweg: ein `--update` **ohne** Schalter
+### Der Rückweg: `--update --beide-bahnen`
 
 ```bash
-bash <kit-pfad>/bash/install.sh . --update
+bash <kit-pfad>/bash/install.sh . --update --beide-bahnen
 ```
 
 ```powershell
-pwsh -File <kit-pfad>\pwsh\install.ps1 . -Update
+pwsh -File <kit-pfad>\pwsh\install.ps1 . -Update -BeideBahnen
 ```
 
-Das Update macht das Projekt wieder vollständig — Entrypoints, Bibliothek **und
+**Der Schalter ist seit `Kit-BL-147` nötig, und das ist der Punkt.** Vorher
+genügte ein `--update` ohne alles — wer bloß eine neue Kit-Version wollte,
+bekam die abgewählte Bahn zurück, ob er sie wollte oder nicht. Im Feld waren
+das **21 ungebetene pwsh-Dateien** in einem reinen Bash-Projekt. Ein `--update`
+**hält** die Bahn heute und meldet, dass es sie erkannt hat:
+
+```
+Einbahnige Ablage erkannt: nur die bash-Bahn (BL-147)
+```
+
+Erkannt wird an den Dateien, die das **Kit** ausliefert, nicht an Endungen —
+ein projekteigenes `deploy.ps1` macht aus deinem Projekt keine pwsh-Ablage.
+
+Das Update **mit** dem Schalter macht das Projekt wieder vollständig — Entrypoints, Bibliothek **und
 die fehlende Konfiguration**. Die Konfiguration ist der Teil, der beim ersten
 Bau vergessen wurde: Ein Update fasst `team.config.*` grundsätzlich nicht an,
 also kamen die Entrypoints zurück und die Werte nicht. Der Update-Pfad
@@ -367,11 +380,12 @@ eine Datei, die das Kit nicht angelegt hat, löscht es auch nicht
 
 ### Belegstand
 
-- **Der Rückweg ist unter Test**, in beiden Richtungen: `kit-test.sh` Stufe 8
-  baut je eine einbahnige Ablage, fährt dort die Suite und holt die fehlende
-  Bahn per `--update` zurück — inklusive der Zusicherung, dass die
-  Konfiguration mit den **Projektwerten** wiederkommt und keine Platzhalter
-  übrig bleiben.
+- **Beides ist unter Test**, in beiden Richtungen: `kit-test.sh` Stufe 8 baut
+  je eine einbahnige Ablage, fährt dort die Suite, prüft dann, dass ein
+  schlichtes `--update` die Ablage **einbahnig lässt** (`Kit-BL-147`), und holt
+  erst danach die fehlende Bahn per `--beide-bahnen` zurück — inklusive der
+  Zusicherung, dass die Konfiguration mit den **Projektwerten** wiederkommt und
+  keine Platzhalter übrig bleiben.
 - **Dass die Tests in einer einbahnigen Ablage grün bleiben**, gilt seit
   `Kit-BL-129` für **beide** Richtungen; vorher war nur eine geprüft.
 

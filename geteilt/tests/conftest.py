@@ -383,7 +383,7 @@ def ueberspringe_ohne_beide_bahnen():
     pytest.skip(
         f"einbahnige Ablage (vorhanden: {da}) — die andere Bahn ist mit "
         f"--nur-bash/--nur-pwsh abgewaehlt worden. Zurueckholen: "
-        f"install mit --update ohne Schalter.")
+        f"install mit --update --beide-bahnen.")
 
 
 def ueberspringe_ohne_bahn(bahn):
@@ -420,7 +420,7 @@ def ueberspringe_ohne_bahn(bahn):
     pytest.skip(
         f"die {bahn}-Bahn liegt nicht in dieser Ablage (vorhanden: {da}) — "
         f"mit --nur-bash/--nur-pwsh abgewaehlt. Zurueckholen: install mit "
-        f"--update ohne Schalter.")
+        f"--update --beide-bahnen.")
 
 
 def kopiere_team_namensraum(ziel):
@@ -878,7 +878,7 @@ def _fehlt_oder_abgewaehlt(bahn, datei):
         # und wird ueberflogen, nicht studiert. Der Rueckweg gehoert trotzdem
         # hinein — ohne ihn liest sich die Abwahl wie eine Sackgasse.
         return (f"in dieser Ablage abgewaehlt (--nur-{andere}) — "
-                f"--update ohne Schalter holt sie zurueck")
+                f"--update --beide-bahnen holt sie zurueck")
     return f"{datei} fehlt in dieser Ablage"
 
 
@@ -1034,14 +1034,14 @@ def pytest_terminal_summary(terminalreporter):
         terminalreporter.write_line(
             f"  {bahn}-Bahn nicht installiert: {len(stand['faelle'])}  "
             f"(vorhanden: {', '.join(sorted(stand['wo']))} — "
-            f"--update ohne Schalter holt sie zurueck)")
+            f"--update --beide-bahnen holt sie zurueck)")
     if _QUOTE["einbahnig"]:
         terminalreporter.write_line(
             f"  einbahnige Ablage          : nur "
             f"{', '.join(sorted(_QUOTE['einbahnig']))} installiert — die "
             f"andere Bahn ist abgewaehlt")
         terminalreporter.write_line(
-            "                               (--update ohne Schalter holt sie "
+            "                               (--update --beide-bahnen holt sie "
             "zurueck)")
 
 

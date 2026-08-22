@@ -984,6 +984,36 @@ andere Bahn ist abgewählt"), dieselbe Bauart wie bei `@pytest.mark.nur_bash`.
 Beides — Abwahl und Rückweg — steht als Stufe 8 in `kit-test.sh`, nicht in
 der Doku: Ein Rückweg, den niemand fährt, verrottet.
 
+### Die Umkehr: ein Update hält die Bahn (`BL-147`, 2026-08-22)
+
+Der Rückweg oben war als **Vorbelegung** gebaut — `--update` ohne Schalter
+macht das Projekt wieder vollständig. Das ist die richtige Zusicherung an der
+falschen Stelle: Sie macht den Ausnahmefall zum Default.
+
+Denn ein `--update` fährt niemand, um eine Bahn zurückzuholen. Man fährt es,
+um eine neue Kit-Version zu bekommen — das ist der Routinefall, und er kam mit
+einer Nebenwirkung, die niemand bestellt hatte:
+
+> `Feld A`, 2026-08-22: Ein Routine-Update legte **21 pwsh-Dateien** in ein
+> reines Bash-Projekt (19 Entrypoints, `team/lib.psm1`, `team/redteam.ps1`).
+> Untracked, unbestellt. Und weil sie im Baum lagen, fuhr die Testsuite ab da
+> eine Bahn mit, die dort niemand fährt — `conftest.bahnen_in_der_ablage`
+> entscheidet an der **Anwesenheit** der Dateien.
+
+Seitdem sagt die **Ablage**, welche Bahn ein Projekt fährt, nicht der Schalter,
+den beim Update gerade niemand tippt. Der Rückweg bleibt, er wird nur
+ausdrücklich: `--beide-bahnen` / `-BeideBahnen`. Damit gilt derselbe Satz in
+beide Richtungen — die Entscheidung kommt vom Anwender, nie vom Installer.
+
+**Woran erkannt wird, ist der eigentliche Bauentscheid.** Nicht an der Endung:
+Ein projekteigenes `deploy.ps1` ist keine pwsh-Bahn, ein `build.sh` macht aus
+einem Windows-Projekt kein zweibahniges. Eine Endungs-Heuristik hätte im Feld
+an genau dieser Stelle vorbeigelesen und die Bahn wieder dazugelegt, die der
+Fix fernhalten soll. Gefragt wird deshalb nach den Dateien, die das **Kit**
+ausliefert — dieselbe Liste, aus der auch die Reste-Meldung gebaut ist. Die
+zählte vorher nach Endung und hätte einem Anwender irgendwann `git rm` auf
+seine eigene Datei vorgeschlagen: Lehre `BL-12`, nur andersherum.
+
 ---
 
 *Die konzeptionelle Grundlage (Vorlage, Guard-Konzept, Ralph-Schleife,

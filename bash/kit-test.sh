@@ -636,18 +636,25 @@ b_pruefe "im leeren Repo schweigt auch das Update" \
     "$(grep -c 'Ungeprueft in der Wurzel' "$ZIEL/.update.log")" "0"
 [ "$BESTAND_FEHLER" -eq 0 ] || exit 1
 
-kopf "8/11 — Abwahl einer Bahn und ihr Rueckweg (BL-119)"
+kopf "8/11 — Abwahl einer Bahn, ihr Bestand und ihr Rueckweg (BL-119/BL-147)"
 # Der Schalter --nur-bash/--nur-pwsh ist eine ausdrueckliche Abwahl durch den
-# Anwender. Was ihn ueberhaupt erst vertretbar macht, ist der RUECKWEG: Ein
-# spaeteres --update ohne Schalter muss das Projekt wieder vollstaendig
-# machen. Sonst waere die Abwahl eine Einbahnstrasse, und der Anwender saesse
-# mit einem halben Projekt da, ohne es zu merken.
+# Anwender. Zwei Zusicherungen haengen daran, und sie ziehen in verschiedene
+# Richtungen:
 #
-# Beim ersten Bau ist genau das passiert: Die Entrypoints kamen zurueck, die
-# KONFIGURATION nicht — ein Update fasst team.config.* grundsaetzlich nicht
-# an. Richtig, solange sie da ist; fehlt sie, ist "nicht anfassen" kein
-# Schutz, sondern eine halbe Bahn. Deshalb steht der Rueckweg hier und nicht
-# in der Doku.
+#   BESTAND (BL-147): Ein --update ohne Schalter HAELT die Bahn. Der Installer
+#   erkennt die einbahnige Ablage an den Dateien, die das Kit ausliefert, und
+#   legt nichts der anderen Bahn dazu. Bis BL-147 machte das Update das
+#   Projekt "wieder vollstaendig" — im Feld (Feld A, 2026-08-22) waren das 21
+#   ungebetene pwsh-Dateien in einem reinen Bash-Projekt.
+#
+#   RUECKWEG (BL-119): --beide-bahnen macht das Projekt vollstaendig. Ohne ihn
+#   waere die Abwahl eine Einbahnstrasse. Beim ersten Bau ist genau hier der
+#   Haken gesessen: Die Entrypoints kamen zurueck, die KONFIGURATION nicht —
+#   ein Update fasst team.config.* grundsaetzlich nicht an. Richtig, solange
+#   sie da ist; fehlt sie, ist "nicht anfassen" kein Schutz, sondern eine
+#   halbe Bahn.
+#
+# Beide stehen hier und nicht in der Doku: Sie brauchen echte Installationen.
 A_REPO="$(mktemp -d)/projekt"
 mkdir -p "$A_REPO"
 git -C "$A_REPO" init -q
@@ -676,13 +683,26 @@ a_pruefe "Tests bleiben gruen (kein Fehlschlag durch die fehlende Bahn)" \
 a_pruefe "und die Einbahnigkeit steht in der Zusammenfassung" \
     "$(grep -c 'einbahnige Ablage' "$A_REPO/.einbahnig.log")" "1"
 
-# --- Der Rueckweg
+# --- Der Bestand (BL-147): Das Routine-Update haelt die Bahn
 git -C "$A_REPO" add -A >/dev/null 2>&1
 git -C "$A_REPO" commit -q -m "einbahnig installiert"
-bash "$KIT/bash/install.sh" "$A_REPO" --update > "$A_REPO/.rueckweg.log" 2>&1 \
+bash "$KIT/bash/install.sh" "$A_REPO" --update > "$A_REPO/.bestand.log" 2>&1 \
     || { rot "  ✗ --update auf einem einbahnigen Projekt schlug fehl"; \
+         sed 's/\x1b\[[0-9;]*m//g' "$A_REPO/.bestand.log" | tail -20; exit 1; }
+a_pruefe "--update laesst die einbahnige Ablage einbahnig (BL-147)" \
+    "$(ls "$A_REPO" | grep -cE '\.ps1$|\.cmd$')" "0"
+a_pruefe "auch team/ bleibt frei von der anderen Bahn" \
+    "$(ls "$A_REPO/team" | grep -cE '\.psm1$|\.ps1$')" "0"
+a_pruefe "und die Erkennung steht im Protokoll" \
+    "$(grep -c 'Einbahnige Ablage erkannt: nur die bash-Bahn' "$A_REPO/.bestand.log")" "1"
+
+# --- Der Rueckweg, jetzt ausdruecklich (BL-119 + BL-147)
+git -C "$A_REPO" add -A >/dev/null 2>&1
+git -C "$A_REPO" commit -q -m "einbahnig geblieben"
+bash "$KIT/bash/install.sh" "$A_REPO" --update --beide-bahnen > "$A_REPO/.rueckweg.log" 2>&1 \
+    || { rot "  ✗ --update --beide-bahnen auf einem einbahnigen Projekt schlug fehl"; \
          sed 's/\x1b\[[0-9;]*m//g' "$A_REPO/.rueckweg.log" | tail -20; exit 1; }
-a_pruefe "--update holt die pwsh-Bahn zurueck" \
+a_pruefe "--beide-bahnen holt die pwsh-Bahn zurueck" \
     "$(ls "$A_REPO" | grep -cE '\.ps1$|\.cmd$')" "19"
 a_pruefe "auch den PowerShell-Kern" \
     "$(ls "$A_REPO/team" | grep -cE '\.psm1$|\.ps1$')" "2"
@@ -756,14 +776,27 @@ a_pruefe "die abgewaehlte bash-Bahn ist als Uebersprung ausgewiesen" \
 a_pruefe "und der Grund nennt die ABWAHL, nicht einen Defekt" \
     "$(grep -c 'in dieser Ablage abgewaehlt (--nur-pwsh)' "$B_REPO/.einbahnig.log")" "1"
 a_pruefe "samt Rueckweg" \
-    "$(grep -c 'update ohne Schalter holt sie zurueck' "$B_REPO/.einbahnig.log")" "2"
+    "$(grep -c 'update --beide-bahnen holt sie zurueck' "$B_REPO/.einbahnig.log")" "2"
 
 git -C "$B_REPO" add -A >/dev/null 2>&1
 git -C "$B_REPO" commit -q -m "einbahnig pwsh installiert"
-bash "$KIT/bash/install.sh" "$B_REPO" --update > "$B_REPO/.rueckweg.log" 2>&1 \
+# Bestand zuerst, spiegelbildlich zu oben: Ein Windows-Projekt bekommt von
+# einem Routine-Update keine .sh dazu (BL-147). Die Richtung wiegt hier
+# schwerer — ein Windows-Projekt OHNE bash ist der Normalfall der pwsh-Bahn.
+bash "$KIT/bash/install.sh" "$B_REPO" --update > "$B_REPO/.bestand.log" 2>&1 \
     || { rot "  ✗ --update auf einem NUR-PWSH-Projekt schlug fehl (BL-126)"; \
+         sed 's/\x1b\[[0-9;]*m//g' "$B_REPO/.bestand.log" | tail -20; exit 1; }
+a_pruefe "--update laesst die nur-pwsh-Ablage einbahnig (BL-147)" \
+    "$(ls "$B_REPO" | grep -cE '\.sh$')" "0"
+a_pruefe "und die Erkennung nennt die pwsh-Bahn" \
+    "$(grep -c 'Einbahnige Ablage erkannt: nur die pwsh-Bahn' "$B_REPO/.bestand.log")" "1"
+
+git -C "$B_REPO" add -A >/dev/null 2>&1
+git -C "$B_REPO" commit -q -m "einbahnig pwsh geblieben"
+bash "$KIT/bash/install.sh" "$B_REPO" --update --beide-bahnen > "$B_REPO/.rueckweg.log" 2>&1 \
+    || { rot "  ✗ --update --beide-bahnen auf einem NUR-PWSH-Projekt schlug fehl (BL-126)"; \
          sed 's/\x1b\[[0-9;]*m//g' "$B_REPO/.rueckweg.log" | tail -20; exit 1; }
-a_pruefe "--update holt die Bash-Bahn zurueck" "$(ls "$B_REPO"/*.sh | wc -l)" "10"
+a_pruefe "--beide-bahnen holt die Bash-Bahn zurueck" "$(ls "$B_REPO" | grep -cE '\.sh$')" "10"
 a_pruefe "team.config.sh ist wieder da" \
     "$([ -f "$B_REPO/team.config.sh" ] && echo ja || echo nein)" "ja"
 a_pruefe "und VOLLSTAENDIG gefuellt (kein Platzhalter uebrig)" \

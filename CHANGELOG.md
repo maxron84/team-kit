@@ -12,6 +12,46 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 _Offen sind drei Backlog-Einträge, die alle eine Windows-Maschine brauchen_
 _(`BL-117`, `BL-145`, `BL-146`) — siehe [plans/backlog.md](plans/backlog.md)._
 
+### Fixed
+
+- ⚠️ **Ein `--update` legte die zweite Bahn dazu — auch in ein Projekt, das nie
+  eine wollte** (`BL-147`). Gedacht war das als Rückweg aus einer Abwahl
+  (`BL-119`: „ein Update macht das Projekt wieder vollständig"). Nur fährt
+  niemand ein `--update`, um eine Bahn zurückzuholen — man fährt es, um eine
+  neue Kit-Version zu bekommen. Der Ausnahmefall war die Vorbelegung.
+
+  Im Feld (`Feld A`, 2026-08-22) legte ein Routine-Update **21 pwsh-Dateien**
+  in ein reines Bash-Projekt: 19 Entrypoints, `team/lib.psm1`,
+  `team/redteam.ps1`. Untracked, unbestellt — und weil sie im Baum lagen, fuhr
+  die Testsuite ab da eine Bahn mit, die dort niemand fährt
+  (`conftest.bahnen_in_der_ablage` entscheidet an der **Anwesenheit** der
+  Dateien).
+
+  **Jetzt sagt die Ablage, welche Bahn ein Projekt fährt.** Der Update-Pfad
+  beider Installer erkennt eine einbahnige Ablage und hält sie einbahnig; er
+  meldet es (`Einbahnige Ablage erkannt: nur die bash-Bahn`). Der Rückweg
+  bleibt, er wird nur **ausdrücklich**: `--update --beide-bahnen`
+  (`-BeideBahnen`). Damit kommt die Entscheidung in beide Richtungen vom
+  Anwender, nie vom Installer — derselbe Schnitt wie bei der Abwahl selbst.
+
+  **Erkannt wird an den Dateien, die das Kit ausliefert, nicht an Endungen.**
+  Ein projekteigenes `deploy.ps1` ist keine pwsh-Bahn, ein `build.sh` macht aus
+  einem Windows-Projekt kein zweibahniges; eine Endungs-Heuristik hätte im Feld
+  an genau dieser Stelle vorbeigelesen. Aus derselben Liste ist jetzt auch die
+  Reste-Meldung gebaut — die zählte vorher nach Endung und hätte irgendwann
+  `git rm` auf die eigene Datei eines Anwenders vorgeschlagen (Lehre `BL-12`,
+  nur andersherum).
+
+  **Unter Test:** `kit-test.sh` Stufe 8 prüft in **beiden** Richtungen erst den
+  Bestand (ein `--update` lässt die einbahnige Ablage einbahnig, in der Wurzel
+  *und* in `team/`), dann den Rückweg über `--beide-bahnen` mit den bisherigen
+  Zusicherungen (Konfiguration aus den **Projektwerten**, keine Platzhalter).
+  Dazu fünf Fälle am Quelltext beider Installer
+  (`test_bl147_update_erkennt_die_bahn.py`), weil die pwsh-Fassung auf einer
+  Maschine ohne PowerShell nicht **gefahren** werden kann — genau die
+  `BL-117`-Lage. ⚠️ **Die pwsh-Seite dieses Fixes ist damit geschrieben und
+  nicht ausgeführt** (`BL-146`).
+
 ## [2.12.0] — 2026-08-22
 
 **Die Windows-Runde.** Erste Kaskade eines Projekts auf der pwsh-Bahn, auf

@@ -3,7 +3,7 @@
 # install.sh — installiert das T.E.A.M. in ein Zielprojekt.
 #
 # Aufruf:  bash bash/install.sh <zielpfad> [--nicht-interaktiv] [--force|--update]
-#                                          [--nur-bash|--nur-pwsh]
+#                                          [--nur-bash|--nur-pwsh|--beide-bahnen]
 #
 #   --nicht-interaktiv  Keine Rückfragen; Werte aus den TEAM_INIT_*-Umgebungs-
 #                       variablen oder den Defaults. Für Skripte und Tests.
@@ -44,6 +44,10 @@ UPDATE=0
 # Hand. Die Abwahl ist deshalb ausdruecklich und kommt vom Anwender, nie vom
 # Installer (BL-119).
 NUR_BAHN=""
+# BL-147: Der Rueckweg aus BL-119 — "ein Update macht das Projekt wieder
+# vollstaendig" — war bis hierher der Default und damit ein Automatismus.
+# Jetzt ist er ein Schalter. Begruendung am Erkennungsblock im Update-Pfad.
+BEIDE_BAHNEN=0
 
 # BL-139: Die Regeltexte nennen Pfade — und in einer einbahnigen Ablage nennen
 # sie damit Dateien, die es dort nicht gibt. Im Feld (Feld B, mit
@@ -84,12 +88,20 @@ for arg in "$@"; do
         --update)           UPDATE=1 ;;
         --nur-bash)         NUR_BAHN="bash" ;;
         --nur-pwsh)         NUR_BAHN="pwsh" ;;
+        --beide-bahnen)     BEIDE_BAHNEN=1 ;;
         -*) echo "Unbekannte Option: $arg" >&2; exit 2 ;;
         *)  ZIEL="$arg" ;;
     esac
 done
 
+if [ "$BEIDE_BAHNEN" -eq 1 ] && [ -n "$NUR_BAHN" ]; then
+    printf '\033[31m%s\033[0m\n' "FEHLER: --beide-bahnen und --nur-$NUR_BAHN schliessen sich aus."
+    echo "  --beide-bahnen holt eine fehlende Bahn zurueck, --nur-* waehlt eine ab."
+    exit 2
+fi
+
 # BL-139: Erst JETZT stehen die Schalter fest — vorher waeren die Werte geraten.
+# (Nach der Bahn-Erkennung im Update-Pfad wird erneut gerufen, BL-147.)
 bahn_werte
 
 # Gehoert die Datei zu einer abgewaehlten Bahn? Entscheidet ueber die ENDUNG,
@@ -100,6 +112,29 @@ bahn_abgewaehlt() {
         bash) case "$1" in *.ps1|*.psm1|*.cmd) return 0 ;; esac ;;
         pwsh) case "$1" in *.sh) return 0 ;; esac ;;
     esac
+    return 1
+}
+
+# BL-147: Liegt diese Bahn im Zielprojekt? Gefragt wird nach den Dateien, die
+# das KIT ausliefert — nicht nach der Endung. Ein projekteigenes deploy.ps1
+# ist keine pwsh-Bahn, und ein build.sh macht aus einem Windows-Projekt kein
+# zweibahniges. Genau daran haette eine Endungs-Heuristik im Feld vorbeigelesen.
+bahn_liegt_da() {  # bahn_liegt_da <bash|pwsh> — 0, wenn diese Bahn da ist
+    local f
+    if [ "$1" = "bash" ]; then
+        for f in "$KIT"/bash/entry/*.sh; do
+            [ -f "$ZIEL/$(basename "$f")" ] && return 0
+        done
+        [ -f "$ZIEL/team/lib.sh" ] && return 0
+        [ -f "$ZIEL/team/redteam.sh" ] && return 0
+    else
+        for f in "$KIT"/pwsh/entry/*.ps1 "$KIT"/pwsh/entry/*.cmd; do
+            [ -e "$f" ] || continue
+            [ -f "$ZIEL/$(basename "$f")" ] && return 0
+        done
+        [ -f "$ZIEL/team/lib.psm1" ] && return 0
+        [ -f "$ZIEL/team/redteam.ps1" ] && return 0
+    fi
     return 1
 }
 
@@ -386,6 +421,38 @@ if [ "$UPDATE" -eq 1 ]; then
         echo "  (weder team.config.sh noch team.config.ps1). Fuer eine"
         echo "  Erstinstallation ohne --update aufrufen."
         exit 2
+    fi
+
+    # BL-147: Welche Bahn ein Projekt faehrt, sagt die ABLAGE — nicht der
+    # Schalter, den beim Update gerade niemand tippt. Bis hierher galt der
+    # Umkehrschluss: Ein --update ohne Schalter machte das Projekt "wieder
+    # vollstaendig" (BL-119) und legte die zweite Bahn dazu. Als Rueckweg aus
+    # einer Abwahl gedacht — im Feld ist es der Normalfall geworden, und der
+    # Normalfall will keine zweite Bahn.
+    #
+    # Feld A, 2026-08-22: Ein Routine-Update legte 21 pwsh-Dateien in ein
+    # reines Bash-Projekt. Untracked, unbestellt, und weil sie im Baum lagen,
+    # fuhr die Testsuite ab da eine Bahn mit, die dort niemand faehrt
+    # (conftest entscheidet an der ANWESENHEIT der Dateien). Der Anwender
+    # bemerkt es an 19 fremden Dateien in `git status` — falls er hinsieht.
+    #
+    # Der Rueckweg bleibt, er wird nur ausdruecklich: --beide-bahnen. Das ist
+    # derselbe Schnitt wie bei der Abwahl selbst ("kommt vom Anwender, nie vom
+    # Installer") — nur jetzt in beide Richtungen.
+    if [ -z "$NUR_BAHN" ] && [ "$BEIDE_BAHNEN" -eq 0 ]; then
+        if   bahn_liegt_da bash && ! bahn_liegt_da pwsh; then NUR_BAHN="bash"
+        elif bahn_liegt_da pwsh && ! bahn_liegt_da bash; then NUR_BAHN="pwsh"
+        fi
+        if [ -n "$NUR_BAHN" ]; then
+            # Die Bahn steht erst JETZT fest — die Regeltexte muessen ihre
+            # Pfade daraus bekommen, sonst nennt der Systemprompt jeder Rolle
+            # Dateien, die es hier nicht gibt (BL-139).
+            bahn_werte
+            gruen "  ✓ Einbahnige Ablage erkannt: nur die ${NUR_BAHN}-Bahn (BL-147)"
+            echo  "    Das Update haelt sie einbahnig und legt keine Dateien der"
+            echo  "    anderen Bahn dazu. Zweibahnig machen (ausdruecklich):"
+            echo  "      bash $KIT/bash/install.sh \"$ZIEL\" --update --beide-bahnen"
+        fi
     fi
 
     # BL-10: NIEMALS in einen laufenden Lauf hinein aktualisieren. Real
@@ -749,11 +816,21 @@ PY
     # pauschales rm des Installers hat im Feld einen projekteigenen Test
     # mitgenommen. Genannt wird es, mit dem Befehl daneben.
     if [ -n "$NUR_BAHN" ]; then
+        # Gezaehlt wird nur, was das KIT ausliefert (BL-147, dieselbe
+        # Ueberlegung wie bei der Erkennung): Ein projekteigenes deploy.ps1
+        # gehoert nicht der abgewaehlten Bahn, und ein "git rm" darauf waere
+        # ein Rat, der fremde Arbeit loescht.
         RESTE=""
-        for f in "$ZIEL"/* "$ZIEL"/team/*; do
-            [ -f "$f" ] || continue
+        for f in "$KIT"/bash/entry/*.sh "$KIT"/pwsh/entry/*.ps1 "$KIT"/pwsh/entry/*.cmd; do
+            [ -e "$f" ] || continue
             bahn_abgewaehlt "$f" || continue
-            RESTE="$RESTE ${f#"$ZIEL"/}"
+            [ -f "$ZIEL/$(basename "$f")" ] && RESTE="$RESTE $(basename "$f")"
+        done
+        for f in "$KIT/bash/lib.sh" "$KIT/bash/redteam.sh" \
+                 "$KIT/pwsh/lib.psm1" "$KIT/pwsh/redteam.ps1"; do
+            [ -e "$f" ] || continue
+            bahn_abgewaehlt "$f" || continue
+            [ -f "$ZIEL/team/$(basename "$f")" ] && RESTE="$RESTE team/$(basename "$f")"
         done
         if [ -n "$RESTE" ]; then
             kopf "Abgewaehlte Bahn liegt noch da (BL-119/BL-133)"
