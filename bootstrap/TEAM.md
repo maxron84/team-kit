@@ -306,13 +306,19 @@ trotzdem links.
 **Fehlt eine der beiden Spalten in deinem Projekt?** Wenn hier keine `.cmd`-
 und `.ps1`-Dateien liegen (oder umgekehrt keine `.sh`), ist diese Bahn bei der
 Installation ausdrücklich **abgewählt** worden (`--nur-bash` / `--nur-pwsh`).
-Das ist kein Defekt. Zurückholen — macht das Projekt wieder vollständig, samt
-der fehlenden Konfiguration:
+Das ist kein Defekt, und ein `--update` ändert daran nichts: Es **hält** die
+Bahn, die hier liegt (`Kit-BL-147`). Zurückholen musst du sie **ausdrücklich**
+— das macht das Projekt wieder vollständig, samt der fehlenden Konfiguration:
 
 ```bash
-bash <kit-pfad>/bash/install.sh . --update
-``` Beide
-Spalten tun dasselbe — es sind zwei Schreibweisen, kein Funktionsunterschied.
+bash <kit-pfad>/bash/install.sh . --update --beide-bahnen
+```
+
+```powershell
+pwsh -File <kit-pfad>\pwsh\install.ps1 . -Update -BeideBahnen
+```
+
+Beide Spalten tun dasselbe — es sind zwei Schreibweisen, kein Funktionsunterschied.
 Die letzte Zeile steht bewusst als *(gleich)* da: Die Werkzeuge sind Python und
 werden auf beiden Wegen identisch aufgerufen.
 
@@ -401,7 +407,9 @@ pwsh -File <kit-pfad>\pwsh\install.ps1 . -Update
 ```
 
 **`--update` fasst nur die Infrastruktur an** — Entrypoints, `{{LIB}}`,
-die Werkzeuge, die Rollen-Briefings, die Team-Tests. **Unangetastet bleiben**
+die Werkzeuge, die Rollen-Briefings, die Team-Tests. **Die Bahn wechselt es
+nicht**: Was einbahnig ist, bleibt einbahnig (`Kit-BL-147`). **Unangetastet
+bleiben**
 deine Projektdaten: deine Konfiguration (`team.config.*` — je Bahn eine),
 `CLAUDE.md`, `CHANGELOG.md`,
 `.budget-ledger`, `.ralph-state` und der ganze Plan-Ordner. Der Lauf listet am
