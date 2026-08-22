@@ -2,7 +2,7 @@
 """BL-18: `--budget` behauptete "nicht im Gesamt enthalten" — auch dann, wenn
 die Architekten-Zeile sehr wohl enthalten war.
 
-Aus dem Feld zurueckgespielt (platformer, Architekt-Closeout K3, 2026-08-02).
+Aus dem Feld zurueckgespielt (Feld A, Architekt-Closeout K3, 2026-08-02).
 team-status.sh druckte den Zusatz UNBEDINGT, obwohl team_architekt_stand zwei
 Modi hat:
 

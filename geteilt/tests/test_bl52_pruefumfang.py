@@ -2,7 +2,7 @@
 """BL-52: Der Sweep-Auftrag endete am Produktivcode-Ordner — Einstiegspunkte in
 der Repo-Wurzel sah das Red Team nie.
 
-Beobachtet an einer fremden, gewachsenen Codebasis (Project-Family-ERP,
+Beobachtet an einer fremden, gewachsenen Codebasis (Feld C,
 2026-08-11, nur analysiert): `main.py` in der Wurzel ist der Einstiegspunkt der
 gesamten GUI, `bin/build.py` erzeugt das ausgelieferte Binaer — beide ausserhalb
 von `src/`, beide bei Default-Konfiguration dauerhaft ungeprueft. Das ist KEINE

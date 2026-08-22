@@ -3,7 +3,7 @@
 und schickten damit jede Rolle an Dateien, die es dort nicht gibt.
 
 DER FELDBEFUND
-    `duke-itam-2026`, mit `--nur-pwsh` installiert. `CLAUDE.md` nannte **14**
+    `Feld B`, mit `--nur-pwsh` installiert. `CLAUDE.md` nannte **14**
     verschiedene `.sh`-Pfade, KEINER davon existierte; `TEAM.md` kam auf 23
     Nennungen. Gemessen, nicht vermutet:
 

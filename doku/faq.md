@@ -462,8 +462,8 @@ zeigen.
 - **Die Verhältniszahl 280 : 1 ist gemessen**, nicht geschätzt: aus dem
   Transkript der Sitzung, in der `Kit-BL-141` gebaut wurde (58 806 159
   `cache_read`-Token gegen 210 804 erzeugte).
-- **Die 35 % und die 13 % sind Feldbeträge** aus `duke-itam-2026` bzw.
-  `platformer`, keine Modellrechnungen.
+- **Die 35 % und die 13 % sind Feldbeträge** aus `Feld B` bzw.
+  `Feld A`, keine Modellrechnungen.
 - **Die Preistabelle des Messwerkzeugs ist gegen die Herstellerangaben
   geprüft** und eicht sich zusätzlich an den abgerechneten Läufen des Projekts
   selbst — weicht sie ab, sagt das Werkzeug es, statt eine Zahl zu buchen.

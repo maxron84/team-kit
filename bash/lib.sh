@@ -23,7 +23,7 @@ fi
 # verschwinden — sonst merkt niemand, dass das Sicherheitsnetz fehlt.
 if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
     # Der Nachsatz ist eine Notbremse gegen einen teuren Fehlermodus, nicht
-    # Ausschmückung (BL-41, Feld platformer K27/K28): Eine bauende Rolle
+    # Ausschmückung (BL-41, Feld A K27/K28): Eine bauende Rolle
     # startete den Smoke-Test als HINTERGRUND-Task und wartete danach auf eine
     # Benachrichtigung, die in einer headless-Sitzung nie eintrifft. Der Lauf
     # endet mit subtype=success und is_error=false — er SIEHT AUS WIE EIN
@@ -62,7 +62,7 @@ TEAM_MODEL_LOOP="${TEAM_MODEL_LOOP:-sonnet}"
 TEAM_MODEL_STRONG="${TEAM_MODEL_STRONG:-opus}"
 
 # --- Budget pro Rolle (Zwei-Schwellen-Modell) --------------------------------
-# Strippenzieher-Entscheid 2026-07-12 (realer Auslöser HM-32): Ein zu tiefes
+# Stakeholder-Entscheid 2026-07-12 (realer Auslöser HM-32): Ein zu tiefes
 # Pro-Rolle-Budget ist ökonomisch absurd — der alte 1-USD-Frank-Cap griff ERST
 # NACH dem (bereits bezahlten) Claude-Aufruf und warf über den Rollback die
 # schon bezahlte Arbeit weg, der nächste Versuch kostete erneut: der Cap
@@ -204,7 +204,7 @@ team_resolve_auth_mode() {
 # --- Zentraler Claude-Aufruf ---------------------------------------------------
 # team_claude <rolle> <modell> <outfile> <prompt> [weitere claude-Flags …]
 #
-# Abo-first mit automatischem API-Fallback (Strippenzieher-Entscheid 2026-07-10:
+# Abo-first mit automatischem API-Fallback (Stakeholder-Entscheid 2026-07-10:
 # gilt für ALLE Rollen, auch Axel): Auth wird pro Aufruf frisch aufgelöst;
 # scheitert der Abo-Aufruf (Exit ≠ 0 oder is_error), folgt genau EIN API-Retry.
 # Nach dem Aufruf stehen TEAM_LAST_COST (USD) und TEAM_LAST_OUT (Log-Datei).
@@ -214,7 +214,7 @@ team_resolve_auth_mode() {
 # TEAM_LAST_OUT bleibt das FINALE Log (Promise-Pruefung, HM-20).
 #
 # Session-Limit (429, Kaskade 9 / Stufe 30, Strategie A+B; API-Fallback-Reihenfolge
-# per Strippenzieher-Entscheid 2026-07-11 umgestellt, Commit f787936): Bei JEDEM
+# per Stakeholder-Entscheid 2026-07-11 umgestellt, Commit f787936): Bei JEDEM
 # Abo-Fehler — Timeout, normaler Fehler ODER 429/Session-Limit — versucht
 # team_claude SOFORT den einmaligen API-Fallback (eigenes, separates Kontingent;
 # hilft auch bei einem Abo-429). Erst wenn AUCH das finale (ggf. API-)Ergebnis
@@ -356,7 +356,7 @@ PY
     versuch_logs+=("$out")
     if team_bewerte_ergebnis "$rolle" "$out" "$cli_exit"; then fehler=0; else fehler=1; fi
 
-    # Strippenzieher-Entscheid (2026-07-11): Bei JEDEM Abo-Fehler — egal ob
+    # Stakeholder-Entscheid (2026-07-11): Bei JEDEM Abo-Fehler — egal ob
     # Timeout, normaler Fehler ODER 429/Session-Limit — SOFORT den API-Fallback
     # versuchen. Der API-Key hat ein eigenes, separates Kontingent (bewiesen
     # 2026-07-11: bei erschöpftem Abo-Kontingent liefert derselbe Prompt mit dem
@@ -534,7 +534,7 @@ team_quittung_fehlt_melden() {
 #
 # WARUM ES SIE GIBT: Die Erkennung oben ist richtig, aber sie hält den Lauf an
 # und legt einem Menschen eine Prüfliste vor, deren drei Schritte IMMER
-# dieselben sind. Im Feld (Projekt platformer) ist der Fall in neun Kaskaden
+# dieselben sind. Im Feld (Feld A) ist der Fall in neun Kaskaden
 # aufgetreten — K27, K28, K29, K33, K34, K35 (dort dreimal), K36, K37 — und
 # JEDES Mal lautete das Ergebnis "Arbeit fertig, nur die Quittung fehlt". Eine
 # Prüfliste, die neunmal dasselbe ergibt, ist eine Funktion, die noch niemand
@@ -925,7 +925,7 @@ team_guard_verify() {
 # team_guard_urteil <rolle> <uebergriff 0|1> <ergebnis-liegt-vor 0|1>
 #   Exit 0 = die Runde zählt · 1 = der Aufruf gilt als gescheitert.
 #
-# BL-16 Ebene 2 (Strippenzieher-Entscheid 2026-08-02): Ein Guard-Übergriff
+# BL-16 Ebene 2 (Stakeholder-Entscheid 2026-08-02): Ein Guard-Übergriff
 # kassiert den ÜBERGRIFF, nicht die Arbeit. Liegt das eigentliche Ergebnis der
 # Rolle vor, ist die Leistung erbracht — der Grenzübertritt ist bereits
 # chirurgisch zurückgerollt und laut gemeldet, und ein zusätzlicher Fehlschlag
@@ -1179,7 +1179,7 @@ team_kosten_summe() {
 # team_kosten_seit <epoch> <dir…>: Summe total_cost_usd nur über *.json, deren
 # mtime >= <epoch> ist — die Kosten EINES Laufs (seit dem gemerkten Startpunkt),
 # nicht lebenslang. Grundlage der Pro-Lauf-Deckel-Durchsetzung in vollautomatik.sh
-# (BL-18, Strippenzieher-Entscheid: „Pro-Lauf-Deckel = operative Grenze,
+# (BL-18, Stakeholder-Entscheid: „Pro-Lauf-Deckel = operative Grenze,
 # Gesamtrahmen nur dokumentiert" — CLAUDE.md/BL-13). Der lebenslange Kontostand
 # bleibt team_kontostand_gesamt (Anzeige, nicht Durchsetzung).
 team_kosten_seit() {
@@ -1310,7 +1310,7 @@ team_bau_notiz() {
 
 # team_architekt_stand [ledger-pfad] [plan-datei]: liefert "USD<TAB>status"
 # fuer die Architekt-Kosten der AKTIVEN Kaskade — BL-28-Hybrid A2->A1
-# (Kaskade 13/Stufe 44): Hat der Strippenzieher fuer diese Kaskade bereits
+# (Kaskade 13/Stufe 44): Hat der Stakeholder fuer diese Kaskade bereits
 # eine echte Architekt-Zeile per `architekt-abschluss` (Stufe 43)
 # eingetragen, ist status "echt" und der Wert kommt aus der Ledger. Sonst
 # status "geschaetzt" mit der A2-Live-Schaetzung (team_architekt_schaetzung).
@@ -1445,7 +1445,7 @@ team_logs_archivieren() {
 }
 
 # team_resolve_budget_cap <aktueller-deckel> <user-hat-gesetzt:0|1> <empfehlung>
-# Reine Rechenlogik der "nur anheben, nie senken"-Regel (Strippenzieher-
+# Reine Rechenlogik der "nur anheben, nie senken"-Regel (Stakeholder-
 # Entscheid 2, Stufe 19) — isoliert testbar ohne echten vollautomatik.sh-Lauf:
 #   - hat der User TEAM_BUDGET_USD explizit gesetzt, gewinnt IMMER der
 #     aktuelle Wert (auch wenn die Empfehlung höher läge);
@@ -1465,7 +1465,7 @@ team_resolve_budget_cap() {
 
 # team_budget_check <kosten> <soft-limit> <label> [hard-limit]
 #
-# Zwei-Schwellen-Modell (Strippenzieher-Entscheid 2026-07-12, HM-32).
+# Zwei-Schwellen-Modell (Stakeholder-Entscheid 2026-07-12, HM-32).
 # Rückgabe:
 #   0 = ok (unter der Warnschwelle)
 #   1 = Warnschwelle (80 % des Soft-Limits) erreicht — reiner Hinweis
@@ -1494,7 +1494,7 @@ if cost >= soft:
     print(f"SOFT-CAP ÜBERSCHRITTEN ({label}): {cost:.2f} USD >= Soft-Cap {soft:.2f} USD.")
     sys.exit(2)
 if cost >= 0.8 * soft:
-    print(f"WARNSCHWELLE ({label}): {cost:.2f} USD >= 80 % von {soft:.2f} USD — Strippenzieher informieren.")
+    print(f"WARNSCHWELLE ({label}): {cost:.2f} USD >= 80 % von {soft:.2f} USD — Stakeholder informieren.")
     sys.exit(1)
 sys.exit(0)
 ' "$1" "$2" "$3" "${4:-}"

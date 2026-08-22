@@ -185,7 +185,7 @@ function Team-JsonLesen {
 $TEAM_SMOKE_TEST = Team-Default 'TEAM_SMOKE_TEST' ''
 if ($TEAM_SMOKE_TEST) {
     # Der Nachsatz ist eine Notbremse gegen einen teuren Fehlermodus, nicht
-    # Ausschmueckung (BL-41, Feld platformer K27/K28): Eine bauende Rolle
+    # Ausschmueckung (BL-41, Feld A K27/K28): Eine bauende Rolle
     # startete den Smoke-Test als HINTERGRUND-Task und wartete danach auf eine
     # Benachrichtigung, die in einer headless-Sitzung nie eintrifft. Der Lauf
     # endet mit subtype=success und is_error=false — er SIEHT AUS WIE EIN
@@ -759,7 +759,7 @@ function team_budget_check {
         return 2
     }
     if ($c -ge 0.8 * $s) {
-        [Console]::Out.WriteLine("WARNSCHWELLE ($Label): $($c.ToString('F2',[cultureinfo]::InvariantCulture)) USD >= 80 % von $($s.ToString('F2',[cultureinfo]::InvariantCulture)) USD — Strippenzieher informieren.")
+        [Console]::Out.WriteLine("WARNSCHWELLE ($Label): $($c.ToString('F2',[cultureinfo]::InvariantCulture)) USD >= 80 % von $($s.ToString('F2',[cultureinfo]::InvariantCulture)) USD — Stakeholder informieren.")
         return 1
     }
     return 0

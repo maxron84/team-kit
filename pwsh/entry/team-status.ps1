@@ -62,7 +62,7 @@ function Status-ArchitektZeile {
       "beschriftung<TAB>USD" der Architekt-Kennzahl — EINE Quelle fuer BEIDE
       Ansichten (Momentaufnahme und --budget).
 
-      BL-18 (Feld platformer, Closeout K3): Der Zusatz "nicht im Gesamt
+      BL-18 (Feld A, Closeout K3): Der Zusatz "nicht im Gesamt
       enthalten" stand in --budget UNBEDINGT — er gilt aber nur fuer den Modus
       "geschaetzt". Im Modus "echt" stammt der Wert aus einer Ledger-Zeile
       DIESER Kaskade, und die summiert der Kontostand mit. Der Modus schaltet

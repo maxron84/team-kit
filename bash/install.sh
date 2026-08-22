@@ -46,7 +46,7 @@ UPDATE=0
 NUR_BAHN=""
 
 # BL-139: Die Regeltexte nennen Pfade — und in einer einbahnigen Ablage nennen
-# sie damit Dateien, die es dort nicht gibt. Im Feld (duke-itam-2026, mit
+# sie damit Dateien, die es dort nicht gibt. Im Feld (Feld B, mit
 # --nur-pwsh installiert) waren das 14 tote .sh-Pfade in CLAUDE.md und 23 in
 # TEAM.md. Am teuersten team.config.sh: Der Regeltext schickte jede Rolle
 # dorthin, um TEAM_SMOKE_TEST nachzutragen, waehrend team/lib.psm1
@@ -116,7 +116,7 @@ ZIEL="$(cd "$ZIEL" 2>/dev/null && pwd)" || { rot "FEHLER: Zielpfad existiert nic
 # gefahren hat, blieb bisher dauerhaft auf dem Fragmentstand seines
 # Installationstages — der Installer meldete dabei sogar Erfolg ("enthaelt den
 # Block bereits") und der --update-Pfad sah gar nicht erst hin. Im Feld
-# (team-kit_project_platformer) fehlten so .team-focus-harry und
+# (Feld A) fehlten so .team-focus-harry und
 # .team-focus-marv: beide standen nach JEDEM Sweep als untracked im Baum, sahen
 # im Closeout wie unfertige Arbeit aus, und ein unachtsames `git add -A` haette
 # einen Fokus-String verewigt, der fuer genau einen Lauf galt.
@@ -389,7 +389,7 @@ if [ "$UPDATE" -eq 1 ]; then
     fi
 
     # BL-10: NIEMALS in einen laufenden Lauf hinein aktualisieren. Real
-    # passiert (2026-08-01, team-kit_project_platformer): Ein Update waehrend
+    # passiert (2026-08-01, Feld A): Ein Update waehrend
     # eines aktiven vollautomatik.sh-Laufs legte frische, uncommittete Dateien
     # in team/ ab. Der naechste Read-Only-Lauf (Axel, Whitelist nur plans/)
     # wertete sie als GUARD-VERLETZUNG, rollte sie chirurgisch zurueck und
@@ -526,7 +526,7 @@ if [ "$UPDATE" -eq 1 ]; then
     if [ -n "$COMMIT_ENTSCHEID" ]; then
         gruen "  ✓ Commit-Entscheid aus dem bisherigen Briefing uebernommen"
     else
-        COMMIT_ENTSCHEID="Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Strippenzieher führt sie aus."
+        COMMIT_ENTSCHEID="Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Stakeholder führt sie aus."
         gelb "  ! Commit-Entscheid nicht lesbar — Default (nicht selbst committen) gesetzt."
     fi
 
@@ -1116,7 +1116,7 @@ frage COMMIT_MODUS "Architekt committet selbst? (j/n)" "n"
 
 # Kollision Pruefumfang/Schreibzone: Derselbe Ordner kann nicht beides sein.
 # Stand er in beiden Antworten, sagte der Rollen-Prompt in EINEM Absatz "tabu"
-# und "schreib hierhin" — beobachtet an Project-Family-ERP, wo tests/ in beiden
+# und "schreib hierhin" — beobachtet an Feld C, wo tests/ in beiden
 # stand und Harrys Reproducer-Auftrag damit widerspruechlich war. Wer seinen
 # Testbestand schuetzen will, ist bei BL-51 richtig, nicht beim Pruefumfang.
 if [ -n "$WEITERER_CODE" ]; then
@@ -1144,7 +1144,7 @@ fi
 # Projekt ist das folgenlos (die Ordner entstehen erst). In einer gewachsenen
 # Codebasis ist "plans/" oder "docs/" typischerweise belegt — und Harry, Marv
 # und Axel bekommen stillschweigend Schreib- und Loeschrecht auf
-# Bestandsdokumente. Beobachtet an Project-Family-ERP: zehn fachliche Dokumente
+# Bestandsdokumente. Beobachtet an Feld C: zehn fachliche Dokumente
 # in plans/, darunter die Architektur- und die Refactoring-Planung.
 #
 # Gewarnt wird, nicht verboten: Ein bewusst geteilter Ordner kann legitim sein.
@@ -1199,7 +1199,7 @@ DEPLOY="TODO: in CLAUDE.md nachtragen"
 DEPLOY_AUSNAHMEN="keine"
 case "${COMMIT_MODUS,,}" in
     j|ja|y|yes) COMMIT_ENTSCHEID="Ich committe Plan-/Doku-Änderungen selbst (docs(plan): …)." ;;
-    *)          COMMIT_ENTSCHEID="Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Strippenzieher führt sie aus." ;;
+    *)          COMMIT_ENTSCHEID="Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Stakeholder führt sie aus." ;;
 esac
 
 # ---------------------------------------------------------------- Kopieren
@@ -1297,7 +1297,7 @@ with p.open("w", newline="",
 PY
 }
 
-# Entrypoints in die Repo-Wurzel — der Strippenzieher tippt sie direkt
+# Entrypoints in die Repo-Wurzel — der Stakeholder tippt sie direkt
 # (Ablage-Konvention aus dem Feld: Einstiegspunkte sichtbar oben).
 # BEIDE Bahnen werden installiert, auch wenn dieser Installer unter Linux
 # laeuft und den Windows-Teil hier niemand braucht. Der Grund ist die

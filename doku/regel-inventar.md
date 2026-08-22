@@ -32,7 +32,7 @@ machen. Erlaubte Träger: `Regeldatei`, `TEAM.md`, `anhang-a`,
 `rolle-axel`.
 
 Die drei Träger tragen verschiedene Adressaten — der Zuschnitt aus `BL-56`:
-**Regeldatei** = was Rollen befolgen, **`TEAM.md`** = was der Strippenzieher an
+**Regeldatei** = was Rollen befolgen, **`TEAM.md`** = was der Stakeholder an
 seiner Maschine tut, **`anhang-a`** = warum es so gebaut ist. `HERLEITUNG` und
 `HISTORIE` landen regulär in `anhang-a` (Doku-Hygiene-Regel 1).
 

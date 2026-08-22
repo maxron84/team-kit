@@ -291,15 +291,42 @@ fi
 T_DATEIEN="$(ls "$ZIEL"/team/tests/test_*.py | wc -l | tr -d ' ')"
 T_FAELLE="$("$KIT_PYTHON" -m pytest "$ZIEL/team/tests" --collect-only -q 2>/dev/null \
             | tail -1 | grep -oE '^[0-9]+' || true)"
-if grep -q "$T_DATEIEN Testdateien, $T_FAELLE Fälle" "$KIT/README.md" \
-   && grep -q "die $T_FAELLE Tests" "$KIT/README.md"; then
-    gruen "  ✓ README nennt dieselben Testzahlen ($T_DATEIEN Dateien, $T_FAELLE Fälle)"
-else
-    rot "  ✗ README nennt nicht '$T_DATEIEN Testdateien, $T_FAELLE Fälle' bzw. 'die $T_FAELLE Tests'"
-    echo "      Gemessen an der frischen Installation. Beide Stellen im README"
-    echo "      nachziehen — sonst steht dort wieder eine Zahl, die niemand prueft."
+# Geprueft wird die GATTUNG, nicht die Abschrift: JEDE Zahl im README, die
+# eine Testzahl behauptet, und JEDER Pfad, den es nennt. Der Vorlaeufer hier
+# kannte zwei feste Formulierungen — und uebersah deshalb wochenlang ein
+# drittes "369 Regressionstests" in freier Prosa, also genau die Zahl, vor der
+# der Kommentar oben warnt. Dieselbe Klasse beim Pfad: Der alte Waechter
+# verbot NAMENTLICH den Autorenmaschinen-Pfad und konnte einen neuen falschen
+# (`bash scripts/team-auth-setup.sh`) nicht sehen. Jetzt wird positiv geprueft.
+if ! "$KIT_PYTHON" "$KIT/geteilt/kit-readme-pruefen.py" \
+        --faelle "$T_FAELLE" --testdateien "$T_DATEIEN" --dateien "$GESCHRIEBEN_IST"; then
+    rot "  ✗ Das README steht gegen die frische Installation."
+    echo "      Gemessen wurde an einer FRISCHEN Installation, nicht am Repo." >&2
+    echo "      Die genannten Stellen im README nachziehen." >&2
     exit 1
 fi
+gruen "  ✓ README: Zahlen gemessen ($T_DATEIEN Dateien, $T_FAELLE Fälle), Pfade existieren"
+
+# Gegenprobe: Ein Waechter, der nie rot wird, sichert nichts ab — er
+# beschreibt nur, was ohnehin gilt (Bauart BL-14). Beide Gattungen einzeln
+# zurueckgedreht, an einer KOPIE; das Repo wird dabei nicht angefasst.
+GEGEN="$ZIEL/.readme-gegenprobe.md"
+sed "s/$T_FAELLE Regressionstests/1 Regressionstests/" "$KIT/README.md" > "$GEGEN"
+if "$KIT_PYTHON" "$KIT/geteilt/kit-readme-pruefen.py" --readme "$GEGEN" \
+        --faelle "$T_FAELLE" --testdateien "$T_DATEIEN" --dateien "$GESCHRIEBEN_IST" \
+        >/dev/null 2>&1; then
+    rot "  ✗ Gegenprobe: eine verfaelschte Testzahl blieb unbemerkt."
+    exit 1
+fi
+sed 's#bash/scripts/team-auth-setup.sh#scripts/team-auth-setup.sh#' "$KIT/README.md" > "$GEGEN"
+if "$KIT_PYTHON" "$KIT/geteilt/kit-readme-pruefen.py" --readme "$GEGEN" \
+        --faelle "$T_FAELLE" --testdateien "$T_DATEIEN" --dateien "$GESCHRIEBEN_IST" \
+        >/dev/null 2>&1; then
+    rot "  ✗ Gegenprobe: ein toter Pfad im README blieb unbemerkt."
+    exit 1
+fi
+rm -f "$GEGEN"
+gruen "  ✓ Gegenprobe: verfaelschte Zahl und toter Pfad werden beide rot"
 
 # BL-58: Schritt 4 prüft die Installation im AUSLIEFERUNGSZUSTAND — dort trägt
 # team.config.sh genau die Werte, die auch in team/lib.sh als Default stehen.
@@ -535,11 +562,11 @@ trap 'aufraeumen; bestand_aufraeumen' EXIT
 git -C "$BESTAND_REPO" init -q
 git -C "$BESTAND_REPO" config user.email "kit-test@localhost"
 git -C "$BESTAND_REPO" config user.name  "Kit-Selbsttest"
-# Die Lage aus Project-Family-ERP: belegtes plans/, gewachsene Testsuite,
+# Die Lage aus Feld C: belegtes plans/, gewachsene Testsuite,
 # Einstiegspunkt in der Wurzel.
 mkdir -p "$BESTAND_REPO/plans" "$BESTAND_REPO/tests" "$BESTAND_REPO/src"
-echo '# Architektur' > "$BESTAND_REPO/plans/family-erp-architecture.md"
-echo '# Refactoring' > "$BESTAND_REPO/plans/codebase-refactoring-plan.md"
+echo '# Architektur' > "$BESTAND_REPO/plans/bestand-architektur.md"
+echo '# Refactoring' > "$BESTAND_REPO/plans/bestand-refactoring-plan.md"
 echo 'def test_alt(): pass' > "$BESTAND_REPO/tests/test_scanner.py"
 echo 'print("start")' > "$BESTAND_REPO/main.py"
 git -C "$BESTAND_REPO" add -A
@@ -570,10 +597,10 @@ b_pruefe "die Folge wird benannt (Waechter greift dort nicht)" \
 b_pruefe "belegter Test-Ordner wird gemeldet" \
     "$(grep -c "Test-Ordner 'tests/' ist nicht leer" "$BESTAND_REPO/.install.log")" "1"
 b_pruefe "Bestandsdokument namentlich genannt" \
-    "$(grep -c 'family-erp-architecture.md' "$BESTAND_REPO/.install.log")" "1"
+    "$(grep -c 'bestand-architektur.md' "$BESTAND_REPO/.install.log")" "1"
 # Der Vermerk ist der Traeger: Aus ihm holen die Rollen-Prompts den Bestand.
 b_pruefe "Plan-Bestand steht in team.config.sh" \
-    "$(grep -c 'TEAM_PLAN_ORDNER_BESTAND:-.*codebase-refactoring-plan.md' \
+    "$(grep -c 'TEAM_PLAN_ORDNER_BESTAND:-.*bestand-refactoring-plan.md' \
         "$BESTAND_REPO/team.config.sh")" "1"
 b_pruefe "Test-Bestand steht in team.config.sh" \
     "$(grep -c 'TEAM_TEST_ORDNER_BESTAND:-.*test_scanner.py' \
@@ -927,8 +954,16 @@ e_pruefe "README verweist nicht mehr auf den Pfad der Autorenmaschine" \
 #    fuer die Maschinen da, auf denen der WSL-Weg ausfaellt.
 e_pruefe "einrichtung.md nennt den nativen Windows-Weg" \
     "$(grep -c '^## Der kurze Weg — Windows nativ' "$KIT/doku/einrichtung.md")" "1"
+# Geprueft wird, DASS der native Weg im Belegstand gefuehrt wird — nicht, WIE
+# er dort beurteilt ist. Der Vorlaeufer verlangte woertlich "gebaut und
+# gefahren" und wurde damit rot, als der Weg auf einer echten Windows-Maschine
+# lief: Er haette bei jedem Zugewinn an Beleg nachgezogen werden muessen. Ein
+# Waechter, der ein URTEIL festschreibt, ist die stille Behauptung, das Urteil
+# duerfe sich nicht aendern — dieselbe Klasse wie der Test, der `auth == "api"`
+# festschrieb (BL-143). Was sich aendern darf, ist der Befund; was nicht fehlen
+# darf, ist der Eintrag.
 e_pruefe "einrichtung.md fuehrt ihn im Belegstand" \
-    "$(grep -c 'Windows nativ (PowerShell): gebaut und gefahren' "$KIT/doku/einrichtung.md")" "1"
+    "$(grep -c '^- \*\*Windows nativ (PowerShell):' "$KIT/doku/einrichtung.md")" "1"
 
 [ "$E_FEHLER" -eq 0 ] || exit 1
 

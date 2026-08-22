@@ -11,7 +11,7 @@ Groessenordnung -- Stufe 43 ersetzt sie beim Kaskaden-Abschluss durch den
 echten Konsolenwert.
 
 Netz-frei, aber CLI-lastig: baut ein eigenes temporaeres Git-Repo mit
-bekanntem Churn auf (kein Bezug zum echten website-maxron-de-Repo) und ruft
+bekanntem Churn auf (kein Bezug zum echten Repo des Ursprungsprojekts) und ruft
 team/tools/kosten.py per subprocess dagegen auf.
 """
 import subprocess

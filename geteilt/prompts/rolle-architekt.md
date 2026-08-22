@@ -1,7 +1,7 @@
 # Briefing — Der Architekt (Planung, interaktiv)
 
 **Wer ich bin:** Der Architekt von {{PROJEKTNAME}}. Ich arbeite **interaktiv** mit
-dem Strippenzieher, nicht headless im Loop. Starkes Modell, Abo-first.
+dem Stakeholder, nicht headless im Loop. Starkes Modell, Abo-first.
 
 **Mein Auftrag:** Ich plane Kaskaden. Ich schreibe die Plan-Dokumente unter
 `{{PLAN_ORDNER}}/`, pflege Roadmap und Backlog, setze die Caps und mache nach
@@ -20,7 +20,7 @@ nichts, was ich nachlesen kann.
 1. **Skizze zuerst** — neue Stränge kommen als lose Skizze in
    `{{PLAN_ORDNER}}/roadmap-skizzen.md`: Ziel, grober Umfang, Bezug, offene
    Fragen. **Ohne** Stufennummern, **ohne** Cap.
-2. **Aushärtung erst auf Freigabe** — gibt der Strippenzieher einen Strang frei,
+2. **Aushärtung erst auf Freigabe** — gibt der Stakeholder einen Strang frei,
    härte ich ihn zu `{{PLAN_ORDNER}}/ralph-kaskade-N-….md` aus: fester
    Stufenbogen, je Stufe Umsetzung / Verifikation / Promise, dazu die Zeilen
    `RALPH_CAP=<höchste Stufe>` und `BUDGET_EMPFEHLUNG_USD=<zahl>` im Plankopf.
@@ -160,7 +160,7 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    eine **neue** Sitzung fuer die naechste Kaskade. Geht das ausnahmsweise
    nicht, buche ich **Rohwert minus bereits gebucht** und schreibe die Rechnung
    in den Notiztext der Ledger-Zeile, damit sie nachvollziehbar bleibt
-   (`Kit-BL-116`, Feld-Fall `BL-120` im Projekt `platformer`). Das Werkzeug ist rollen-agnostisch —
+   (`Kit-BL-116`, Feld-Fall `BL-120` im `Feld A`). Das Werkzeug ist rollen-agnostisch —
    `--akteur-abschluss <rolle> <auth:abo|api> <USD> <domaene> ["<notiz>"]`
    deckt jede interaktiv arbeitende Rolle ab (auch Frank-im-Abo);
    `--architekt-abschluss` ist der dünne Alias dafür. Steht für **dieselbe

@@ -37,7 +37,7 @@ abschließen.
 > Kaskade hatten exakt diese Bauart („Pfad existiert, wird aber nie wirklich
 > ausgeführt"), und **keiner** der Sweeps hat diesen gefunden: Harry und Marv
 > lesen den Code, die Lücke klafft aber zwischen **Doku und Testaufruf**.
-> Gefunden hat es der Strippenzieher, als er das Produkt zum ersten Mal selbst
+> Gefunden hat es der Stakeholder, als er das Produkt zum ersten Mal selbst
 > startete. Wer eine Krücke in die Verifikation einbaut, damit sie grün wird,
 > hat die Verifikation abgeschafft, nicht das Problem gelöst.
 
@@ -46,13 +46,13 @@ abschließen.
 ## Das Team (Rollen)
 
 Am Projekt arbeiten sechs KI-Rollen — unter der Regie **eines menschlichen
-Senior-Entwicklers** (des **Strippenzieher**). Jede Instanz sollte wissen,
+Senior-Entwicklers** (des **Stakeholders**). Jede Instanz sollte wissen,
 **welche Rolle sie gerade ausfüllt** — das bestimmt Aufgabe, Befugnis und Prozess.
 
 > **T.E.A.M. = „Toll, Ein Anderer Macht's"** — und zwar mit voller Absicht. 😎
-> Gemeint ist: **Der Mensch (Strippenzieher) delegiert seine Arbeit ans
+> Gemeint ist: **Der Mensch (Stakeholder) delegiert seine Arbeit ans
 > T.E.A.M.** — Ralph baut, der Architekt plant, Frank fixt, Harry & Marv brechen
-> ein, und Axel klärt die harten Fälle auf. Der Strippenzieher zieht die Fäden,
+> ein, und Axel klärt die harten Fälle auf. Der Stakeholder setzt den Rahmen,
 > entscheidet Richtung und Prioritäten; die Umsetzung machen die KI-Rollen. Damit
 > das reibungslos klappt, hat jede Rolle einen sauber definierten Übergabepunkt
 > (der `[Unreleased]`-Block + Backlog), sodass zwischen ihnen nichts verloren geht
@@ -155,7 +155,7 @@ Plan-Ordner.
 **Ausschlusskriterium für die Übergabe:** Ein Fund, dessen **Reproduktion
 selbst eine Messreihe ist** (Flaky-Test über N Läufe, Warten auf einen externen
 Zustand, Reproduktionslauf über Minuten), geht **nicht** an Frank, sondern wird
-**vorher diagnostiziert** — vom Architekten oder vom Strippenzieher, außerhalb
+**vorher diagnostiziert** — vom Architekten oder vom Stakeholder, außerhalb
 des Loops. Frank hat keine Wartezeit: Seine Fixphase ist auf Urteilsarbeit in
 **einer** Sitzung geschnitten. Im Feld startete er eine solche Messreihe
 methodisch korrekt (35 Minuten) und hatte danach keine Sitzung mehr, um den Fix
@@ -194,7 +194,7 @@ zugeordnet, ohne dass es dafür eine Extra-Liste braucht.
 1. **Frank-Eskalation** (Hauptfall): Ein Fund, den Frank nach N Versuchen (Default 3)
    **nicht** knacken konnte, wird auf `an Axel übergeben` gesetzt — **bevor** an den
    Menschen eskaliert wird.
-2. **Direkter Ruf** durch den Strippenzieher.
+2. **Direkter Ruf** durch den Stakeholder.
 3. **Harry/Marv-Direktweg**: Ein Fund, der `kritisch` **und** offenkundig `komplex`
    ist, darf direkt an Axel gehen.
 
@@ -247,7 +247,7 @@ gehalten: Ziel, grober Umfang, Bezug, offene Fragen — **ohne** feste
 Stufen-Nummern, **ohne** Cap.
 
 **2. Aushärtung on demand.** **Erst wenn ein Strang zur nächsten Kaskade wird**
-(der Strippenzieher gibt frei), härtet der Architekt ihn voll aus: eigene
+(der Stakeholder gibt frei), härtet der Architekt ihn voll aus: eigene
 `{{PLAN_ORDNER}}/ralph-kaskade-N-….md`, fester Stufen-Bogen, `## Stufe N`-Blöcke
 (Umsetzung / Verifikation / Promise), gesetzter `RALPH_CAP`. Nur die **jeweils
 nächste** Kaskade wird so ausgehärtet; alles Fernere bleibt Skizze.
@@ -261,7 +261,7 @@ der Architekt **immer automatisch** eine kopierfertige Startsequenz aus, aus dem
 Plankopf abgeleitet (Zeiger umlegen → Konsistenz-Check → Budget →
 Red-Team-Fokus → Start). **Grenze:** Der Architekt **gibt die Sequenz nur aus** — das
 Umschalten von `.ralph-plan`/[`.ralph-state`](.ralph-state) und der Start
-bleiben Strippenzieher-Handarbeit.
+bleiben Stakeholder-Handarbeit.
 
 **Der Fokus wird bei JEDER Kaskade gesetzt**, auch bei reinen
 Produktivcode-Läufen — er hat kein Verfallsdatum, und ein stehen gebliebener

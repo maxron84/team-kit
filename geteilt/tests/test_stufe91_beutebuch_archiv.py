@@ -105,7 +105,7 @@ def test_archiviere_verschiebt_nur_erledigt_und_ueberholt(tmp_path):
         _block(1, "offen"),
         _block(2, "erledigt (Frank-Fix, abc)"),
         _block(3, "an Frank übergeben"),
-        _block(4, "überholt (Strippenzieher-Entscheid)"),
+        _block(4, "überholt (Stakeholder-Entscheid)"),
         _block(5, "an Axel übergeben"),
         _block(6, "Fix-Plan liegt vor"),
     ])

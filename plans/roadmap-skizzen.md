@@ -10,7 +10,7 @@ Umfang, Bezug, offene Fragen — **ohne** Stufennummern, **ohne** Cap
 > landet in keiner Installation.
 
 **Quelle der meisten Stränge:** das Feldprojekt
-`~/Source/team-kit_project_platformer`, Kaskade 1 (2026-08-01). Dort ist das Kit
+`~/Source/Feld A`, Kaskade 1 (2026-08-01). Dort ist das Kit
 zum ersten Mal scharf über eine volle Kaskade gelaufen, und genau dort fielen die
 Fehler auf, die kein Kit-Test finden konnte.
 
@@ -82,7 +82,7 @@ Feldprojekt — dann neu bewerten.
 Als `kosten.py ledger-pruefen` / `./team-status.sh --ledger-pruefen` umgesetzt
 (Architekten-Handarbeit nach Franks Dreisatz, Release 2.4.0). Der Strang lief
 **nicht** über eine Kaskade — im Kit-Repo ist kein Team installiert, Ralph kann
-hier nichts bauen (Strippenzieher-Entscheid 2026-08-01: bleibt so).
+hier nichts bauen (Stakeholder-Entscheid 2026-08-01: bleibt so).
 
 **Die drei offenen Fragen, beantwortet:**
 

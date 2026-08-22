@@ -68,7 +68,7 @@ trap 'echo "[vollautomatik] abgebrochen (Signal) — Lock wird freigegeben."; ex
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
-# --- Zwei bewusst getrennte Kennzahlen (BL-18, Strippenzieher-Entscheid) ------
+# --- Zwei bewusst getrennte Kennzahlen (BL-18, Stakeholder-Entscheid) ------
 # A) lauf_kosten  — Kosten NUR DIESES Laufs (Logs seit LAUF_START). Das ist die
 #    operative Grenze, gegen die budget_ok() den Pro-Lauf-Deckel durchsetzt:
 #    „Pro-Lauf-Deckel = operative Grenze" (CLAUDE.md/BL-13). Vorher (BL-17) maß
@@ -91,7 +91,7 @@ lauf_kosten()       { team_kosten_seit "$LAUF_START" .ralph-logs .team-logs .ral
 kontostand_gesamt() { team_kontostand_gesamt; }
 
 # --- Deckel-Governance: Architekten-Empfehlung nur ANHEBEN, nie senken ------
-# (Strippenzieher-Entscheid 2, Kaskade 6 Stufe 19). Eine explizite
+# (Stakeholder-Entscheid 2, Kaskade 6 Stufe 19). Eine explizite
 # TEAM_BUDGET_USD-Übersteuerung durch den User hat immer Vorrang und wird
 # nicht überschrieben — team_resolve_budget_cap kapselt die Regel isoliert
 # testbar (siehe team/lib.sh).

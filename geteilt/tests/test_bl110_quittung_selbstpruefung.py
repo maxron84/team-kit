@@ -3,13 +3,13 @@
 
 Die Erkennung aus BL-41 ist richtig, aber sie haelt den Lauf an und legt einem
 Menschen eine Pruefliste vor, deren Schritte IMMER dieselben sind. Im Feld
-(Projekt platformer) ist der Fall in neun Kaskaden aufgetreten - K27, K28,
+(Feld A) ist der Fall in neun Kaskaden aufgetreten - K27, K28,
 K29, K33, K34, K35 (dort dreimal), K36, K37 - und jedes Mal lautete das
 Ergebnis "Arbeit fertig, nur die Quittung fehlt". Eine Pruefliste, die neunmal
 dasselbe ergibt, ist eine Funktion, die noch niemand geschrieben hat.
 
 Der teure Fehler waere die Gegenrichtung: eine HALB gebaute Stufe
-durchzuwinken. Genau davor war die Pruefliste blind (BL-135, Feld platformer):
+durchzuwinken. Genau davor war die Pruefliste blind (BL-135, Feld A):
 Sie fragt nach Commit und gruenem Baum, nicht nach der Existenz der
 Zusicherungen. Die Selbstpruefung schliesst diese Luecke und ist deshalb ein
 UND ueber drei Bedingungen - faellt eine durch, meldet der Loop unveraendert

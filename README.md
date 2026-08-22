@@ -1,3 +1,25 @@
+[![Linux — verifiziert](https://img.shields.io/badge/Linux-verifiziert-2ea44f?style=flat-square&logo=linux&logoColor=white)](doku/einrichtung.md#belegstand)
+[![Windows WSL2 — hergeleitet](https://img.shields.io/badge/Windows_WSL2-hergeleitet-dfb317?style=flat-square&logo=windows&logoColor=white)](doku/einrichtung.md#belegstand)
+[![Windows nativ — im Feld gelaufen](https://img.shields.io/badge/Windows_nativ-im_Feld_gelaufen-2ea44f?style=flat-square&logo=powershell&logoColor=white)](doku/einrichtung.md#belegstand)
+[![macOS — nicht belegt](https://img.shields.io/badge/macOS-nicht_belegt-9f9f9f?style=flat-square&logo=apple&logoColor=white)](doku/einrichtung.md#belegstand)
+
+[![Version 2.12.0](https://img.shields.io/badge/Version-2.12.0-007ec6?style=flat-square)](CHANGELOG.md)
+[![Regressionstests 590](https://img.shields.io/badge/Regressionstests-590-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
+[![Selbsttest 11 Stufen](https://img.shields.io/badge/Selbsttest-11_Stufen-2ea44f?style=flat-square)](bash/kit-test.sh)
+[![Lizenz MIT](https://img.shields.io/badge/Lizenz-MIT-007ec6?style=flat-square)](LICENSE)
+
+[![Projekt-Stack agnostisch](https://img.shields.io/badge/Projekt--Stack-agnostisch-2ea44f?style=flat-square)](#grenzen)
+[![Modelle agnostisch](https://img.shields.io/badge/Modelle-agnostisch-8957e5?style=flat-square)](#modelle--agnostisch-aber-nicht-anspruchslos)
+[![Agenten-CLI nur Claude Code](https://img.shields.io/badge/Agenten--CLI-nur_Claude_Code-fe7d37?style=flat-square&logo=anthropic&logoColor=white)](#grenzen)
+[![Lokale Modelle Fernziel](https://img.shields.io/badge/Lokale_Modelle-Fernziel-fe7d37?style=flat-square)](#modelle--agnostisch-aber-nicht-anspruchslos)
+[![Binary nicht geplant](https://img.shields.io/badge/Binary-nicht_geplant-e05d44?style=flat-square)](#grenzen)
+
+> **Der Farbcode ist der Belegstand des Kits, nicht die Wunschliste:**
+> 🟢 im Feld belegt · 🟡 hergeleitet und an der Maschine geprüft ·
+> 🟠 gebaut oder gewollt, aber nicht abgenommen · 🔴 nicht vorhanden ·
+> ⚪ nicht belegt. Woher die Einstufung kommt, steht im
+> [Belegstand](doku/einrichtung.md#belegstand) und unter [Grenzen](#grenzen).
+
 ![T.E.A.M. — Toll, ein anderer macht's. Sechs Rollenkarten im Terminal-Look:
 Ralph Wiggum (Bau-Loop), der Architekt (Plan & Closeout), Frank der Fixer
 (Ad-hoc-Fixes) — die drei dürfen Code schreiben; Harry (Red Team Security),
@@ -29,17 +51,21 @@ Codium bzw. VS Code) und Agenten-Werkzeug, steht in
 Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 136 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
-`TEAM.md` und 369 Regressionstests.
+`TEAM.md` und 590 Regressionstests.
 
-**Stand: Version 2.10.0** (2026-08-16). Der Backlog des Kits ist wieder leer.
-Neu: Der vierte `BL-41`-Ausgang — Log meldet Erfolg, Quittung fehlt — prüft
-sich selbst, statt die Vollautomatik mitten in der Kaskade anzuhalten; im Feld
-war der Fall neunmal aufgetreten und neunmal gleich ausgegangen. Behoben: ein
-Kit-Test, der am Füllstand des Beutebuchs hing, und ein `install.sh --update`,
-das ein gewachsenes `.gitignore` nie nachzog. Neu dokumentiert ist die
-**Modellhaltung** des Kits (Abschnitt unten): agnostisch, mit benannten
-Fähigkeitsanforderungen und lokalen Modellen als Fernziel. Abgetragene Einträge
-stehen in [plans/backlog-archiv.md](plans/backlog-archiv.md) (63 Stück).
+**Stand: Version 2.12.0** (2026-08-22). Das Neue ist vor allem ein **Beleg**:
+Die pwsh-Bahn hat auf einer echten Windows-Maschine ihre erste Kaskade geplant,
+gebaut und abgeschlossen — einbahnig installiert, mit dem ersten vollständigen
+Kostenabschluss überhaupt. Daraus kam die Runde `BL-120`…`BL-146`, darunter drei
+Fehler in der Kostenkette, die erst beim **vollständigen** Durchlauf zuschlagen:
+ein Abbruch genau bei dem Aufruf, den die Doku vorgibt; eine Abo-Buchung, die in
+der API-Spalte landete; und eine Architektenzeile, die den Diff maß statt der
+Arbeit. Alle drei sind behoben, und die Messung liegt jetzt als Werkzeug im Kit
+(`kosten.py sitzung-messen`) statt als Skript, das sich jeder neu schreibt.
+
+**Offen sind drei Einträge**, und alle drei brauchen dieselbe Maschine:
+[plans/backlog.md](plans/backlog.md). Abgetragenes steht in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (93 Einträge).
 
 ---
 
@@ -72,18 +98,20 @@ die Bedienanleitung fürs Zielprojekt ist `TEAM.md`:
 | Datei | Für wen | Inhalt |
 |---|---|---|
 | **[doku/einrichtung.md](doku/einrichtung.md)** | **wer das Kit auf eine Maschine holt** | **Die Routine: Klonen, Bordmittel, WSL, IDE, Auth, Einbinden, Fehlerbilder, Belegstand** |
-| [doku/faq.md](doku/faq.md) | wer beim Aufsetzen hängt | Ganze Fragen statt Symptomzeilen — beginnend mit *Claude-CLI nicht gefunden* (Linux, WSL, Windows) |
+| [doku/faq.md](doku/faq.md) | wer beim Aufsetzen oder im Betrieb hängt | Vier ganze Fragen statt Symptomzeilen: CLI nicht gefunden, Exit `42`/`43`, abgewählte Bahn zurückholen, Kosten höher als geschätzt |
 | [doku/anhang-a.md](doku/anhang-a.md) | wer wissen will, *warum* es so gebaut ist | Die Warum-Schicht: Bauentscheide und Feld-Betriebslehren (A.0–A.13) |
 | [doku/regel-inventar.md](doku/regel-inventar.md) | wer eine Regel der Vorlage ändert | Jede Regel als NORM/HERLEITUNG/HISTORIE, mit Träger und wörtlichem Zitat |
 | [CHANGELOG.md](CHANGELOG.md) | wer eine bestehende Installation nachzieht | Jede Änderung mit Begründung und Feldbeleg |
 | [plans/backlog.md](plans/backlog.md) | wer am Kit mitbaut | Offene Punkte (Abgetragenes im [Archiv](plans/backlog-archiv.md)) |
-| `TEAM.md` | der Strippenzieher im Zielprojekt | Bedienanleitung — wird installiert und liegt danach im Projekt |
+| [plans/windows-nativ.md](plans/windows-nativ.md) | wer die pwsh-Bahn versteht oder erweitert | Der Bauplan der zweiten Bahn: Anlass, verworfene Alternativen, Stufen, Abnahmekriterien |
+| [plans/roadmap-skizzen.md](plans/roadmap-skizzen.md) | wer eine Idee sucht statt einer Aufgabe | Ungehärtete Stränge — bewusst noch kein Plan |
+| `TEAM.md` | der Stakeholder im Zielprojekt | Bedienanleitung — wird installiert und liegt danach im Projekt |
 
 ---
 
 ## Was das T.E.A.M. ist
 
-Sechs KI-Rollen unter der Regie **eines** Menschen (des *Strippenziehers*):
+Sechs KI-Rollen unter der Regie **eines** Menschen (des *Stakeholders*):
 
 | Rolle | Aufgabe | Darf Produktivcode ändern? |
 |---|---|---|
@@ -153,17 +181,26 @@ den üblichen Cloud-Modellen weiter.
 
 ## Herkunft
 
-Der Code stammt aus dem Projekt `website-maxron-de`, wo er über **22 Kaskaden**
+Der Code stammt aus dem **Ursprungsprojekt**, wo er über **22 Kaskaden**
 scharf gelaufen ist (2026-07-10 bis 2026-08-01): reale Red-Team-Funde `HM-1`…`HM-53`,
 Frank-Fixes, wirksamer Read-Only-Guard. Er wurde **nicht neu geschrieben**, sondern
 übernommen und parametrisiert — die teuer gelernten Details bleiben erhalten.
 
-Seither läuft das Kit im Feldprojekt `team-kit_project_platformer`: **33 Kaskaden,
-157 Stufen, 93 Red-Team-Funde `HM-1`…`HM-93`, 49 `vollautomatik.sh`-Läufe,
-rund 1265 USD Abo-Gegenwert — vollständig geledgert** (Stand 2026-08-11). Aus
-diesem Betrieb und aus Einzügen in fremde Codebasen kommen die Backlog-Einträge
-`BL-1`…`BL-61`; was davon behoben ist, steht im [CHANGELOG](CHANGELOG.md) und
-in [plans/backlog-archiv.md](plans/backlog-archiv.md), der Rest in
+Seither kommen die Befunde aus dem laufenden Betrieb. **Die Projekte werden
+nicht genannt** — für den Beleg zählt nicht, wie sie heißen, sondern was sie
+haben und was sie getan haben. Dafür tragen sie feste Kürzel:
+
+| Kürzel | Profil | Was dort gelaufen ist |
+|---|---|---|
+| **Ursprung** | Web-Projekt, Linux, bash-Bahn | 22 Kaskaden (2026-07-10 bis 2026-08-01), `HM-1`…`HM-53` — die Quelle des Codes |
+| **`Feld A`** | Greenfield, Python mit Spiel-Engine, Linux, bash-Bahn | 33 Kaskaden, 157 Stufen, `HM-1`…`HM-93`, 49 `vollautomatik.sh`-Läufe, rund 1265 USD Abo-Gegenwert — vollständig geledgert (Stand 2026-08-11) |
+| **`Feld B`** | Greenfield, Windows 11, **einbahnig pwsh** installiert | Erste Kaskade geplant, gebaut und abgeschlossen (2026-08-21) — der erste vollständige Kostenabschluss eines Projekts überhaupt |
+| **`Feld C`** | Fremde, **gewachsene** Codebasis: Python/tkinter, Einstiegspunkt in der Wurzel, `src/`, `bin/`, gewachsene `tests/`, belegtes `plans/` | Gelesen (2026-08-11) und installiert (2026-08-13). **Keine** Kaskade — belegt ist der Einzug, nicht der Betrieb |
+
+Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen vier Quellen
+kommen die Backlog-Einträge `BL-1`…`BL-146`; was davon behoben ist, steht im
+[CHANGELOG](CHANGELOG.md) und in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (93 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors
@@ -188,8 +225,13 @@ pwsh -File pwsh\install.ps1 <zielpfad> [-NichtInteraktiv] [-Update|-Force]
 > Bäume** — festgenagelt in `kit-test.sh`, Schritt 11/11. Sie schreiben auch
 > **beide** Konfigurationen (`team.config.sh` *und* `team.config.ps1`), damit
 > ein auf Linux eingerichtetes Projekt unter Windows nicht ohne Konfiguration
-> dasteht. Die pwsh-Bahn ist **gebaut, aber noch nicht auf Windows
-> abgenommen** — siehe [doku/einrichtung.md, *Belegstand*](doku/einrichtung.md#belegstand).
+> dasteht. Die pwsh-Bahn ist inzwischen **auf einer echten Windows-Maschine
+> gelaufen**, samt einer vollständigen Kaskade (`Feld B`). Was dort noch fehlt,
+> ist nicht die Bahn, sondern ihr **Selbsttest**: `kit-test.ps1` fährt 6 von 11
+> Stufen und 15 von 127 Prüfungen (`BL-145`). Ein Fix an gemeinsamem Code gilt
+> deshalb erst als nachgewiesen, wenn **`kit-test.sh`** gelaufen ist — nicht,
+> wenn `kit-test.ps1` grün meldet. Siehe
+> [doku/einrichtung.md, *Belegstand*](doku/einrichtung.md#belegstand).
 
 **Nur eine Bahn installieren:** `--nur-bash` bzw. `--nur-pwsh` (PowerShell:
 `-NurBash` / `-NurPwsh`). Ein Projekt bekommt dann statt 29 Entrypoints nur
@@ -223,7 +265,7 @@ nachgezogen werden, sonst läuft die Doku der Mechanik hinterher.
 > `--force` ist nur für eine kaputte **Erst**installation gedacht.
 
 **Voraussetzungen**: Zielpfad ist ein Git-Repository, `claude` im PATH,
-Auth eingerichtet (`bash scripts/team-auth-setup.sh`). Geprüft und erklärt
+Auth eingerichtet (`bash bash/scripts/team-auth-setup.sh`). Geprüft und erklärt
 werden sie von `kit-einrichten.sh` bzw. `kit-einrichten.ps1`; die ausführliche
 Fassung — Linux, Windows mit WSL und Windows nativ — steht in
 [doku/einrichtung.md](doku/einrichtung.md). Welche
@@ -302,7 +344,7 @@ bleibt deiner, der Smoke-Test ist im Bestandsprojekt meist schon vorhanden —
 genau das Feld, das im leeren Projekt zuerst fehlt.
 
 > **Belegstand.** Die Stellen, an denen die Defaults nur für ein Neuprojekt
-> taugten, stammen aus einer fremden Bestandscodebasis (`Project-Family-ERP`,
+> taugten, stammen aus einer fremden Bestandscodebasis (`Feld C`,
 > Python/tkinter, Einstiegspunkt in der Wurzel, `src/`, `bin/`, gewachsene
 > `tests/`, belegtes `plans/`): erst **gelesen** (2026-08-11 → `BL-51`/`BL-52`,
 > gebaut in 2.6.0), dann **installiert** (2026-08-13 → `BL-57`, gebaut in
@@ -378,8 +420,11 @@ geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 ├── tests/              84 Testdateien, 590 Fälle — der Doppelbahn-Harnisch
 │                       fährt jeden Fall gegen BEIDE Bahnen, aus EINEM
 │                       Testkörper
-└── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
-                        bewacht die Vorlage, nicht die installierte CLAUDE.md
+├── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
+│                       bewacht die Vorlage, nicht die installierte CLAUDE.md
+└── kit-readme-pruefen.py Prüfer für dieses README (Stufe 5). Kit-only — jede
+                        Zahl gegen die frische Installation, jeder genannte
+                        Pfad gegen das Dateisystem
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
 plans/                  Roadmap und Backlog DES KITS (nicht die Vorlagen —
@@ -479,19 +524,29 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
   sind Python und liegen unter `team/tools/`. Das ist eine Abhängigkeit der
   **Team-Infrastruktur** — auf einer Ebene mit `git`, `flock` und der Agenten-CLI —
   nicht deines Projekts. Verifiziert in Go-, Rust- und PHP-Projektstrukturen.
-- **Im Feld gelaufen, aber an einem Projekttyp.** Die 33 Kaskaden stammen aus
-  **einem** Feldprojekt (Python/pygame, von null aufgebaut). Jeder Lauf hat
-  Kit-Fehler zutage gefördert — `BL-1`…`BL-56`, von der toten Fixphase über
-  zwei Löcher in der Kostenerfassung bis zur vierten Fehlerklasse „Stufe
+- **Im Feld gelaufen, aber schmal aufgestellt.** Der Dauerbetrieb liegt bei
+  **einem** Projekt (`Feld A`: 33 Kaskaden, Greenfield, Linux, bash-Bahn);
+  `Feld B` hat **eine** Kaskade auf der pwsh-Bahn gefahren, `Feld C` gar keine.
+  Zwei Plattformen und zwei Bahnen sind damit berührt, aber nur **eine**
+  Kombination ist eingelaufen. Jeder Lauf hat Kit-Fehler zutage gefördert —
+  `BL-1`…`BL-146`, von der toten Fixphase über zwei Löcher in der
+  Kostenerfassung und die Zeilenenden bis zur vierten Fehlerklasse „Stufe
   fertig, Quittung fehlt". Die Erwartung ist nicht, dass das aufhört; die
   Mechanik dafür ist der Rückkanal Feld → Kit.
 - **Bestandsprojekte: der Einzug ist belegt, der Betrieb nicht.** `BL-51`,
-  `BL-52` und `BL-57` stammen aus einer echten gewachsenen Codebasis und sind
-  gegen die nachgestellte Lage geprüft (`kit-test.sh`, Schritt 6). Was fehlt,
-  ist eine Kaskade mit echten Agenten in einem Bestandsprojekt — bis dahin ist
-  belegt, dass das Team dort **einzieht**, nicht, dass es dort **arbeitet**.
-- **Noch nie gelaufen: Axel.** Der Forensiker hat in 33 Kaskaden keine einzige
+  `BL-52` und `BL-57` stammen aus `Feld C`, einer echten gewachsenen Codebasis,
+  und sind gegen die nachgestellte Lage geprüft (`kit-test.sh`, Schritt 6). Was
+  fehlt, ist eine Kaskade mit echten Agenten in einem Bestandsprojekt — bis
+  dahin ist belegt, dass das Team dort **einzieht**, nicht, dass es dort
+  **arbeitet**.
+- **Noch nie gelaufen: Axel.** Der Forensiker hat in keinem Feld eine einzige
   Ledgerzeile — sein Pfad ist getestet, aber nicht im Feld belegt.
+- **Kein Binary, keine Fassung ohne Bordmittel.** Das Kit ist eine Sammlung von
+  Skripten und setzt `git`, `bash` ≥ 4 bzw. PowerShell ≥ 7, `python3` und
+  `flock` voraus. Eine gepackte, abhängigkeitsfreie Auslieferung ist **nicht
+  geplant** — und macOS ist damit nicht verboten, aber unbelegt: Die
+  Bordmittel-`bash` ist dort 3.2 und `flock` fehlt. `kit-einrichten.sh` sagt
+  das an der Maschine, statt es vorauszusetzen.
 - **Modellagnostisch ja, CLI-agnostisch nein.** Die Rollen sprechen zwei Stufen
   an (`TEAM_MODEL_LOOP`/`TEAM_MODEL_STRONG`), keine Modellnamen — aber der
   einzige erprobte Weg zu einem Modell führt heute über `claude -p`. Daran

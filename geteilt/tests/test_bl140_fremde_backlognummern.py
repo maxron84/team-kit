@@ -28,7 +28,7 @@ WARUM DER FIX NICHT MECHANISCH IST
         (`HM-7`)"). Ein `Kit-`-Praefix waere dort schlicht falsch.
       * `BL-120` im Architekten-Briefing meint WEDER das Kit NOCH das
         Zielprojekt: `Kit-BL-116` nennt als Quelle das Feldprojekt
-        `platformer` und dessen dortiges `BL-120`. Das Kit-`BL-120` ist das
+        `Feld A` und dessen dortiges `BL-120`. Das Kit-`BL-120` ist das
         FAQ-Geruest — aus einem richtigen Verweis waere ein falscher geworden.
 
     Daraus folgt die Regel, die dieser Lint durchsetzt, und sie hat DREI
@@ -65,7 +65,7 @@ AUSNAHMEN = {
     ("TEAM.md", "AX-3"):
         "Formatbeispiel im Glossar, wie HM-7 — Axels Ermittlungsakte.",
     ("rolle-architekt.md", "BL-120"):
-        "Meint den Backlog des Feldprojekts `platformer`, nicht den des Kits "
+        "Meint den Backlog von `Feld A`, nicht den des Kits "
         "(Kit-BL-116 nennt ihn als Quelle) und nicht den des Zielprojekts. "
         "Das Projekt wird im Text BENANNT — das ist die dritte Sorte.",
 }

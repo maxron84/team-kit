@@ -13,9 +13,12 @@ Bedienanleitung und **keine** Regelquelle:
 Sie bleibt im Kit-Repo — der Installer kopiert sie **nicht** ins Zielprojekt.
 Wer dort auf „Anhang A.7" stößt, liest hier nach.
 
-**Quellen:** Feldprojekt `website-maxron-de`, Kaskaden 1–22 (2026-07-10 bis
-2026-08-01); Feldprojekt `team-kit_project_platformer`, 33 Kaskaden (bis
-2026-08-11); Einzug in `Project-Family-ERP` (2026-08-13). Die Abschnitts-
+**Quellen:** Das Ursprungsprojekt, Kaskaden 1–22 (2026-07-10 bis
+2026-08-01); `Feld A`, 33 Kaskaden (bis 2026-08-11); Einzug in `Feld C`
+(2026-08-13); `Feld B`, erste Kaskade auf der pwsh-Bahn (2026-08-21). Wofür
+die Kürzel stehen, sagt die Profiltabelle im
+[README](../README.md#herkunft) — die Projekte werden bewusst nicht
+genannt, für den Beleg zählt ihre Lage. Die Abschnitts-
 nummern **A.0–A.11 bleiben stabil** — Regeldatei, Regel-Inventar und
 Backlog-Einträge verweisen darauf.
 
@@ -63,7 +66,7 @@ divergieren die Fund-Formate ab dem zweiten Sweep, und die Zustandsmaschine
 ## A.2 Wo was liegt — und warum dort
 
 Das Kit **liefert** die Skripte aus, statt sie generieren zu lassen. Die
-Ablage-Konvention stammt aus dem Feld (`website-maxron-de`, 2026-07-11):
+Ablage-Konvention stammt aus dem Feld (Ursprungsprojekt, 2026-07-11):
 
 ```
 ./vollautomatik.sh ./halbautomatik.sh ./team-status.sh ./team-test.sh
@@ -76,7 +79,7 @@ team/tests/                                             Team-Regressionstests
 ```
 
 **Einstiegspunkte sichtbar oben, Werkzeug im Unterordner** — dieselbe Logik wie
-`Makefile`/`.github/`. Der Strippenzieher tippt `./vollautomatik.sh` direkt.
+`Makefile`/`.github/`. Der Stakeholder tippt `./vollautomatik.sh` direkt.
 Die Entrypoints sind über relative Geschwister-Pfade eng verzahnt und erwarten
 die Repo-Wurzel als Standort — nicht ohne Not verschieben.
 
@@ -109,7 +112,7 @@ Zentral in `team/lib.sh` (Helfer `team_claude`): Rollen starten im
 zurück, danach zurück zu Abo.
 
 **Axel** ist bei der **Auth** in die Abo-first-Regel aufgenommen
-(Strippenzieher-Entscheid 2026-07-10: starkes Modell im Abo ist günstiger, das
+(Stakeholder-Entscheid 2026-07-10: starkes Modell im Abo ist günstiger, das
 Budget-Cap pro Fall bleibt als Airbag) — sein **Modell** bleibt davon unberührt
 immer stark. Modell und Auth sind zwei getrennte Achsen. Seit dem
 Folge-Entscheid 2026-07-13 läuft auch Der Architekt Abo-first — damit ist
@@ -263,7 +266,7 @@ An der **real installierten** CLI verifizieren — **nicht raten**:
 - **CAP/PLAN aus dem aktiven Plan statt Skript-Edit** — der Loop liest
   `RALPH_CAP` aus dem aktiven Plan und den Plan-Pfad aus `.ralph-plan`. Nur das
   *Auslesen* ist automatisiert, das *Weiterschalten* bleibt bewusste
-  Strippenzieher-Aktion. Verhindert den stillen Fehlstart „`RALPH_CAP`
+  Stakeholder-Aktion. Verhindert den stillen Fehlstart „`RALPH_CAP`
   vergessen".
 
 **Feld-Betriebslehren — in scharfen Läufen real erlebt:**
@@ -503,7 +506,7 @@ Bau-Details von `team/tools/kosten.py`:
   bei **derselben Rolle + Kaskade** anschlägt: Hier entstehen **zwei**
   Kaskadennummern und damit zwei Zeilen, die jede für sich plausibel sind. Der
   Fall fällt also in **keiner** bestehenden Prüfung auf — im Feld gemerkt erst
-  beim Nachrechnen (`team-kit_project_platformer`, dortiges `BL-120`).
+  beim Nachrechnen (`Feld A`, dortiges `BL-120`).
   **Feld-Rezept, solange kein Werkzeug es kann:** Rohwert **minus bereits
   gebucht**, mit der Rechnung im Notiztext der Ledger-Zeile, damit sie
   nachvollziehbar bleibt. **Billiger ist die Vermeidung:** ein Closeout je

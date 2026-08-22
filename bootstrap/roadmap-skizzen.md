@@ -3,7 +3,7 @@
 Ungehärtete Stränge. Ziel, grober Umfang, Bezug, offene Fragen — **ohne**
 Stufennummern, **ohne** Cap (Kaskaden-Planungsregel 1).
 
-Erst wenn der Strippenzieher einen Strang zur nächsten Kaskade freigibt, härtet
+Erst wenn der Stakeholder einen Strang zur nächsten Kaskade freigibt, härtet
 der Architekt ihn zu einem eigenen Plan `ralph-kaskade-N-….md` aus.
 
 ---

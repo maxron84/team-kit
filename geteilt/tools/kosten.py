@@ -77,7 +77,7 @@ Nutzung:
                                         Architekt-Ledger-Zeile an
                                         (rolle=architekt, auth VORBELEGT mit
                                         abo — BL-143) fuer die Kaskade, die
-                                        der Strippenzieher aus der Anthropic-
+                                        der Stakeholder aus der Anthropic-
                                         Konsole abliest. Ohne --kaskade wird
                                         die Nummer aus .ralph-plan abgeleitet
                                         (Muster "ralph-kaskade-<N>-..."). Ein
@@ -138,7 +138,7 @@ Nutzung:
                                         auth="abo"/"api"/"abo/api" je nach
                                         Split; Kaskadenschaerfe schlaegt
                                         Abo/API-Schaerfe je Rollenzeile,
-                                        Strippenzieher-Entscheid). Steht fuer
+                                        Stakeholder-Entscheid). Steht fuer
                                         die Kaskade schon eine roles-Zeile,
                                         BRICHT der Aufruf AB und nennt Alt-,
                                         Neu- und Summenwert (BL-5) —
@@ -952,7 +952,7 @@ def architekt_schaetzung(seit, pfade=("plans", "CLAUDE.md"), repo="."):
 # architekt_schaetzung() oben rechnet Zeilen-Churn mal Eichfaktor. Das misst
 # die GROESSE DES DIFFS, nicht die Arbeit: Eine Sitzung mit viel Lesen, Pruefen
 # und Gegenproben und wenig geschriebenem Text wird systematisch unterschaetzt,
-# eine Prosa-Sitzung ueberschaetzt. Im Feld (duke-itam-2026, Kaskade 1) meldete
+# eine Prosa-Sitzung ueberschaetzt. Im Feld (Feld B, Kaskade 1) meldete
 # die Zeile 7,6861 USD; die Messung aus dem Sitzungstranskript ergab 11,7582 —
 # 35 % zu niedrig.
 #
@@ -1452,7 +1452,7 @@ def akteur_abschluss(usd, domaene, kaskade, rolle, auth, notiz="",
     mehrere Sitzungen an einer Kaskade arbeitet (Aushaertung vormittags,
     Closeout abends), bucht zwangslaeufig zweimal — und der zweite Aufruf
     loeschte den ersten Wert wortlos. Im Feld sind so 5,5515 USD aus einem
-    Ledger verschwunden (platformer, Kaskade 9). Der Default bricht ab
+    Ledger verschwunden (Feld A, Kaskade 9). Der Default bricht ab
     statt zu addieren, weil ein Wiederholungsaufruf mit denselben Zahlen
     (Vertipper, zweiter Anlauf) sonst verdoppeln wuerde — dieselbe
     Symmetrieueberlegung, die BL-5 fuer rollen_abschluss angestellt hat.
@@ -1531,7 +1531,7 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     16/Stufe 54): haengt EINE rolle=roles-Ledger-Zeile fuer die
     .team-logs-Kosten (Harry/Marv/Frank/Axel) EINER Kaskade an. usd = abo +
     api; auth = "abo" (api==0), "api" (abo==0), sonst "abo/api" —
-    Strippenzieher-Entscheid: Kaskadenschaerfe schlaegt Abo/API-Schaerfe je
+    Stakeholder-Entscheid: Kaskadenschaerfe schlaegt Abo/API-Schaerfe je
     Rollenzeile, der gemischte Fall ist erwartet und wird ehrlich als
     "abo/api" ausgewiesen (kein geratener Split). notiz wird um den exakten
     Split ergaenzt und traegt voran den Rollenbezug ("Rollen: …" / "Bau: …",
@@ -1604,7 +1604,7 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     # dieses Feld ist die einzige Prosa-Spur je Zeile. Ein Rueckfall obendrein
     # — genau diese Beschwerde stand schon in Feld-BL-5, der BL-4-Fix hat sie
     # strukturell wieder eingebaut.
-    # Strippenzieher-Entscheid 2026-08-02: der Vorspann entsteht HIER, aus der
+    # Stakeholder-Entscheid 2026-08-02: der Vorspann entsteht HIER, aus der
     # Zielrolle, nicht aus einem zweiten Bedienparameter — die Bedienung
     # bleibt einhaendig (ein Notiztext), und auch ein direkter kosten.py-
     # Aufruf bekommt die Zuordnung, ohne sie mitschreiben zu muessen.
@@ -1968,7 +1968,7 @@ def _main(argv):
         # api", und der Architektenwert sei "als Abo-Gegenwert zu buchen und NIE
         # stillschweigend als abgerechneter Betrag auszugeben".
         #
-        # Im Feld (duke-itam-2026, Kaskade 1) landeten so 16,3990 USD in der
+        # Im Feld (Feld B, Kaskade 1) landeten so 16,3990 USD in der
         # Zeile "real via API abgerechnet" des Kontostands — echtes Geld, das
         # nie geflossen ist. Gemerkt hat es niemand beim Buchen, sondern erst
         # beim Lesen der geschriebenen Ledger-Zeile: Die Erfolgsmeldung nannte

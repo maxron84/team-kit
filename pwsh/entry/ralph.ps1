@@ -28,7 +28,7 @@ Import-Module ./team/lib.psm1 -Force -DisableNameChecking
 
 if (-not (team_lock 'ralph')) { exit 1 }
 
-# PLAN_DATEI: der aktive, ausgehaertete Kaskaden-Plan. Zeigt der Strippenzieher
+# PLAN_DATEI: der aktive, ausgehaertete Kaskaden-Plan. Zeigt der Stakeholder
 # per Zeiger-Datei .ralph-plan auf den jeweils freigegebenen Plan — Umschalten
 # auf die naechste Kaskade ist damit ein Einzeiler.
 $planZeiger = '.ralph-plan'

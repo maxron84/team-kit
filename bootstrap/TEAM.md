@@ -1,7 +1,7 @@
 # T.E.A.M. in {{PROJEKTNAME}} — Bedienung
 
 Dieses Projekt wird von einem **Team aus KI-Rollen** vorangetrieben, das du als
-*Strippenzieher* steuerst. Diese Datei ist für **dich**, den Menschen.
+*Stakeholder* steuerst. Diese Datei ist für **dich**, den Menschen.
 Die Regeln für die KI-Rollen stehen in [`CLAUDE.md`](CLAUDE.md).
 
 **Neu hier?** Erst die Warnung direkt darunter — sie ist die teuerste des
@@ -70,7 +70,7 @@ Diese Wörter tauchen überall auf; hier stehen sie einmal an einem Ort.
 
 | Begriff | Bedeutung |
 |---|---|
-| **Strippenzieher** | Du. Der Mensch, der Richtung, Prioritäten und Freigaben bestimmt. |
+| **Stakeholder** | Du. Der Mensch, der Richtung, Prioritäten und Freigaben bestimmt. |
 | **Kaskade** | Ein geplanter Bauabschnitt, zerlegt in nummerierte Stufen. Die Einheit, in der hier gearbeitet und abgerechnet wird. |
 | **Stufe** | Ein Schritt einer Kaskade — ein Commit, ein grüner Smoke-Test. |
 | **Aushärten** | Eine lose Skizze in einen festen Plan mit Stufennummern und Deckel überführen. Macht der Architekt, erst auf deine Freigabe. |

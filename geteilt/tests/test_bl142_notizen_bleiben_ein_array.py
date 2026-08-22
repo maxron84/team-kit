@@ -3,7 +3,7 @@
 bei dem Aufruf, den die Doku vorgibt.
 
 WAS IM FELD PASSIERT IST
-    `duke-itam-2026`, Closeout der ersten Kaskade, erster echter
+    `Feld B`, Closeout der ersten Kaskade, erster echter
     Kostenabschluss eines Projekts:
 
         Method invocation failed because [System.Char] does not contain a

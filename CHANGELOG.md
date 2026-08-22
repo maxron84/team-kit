@@ -2,9 +2,155 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+> **Feldbelege tragen Kürzel statt Namen** (`Feld A`, `Feld B`, `Feld C`).
+> Wofür sie stehen, sagt die Profiltabelle im
+> [README](README.md#herkunft): Für den Beleg zählt die Lage eines
+> Projekts — Plattform, Bahn, Greenfield oder Bestand —, nicht sein Name.
+
 ## [Unreleased]
 
+_Offen sind drei Backlog-Einträge, die alle eine Windows-Maschine brauchen_
+_(`BL-117`, `BL-145`, `BL-146`) — siehe [plans/backlog.md](plans/backlog.md)._
+
+## [2.12.0] — 2026-08-22
+
+**Die Windows-Runde.** Erste Kaskade eines Projekts auf der pwsh-Bahn, auf
+einer echten Windows-Maschine, einbahnig installiert — und der erste
+vollständige Kostenabschluss überhaupt. Beides zusammen hat `BL-120`…`BL-146`
+erzeugt: die Kostenkette, die Zeilenenden, den Interpreternamen, die
+Regeltexte einer einbahnigen Ablage. Feldbefunde sind mit ⚠️ markiert.
+
+### Changed
+
+- **Die Feldprojekte werden nicht mehr genannt — sie werden beschrieben.**
+  Bis hierher standen in Doku, Backlog, CHANGELOG, Code-Kommentaren, Test-
+  Docstrings und im **ausgelieferten** Architekten-Briefing die echten Namen
+  von vier Projekten, dazu ein absoluter Pfad der Autorenmaschine und die
+  Dateinamen aus einer fremden Codebasis. Für den Beleg trägt der Name nichts
+  bei: Was zählt, ist die **Lage** — Plattform, Bahn, Greenfield oder Bestand,
+  und was dort gelaufen ist.
+
+  Sie heißen jetzt `Feld A`, `Feld B` und `Feld C`, das vierte ist „das
+  Ursprungsprojekt". Die Zuordnung steht **einmal**, als Profiltabelle im
+  README unter *Herkunft*; ein künftiges Projekt bekommt den nächsten
+  Buchstaben. Das Kürzel trägt die Identität, die Tabelle die Beweiskraft —
+  deshalb muss ein Kürzel nicht umbenannt werden, wenn ein Feld später mehr
+  belegt als heute.
+
+  **Nicht mechanisch war eine Stelle:** Die `BL-140`-Regel kennt als dritte
+  Sorte „ein DRITTES Projekt wird **benannt**, nicht präfigiert", und ihr
+  einziger konkreter Fall im Briefing nannte ein Feldprojekt beim Namen. Die
+  Regel bleibt gültig — sie benennt jetzt das Kürzel. Die Ausnahmeliste des
+  Lints trägt den Grund nach.
+
+- **„Strippenzieher" heißt jetzt „Stakeholder".** Der Begriff stand an 85
+  Stellen, darunter in `CLAUDE.md.vorlage` und `TEAM.md` — beides Texte, die
+  in **jedes** Zielprojekt ausgeliefert werden. „Stakeholder" ist neutraler
+  und trägt dieselbe Bedeutung: der eine Mensch, der Richtung, Prioritäten und
+  Freigaben bestimmt.
+
+  **Bewusst ohne Update-Funktion.** Bereits eingerichtete Projekte behalten
+  ihren Wortlaut; `--update` fasst `CLAUDE.md` und `TEAM.md` grundsätzlich
+  nicht an, und eine Sonderbehandlung dafür wäre ein Eingriff in Projektdaten
+  wegen einer Wortwahl.
+
+  **Zwei Stellen hat der Wechsel mitgenommen**, und beide hätte ein reines
+  Such-und-Ersetze stehen lassen: „des **Strippenzieher**" war schon vorher
+  ein falscher Genitiv (jetzt „des **Stakeholders**"), und „Der Strippenzieher
+  zieht die Fäden" war ein Wortspiel auf den alten Begriff — ohne ihn bleibt
+  eine schiefe Metapher stehen, die zudem genau den Beiklang trägt, der weg
+  sollte. Dort steht jetzt „setzt den Rahmen". Das Regel-Inventar (Stufe 9)
+  ist mitgezogen und grün.
+
+### Added
+
+- **Das README trägt seinen Belegstand jetzt im Kopf.** Über dem Banner steht
+  eine Reihe Statusabzeichen, und ihr Farbcode ist nicht Marketing, sondern
+  die Skala, die das Kit ohnehin führt: 🟢 im Feld belegt, 🟡 hergeleitet,
+  🟠 gebaut oder gewollt aber nicht abgenommen, 🔴 nicht vorhanden, ⚪ nicht
+  belegt. Damit steht die Aussage, für die man sonst bis *Grenzen* scrollen
+  musste, in der ersten Bildschirmhöhe — inklusive der unbequemen: `Binary`
+  ist rot, `Agenten-CLI` orange, `macOS` grau. Jedes Abzeichen verlinkt auf
+  die Stelle, die es begründet.
+
+- **`geteilt/kit-readme-pruefen.py` — die Zahlen und Pfade des README stehen
+  unter Test.** Neu in `kit-test.sh`, Stufe 5, mit Gegenprobe in beide
+  Richtungen (verfälschte Zahl und toter Pfad werden einzeln rot).
+
+  **Der Anlass ist ein Rückfall.** Für die Testzahlen gab es bereits einen
+  Wächter — er kannte **zwei feste Formulierungen**. Eine dritte Stelle in
+  freier Prosa nannte weiterhin `369 Regressionstests`, während es 590 waren:
+  ausgerechnet die Zahl, vor der der Kommentar über dem alten Wächter warnt.
+  Für die Pfade galt dasselbe eine Etage tiefer: Der vorhandene Wächter verbot
+  **namentlich** den alten Autorenmaschinen-Pfad und konnte deshalb nicht
+  sehen, dass daneben ein neuer falscher stand.
+
+  Geprüft wird jetzt die **Gattung** statt der Abschrift: jede Zahl, die eine
+  Testzahl behauptet — auch die im Abzeichen —, und jeder Pfad, den das README
+  nennt, positiv gegen das Dateisystem. Die Messwerte kommen weiterhin von
+  außen, aus einer **frischen Installation**; eine im Repo nachgerechnete Zahl
+  wäre wieder eine Abschrift. Die Ausnahmeliste der Pfadprüfung ist eng und
+  begründet: Das README nennt zwei Ablagen nebeneinander — die des Kits und
+  die eines Zielprojekts —, und ein Wächter, der die zweite anmahnt, wird
+  abgeschaltet statt befolgt (Bauart `BL-14`).
+
 ### Fixed
+
+- **`README` — das Flaggschiff stand sechs Tage und 69 Einträge hinter dem
+  Repo.** Es nannte Version 2.10.0, einen „wieder leeren" Backlog, 63
+  abgetragene Einträge und den Stand `BL-1`…`BL-61`; wirklich waren es drei
+  offene Einträge, 93 abgetragene und `BL-1`…`BL-146`.
+
+  **Der Teil, der weh tut, ist die Untertreibung.** Das zweite Feldprojekt kam
+  im README **null mal** vor, obwohl es auf einer echten Windows-Maschine eine
+  vollständige Kaskade gefahren hat. Zwei Kernaussagen waren dadurch zu
+  pessimistisch: die pwsh-Bahn sei „gebaut, aber noch nicht auf Windows
+  abgenommen", und das Kit sei „im Feld gelaufen, aber an einem Projekttyp".
+  Beide sind auf den heutigen Beleg gehoben, samt der Lücke, die **wirklich**
+  offen ist: `kit-test.ps1` fährt 6 von 11 Stufen und 15 von 127 Prüfungen
+  (`BL-145`). Ein Kit, dessen Hausregel „was verifiziert ist, heißt
+  verifiziert" lautet, verliert an so einer Stelle in beide Richtungen.
+
+- **`doku/einrichtung.md` — der Belegstand endete mit „Der nächste
+  Windows-Lauf ist der Beleg", und der Lauf war am selben Tag passiert.** Der
+  vierte Kontakt fehlte: die erste vollständige Kaskade auf der pwsh-Bahn,
+  einbahnig installiert, mit echten Ledgerzeilen. Er ist nachgetragen — mit
+  der Trennung, die ihn erst brauchbar macht: was er belegt (die CLI läuft
+  dort headless mit dem Abo, die Rollen quittieren, der Closeout schreibt) und
+  was nicht (es war ein Greenfield, und der Selbsttest der Bahn deckt sie
+  nicht).
+
+- **`README` — `bash scripts/team-auth-setup.sh` zeigte ins Leere.** Das
+  Skript liegt unter `bash/scripts/`; ein `scripts/` in der Wurzel gibt es
+  nicht, was das README vier Absätze später selbst schreibt („In der Wurzel
+  liegt kein einziges Skript"). Steht jetzt unter Test.
+
+- **`kit-test.sh` Stufe 10 schrieb ein Urteil fest statt einer Zusicherung.**
+  Die Prüfung verlangte wörtlich `Windows nativ (PowerShell): gebaut und
+  gefahren` in `doku/einrichtung.md` — und wurde rot, als der Belegstand
+  nachgezogen wurde, weil der Weg auf einer echten Windows-Maschine gelaufen
+  ist. Ihr eigener Kommentar sagt etwas anderes: Der native Weg müsse **im
+  Belegstand geführt** sein. Sie prüfte also eine Abschrift statt der
+  Eigenschaft und hätte bei **jedem** Zugewinn an Beleg nachgezogen werden
+  müssen. Ein Wächter, der ein Urteil einfriert, ist die stille Behauptung,
+  das Urteil dürfe sich nicht ändern — zeichengleich mit dem Test, der
+  `auth == "api"` festschrieb (`BL-143`). Geprüft wird jetzt, **dass** der
+  Eintrag existiert, nicht **wie** er ausfällt.
+
+  Gefunden beim ersten `kit-test.sh`-Lauf dieser Runde — nicht beim Lesen.
+
+- **`README` — die Doku-Karte verschwieg die beiden größten Plandateien.**
+  `plans/windows-nativ.md` (701 Zeilen, der Bauplan der zweiten Bahn) und
+  `plans/roadmap-skizzen.md` fehlten in der Übersicht; die FAQ war mit „eine
+  Frage" beschrieben, obwohl sie vier ausgebaute trägt.
+
+- **`CHANGELOG` — 1950 Zeilen lagen unter `[Unreleased]`, und eine Version,
+  auf die zwei Dokumente zeigten, gab es nicht.** `doku/anhang-a.md` schreibt
+  „prüfte bis 2.11.0 niemand", der Launcher-Kommentar nennt den Umzug auf
+  `bash/` — beides Verweise auf eine Fassung, die nie geschnitten wurde. Der
+  Block ist an seiner natürlichen Naht getrennt: **2.11.0** (2026-08-20) ist
+  die Bahn-Runde, die die Ablage auf `bash/`/`pwsh/`/`geteilt/` umgestellt
+  hat, **2.12.0** die Windows-Runde.
 
 - **`BL-120` — die FAQ trug eine Frage und war ein Versprechen.**
 
@@ -59,7 +205,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 - **`BL-141` — die Architekten-Kostenzeile war ein Zeilen-Churn-Proxy und lag im
   Feld 35 % zu niedrig.**
-  ⚠️ **Feldbefund** aus `duke-itam-2026`, Kaskade 1: Die Zeile meldete
+  ⚠️ **Feldbefund** aus `Feld B`, Kaskade 1: Die Zeile meldete
   **7,6861 USD**; die Messung aus dem Sitzungstranskript ergab **11,7582 USD**.
 
   `architekt_schaetzung()` rechnet `git_churn(…) × Eichfaktor` — das misst die
@@ -130,7 +276,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 - **`BL-139` — in einer einbahnigen Ablage nannten die Regeltexte die andere
   Bahn und schickten jede Rolle an Dateien, die es dort nicht gibt.**
-  ⚠️ **Feldbefund** aus `duke-itam-2026`, mit `--nur-pwsh` installiert.
+  ⚠️ **Feldbefund** aus `Feld B`, mit `--nur-pwsh` installiert.
   `CLAUDE.md` nannte **14** verschiedene `.sh`-Pfade, **keiner** existierte;
   `TEAM.md` kam auf 23 Nennungen. Gemessen, nicht vermutet:
 
@@ -209,7 +355,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
      Nummerierung im Beutebuch des **Zielprojekts** („Trägt eine Nummer
      (`HM-7`)"). Ein `Kit-`-Präfix wäre dort schlicht falsch.
   2. `BL-120` im Architekten-Briefing meint **weder** das Kit **noch** das
-     Zielprojekt: `Kit-BL-116` nennt als Quelle das Feldprojekt `platformer`
+     Zielprojekt: `Kit-BL-116` nennt als Quelle das `Feld A`
      und dessen dortiges `BL-120`. Das Kit-`BL-120` ist das FAQ-Gerüst — aus
      einem **richtigen** Verweis wäre ein falscher geworden.
 
@@ -295,7 +441,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 - **`BL-143` — der Alias `--architekt-abschluss` buchte fest `auth=api`: gegen
   die eigene Regel, und mit sichtbarer Geldwirkung.**
-  ⚠️ **Feldbefund** aus `duke-itam-2026`, Closeout der ersten Kaskade. Das
+  ⚠️ **Feldbefund** aus `Feld B`, Closeout der ersten Kaskade. Das
   Werkzeug meldete
 
   ```
@@ -360,7 +506,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 - **`BL-142` — `--rollen-abschluss` mit BEIDEN Notizen brach immer ab: also
   genau bei dem Aufruf, den die Doku vorgibt.**
-  ⚠️ **Feldbefund** aus `duke-itam-2026`, Closeout der ersten Kaskade, erster
+  ⚠️ **Feldbefund** aus `Feld B`, Closeout der ersten Kaskade, erster
   echter Kostenabschluss eines Projekts:
 
   ```
@@ -491,7 +637,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 - **`BL-138` — ein grüner Lauf, der als roter endete: am Aufräumen.**
   ⚠️ **Feldbefund**, gemeldet vom Anwender beim ersten eigenen Testlauf in
-  `duke-itam-2026`. Das Fortschrittsband war makellos — 542 Zeichen, 228
+  `Feld B`. Das Fortschrittsband war makellos — 542 Zeichen, 228
   Punkte, 314 `s`, kein `F`, kein `E`. Unmittelbar hinter `[100%]` begann
   eine Wand aus Traceback:
 
@@ -627,7 +773,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 - **`BL-136` — die Regel gegen `bad interpreter` schützte das Kit, nicht die
   Projekte.** ⚠️ **Feldbefund**, aufgefallen beim Committen von
-  `duke-itam-2026`: Git meldete für jede Datei
+  `Feld B`: Git meldete für jede Datei
   `LF will be replaced by CRLF the next time Git touches it`.
 
   Das Kit-Repo trägt seit Langem eine `.gitattributes` mit
@@ -774,7 +920,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   sein — dort ist BOM-los richtig.
 
 - **`BL-133` — der Windows-Lauf war rot, und keiner der 68 Fehlschläge kam aus
-  dem Kit.** ⚠️ **Feldbefund, dritter Windows-Lauf** (`duke-itam-2026`,
+  dem Kit.** ⚠️ **Feldbefund, dritter Windows-Lauf** (`Feld B`,
   `68 failed, 436 passed`). **65** dieser Fehlschläge trugen wörtlich dieselbe
   Zeile: *„Python was not found …"*. Das ist `BL-131`, und der war abgetragen —
   nur nicht überall. `BL-131` hat **drei** Orte gezählt; der Name stand an
@@ -1300,6 +1446,13 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   der Entwicklungsmaschine ist kein `pwsh`, keine dieser Dateien konnte hier
   geparst werden.
 
+## [2.11.0] — 2026-08-20
+
+**Die Bahn-Runde.** Das Repo bekommt seine heutige Ablage: `bash/`, `pwsh/`
+und `geteilt/`, jede Datei mit einer Bahn-Kennung in Zeile 1, dazu die Abwahl
+einer Bahn samt Rückweg (`BL-107`…`BL-119`). Seit dieser Fassung liegt der
+Installer unter `bash/install.sh`.
+
 ### Changed
 
 - **Der Launcher außerhalb des Repos kann nicht mehr still verrotten.**
@@ -1540,7 +1693,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Kaskaden in **derselben** Sitzung abschließt, misst beim zweiten Closeout
   wieder das **ganze** Transkript — der bereits gebuchte Teil steckt darin und
   wandert ein zweites Mal ins Ledger. Aus dem Feld zurückgespielt
-  (`team-kit_project_platformer`, dortiges `BL-120`).
+  (`Feld A`, dortiges `BL-120`).
 
   **Der Befund ist die Unsichtbarkeit, nicht der Rechenfehler.** Keine
   bestehende Absicherung schlägt an: Die vierte Eigenschaft aus `BL-33` („ein
@@ -2018,7 +2171,7 @@ eingewechselt von unten nach oben.
   er vollständig ist. Ein Projekt, das früh installiert und seither brav
   `--update` gefahren ist, blieb damit dauerhaft auf dem Fragmentstand seines
   Installationstages, während der Installer Erfolg meldete. Im Feld
-  (platformer) fehlten so `.team-focus-harry` und `.team-focus-marv`: beide
+  (Feld A) fehlten so `.team-focus-harry` und `.team-focus-marv`: beide
   standen nach **jedem** Sweep als untracked im Baum, sahen im Closeout wie
   unfertige Arbeit aus, und ein unachtsames `git add -A` hätte einen
   Fokus-String verewigt, der für genau einen Lauf galt. Beide Pfade vergleichen
@@ -2035,7 +2188,7 @@ eingewechselt von unten nach oben.
   es dort längst gibt, erhöht die nächste freie Nummer nicht — der Sweep meldet
   korrekt „keine neuen Funde", und der Test fällt um, obwohl die Mechanik
   stimmt. Die Nummer kommt jetzt aus dem kopierten Beutebuch. Im Feld
-  (platformer, Beutebuch bis `HM-100`) sind daran zwei Gegenproben unmittelbar
+  (Feld A, Beutebuch bis `HM-100`) sind daran zwei Gegenproben unmittelbar
   nach einem Kit-Update rot geworden.
 
 ## [2.9.0] — 2026-08-14
@@ -2151,7 +2304,7 @@ regelkonform angehoben hat.
 - **`test_zentrale_defaults` misst wieder das Kit (`BL-58`).** Neu ist
   `_lib_default()`: Es liest die Zeile `NAME="${NAME:-wert}"` **statisch** aus
   `team/lib.sh`, statt die Bibliothek zu sourcen. Zurückgespielt aus
-  `team-kit_project_platformer`, wo der Fix seit dem 2026-08-09 lief und ein
+  `Feld A`, wo der Fix seit dem 2026-08-09 lief und ein
   `install.sh --update` auf 2.6.0 ihn überschrieben hatte — der `BL-12`-Fall,
   vor dem der Installer selbst warnt.
 - **`kit-test.sh` meldete Fehlschläge rot und beendete sich mit Exit 0
@@ -2185,7 +2338,7 @@ regelkonform angehoben hat.
 ## [2.8.0] — 2026-08-13
 
 **Das Interview redet jetzt mit dem Anwender, nicht mit dem Autor.** Ein Einzug
-in `Project-Family-ERP` legte offen, dass die Fragen zwar korrekt waren, aber
+in `Feld C` legte offen, dass die Fragen zwar korrekt waren, aber
 nur für den verständlich, der die Mechanik dahinter schon kennt: Der Anwender
 trug `tests/` in den *Prüfumfang* ein — den Ordner, den er zwei Fragen später
 als *Schreibzone* vergab —, und ließ zugleich `main.py` und `bin/` weg, also
@@ -2362,7 +2515,7 @@ Dazu ein **Einstieg für Entwickler, die das Kit nicht kennen** — bisher benut
   halb — er ist jetzt **zweigeteilt** beschrieben (WANN im Vorlagenblock, WIE im
   Architekten-Briefing). `doku/regel-inventar.md`: `anhang-a` fehlte in der
   Träger-Liste, obwohl der Prüfer ihn längst kennt; dazu der Zuschnitt in einem
-  Satz (Regeldatei = was Rollen befolgen, `TEAM.md` = was der Strippenzieher
+  Satz (Regeldatei = was Rollen befolgen, `TEAM.md` = was der Stakeholder
   tut, `anhang-a` = warum es so gebaut ist). `BL-56` trug noch die Zahlen seiner
   Frühfassung (72/60 statt 73/61; 5,7 KB und „14 KB", real 8,2 KB und knapp
   17 KB) und einen fehlenden Satztrenner — beides berichtigt.
@@ -2379,7 +2532,7 @@ Dazu ein **Einstieg für Entwickler, die das Kit nicht kennen** — bisher benut
   wonach eine Rolle handelt: `.ralph-state`, „429 weicht den Guard nicht auf",
   Exit 42 unverändert durchreichen, Guard auf **jedem** Pfad, Smoke-Test im
   Vordergrund. Zwei Regeln wechselten den Träger zum **Menschen**: die
-  `.bashrc`-Key-Falle (bindet den Strippenzieher an seiner Maschine, keine Rolle
+  `.bashrc`-Key-Falle (bindet den Stakeholder an seiner Maschine, keine Rolle
   kann sie befolgen) steht jetzt in `TEAM.md` samt ~13,8-USD-Feldbeleg; „Die
   Arbeit ist meistens fertig" stand dort längst wortgleich.
 
@@ -2442,7 +2595,7 @@ Dazu ein **Einstieg für Entwickler, die das Kit nicht kennen** — bisher benut
 **Das Kit zieht in gewachsene Codebasen ein (`BL-51`, `BL-52`).**
 
 Beide Befunde stammen aus der Analyse einer fremden Bestandscodebasis
-(`Project-Family-ERP`, 2026-08-11, nur gelesen). Der rote Faden: **Zwei
+(`Feld C`, 2026-08-11, nur gelesen). Der rote Faden: **Zwei
 tragende Defaults sind Annahmen über ein leeres Repo — und sie scheitern
 lautlos.** Ein belegter Plan-Ordner macht die Read-Only-Rollen zu
 Schreibberechtigten, ohne dass der Guard je anschlägt; ein Prüfumfang aus
@@ -2483,7 +2636,7 @@ trotzdem „sauber".
   Ort und Stelle und nennt die harte Variante: ein eigener, leerer Plan-Ordner.
 - **`kit-test.sh` fährt einen sechsten Schritt: den Einzug in eine gewachsene
   Codebasis.** Zweites Wegwerf-Repo mit belegtem `plans/`, gewachsener
-  `tests/`-Suite und `main.py` in der Wurzel — die Lage aus Family-ERP. Zwölf
+  `tests/`-Suite und `main.py` in der Wurzel — die Lage aus `Feld C`. Zwölf
   Zusicherungen, darunter beide **Gegenproben** im leeren Repo: Dort schweigen
   Installer und Update. Eine Warnung, die immer erscheint, erzieht zum
   Wegsehen (`BL-14`).
@@ -2520,7 +2673,7 @@ trotzdem „sauber".
 
 ## [2.5.0] — 2026-08-11
 
-**Sechs Feldbefunde aus `team-kit_project_platformer` (K29–K33), abgearbeitet.**
+**Sechs Feldbefunde aus `Feld A` (K29–K33), abgearbeitet.**
 
 Der rote Faden: **Ein Vorgang, der Geld gekostet hat, muss eine Spur
 hinterlassen, die man von „nichts passiert" unterscheiden kann.** Fünf der
@@ -2639,7 +2792,7 @@ Ursache, ein abgetragener Backlog-Punkt ohne Nachzug in den Zitaten.
 
 **Zwei Kennzahlen, die im Closeout das Falsche behaupteten.**
 
-Beide aus dem Feld (`team-kit_project_platformer`, Architekt-Closeout K3),
+Beide aus dem Feld (`Feld A`, Architekt-Closeout K3),
 beide gefunden beim Nachrechnen des Endstands — nicht von einem Werkzeug.
 Kein Rechenfehler: Das Ledger war jedes Mal korrekt, falsch war, was die
 Anzeige über die Zahlen **sagte**.
@@ -2707,7 +2860,7 @@ Anzeige über die Zahlen **sagte**.
 **Der Guard urteilte ohne Ausgangszustand — und die einzige Verifikation, die
 zwischen Doku und Testaufruf schaut, gab es nicht.**
 
-Zwei Entscheide des Strippenziehers, beide gebaut. `BL-16` war der letzte
+Zwei Entscheide des Stakeholders, beide gebaut. `BL-16` war der letzte
 offene Feld-K2-Befund; `BL-17` kam aus demselben Feld nach.
 
 ### Fixed
@@ -2793,7 +2946,7 @@ referenzierte Dateien zu lesen. Das war die **halbe** Reparatur: Der Extraktor
 *konnte* den Pfad seither lesen — die Vorlage erzeugte nur nie einen. Sie nannte
 ihn **ohne Backticks** und als **„optional"**, an fünf Stellen in vier Dateien,
 in **jeder** frischen Installation. Aus dem Feld zurückgespielt (dort `BL-7`,
-`team-kit_project_platformer`), wo derselbe Defekt an einem einzigen Fund
+`Feld A`), wo derselbe Defekt an einem einzigen Fund
 12,00 USD verbrannt hat: 9 Frank-Versuche, 3 Axel-Akten, keine Zeile Code
 überlebt — bei grünem Smoke-Test und gültigem Promise, also ohne jedes
 Fehlersignal.
@@ -2816,7 +2969,7 @@ Fehlersignal.
   Schritt 2 + Fund-Format), [`team/prompts/rolle-harry.md`](geteilt/prompts/rolle-harry.md),
   [`team/prompts/rolle-marv.md`](geteilt/prompts/rolle-marv.md).
 - **Der Guard bleibt unangetastet scharf.** Gewählt wurde die Prompt-Pflicht,
-  nicht die Guard-Lockerung (Strippenzieher-Entscheid im Feld, 2026-08-02).
+  nicht die Guard-Lockerung (Stakeholder-Entscheid im Feld, 2026-08-02).
   Begründung aus dem Feld: Beim Folgefund setzte Frank die Zeile **von sich
   aus** — dem Muster des vorigen Fundblocks folgend — und kam in **einem**
   Versuch durch. Das Muster trägt, sobald es sichtbar ist; es braucht nur eine
@@ -2863,7 +3016,7 @@ Fehlersignal.
 **Zwei Fehler in `ledger-pruefen`, gefunden beim ersten Einsatz auf einem
 fremden, gewachsenen Ledger.**
 
-Beim Rückspielen der Kit-Fixes in das Ursprungsprojekt `website-maxron-de` —
+Beim Rückspielen der Kit-Fixes in das Ursprungsprojekt —
 den Ahnherrn des Kits, der das flache Vor-Kit-Layout trägt und deshalb **kein**
 `install.sh --update` annimmt — lief `ledger-pruefen` erstmals gegen 67
 gewachsene Ledger-Zeilen aus 22 Kaskaden. Es meldete drei Warnungen. **Keine
@@ -2918,7 +3071,7 @@ gebaut wurden (Skizze D, Frage 2).
   heute. Dort sind die drei fehlenden Fixes jetzt einzeln nachgezogen
   (`BL-57`/`BL-58`/`BL-59` im dortigen Backlog); eine Migration auf das
   Kit-Layout wäre 531 Pfadverweise in 61 Dateien und wurde bewusst **nicht**
-  gemacht (Strippenzieher-Entscheid 2026-08-01).
+  gemacht (Stakeholder-Entscheid 2026-08-01).
 
 ## [2.4.0] — 2026-08-01
 
@@ -3143,7 +3296,7 @@ der ersten Feldkaskade: drei Fehler kamen aus dem Feld zurück (`BL-4`, `BL-5`,
 ## [2.2.1] — 2026-08-01
 
 **Die Fixphase war in jeder Installation tot.** Erster Fund aus einem
-Feldprojekt zurück ins Kit (`team-kit_project_platformer`, Kaskade 1).
+Feldprojekt zurück ins Kit (`Feld A`, Kaskade 1).
 
 ### Fixed
 - **`team/tools/beutebuch.py` löste die Projektwurzel eine Ebene zu hoch auf.**
@@ -3288,7 +3441,7 @@ und Projekt sauber — verifiziert in Go-, Rust- und PHP-Projektstrukturen.
 
 ## [1.0.0] — 2026-08-01
 
-Erste Fassung. Der Code stammt aus `website-maxron-de` (22 Kaskaden scharf
+Erste Fassung. Der Code stammt aus dem Ursprungsprojekt (22 Kaskaden scharf
 gelaufen, 2026-07-10 bis 2026-08-01) und wurde übernommen, nicht neu geschrieben.
 
 ### Added

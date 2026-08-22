@@ -4,7 +4,7 @@ Feld 35 % zu niedrig — obwohl die Daten fuer eine exakte Messung auf der Platt
 lagen.
 
 DER FELDBEFUND
-    `duke-itam-2026`, Kaskade 1. Die Zeile meldete **7,6861 USD**; die Messung
+    `Feld B`, Kaskade 1. Die Zeile meldete **7,6861 USD**; die Messung
     aus dem Sitzungstranskript ergab **11,7582 USD**.
 
     `architekt_schaetzung()` rechnet `git_churn(...) * EICHFAKTOR`. Das misst

@@ -733,7 +733,7 @@ if ($Update) {
     if ($commitEntscheid) {
         Gruen "  [ok] Commit-Entscheid aus dem bisherigen Briefing uebernommen"
     } else {
-        $commitEntscheid = 'Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Strippenzieher führt sie aus.'
+        $commitEntscheid = 'Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Stakeholder führt sie aus.'
         Gelb "  [!] Commit-Entscheid nicht lesbar — Default (nicht selbst committen) gesetzt."
     }
 
@@ -1210,7 +1210,7 @@ if (-not $PlanBestand -and -not $TestBestand) {
 $CommitEntscheid = if ($CommitModus.ToLower() -in @('j', 'ja', 'y', 'yes')) {
     'Ich committe Plan-/Doku-Änderungen selbst (docs(plan): …).'
 } else {
-    'Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Strippenzieher führt sie aus.'
+    'Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Stakeholder führt sie aus.'
 }
 
 Setze-Werte $Projekt $Produktivcode $TestOrdner $PlanOrdner $SmokeTest `

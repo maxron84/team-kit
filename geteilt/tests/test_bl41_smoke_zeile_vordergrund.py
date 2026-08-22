@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """BL-41: Die Smoke-Zeile muss Vordergrund-Betrieb verlangen.
 
-Aus dem Feld zurueckgespielt (team-kit_project_platformer, K27/K28). Eine
+Aus dem Feld zurueckgespielt (Feld A, K27/K28). Eine
 bauende Rolle startete den Smoke-Test als HINTERGRUND-Task und wartete danach
 auf eine Benachrichtigung, die in einer headless-Sitzung nie eintrifft. Der
 Lauf endet mit subtype=success und is_error=false — er SIEHT AUS WIE EIN

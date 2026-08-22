@@ -22,7 +22,7 @@ cd "$(dirname "$0")"
 source ./team/lib.sh
 team_lock ralph
 
-# PLAN_DATEI: der aktive, ausgehärtete Kaskaden-Plan. Zeigt der Strippenzieher
+# PLAN_DATEI: der aktive, ausgehärtete Kaskaden-Plan. Zeigt der Stakeholder
 # per Zeiger-Datei .ralph-plan (eine Zeile, Pfad) auf den jeweils freigegebenen
 # Plan — Umschalten auf die nächste Kaskade ist damit ein Einzeiler:
 #   echo plans/ralph-kaskade-N-….md > .ralph-plan

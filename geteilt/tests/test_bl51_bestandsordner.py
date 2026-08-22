@@ -11,7 +11,7 @@ aus BL-16 faengt das nicht auf: Er nimmt eine Rolle nur fuer Pfade aus der
 Haftung, die beim Rollenstart schon schmutzig waren; committete
 Bestandsdokumente sind sauber und damit ungeschuetzt.
 
-Beobachtet an Project-Family-ERP (2026-08-11, nur analysiert): zehn fachliche
+Beobachtet an Feld C (2026-08-11, nur analysiert): zehn fachliche
 Dokumente in plans/, darunter die Architektur- und die Refactoring-Planung.
 
 Was hier geprueft wird, ist die PROMPT-Auflage — die Mechanik kann es nicht:
@@ -35,7 +35,7 @@ from conftest import (BASH, entrypoint_aufruf, kopiere_team_namensraum,
 WURZEL = Path(__file__).resolve().parents[2]
 HARRY = WURZEL / "harry.sh"
 
-BESTAND = "family-erp-architecture.md codebase-refactoring-plan.md"
+BESTAND = "bestand-architektur.md bestand-refactoring-plan.md"
 
 
 def _konfig(schluessel):

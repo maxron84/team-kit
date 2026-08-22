@@ -3,7 +3,7 @@
 eigene Regel, und mit sichtbarer Geldwirkung.
 
 WAS IM FELD PASSIERT IST
-    `duke-itam-2026`, Closeout der ersten Kaskade. Das Werkzeug meldete
+    `Feld B`, Closeout der ersten Kaskade. Das Werkzeug meldete
 
         Architekt-Zeile Kaskade 1 (produkt) angelegt: 16.3990 USD
 

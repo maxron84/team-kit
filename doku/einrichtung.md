@@ -717,7 +717,10 @@ verifiziert bezeichnet — der Rest nicht.
   von DrvFs und Git for Windows, und `kit-einrichten.sh` prüft jede davon
   **an der Maschine** statt sie vorauszusetzen (Proben für `chmod +x` und
   `flock`). Ein vollständiger Durchlauf auf einer Windows-Maschine steht aus.
-- **Windows nativ (PowerShell): gebaut und gefahren, aber NICHT auf Windows.**
+- **Windows nativ (PowerShell): auf Windows gelaufen — der Selbsttest noch
+  nicht.** Der Absatz hier hält fest, was die Bahn **vor** dem ersten
+  Windows-Kontakt belegte; die vier Kontakte darunter sind die Spur danach, und
+  der vierte ist der eigentliche Beleg.
   Die ganze pwsh-Bahn — `kit-einrichten.ps1`, `install.ps1`, `pwsh/lib.psm1`, die
   zehn Rollen-Einstiege, `kit-test.ps1` — ist gegen **pwsh 7.4.6 unter Linux**
   geprüft: Syntax, Einrichtung, Installation, ein `-Update` gegen eine mit
@@ -728,8 +731,7 @@ verifiziert bezeichnet — der Rest nicht.
   allem die tragende Frage, **ob `claude -p --output-format json` unter nativem
   Windows headless mit dem Abo läuft**. Dafür liegt
   [`pruefe-windows.ps1`](../pwsh/pruefe-windows.ps1) bereit; sie beantwortet genau
-  diese drei Punkte und kostet im Standardlauf nichts. Solange sie nicht
-  gefahren ist, gilt der native Weg als **gebaut, nicht abgenommen**.
+  diese drei Punkte und kostet im Standardlauf nichts.
 - **Erster Kontakt mit einer echten Windows-Maschine (18.08.2026): rot.**
   `kit-einrichten.ps1` brach auf einer Windows-11-Enterprise-VM mit zehn
   Syntaxfehlern ab, ohne eine Zeile auszuführen — Ursache war die fehlende
@@ -782,6 +784,32 @@ verifiziert bezeichnet — der Rest nicht.
   Auch dieser Stand ist **hergeleitet, nicht abgenommen**: Verifiziert ist er
   gegen Linux (Kit-Selbsttest 11/11, 459 Tests in der Installation) und gegen
   einen simulierten Wirt ohne Bash. Der nächste Windows-Lauf ist der Beleg.
+
+- **Vierter Kontakt — eine ganze Kaskade (21.08.2026): der Beleg.** In `Feld B`,
+  frisch und mit `--nur-pwsh` installiert, ist die **erste Kaskade geplant,
+  gebaut und abgeschlossen** worden — auf einer echten Windows-Maschine, ohne
+  WSL, auf der pwsh-Bahn. Damit ist zum ersten Mal belegt, was bis dahin nur
+  hergeleitet war: Die CLI läuft dort headless mit dem Abo, Ralph baut, die
+  Rollen quittieren, und der Closeout schreibt echte Ledgerzeilen
+  (`abo 4.5571 / api 0.0000`).
+
+  **Der Lauf hat fünf Befunde erzeugt, und sie teilen sich sauber.** Zwei fielen
+  beim **Anlegen** auf und betrafen die ausgelieferten Regeltexte einer
+  einbahnigen Ablage: `CLAUDE.md` nannte 14 `.sh`-Pfade, von denen **keiner**
+  existierte, `TEAM.md` weitere 23 (`BL-139`), und der Regeltext zitierte den
+  Kit-Backlog blank, wodurch der Nummernraum eines frischen Projekts ab Tag 1
+  doppelt belegt war (`BL-140`). Drei fielen im **Closeout** auf und betrafen
+  die Kostenkette (`BL-141`–`BL-143`) — sie schlagen erst beim vollständigen
+  Durchlauf zu, weshalb kein früherer Lauf sie sehen konnte. Alle fünf sind
+  abgetragen.
+
+  **Was das nicht belegt.** Die Kaskade lief in einem **Greenfield**, nicht im
+  Bestand. Und der Selbsttest der pwsh-Bahn deckt sie nicht: `kit-test.ps1`
+  fährt 6 von 11 Stufen und 15 von 127 Prüfungen (`BL-145`). Das ist der
+  strukturelle Grund, warum `BL-136` als „grün" galt, während die bash-Bahn rot
+  war (`BL-144`). **Die Regel, die bis dahin gilt:** Ein Fix an gemeinsamem Code
+  ist erst nachgewiesen, wenn **`kit-test.sh`** gelaufen ist — nicht, wenn
+  `kit-test.ps1` grün meldet.
 
 - **WSL 1: nicht zugesichert, aber nicht verboten.** Die Eigenschaften von
   VolFs (Metadaten in NTFS-Attributen) und die Implementierung von `flock()`

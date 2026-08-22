@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """BL-16: Der Guard schrieb jede schmutzige Datei der laufenden Rolle zu.
 
-Aus dem Feld zurueckgespielt (dort BL-8, team-kit_project_platformer,
+Aus dem Feld zurueckgespielt (dort BL-8, Feld A,
 Kaskade 2). `team_guard_verify` bildete die Verletzerliste aus
 `git diff --name-only $HASH HEAD` plus `git status --porcelain` — es gab
 KEINEN Ausgangszustand. Die Funktion wusste nicht, was beim Rollenstart bereits
@@ -12,7 +12,7 @@ Handaenderung, abgebrochenes Werkzeug) der Rolle an. Folge doppelt:
       Stagnation, Lauf gestoppt, obwohl die Akte fertig geschrieben war.
   (b) Fremde, unbeteiligte Arbeit wurde chirurgisch, aber hart zurueckgerollt.
 
-Zwei Entscheide (Strippenzieher, 2026-08-02):
+Zwei Entscheide (Stakeholder, 2026-08-02):
   Ebene 1 — Zuschreibung: team_guard_begin haelt einen Schnappschuss mit
       BLOB-HASHES. Was beim Start schon schmutzig war UND es unveraendert
       geblieben ist, gehoert nicht der Rolle. Der Hash ist noetig, damit eine

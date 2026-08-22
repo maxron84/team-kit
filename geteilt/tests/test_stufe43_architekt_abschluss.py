@@ -4,7 +4,7 @@
 
 Die A2-Live-Schaetzung (Stufe 42) wird NIE in .budget-ledger persistiert --
 sie ist eine reine Laufzeit-Berechnung (Churn seit dem letzten Ledger-Commit).
-Das Abschluss-Tool haengt stattdessen den ECHTEN, vom Strippenzieher aus der
+Das Abschluss-Tool haengt stattdessen den ECHTEN, vom Stakeholder aus der
 Anthropic-Konsole abgelesenen Wert an. Ein zweiter Aufruf fuer dieselbe
 Kaskade ERSETZT die vorhandene Architekt-Zeile statt sie zu verdoppeln, damit
 Schaetzung und echter Wert nie beide zaehlen.

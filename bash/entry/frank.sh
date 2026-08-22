@@ -16,7 +16,7 @@ cd "$(dirname "$0")"
 source ./team/lib.sh
 team_lock frank || exit 1
 
-# Zwei-Schwellen-Modell (Strippenzieher-Entscheid 2026-07-12, HM-32): Frank ist
+# Zwei-Schwellen-Modell (Stakeholder-Entscheid 2026-07-12, HM-32): Frank ist
 # ein iterierendes "Sorgenkind" — ein Soft-Cap-Überlauf ist bei einem normalen
 # Fix NICHT ungewöhnlich und darf NICHT die bereits bezahlte Arbeit per Rollback
 # wegwerfen (der alte 1-USD-Cap tat genau das und war ökonomisch absurd). Erst
@@ -71,7 +71,7 @@ team_guard_begin
 # Fokus-Zeile (HM-29): analog zu Harry/Marv (TEAM_REDTEAM_FOCUS, BL-15) fest
 # "Code-Fix unter site/" vorzuschreiben ist für Infra-Kaskaden (Team-Skripte
 # statt site/) sachlich falsch — der Prompt widersprach bislang der Realität
-# der laufenden Kaskade. Ist TEAM_REDTEAM_FOCUS gesetzt (Strippenzieher-Schalter
+# der laufenden Kaskade. Ist TEAM_REDTEAM_FOCUS gesetzt (Stakeholder-Schalter
 # derselben Kaskade), übernimmt Frank denselben Fokus statt der site/-Fixierung.
 # BL-52: Findet das Red Team etwas ausserhalb des Produktivcode-Ordners (Ein-
 # stiegspunkt, Build-Skript), muss Franks Auftrag den Ort auch nennen duerfen —

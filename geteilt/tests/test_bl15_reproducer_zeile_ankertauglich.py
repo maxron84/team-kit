@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """BL-15: Die ausgelieferte `Reproducer-Test`-Zeile muss anker-tauglich sein.
 
-Aus dem Feld zurueckgespielt (dort BL-7, team-kit_project_platformer,
+Aus dem Feld zurueckgespielt (dort BL-7, Feld A,
 Kaskade 2 — real 12,00 USD an HM-4 verbrannt: 9 Frank-Versuche, 3 Axel-Akten,
 keine Zeile Code ueberlebt, bei gruenem Smoke-Test und gueltigem Promise).
 

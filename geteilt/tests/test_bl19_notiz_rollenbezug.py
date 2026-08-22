@@ -2,7 +2,7 @@
 """BL-19: `--rollen-abschluss` schrieb EINE Notiz wortgleich in ZWEI Zeilen
 mit verschiedener Bedeutung.
 
-Aus dem Feld zurueckgespielt (platformer, Architekt-Closeout K3, 2026-08-02).
+Aus dem Feld zurueckgespielt (Feld A, Architekt-Closeout K3, 2026-08-02).
 team-status.sh ruft seit BL-4 beide Verben in einer Schleife mit demselben
 --notiz auf: `rollen-abschluss` bucht .team-logs (Harry/Marv/Frank/Axel),
 `ralph-abschluss` bucht .ralph-logs (Ralphs Baukosten). Es gibt aber nur EINEN
@@ -19,7 +19,7 @@ je Zeile. Und es ist ein RUECKFALL — genau diese Beschwerde stand schon in
 Feld-BL-5 ueber die K1-Zeile; der BL-4-Fix hat sie strukturell wieder
 eingebaut.
 
-Strippenzieher-Entscheid 2026-08-02: Vorspann JE ZIELROLLE in kosten.py
+Stakeholder-Entscheid 2026-08-02: Vorspann JE ZIELROLLE in kosten.py
 ("Rollen: …" / "Bau: …"), kein zweiter Bedienparameter — die Bedienung bleibt
 einhaendig, und auch der direkte kosten.py-Aufruf bekommt die Zuordnung.
 
