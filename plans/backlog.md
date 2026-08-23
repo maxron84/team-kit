@@ -13,13 +13,39 @@ tragen hier dieselbe Bedeutung wie im Feldprojekt
 Funde ab `BL-6`. Verweise auf den Backlog eines **anderen** Projekts werden
 `Kit-BL-<N>` geschrieben (`BL-50`).
 
-> **Feldbelege tragen Kürzel statt Namen** (`Feld A`, `Feld B`, `Feld C`) —
+> **Feldbelege tragen Kürzel statt Namen** (`Feld A`…`Feld D`) —
 > die Profiltabelle steht im [README](../README.md#herkunft).
 
 > **Abgetragene Einträge stehen im Archiv:**
 > [`backlog-archiv.md`](backlog-archiv.md). Dort liegt die vollständige
 > Begründung jedes erledigten Punktes — sie wird nachgeschlagen, nicht
 > mitgelesen. Diese Datei trägt nur, woran noch Arbeit hängt (`BL-53`).
+
+**Stand 2026-08-23 — was zuletzt passiert ist.** Eine Kit-Sitzung auf der
+Linux-Maschine hat zwei Dinge gebaut, beide vollständig in
+[`backlog-archiv.md`](backlog-archiv.md) begründet:
+
+- **`BL-153`** — der Rückkanal Feld → Kit ist ein **Werkzeug** statt einer
+  Konvention: `kit-melden.sh`/`.ps1`/`.cmd`, `team/tools/kit_meldung.py`,
+  `TEAM_KIT_PFAD` in beiden Konfigurationen, dazu `CONTRIBUTING.md`,
+  `.github/PULL_REQUEST_TEMPLATE.md` und `plans/meldungen/`.
+- **`BL-154`** — zwei Abschriften durch Messungen ersetzt: die
+  Entrypoint-Ausnahmeliste in `install.sh` und die Entrypoint-Zahlen in
+  `kit-test.sh`.
+
+**Was das für die Windows-Maschine bedeutet:** Die bash-Bahn ist gefahren
+(`kit-test.sh` vollständig grün), die **pwsh-Bahn von `BL-153` ist geschrieben
+und nie gelaufen** — sie hängt als Punkt (6) an `BL-146`. `BL-155` ist neu und
+eine andere Klasse: dort fehlt die pwsh-Hälfte ganz.
+
+> **Wenn `BL-146` dort grün ist, ist der Release-Schnitt fällig.** Alles seit
+> 2.12.0 liegt im CHANGELOG unter `[Unreleased]`; erst der Windows-Lauf macht
+> aus der pwsh-Hälfte eine Zusicherung. Zum Schnitt gehören:
+> `## [2.13.0]`-Überschrift im CHANGELOG, das Versions-Badge im README und die
+> „Stand: Version …"-Zeile darunter. **Vorher nicht** — eine Version, deren
+> zweite Bahn ungeprüft ist, behauptet mehr, als sie hält.
+
+---
 
 **Abtrag 2026-08-21 (Kit-Sitzung nach dem Windows-Pull), abgeschlossen.** Der
 Pull selbst hat einen eigenen Fund mitgebracht (`BL-144`: Der Selbsttest der

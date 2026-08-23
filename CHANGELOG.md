@@ -2,7 +2,7 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
-> **Feldbelege tragen Kürzel statt Namen** (`Feld A`, `Feld B`, `Feld C`).
+> **Feldbelege tragen Kürzel statt Namen** (`Feld A`…`Feld D`).
 > Wofür sie stehen, sagt die Profiltabelle im
 > [README](README.md#herkunft): Für den Beleg zählt die Lage eines
 > Projekts — Plattform, Bahn, Greenfield oder Bestand —, nicht sein Name.
