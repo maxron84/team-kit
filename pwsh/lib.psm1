@@ -181,8 +181,32 @@ function Team-JsonLesen {
     catch { return $null }
 }
 
-# --- Abgeleitete Prompt-Bausteine ---------------------------------------------
+# --- Ein Platzhalter ist kein Befehl (BL-149) ---------------------------------
+# Jede Weiche unterhalb unterscheidet "konfiguriert" von "nicht konfiguriert"
+# ueber leer/nicht-leer. Das ist richtig — nur ist "noch nicht ausgefuellt" im
+# Kit jahrelang als TODO-SATZ geschrieben worden, und der ist nicht leer.
+#
+# Im Feld traf das jede erste Kaskade: Der Satz "TODO: noch keiner — Stufe 1
+# der ersten Kaskade" stand als Vorbelegung in team.config.*, galt damit als
+# Befehl, landete im Prompt jeder bauenden Rolle, in der Werkzeug-Allowlist des
+# Red Teams (Bash(TODO …)) und wurde von team_quittung_selbstpruefung
+# WOERTLICH ausgefuehrt. Der vierte Ausgang aus BL-41 konnte in Stufe 1 damit
+# nie automatisch quittieren, obwohl genau diese Stufe die Aufgabe hat, den
+# Smoke-Test ueberhaupt erst zu bauen.
+#
+# Die Vorbelegung ist weg (der Installer fuellt team.config.* jetzt LEER). Diese
+# Weiche steht trotzdem hier: Ein Mensch traegt in eine leere Zeile gern selbst
+# ein "TODO" ein, und ein Platzhalter dieser Sorte wird im Kit
+# erfahrungsgemaess an anderer Stelle wieder eingefuehrt. Sie normalisiert
+# EINMAL, oben, statt an drei Verbrauchsstellen einzeln.
+#
+# Bewusst nur der Praefix und bewusst gross geschrieben: "TODO" am Anfang ist
+# im ganzen Kit die Marke fuer "noch nicht ausgefuellt". Ein echter Pruefbefehl
+# faengt nicht so an; ein Skript namens .\todo.ps1 bleibt unangetastet.
 $TEAM_SMOKE_TEST = Team-Default 'TEAM_SMOKE_TEST' ''
+if ($TEAM_SMOKE_TEST -cmatch '^TODO') { $TEAM_SMOKE_TEST = '' }
+
+# --- Abgeleitete Prompt-Bausteine ---------------------------------------------
 if ($TEAM_SMOKE_TEST) {
     # Der Nachsatz ist eine Notbremse gegen einen teuren Fehlermodus, nicht
     # Ausschmueckung (BL-41, Feld A K27/K28): Eine bauende Rolle

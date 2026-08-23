@@ -86,7 +86,16 @@ $TEAM_CHANGELOG       = Team-Wert 'TEAM_CHANGELOG'       'CHANGELOG.md'
 # Ist er leer, lassen die Rollen den Smoke-Test-Schritt aus und melden das im
 # Prompt als offenen Punkt — das Team laeuft, aber ohne Sicherheitsnetz.
 # Das ist ein Zustand fuer Tag 1, kein Dauerzustand.
-$TEAM_SMOKE_TEST = Team-Wert 'TEAM_SMOKE_TEST' '{{SMOKE_TEST}}'
+#
+# BL-149: Hier stand als Vorbelegung der Satz "TODO: noch keiner — Stufe 1 der
+# ersten Kaskade". Er war gut gemeint und hat jede erste Kaskade beschaedigt:
+# Ein nicht-leerer Wert ist fuer die Weichen oben ein KONFIGURIERTER Befehl, und
+# der Satz landete wörtlich im Prompt der Rollen, in der Werkzeug-Allowlist des
+# Red Teams und in der Selbstpruefung, die ihn AUSFUEHRTE (Exit 127, "ist ROT").
+# Der Hinweis steht deshalb hier im Kommentar, wo er niemanden ausführt:
+# Trägt Stufe 1 der ersten Kaskade den echten Pruefbefehl ein, kommt er unten
+# in die Zeile.
+$TEAM_SMOKE_TEST = Team-Wert 'TEAM_SMOKE_TEST' '{{SMOKE_TEST_KONFIG}}'
 
 # --- Commit-Konventionen ------------------------------------------------------
 $TEAM_FIX_PRAEFIX  = Team-Wert 'TEAM_FIX_PRAEFIX'  'fix(uat)'

@@ -17,6 +17,33 @@ else
     echo "[team-lib] WARNUNG: team.config.sh fehlt — Bibliotheks-Defaults aktiv." >&2
 fi
 
+# --- Ein Platzhalter ist kein Befehl (BL-149) ---------------------------------
+# Jede Weiche unterhalb unterscheidet "konfiguriert" von "nicht konfiguriert"
+# ueber leer/nicht-leer. Das ist richtig — nur ist "noch nicht ausgefuellt" im
+# Kit jahrelang als TODO-SATZ geschrieben worden, und der ist nicht leer.
+#
+# Im Feld traf das jede erste Kaskade: Der Satz "TODO: noch keiner — Stufe 1
+# der ersten Kaskade" stand als Vorbelegung in team.config.sh, galt damit als
+# Befehl, landete im Prompt jeder bauenden Rolle ("Smoke-Test ausfuehren:
+# TODO: …"), in der Werkzeug-Allowlist des Red Teams (Bash(TODO …)) und wurde
+# von team_quittung_selbstpruefung WOERTLICH ausgefuehrt — Exit 127, Meldung
+# "ist ROT". Der vierte Ausgang aus BL-41 konnte in Stufe 1 damit nie
+# automatisch quittieren, obwohl genau diese Stufe die Aufgabe hat, den
+# Smoke-Test ueberhaupt erst zu bauen.
+#
+# Die Vorbelegung ist weg (der Installer fuellt team.config.* jetzt LEER). Diese
+# Weiche steht trotzdem hier, und zwar aus zwei Gruenden: Ein Mensch traegt in
+# eine leere Zeile gern selbst ein "TODO" ein, und ein Platzhalter dieser Sorte
+# wird im Kit erfahrungsgemaess an anderer Stelle wieder eingefuehrt. Sie
+# normalisiert EINMAL, oben, statt an drei Verbrauchsstellen einzeln.
+#
+# Bewusst nur der Praefix und bewusst gross geschrieben: "TODO" am Anfang ist
+# im ganzen Kit die Marke fuer "noch nicht ausgefuellt". Ein echter Pruefbefehl
+# faengt nicht so an; ein Skript namens ./todo.sh bleibt unangetastet.
+case "${TEAM_SMOKE_TEST:-}" in
+    TODO*) TEAM_SMOKE_TEST="" ;;
+esac
+
 # --- Abgeleitete Prompt-Bausteine (Starterkit) --------------------------------
 # Smoke-Test-Zeile für die bauenden Rollen. Ist kein Befehl konfiguriert, wird
 # der Schritt AUSDRÜCKLICH als offener Punkt benannt, statt still zu

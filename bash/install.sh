@@ -646,7 +646,28 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{BEUTEBUCH}}", plan.rstrip("/") + "/beutebuch.md"),
              ("{{CHANGELOG}}", "CHANGELOG.md"),
              ("{{FIX_PRAEFIX}}", "fix(uat)"), ("{{FEAT_PRAEFIX}}", "feat"),
+             # BL-149: ZWEI Platzhalter fuer einen Wert, und der Unterschied
+             # ist der Unterschied zwischen Prosa und Konfiguration.
+             #
+             # {{SMOKE_TEST}} steht in Regeltexten (CLAUDE.md, TEAM.md,
+             # roadmap-skizzen, Ralphs Briefing). Dort ist der TODO-Satz genau
+             # richtig: Er sagt einem Menschen, was noch fehlt.
+             #
+             # {{SMOKE_TEST_KONFIG}} steht NUR in team.config.*, und dort war
+             # derselbe Satz ein Schaden. Die Weichen der Bibliothek
+             # unterscheiden "konfiguriert" von "nicht konfiguriert" ueber
+             # leer/nicht-leer — ein nicht-leerer Platzhalter war fuer sie ein
+             # KONFIGURIERTER Befehl. Folge in Kaskade 1 JEDES Projekts: Die
+             # Rollen bekamen "Smoke-Test ausfuehren: TODO: noch keiner …" in
+             # den Prompt, das Red Team ein Bash(TODO …) in die Allowlist, und
+             # die Selbstpruefung fuehrte den Satz WOERTLICH aus (Exit 127,
+             # "ist ROT"). Getroffen wurde ausschliesslich der Erstlauf — die
+             # Lage mit der geringsten Projekterfahrung.
+             #
+             # Dieselbe Bauart wie {{WEITERER_CODE}} weiter unten: Ein
+             # Platzhalter, der leer werden darf, gehoert in keine Prosa.
              ("{{SMOKE_TEST}}", smoke or "TODO: noch keiner — Stufe 1 der ersten Kaskade"),
+             ("{{SMOKE_TEST_KONFIG}}", smoke),
              ("{{TECH_STACK}}", stack), ("{{DEPLOY}}", deploy),
              ("{{DEPLOY_AUSNAHMEN}}", ausn), ("{{DOMAENEN}}", domaenen),
              ("{{COMMIT_ENTSCHEID}}", commit),
@@ -1327,7 +1348,13 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{BEUTEBUCH}}", plan.rstrip("/") + "/beutebuch.md"),
              ("{{CHANGELOG}}", "CHANGELOG.md"),
              ("{{FIX_PRAEFIX}}", "fix(uat)"), ("{{FEAT_PRAEFIX}}", "feat"),
+             # BL-149: siehe die Begruendung in der Fuell-Routine des
+             # Update-Pfads weiter oben. {{SMOKE_TEST}} ist Prosa und darf den
+             # TODO-Satz tragen; {{SMOKE_TEST_KONFIG}} steht nur in
+             # team.config.* und muss LEER bleiben, weil die Weichen der
+             # Bibliothek an leer/nicht-leer haengen.
              ("{{SMOKE_TEST}}", smoke or "TODO: noch keiner — Stufe 1 der ersten Kaskade"),
+             ("{{SMOKE_TEST_KONFIG}}", smoke),
              ("{{TECH_STACK}}", stack), ("{{DEPLOY}}", deploy),
              ("{{DEPLOY_AUSNAHMEN}}", ausn), ("{{DOMAENEN}}", domaenen),
              ("{{COMMIT_ENTSCHEID}}", commit),

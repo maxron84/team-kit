@@ -261,7 +261,17 @@ function Setze-Werte {
         '{{CHANGELOG}}'        = 'CHANGELOG.md'
         '{{FIX_PRAEFIX}}'      = 'fix(uat)'
         '{{FEAT_PRAEFIX}}'     = 'feat'
+        # BL-149: ZWEI Platzhalter fuer einen Wert. {{SMOKE_TEST}} steht in
+        # Regeltexten — dort sagt der TODO-Satz einem Menschen, was fehlt.
+        # {{SMOKE_TEST_KONFIG}} steht NUR in team.config.*, und dort war er ein
+        # Schaden: Die Weichen der Bibliothek unterscheiden "konfiguriert" von
+        # "nicht konfiguriert" ueber leer/nicht-leer, also galt der Platzhalter
+        # als KONFIGURIERTER Befehl. In Kaskade 1 jedes Projekts landete er im
+        # Prompt der Rollen, in der Werkzeug-Allowlist des Red Teams und wurde
+        # von der Selbstpruefung woertlich ausgefuehrt (Exit 127). Ausfuehrliche
+        # Begruendung in der Fuell-Routine von install.sh.
         '{{SMOKE_TEST}}'       = $(if ($SmokeTest) { $SmokeTest } else { 'TODO: noch keiner — Stufe 1 der ersten Kaskade' })
+        '{{SMOKE_TEST_KONFIG}}' = $SmokeTest
         '{{TECH_STACK}}'       = $TechStack
         '{{DEPLOY}}'           = $Deploy
         '{{DEPLOY_AUSNAHMEN}}' = $DeployAusnahmen

@@ -10,10 +10,69 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 ## [Unreleased]
 
 _Offen: drei Einträge, die eine Windows-Maschine brauchen (`BL-117`,_
-_`BL-145`, `BL-146`), dazu `BL-148`, `BL-149` und `BL-152` — siehe_
+_`BL-145`, `BL-146`), dazu `BL-148` und `BL-152` — siehe_
 _[plans/backlog.md](plans/backlog.md)._
 
 ### Fixed
+
+- ⚠️ **Der Platzhalter war nicht leer — und alle Weichen prüfen nur auf leer.
+  Damit startete die allererste Kaskade JEDES Projekts mit einem kaputten
+  Prompt** (`BL-149`). `team.config.*` kam mit der Vorbelegung
+  `TEAM_SMOKE_TEST="TODO: noch keiner — Stufe 1 der ersten Kaskade"` aus dem
+  Installer. Die Bibliothek unterscheidet „konfiguriert" von „nicht
+  konfiguriert" aber allein über leer/nicht-leer — für sie war der Satz ein
+  **konfigurierter Befehl**. Drei Folgen, alle in Kaskade 1:
+
+  1. `SMOKE_ZEILE` schrieb jeder bauenden Rolle in den Prompt: „Smoke-Test
+     ausführen: `TODO: noch keiner — Stufe 1 der ersten Kaskade` — muss grün
+     sein", samt dem Nachsatz, ihn ja im Vordergrund auszuführen.
+  2. `team_allowed_tools` hängte `Bash(TODO: noch keiner — …)` in die
+     Werkzeug-Allowlist des Red Teams.
+  3. `team_quittung_selbstpruefung` führte den Wert **wörtlich** aus — Exit
+     127 — und meldete „✗ … ist ROT". Der vierte Ausgang (`BL-41`) konnte in
+     Stufe 1 damit **nie** automatisch quittieren, obwohl genau diese Stufe
+     die Aufgabe hat, den Smoke-Test überhaupt erst zu bauen.
+
+  Der Kommentar unmittelbar über der Zeile sagte selbst: „Ist er **leer**,
+  lassen die Rollen den Smoke-Test-Schritt aus" — die Vorbelegung widersprach
+  ihrer eigenen Dokumentation.
+
+  **Zwei Hälften gebaut.** Der **Fall**: `{{SMOKE_TEST}}` bleibt der
+  Prosa-Platzhalter und trägt den TODO-Satz weiter in `CLAUDE.md`, `TEAM.md`
+  und die Skizzen-Vorlage — dort ist er richtig, er sagt einem Menschen, was
+  fehlt. Neu daneben steht `{{SMOKE_TEST_KONFIG}}`, der **nur** in
+  `team.config.*` vorkommt und leer bleibt, wenn nichts konfiguriert ist
+  (dieselbe Bauart wie `{{WEITERER_CODE}}`). Die **Klasse**: Die Bibliothek
+  behandelt einen mit `TODO` beginnenden Wert wie leer — ein Mensch trägt in
+  eine leere Zeile gern selbst ein „TODO" ein, und Platzhalter dieser Sorte
+  werden erfahrungsgemäß an anderer Stelle wieder eingeführt. Normalisiert
+  wird **einmal**, beim Laden, statt an drei Verbrauchsstellen einzeln.
+
+  **Warum das so lange unsichtbar war** — und das ist der eigentliche Fund:
+  Der Fehler hat ein Zeitfenster von genau einer Kaskade pro Projekt. Dazu
+  kam eine zweite Blindstelle, schwarz auf weiß in
+  `test_bl41_smoke_zeile_vordergrund.py`: Dessen Schlusskommentar erklärte den
+  else-Zweig („Kein Smoke-Test konfiguriert") für **nicht prüfbar**, weil eine
+  Installation `TEAM_SMOKE_TEST` immer selbst setze. Das stimmte — **weil**
+  der Installer die nicht-leere Vorbelegung schrieb. Der Zweig, in dem der
+  Fund saß, war der einzige, den niemand fuhr; der Kommentar hat ihn
+  beschrieben, ohne ihn zu erkennen, und als Testlücke abgehakt. Er ist jetzt
+  berichtigt und verweist auf den Test, der den Zweig fährt.
+
+  **Unter Test:** `test_bl149_platzhalter_ist_kein_befehl.py` fährt beide
+  Verbrauchsstellen auf **beiden Bahnen** in einer Ablage **ohne**
+  `team.config` — dann entscheidet allein die Umgebung, und der Test gilt in
+  beiden Ablagen gleich. Dazu drei Gegenproben (ein echter Befehl kommt
+  weiterhin im Prompt und in der Allowlist an; `./todo.sh` wird **nicht**
+  geschluckt, weil die Weiche am Präfix und großgeschrieben greift) und vier
+  statische Prüfungen über die Vorbelegung selbst — inklusive der, dass
+  **beide** Füll-Routinen von `install.sh` den neuen Platzhalter kennen
+  (`BL-119` hat gezeigt, was eine halb fertige Konfiguration kostet).
+  Gegenprobe gefahren: Jede Hälfte des Fixes einzeln zurückgedreht macht
+  eigene Fälle rot.
+
+  ⚠️ **Die pwsh-Hälfte ist geschrieben, aber nicht gefahren** — kein
+  PowerShell 7 auf der Entwicklungsmaschine. Siehe `BL-146`.
 
 - ⚠️ **Der Plankopf ist Markdown — die Leser lasen ihn wie Konfiguration**
   (`BL-150`). Beide Bahnen ankerten auf `^\s*RALPH_CAP=` und nahmen den Rest

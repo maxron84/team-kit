@@ -67,11 +67,23 @@ def test_smoke_zeile_traegt_die_notbremse(brocken, warum, schale):
         f"Ist:\n{zeile}")
 
 
-# Bewusst NICHT geprueft: der else-Zweig (kein Smoke-Test konfiguriert).
-# Der Versuch stand hier und fiel — nicht am Code, sondern an der Umgebung:
-# lib.sh sourcet team.config.sh, und in einer Installation setzt die
-# TEAM_SMOKE_TEST selbst, womit sich der else-Zweig von aussen nicht mehr
-# erzwingen laesst. Er waere im Kit-Repo gruen und in der Installation rot —
-# also genau die umgebungsabhaengige Verifikation, gegen die BL-17 steht.
-# Zum Fund BL-41 traegt er ohnehin nichts bei: Ohne Smoke-Test gibt es keinen
-# Hintergrund-Task, der die Sitzung beenden koennte.
+# Der else-Zweig (kein Smoke-Test konfiguriert) wird hier nicht geprueft, und
+# das ist eine Zustaendigkeitsfrage, keine Unmoeglichkeit mehr.
+#
+# BIS BL-149 STAND HIER ETWAS ANDERES, und es war eine Falschaussage geworden:
+# "laesst sich von aussen nicht mehr erzwingen, weil eine Installation
+# TEAM_SMOKE_TEST immer selbst setzt". Das stimmte — aber nur, WEIL der
+# Installer eine nicht-leere Vorbelegung schrieb ("TODO: noch keiner …"). Der
+# Zweig war unpruefbar, weil der Fehler ihn unerreichbar machte. Anders gesagt:
+# Dieser Kommentar hat den Fund von BL-149 anderthalb Jahre lang beschrieben,
+# ohne ihn zu erkennen, und ihn als Testluecke abgehakt.
+#
+# Die Lehre ist nicht "haetten wir es doch geprueft", sondern: Ein Satz "geht
+# hier nicht" gehoert regelmaessig nachgeprueft. Er beschreibt eine Umgebung,
+# und Umgebungen aendern sich — hier hat er sogar die Ursache benannt.
+#
+# Geprueft wird der Zweig jetzt in `test_bl149_platzhalter_ist_kein_befehl.py`,
+# in einer Ablage OHNE team.config: Dann entscheidet allein die Umgebung, und
+# der Test ist in beiden Ablagen gleich gueltig. Zum Fund BL-41 traegt er
+# weiterhin nichts bei — ohne Smoke-Test gibt es keinen Hintergrund-Task, der
+# die Sitzung beenden koennte —, deshalb liegt er dort und nicht hier.
