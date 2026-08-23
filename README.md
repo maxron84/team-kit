@@ -196,9 +196,10 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 | **`Feld A`** | Greenfield, Python mit Spiel-Engine, Linux, bash-Bahn | 33 Kaskaden, 157 Stufen, `HM-1`…`HM-93`, 49 `vollautomatik.sh`-Läufe, rund 1265 USD Abo-Gegenwert — vollständig geledgert (Stand 2026-08-11) |
 | **`Feld B`** | Greenfield, Windows 11, **einbahnig pwsh** installiert | Erste Kaskade geplant, gebaut und abgeschlossen (2026-08-21) — der erste vollständige Kostenabschluss eines Projekts überhaupt |
 | **`Feld C`** | Fremde, **gewachsene** Codebasis: Python/tkinter, Einstiegspunkt in der Wurzel, `src/`, `bin/`, gewachsene `tests/`, belegtes `plans/` | Gelesen (2026-08-11) und installiert (2026-08-13). **Keine** Kaskade — belegt ist der Einzug, nicht der Betrieb |
+| **`Feld D`** | Greenfield, Linux, bash-Bahn: Electron + Python 3 + SQLite — Neubau, dessen tkinter-Vorgänger als reine Lesereferenz danebenliegt | Erste Kaskade geplant und gebaut (2026-08-23), Stufen 1–4 grün, Stufe 5 an der Umgebung blockiert. `BL-149`…`BL-151` — **drei Erstlauf-Funde**, alle aus dem Zeitfenster, das ein laufendes Projekt gar nicht mehr hat |
 
-Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen vier Quellen
-kommen die Backlog-Einträge `BL-1`…`BL-148`; was davon behoben ist, steht im
+Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen fünf Quellen
+kommen die Backlog-Einträge `BL-1`…`BL-151`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
 [plans/backlog-archiv.md](plans/backlog-archiv.md) (94 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
