@@ -1037,6 +1037,33 @@ def _usage_addieren(kuebel, usage):
         kuebel["cache_write_5m"] += usage.get("cache_creation_input_tokens", 0) or 0
 
 
+def _modelusage_kuebel(u, cache_art):
+    """Token-Kuebel aus einem `modelUsage`-Eintrag eines headless-Logs.
+
+    BL-152. Bewusst NICHT `_usage_addieren`: Die beiden Strukturen sehen sich
+    aehnlich und kommen aus verschiedenen Quellen.
+
+        Transkript  `usage`       snake_case, Cache-Erstellung nach Laufzeit
+                                  aufgeschluesselt (`cache_creation`)
+        headless    `modelUsage`  camelCase, Cache-Erstellung als EINE Summe
+
+    Zusammengelegt sah das nach Sparsamkeit aus und war ein stiller
+    Leserfehler: Jeder Schluessel ging ins Leere, jeder Kuebel blieb 0, und
+    die Eichung konnte nie bestehen. Zwei Leser fuer zwei Formate sind hier
+    billiger als eine Funktion, die beide zu kennen behauptet.
+
+    `cache_art` sagt, als welche Laufzeit die Cache-Erstellung gebucht wird —
+    die Angabe fehlt in dieser Struktur, siehe die Begruendung in
+    `preise_nachrechnen`.
+    """
+    kuebel = _tokenkuebel()
+    kuebel["input"] = u.get("inputTokens", 0) or 0
+    kuebel["output"] = u.get("outputTokens", 0) or 0
+    kuebel["cache_read"] = u.get("cacheReadInputTokens", 0) or 0
+    kuebel[cache_art] = u.get("cacheCreationInputTokens", 0) or 0
+    return kuebel
+
+
 def sitzung_messen(pfade):
     """Liest Transkripte und gibt (je_modell, antworten, doppelt) zurueck.
 
@@ -1155,23 +1182,64 @@ def preise_nachrechnen(logs):
         nutzung = d.get("modelUsage")
         if gemeldet is None or not isinstance(nutzung, dict) or not nutzung:
             continue
-        gerechnet = 0.0
-        vollstaendig = True
-        for modell, u in nutzung.items():
-            preis = modell_basispreis(modell)
-            if preis is None:
-                vollstaendig = False
+        # BL-152: Die beiden Kuebel-Formate haben VERSCHIEDENE HERKUNFT und
+        # duerfen nicht in eine Funktion gezwaengt werden. `_usage_addieren`
+        # liest die `usage`-Struktur des TRANSKRIPTS (snake_case); hier steht
+        # `modelUsage` aus dem headless-Log, und das traegt camelCase. Der
+        # Leser fragte bis hierher nach `input_tokens`, wo `inputTokens`
+        # stand — jeder Kuebel blieb auf 0, `gerechnet` wurde 0.0000, und die
+        # Abweichung war IMMER exakt 100 %, unabhaengig davon, ob die Tabelle
+        # stimmte. Die Warnung zeigte also genau dorthin, wo der Fehler nicht
+        # war, und riet von einer Buchung ab, die in Ordnung gewesen waere.
+        #
+        # Nachgemessen an 920 abgerechneten Laeufen aus vier Feldprojekten:
+        # mit den richtigen Schluesseln reproduzieren ALLE 920 den
+        # abgerechneten Betrag auf ein Promille; mit den alten war es keiner.
+        nenner = gemeldet if gemeldet else 1.0
+        abweichungen = []
+        for art in ("cache_write_1h", "cache_write_5m"):
+            gerechnet = 0.0
+            vollstaendig = True
+            for modell, u in nutzung.items():
+                preis = modell_basispreis(modell)
+                if preis is None:
+                    vollstaendig = False
+                    break
+                gerechnet += kosten_aus_tokens(_modelusage_kuebel(u, art), preis)
+            if not vollstaendig:
                 break
-            kuebel = _tokenkuebel()
-            _usage_addieren(kuebel, u)
-            gerechnet += kosten_aus_tokens(kuebel, preis)
+            abweichungen.append((abs(gerechnet - gemeldet) / nenner, gerechnet))
         if not vollstaendig:
             continue
-        # Relativ, nicht absolut: Ein Cent Abweichung ist bei 0,05 USD ein
-        # Befund und bei 50 USD Rundung.
-        nenner = gemeldet if gemeldet else 1.0
-        befunde.append((pfad, gemeldet, gerechnet,
-                        abs(gerechnet - gemeldet) / nenner))
+        # Die KLEINERE der beiden Abweichungen zaehlt — und das ist keine
+        # Nachsicht, sondern die Beseitigung einer Unbekannten, die diese
+        # Funktion gar nicht beobachten kann.
+        #
+        # `modelUsage` traegt die Cache-Erstellung als EINE Summe, ohne die
+        # 5m/1h-Aufteilung, die das Transkript hergibt. Die beiden Saetze
+        # unterscheiden sich (Faktor 2,00 gegen 1,25), also braucht es eine
+        # Annahme. Gemessen an denselben 920 Laeufen zerfaellt das sauber in
+        # zwei Gruppen:
+        #
+        #     808 Abo-Laeufe          1h trifft, 5m nicht
+        #     112 API-Fallback-Laeufe 110 mal 5m, 2 mal 1h
+        #
+        # Eine FESTE Annahme ist damit fuer eine der beiden Gruppen immer
+        # falsch: "immer 1h" haette 110 von 920 Laeufen als "Preistabelle
+        # veraltet" gemeldet — ein leiserer Fehlalarm als vorher, aber
+        # derselbe Fehler. Ein Waechter mit Fehlalarmen wird abgeschaltet
+        # (Bauart BL-14).
+        #
+        # Die Erkennung an der Laufart festzumachen (der Dateiname traegt
+        # "-api-fallback") waere die naheliegende Alternative und ist
+        # nachweislich schlechter: 2 der 112 Fallback-Laeufe rechnen mit 1h ab.
+        #
+        # Der Waechter bleibt dadurch scharf, ebenfalls gemessen: Eine um 5 %
+        # verstellte Preistabelle wird bei 920 von 920 Laeufen erkannt, eine um
+        # 20 % verstellte bei 907. Die Annahme betrifft nur EINEN Kuebel; der
+        # Basispreis, um den es bei einer Preisaenderung geht, steckt in allen.
+        rel, gerechnet = min(abweichungen)
+        befunde.append((pfad, gemeldet, gerechnet, rel))
     return befunde
 
 

@@ -171,6 +171,23 @@ def test_mehrere_modelle_werden_je_eigenem_preis_gerechnet():
 # --- Die Selbstpruefung, die das Werkzeug erst gueltig macht -----------------
 
 def _log(pfad, usd, nutzung):
+    """Ein headless-Log mit Eichpunkt.
+
+    BL-152: Die `nutzung` hier traegt camelCase, weil ein echtes `modelUsage`
+    das tut — `inputTokens`, nicht `input_tokens`. Bis dahin stand hier
+    snake_case, also die Sprache des LESERS statt die des Logs. Alle vier
+    Faelle waren gruen, und sie haben damit einen Leserfehler FESTGESCHRIEBEN:
+    `preise_nachrechnen` fragte nach snake_case, im Feld stand camelCase, jeder
+    Kuebel blieb 0 und die Eichung meldete bei jedem Lauf 100 % Abweichung.
+
+    Die Lehre gehoert hierher, weil sie an dieser Zeile haengt: Ein Test, der
+    sein Testmaterial im Dialekt des Codes schreibt, prueft den Code gegen sich
+    selbst. Das Format eines Fixtures muss aus der QUELLE kommen, nicht aus dem
+    Leser. Dieselbe Bauart wie in BL-143.
+
+    Die Gegenprobe dazu steht in `test_bl152_eichung_liest_das_log_format.py`:
+    Dort ist das Fixture aus echten abgerechneten Laeufen genommen.
+    """
     pfad.parent.mkdir(parents=True, exist_ok=True)
     pfad.write_text(json.dumps({"total_cost_usd": usd, "modelUsage": nutzung}),
                     encoding="utf-8")
@@ -180,8 +197,8 @@ def test_stimmige_preistabelle_wird_bestaetigt(tmp_path):
     """Ein Log, dessen abgerechneter Betrag die Tabelle reproduziert."""
     # 1 Mio Input + 1 Mio Output bei 5,00 USD/Mio Input = 5,00 + 25,00
     _log(tmp_path / ".ralph-logs" / "a.json", 30.00,
-         {"claude-opus-5": {"input_tokens": 1_000_000,
-                            "output_tokens": 1_000_000}})
+         {"claude-opus-5": {"inputTokens": 1_000_000,
+                            "outputTokens": 1_000_000}})
     befunde = kosten.preise_nachrechnen(kosten.logs_einsammeln(str(tmp_path)))
     assert len(befunde) == 1, befunde
     assert befunde[0][3] < kosten.PREIS_TOLERANZ, (
@@ -196,8 +213,8 @@ def test_veraltete_preistabelle_wird_erkannt(tmp_path):
     bucht das Werkzeug jahrelang mit einer toten Tabelle weiter.
     """
     _log(tmp_path / ".team-logs" / "b.json", 45.00,
-         {"claude-opus-5": {"input_tokens": 1_000_000,
-                            "output_tokens": 1_000_000}})
+         {"claude-opus-5": {"inputTokens": 1_000_000,
+                            "outputTokens": 1_000_000}})
     befunde = kosten.preise_nachrechnen(kosten.logs_einsammeln(str(tmp_path)))
     assert len(befunde) == 1
     assert befunde[0][3] > kosten.PREIS_TOLERANZ, (
@@ -222,7 +239,7 @@ def test_unbekanntes_modell_im_log_ist_kein_befund(tmp_path):
     obwohl die vorhandenen Eintraege stimmen. Die Luecke gehoert an die
     Sitzungsmessung gemeldet, nicht an die Eichung."""
     _log(tmp_path / ".ralph-logs" / "c.json", 99.00,
-         {"claude-zukunft-9": {"input_tokens": 1_000_000}})
+         {"claude-zukunft-9": {"inputTokens": 1_000_000}})
     assert kosten.preise_nachrechnen(kosten.logs_einsammeln(str(tmp_path))) == []
 
 
@@ -254,8 +271,8 @@ def test_cli_bricht_bei_veralteter_preistabelle_nicht_still_ab(tmp_path):
     """Der Fall, der BL-141 traegt: Die Zahl kommt trotzdem, aber sie ist als
     UNGEEICHT markiert und der Exit-Code sagt es auch."""
     _log(tmp_path / ".ralph-logs" / "b.json", 45.00,
-         {"claude-opus-5": {"input_tokens": 1_000_000,
-                            "output_tokens": 1_000_000}})
+         {"claude-opus-5": {"inputTokens": 1_000_000,
+                            "outputTokens": 1_000_000}})
     t = tmp_path / "s.jsonl"
     t.write_text(_satz("m1", ein=1_000_000) + "\n", encoding="utf-8")
     rc, out, err = _cli(tmp_path, "sitzung-messen", str(t))
@@ -268,8 +285,8 @@ def test_cli_bricht_bei_veralteter_preistabelle_nicht_still_ab(tmp_path):
 def test_cli_quittiert_eine_stimmige_tabelle_ausdruecklich(tmp_path):
     """Gegenrichtung: Eine Meldung, die immer erscheint, ist keine (BL-14)."""
     _log(tmp_path / ".ralph-logs" / "a.json", 30.00,
-         {"claude-opus-5": {"input_tokens": 1_000_000,
-                            "output_tokens": 1_000_000}})
+         {"claude-opus-5": {"inputTokens": 1_000_000,
+                            "outputTokens": 1_000_000}})
     t = tmp_path / "s.jsonl"
     t.write_text(_satz("m1", ein=1_000_000) + "\n", encoding="utf-8")
     rc, out, err = _cli(tmp_path, "sitzung-messen", str(t))

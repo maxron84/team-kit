@@ -10,10 +10,64 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 ## [Unreleased]
 
 _Offen: drei Einträge, die eine Windows-Maschine brauchen (`BL-117`,_
-_`BL-145`, `BL-146`), dazu `BL-148` und `BL-152` — siehe_
+_`BL-145`, `BL-146`), dazu `BL-148` — siehe_
 _[plans/backlog.md](plans/backlog.md)._
 
 ### Fixed
+
+- ⚠️ **Die Eichprüfung der Preistabelle konnte nie bestehen — sie las
+  `modelUsage` mit den Schlüsseln des Transkripts** (`BL-152`).
+  `preise_nachrechnen()` reichte einen `modelUsage`-Eintrag an
+  `_usage_addieren()` weiter. Die beiden Strukturen sehen sich ähnlich und
+  kommen aus verschiedenen Quellen: Das Transkript trägt **snake_case**
+  (`input_tokens`), das headless-Log **camelCase** (`inputTokens`). Jeder
+  Kübel blieb auf 0, `gerechnet` wurde `0.0000`, und die Abweichung war
+  **immer exakt 100 %** — unabhängig davon, ob die Tabelle stimmte.
+  `sitzung-messen` meldete daraufhin „Preistabelle stimmt nicht mehr" und
+  erklärte die eigene, korrekt gemessene Zahl für `UNGEEICHT`. **Die Warnung
+  zeigte genau dorthin, wo der Fehler nicht war**, und riet von einer Buchung
+  ab, die in Ordnung gewesen wäre.
+
+  **Nachgemessen an 920 abgerechneten Läufen aus vier Feldprojekten** — statt
+  an den elf, die der Backlog-Eintrag hatte: Mit den richtigen Schlüsseln
+  reproduzieren **alle 920** den abgerechneten Betrag exakt. Die Preistabelle
+  war die ganze Zeit korrekt.
+
+  **Die 5m/1h-Frage ist damit auch beantwortet, und anders als vermutet.**
+  `modelUsage` trägt die Cache-Erstellung als eine Summe ohne Aufteilung nach
+  Laufzeit; die Sätze unterscheiden sich (2,00 gegen 1,25). Dieselben 920
+  Läufe zerfallen sauber in zwei Gruppen: **808 Abo-Läufe rechnen 1h ab, 112
+  API-Fallback-Läufe überwiegend 5m** (110 von 112). Eine **feste** Annahme
+  ist damit für eine der beiden Gruppen immer falsch — „immer 1h", der
+  ursprüngliche Vorschlag, hätte 110 von 920 Läufen als „Preistabelle
+  veraltet" gemeldet. Ein leiserer Fehlalarm, aber derselbe Fehler, und ein
+  Wächter mit Fehlalarmen wird abgeschaltet (`BL-14`). Gezählt wird deshalb
+  die **kleinere** der beiden Abweichungen. Die Laufart am Dateinamen
+  festzumachen wäre die naheliegende Alternative und ist nachweislich
+  schlechter: 2 der 112 Fallback-Läufe rechnen mit 1h ab.
+
+  **Der Wächter bleibt scharf, ebenfalls gemessen:** Eine um 5 % verstellte
+  Preistabelle wird bei 920 von 920 Läufen erkannt, eine um 20 % verstellte
+  bei 907. Die Annahme betrifft nur **einen** Kübel; der Basispreis, um den es
+  bei einer Preisänderung geht, steckt in allen.
+
+  **Warum es niemandem auffiel — und das ist der eigentliche Fund:** Es *gab*
+  einen Test. `test_bl141_sitzung_messen.py` prüfte die Eichung in vier
+  Fällen, alle vier grün. Sie bauten ihre `modelUsage`-Fixture aber in der
+  Sprache des **Lesers** (`input_tokens`) statt in der des **echten Logs**.
+  Ein Test, der sein Testmaterial im Dialekt des Codes schreibt, prüft den
+  Code gegen sich selbst — er hat die Fehlbuchung **festgeschrieben**, statt
+  sie zu fangen. Dieselbe Bauart wie in `BL-143`. Die vier Fixtures sind
+  nachgezogen, mit der Lehre an der Zeile, an der sie hängt.
+
+  **Unter Test:** `test_bl152_eichung_liest_das_log_format.py`, neun Fälle mit
+  einem Fixture aus **echten abgerechneten Läufen** — nur die Zahlenfelder,
+  kein Text, keine Pfade; beide Lauf-Arten, drei Basispreise, ein Lauf unter
+  einem Zehntelcent. Genau darin liegt ihr Wert: Ein Fixture, das aus der
+  Preistabelle abgeleitet wäre, könnte die Tabelle nicht prüfen. Dazu die
+  Gegenprobe über fünf verstellte Preistabellen und ein Fall, der festhält,
+  dass `_usage_addieren` das Log-Format **nicht** lesen darf — zwei Leser für
+  zwei Formate war der Punkt.
 
 - ⚠️ **Der Platzhalter war nicht leer — und alle Weichen prüfen nur auf leer.
   Damit startete die allererste Kaskade JEDES Projekts mit einem kaputten
