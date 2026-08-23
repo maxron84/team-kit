@@ -9,8 +9,8 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
-_Offen sind noch drei Einträge, und alle drei brauchen eine Windows-Maschine_
-_(`BL-117`, `BL-145`, `BL-146`) — siehe [plans/backlog.md](plans/backlog.md)._
+_Offen sind noch vier Einträge, und alle vier brauchen eine Windows-Maschine_
+_(`BL-117`, `BL-145`, `BL-146`, `BL-155`) — siehe [plans/backlog.md](plans/backlog.md)._
 
 ### Added
 
@@ -144,7 +144,12 @@ _(`BL-117`, `BL-145`, `BL-146`) — siehe [plans/backlog.md](plans/backlog.md)._
 
   **Offen und bewusst nicht mitgenommen:** Die pwsh-Bahn hat den
   `BL-52`-Hinweis gar nicht — `install.ps1` kennt keine Wurzel-Code-Prüfung.
-  Ältere Asymmetrie, gehört auf die Windows-Maschine zu `BL-145`.
+  Das ist keine ungeprüfte Hälfte, sondern eine **fehlende**, und sie steht
+  jetzt als `BL-155` im Backlog: Bau auf der Windows-Maschine, mit derselben
+  Regel wie hier (Entrypoint = liegt in `bash/entry/` oder `pwsh/entry/`),
+  nicht mit einer zweiten Liste. Blind geschrieben würde der pwsh-Zweig bei
+  seiner ersten Ausführung dort *angepasst* statt gelesen — die Lehre aus
+  `BL-113`/`BL-117`.
 
 - ⚠️ **Der `BL-140`-Lint verbot in einem Feldprojekt genau die Schreibweise,
   die seine eigene Regel als richtig erklärt** (`BL-148`). Die Regel kennt
