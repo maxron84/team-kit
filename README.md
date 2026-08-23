@@ -9,6 +9,7 @@
 [![Lizenz MIT](https://img.shields.io/badge/Lizenz-MIT-007ec6?style=flat-square)](LICENSE)
 
 [![Projekt-Stack agnostisch](https://img.shields.io/badge/Projekt--Stack-agnostisch-2ea44f?style=flat-square)](#grenzen)
+[![Antrieb — Nutzen je Token](https://img.shields.io/badge/Antrieb-Nutzen_je_Token-8957e5?style=flat-square)](#der-antrieb-nutzen-je-token)
 [![Modelle agnostisch](https://img.shields.io/badge/Modelle-agnostisch-8957e5?style=flat-square)](#modelle--agnostisch-aber-nicht-anspruchslos)
 [![Agenten-CLI nur Claude Code](https://img.shields.io/badge/Agenten--CLI-nur_Claude_Code-fe7d37?style=flat-square&logo=anthropic&logoColor=white)](#grenzen)
 [![Lokale Modelle Fernziel](https://img.shields.io/badge/Lokale_Modelle-Fernziel-fe7d37?style=flat-square)](#modelle--agnostisch-aber-nicht-anspruchslos)
@@ -30,6 +31,34 @@ Leitsatz: Finder ≠ Fixer.](team-banner.webp)
 
 Ein vollständiges KI-Rollenteam auf Knopfdruck in ein Software-Projekt —
 frisch angelegt **oder seit Jahren gewachsen**.
+
+## Was das ist — und für wen
+
+**Was das ist.** Kein Chat-Assistent und kein Autopilot, sondern ein
+**Regiepult**. Sechs KI-Rollen mit harten Auflagen, ein Loop, der einen
+geschriebenen Plan Stufe für Stufe abarbeitet — **ein Commit je Stufe** —, und
+eine Buchführung, die hinterher zeigt, was jede einzelne Stufe gekostet hat. Du
+tippst den Code nicht; du entscheidest, **was** gebaut wird, liest den Diff und
+gibst die nächste Stufe frei.
+
+**Für wen.** Für **erfahrene Entwickler**, die ihren eigenen Code lesen und
+verstehen und ihr KI-Team Schritt für Schritt anleiten wollen — in der Rolle
+eines **fachlich orientierten Stakeholders**: Product Owner, Chefentwickler,
+Tech Lead. Das ist keine Höflichkeitsformel, sondern eine **Betriebsbedingung**.
+Das tragende Prinzip **Finder ≠ Fixer** endet bei einem Menschen, der den Fund
+*beurteilen* muss: Ist der Red-Team-Fund echt oder Rauschen? Behebt Franks Fix
+die Ursache oder das Symptom? Ist die Stufe abnahmereif? Wer den Diff nicht
+liest, kann diese Fragen nicht beantworten — dann wird das Beutebuch zur Ablage
+statt zur Entscheidung, und das Team baut zuverlässig, ausdauernd und teuer am
+Ziel vorbei.
+
+**Warum es das gibt.** Der Antrieb ist **Kosten/Nutzen**, nicht Bequemlichkeit —
+agnostisch gesagt: **Nutzen je Token**. Das ist der Unterschied zum Bauen über
+ein oder mehrere Chatfenster, und es ist derselbe Maßstab, der später für ein
+**lokales Modell offline** gilt. Ausgeführt unter
+[Der Antrieb](#der-antrieb-nutzen-je-token).
+
+## Schnellstart
 
 ```bash
 git clone https://github.com/maxron84/team-kit.git ~/Source/team-kit
@@ -81,7 +110,9 @@ Arbeit. Alle drei sind behoben, und die Messung liegt jetzt als Werkzeug im Kit
 
 | Abschnitt | Worum es geht |
 |---|---|
+| [Was das ist — und für wen](#was-das-ist--und-für-wen) | Regiepult statt Autopilot — und die Betriebsbedingung dahinter |
 | [Was das T.E.A.M. ist](#was-das-team-ist) | Die sechs Rollen und das Prinzip *Finder ≠ Fixer* |
+| [Der Antrieb](#der-antrieb-nutzen-je-token) | Nutzen je Token: vier Hebel, die Gegenrechnung zum Chatfenster, die Rolle von Git |
 | [Modelle](#modelle--agnostisch-aber-nicht-anspruchslos) | Zwei Stufen statt Modellnamen, sechs vorausgesetzte Fähigkeiten, Ziel lokal |
 | [Herkunft](#herkunft) | Woher der Code kommt und wo er scharf gelaufen ist |
 | [Installation](#installation) | `install.sh`, das Aufnahme-Interview, `--update` gegen `--force` |
@@ -125,6 +156,89 @@ Sechs KI-Rollen unter der Regie **eines** Menschen (des *Stakeholders*):
 Tragendes Prinzip: **Finder ≠ Fixer.** Wer einen Fehler findet, behebt ihn nicht
 selbst — das macht Frank. Jede Übergabe läuft über das Beutebuch und bleibt
 nachvollziehbar.
+
+## Der Antrieb: Nutzen je Token
+
+**Der eigentliche Antrieb dieses Kits ist Kosten/Nutzen.** Ein Rollenteam mit
+Loop ist kein Selbstzweck: **Graphen und Loops sind der heutige Stand der
+Technik**, um sich einem guten Ergebnis *iterativ* zu nähern — Schritt für
+Schritt, Commit für Commit, mit einer menschlichen Abnahme dazwischen. Kommt
+morgen eine bessere Mechanik, wird sie getauscht; das Ziel bleibt.
+
+Bewusst formuliert als **Nutzen je Token**, nicht als „Kosten pro Monat". Wer in
+Token rechnet statt in Dollar, hat die Rechnung schon aufgestellt, die für ein
+**lokales Modell offline** gilt — dort kostet nicht der Token Geld, sondern
+Zeit, Strom und Kontextfenster. Es ist dieselbe Optimierung mit anderen
+Einheiten, und deshalb ist das
+[Fernziel lokal](#modelle--agnostisch-aber-nicht-anspruchslos) kein Anhängsel,
+sondern die Konsequenz: Wer sich heute an ein volles Kontextfenster gewöhnt,
+kann später nicht auf ein kleines Modell wechseln. Wer heute mit engen Stufen
+auskommt, kann es.
+
+**Vier Hebel — alle gebaut, alle im Feld gefahren:**
+
+| Hebel | Was dahintersteckt |
+|---|---|
+| **Zwei Stufen statt eines Modells** | Die Rollen kennen keine Modellnamen, sondern `TEAM_MODEL_LOOP` und `TEAM_MODEL_STRONG`. Die **Masse** der Aufrufe (Bau-Loop, Sweeps, Fixes) läuft auf der günstigen Stufe; die starke läuft **nie im Dauer-Loop**, sondern fallweise — ein Fall pro Aufruf |
+| **Caps mit zwei Schwellen** | Soft-Cap = Hinweis, Hard-Cap = Airbag. Die Trennung ist eine bezahlte Feldlehre (`HM-32`): Ein zu enger Cap greift **nach** dem bereits bezahlten Aufruf und wirft plausible Arbeit per Rollback weg — er spart nichts, er **vervielfacht** |
+| **Messen statt schätzen** | Jeder Aufruf schreibt seinen Preis ins Ledger, getrennt nach API-Geld und Abo-Gegenwert. `--budget` zeigt den Kontostand, `--ledger-pruefen` sucht die Lücken, `kosten.py sitzung-messen` holt die interaktiven Sitzungen nach, die von sich aus keinen Wert melden |
+| **Der Commit als Buchungseinheit** | Eine Stufe = ein Commit = eine Ledgerzeile. Damit ist „was hat dieses Feature gekostet" keine Schätzung, sondern eine Abfrage — siehe unten |
+
+### Was das gegenüber einem Chatfenster ändert
+
+In einem Chatfenster wächst der Kontext **monoton**: Jeder Folgeschritt trägt
+die gesamte Vorgeschichte mit, auch die verworfenen Zwischenstände. Caching
+verbilligt das, aber es schafft es nicht ab. Und am Ende weiß niemand, was
+welcher Schritt gekostet hat — im Abo gibt es dafür nicht einmal eine Zahl auf
+der Konsole.
+
+Der Loop dreht beides um. Jeder Rollenaufruf ist ein **eigener Prozess** mit
+*genau* dem Kontext, den die Stufe braucht: die Regeldatei, der aktive Plan,
+die eine Stufe. Was die vorige Stufe an Irrwegen produziert hat, ist nicht
+mehr im Kontext — es steht im Commit, wo man es nachlesen kann, wenn man will,
+und wo es nichts kostet, wenn man nicht will. Der Preis jedes Aufrufs kommt als
+Zahl zurück und landet in der Buchhaltung.
+
+Belegt ist das an `Feld A`: 33 Kaskaden, 157 Stufen, 49 Loop-Läufe,
+rund 1265 USD Abo-Gegenwert — **vollständig geledgert**, aufgeschlüsselt bis
+auf die Stufe. Nicht, weil die Summe klein wäre, sondern weil sie **bekannt**
+ist. Was sich nicht messen lässt, lässt sich auch nicht optimieren; genau
+deshalb waren die drei teuersten Kit-Fehler dieses Jahres alle Löcher in der
+**Kostenerfassung** und nicht im Bau-Code.
+
+### Warum Git hier mehr trägt als anderswo
+
+**Feine, atomare Commits sind kein Alleinstellungsmerkmal** — im gesamten
+Umfeld des agentischen Programmierens gelten sie als empfohlene Praxis, und das
+zu Recht. Der Unterschied liegt darin, **wer** sie durchsetzt und **wozu** sie
+dienen.
+
+Anderswo ist der Commit eine **Empfehlung an den Menschen**, und der Rückweg
+ist typischerweise ein **editor-lokaler Snapshot** — ohne Diff, nicht teilbar,
+nicht in der Historie, beim Maschinenwechsel weg. Hier ist der Commit ein
+**Zustandsübergang der Maschine** und trägt drei Lasten gleichzeitig:
+
+1. **Bedingung des Fortschritts.** Ralph schaltet `.ralph-state` erst **nach**
+   dem Commit weiter. Eine Stufe ohne Commit ist kein halber Erfolg, sondern
+   eine eigene, benannte Fehlerklasse mit eigenem Exit-Code (`43`) — weil die
+   Verwechslung mit „Fehler" im Feld viermal die bereits bezahlte Arbeit
+   gekostet hat (zusammen 19,47 USD).
+2. **Buchungseinheit des Geldes.** Ein Snapshot kostet nichts und bucht nichts;
+   er ist ein Undo. Ein Commit hier ist die Zeile, an der Ledger, Cap und
+   Rollback ansetzen. Deshalb ist auch der Rollback keine kostenlose Geste: Er
+   wirft bezahlte Arbeit weg, und genau das ist der Grund, warum die Caps
+   großzügig stehen.
+3. **Prüfeinheit des Menschen.** Ein Diff je Stufe ist die Menge, die ein
+   Stakeholder noch lesen und verantworten kann. Die Feinkörnigkeit ist keine
+   Ordnungsliebe — sie ist die **Portionierung, in der Kontrolle überhaupt
+   ausübbar bleibt**, und damit die Verbindung zurück zu „für wen".
+
+**Und die Grenze, damit es keine Sparversprechen gibt:** Das Kit senkt nicht
+den Preis pro Token. Es senkt die **Zahl der Token, die für nichts verbrannt
+werden** — durch enge Stufen, billige Rollen, abgebrochene Leerläufe und
+dadurch, dass doppelte Arbeit überhaupt sichtbar wird. Die 1265 USD aus
+`Feld A` sind der Beleg dafür, dass hier gearbeitet wurde, nicht dafür, dass es
+umsonst war.
 
 ## Modelle — agnostisch, aber nicht anspruchslos
 

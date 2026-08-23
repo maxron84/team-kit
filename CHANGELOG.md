@@ -12,6 +12,48 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 _Offen sind noch drei Einträge, und alle drei brauchen eine Windows-Maschine_
 _(`BL-117`, `BL-145`, `BL-146`) — siehe [plans/backlog.md](plans/backlog.md)._
 
+### Added
+
+- **Das README sagt jetzt im Kopf, was das hier ist und für wen** — und stellt
+  den Antrieb nach vorn, statt ihn über sechs Dokumente zu verteilen. Zwei neue
+  Abschnitte:
+
+  - **„Was das ist — und für wen"** steht **vor** dem Schnellstart, weil ein
+    Leser, der die Sache noch nicht kennt, nicht zuerst auf ein
+    `git clone` stoßen sollte. Drei Blöcke: Regiepult statt Autopilot; die
+    Zielgruppe (erfahrene Entwickler in der Rolle eines fachlich orientierten
+    Stakeholders — PO, Chefentwickler, Tech Lead); und der Antrieb in einem
+    Satz. **Die Zielgruppe ist dabei als Betriebsbedingung formuliert, nicht
+    als Empfehlung:** *Finder ≠ Fixer* endet bei einem Menschen, der den Fund
+    beurteilen können muss. Wer den Diff nicht liest, macht aus dem Beutebuch
+    eine Ablage.
+  - **„Der Antrieb: Nutzen je Token"** bündelt die vier Kostenhebel, die
+    bisher einzeln in `CLAUDE.md.vorlage`, Anhang A und dem Architekten-
+    Briefing standen: zwei Modellstufen, Caps mit zwei Schwellen, Messen statt
+    Schätzen, und der Commit als Buchungseinheit. Dazu die Gegenrechnung zum
+    Chatfenster (monoton wachsender Kontext gegen prozessfrischen Kontext je
+    Stufe) und eine Grenze, damit kein Sparversprechen entsteht: Das Kit senkt
+    nicht den Preis je Token, sondern die Zahl der für nichts verbrannten.
+
+  **Die Wortwahl „Nutzen je Token" statt „Kosten" ist Absicht** und deckt sich
+  mit der Modell- und CLI-Agnostik des Kits: Für ein lokales Modell offline
+  kostet der Token kein Geld, sondern Zeit, Strom und Kontextfenster. Es ist
+  dieselbe Optimierung mit anderen Einheiten — damit ist das Fernziel lokal
+  kein Anhängsel, sondern die Konsequenz.
+
+  **Zur Rolle von Git wurde vorher geprüft, statt sie zu behaupten.** Feine,
+  atomare Commits sind im agentischen Programmieren **verbreitete
+  Empfehlung** — als Praxis also *kein* Alleinstellungsmerkmal. Der belegbare
+  Unterschied ist, wer sie durchsetzt und wozu sie dienen: Anderswo ist der
+  Commit eine Empfehlung an den Menschen und der Rückweg ein editor-lokaler
+  Snapshot (ohne Diff, nicht teilbar, nicht in der Historie). Hier ist er ein
+  **Zustandsübergang der Maschine** und trägt drei Lasten gleichzeitig —
+  Bedingung des Fortschritts (`.ralph-state` schaltet erst nach dem Commit,
+  Fehlklasse `43`), Buchungseinheit des Geldes (Ledger, Cap, Rollback setzen
+  dort an) und Prüfeinheit des Menschen (ein Diff je Stufe ist die Portion,
+  in der Kontrolle ausübbar bleibt). So steht es im README, und der
+  Alleinstellungsanspruch liegt ausdrücklich **nicht** auf Git allein.
+
 ### Fixed
 
 - ⚠️ **Der `BL-140`-Lint verbot in einem Feldprojekt genau die Schreibweise,
