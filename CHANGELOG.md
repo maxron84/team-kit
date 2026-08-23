@@ -10,11 +10,54 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 ## [Unreleased]
 
 _Offen: drei Einträge, die eine Windows-Maschine brauchen (`BL-117`,_
-_`BL-145`, `BL-146`), dazu die Erstlauf-Funde aus `Feld D` und dem Feld_
-_(`BL-148`, `BL-149`, `BL-150`, `BL-152`) — siehe_
+_`BL-145`, `BL-146`), dazu `BL-148`, `BL-149` und `BL-152` — siehe_
 _[plans/backlog.md](plans/backlog.md)._
 
 ### Fixed
+
+- ⚠️ **Der Plankopf ist Markdown — die Leser lasen ihn wie Konfiguration**
+  (`BL-150`). Beide Bahnen ankerten auf `^\s*RALPH_CAP=` und nahmen den Rest
+  der Zeile. Der Architekt legte den Plankopf aber fett an
+  (`**RALPH_CAP=5**`): Die führenden Sterne verhinderten den Treffer, und
+  selbst bei Treffer wäre der Wert `5**` gewesen. **Ralph stieg mit Exit 1
+  aus, `team-status` zeigte `Cap ?`, und `BUDGET_EMPFEHLUNG_USD` ging nie in
+  die Deckel-Anhebung der Vollautomatik ein** — ein fehlender Wert, den
+  niemand vermisst, weil sein Fehlen wie ein bewusst niedriger Deckel
+  aussieht.
+
+  **Der Fehler war eingebaut, nicht zufällig.** Das Architekten-Briefing
+  verlangte „die Zeilen `RALPH_CAP=…` und `BUDGET_EMPFEHLUNG_USD=…` im
+  Plankopf" — ohne ein Wort über Blank-Pflicht, während der übrige Plankopf
+  (`**Plan:**`, `**Stufen:**`, `**Typ:**`) durchgehend fett ist. Wer sich exakt
+  ans Briefing hielt und dem Stil des eigenen Dokuments folgte, blockierte den
+  Bau.
+
+  **Beide Hälften gebaut, weil keine für sich trägt:** Die Leser dulden jetzt
+  Auszeichnung (führende `**`/`` ` ``/`_`/Aufzählungs- und Zitatzeichen,
+  nachlaufende ebenso) — und das Briefing spricht die Blank-Pflicht aus und
+  zeigt den Plankopf als Block. Eine geduldete Auszeichnung ohne Briefing-Satz
+  lädt zum Weiterschreiben ein; ein Briefing-Satz ohne duldenden Leser trifft
+  den nächsten Architekten, der ihn überliest.
+
+  Nebenbei ist die zweite Kopie derselben Ableitung verschwunden:
+  `team_ralph_cap` und `team_budget_empfehlung` teilen sich auf beiden Bahnen
+  jetzt ein `team_plankopf_wert`. Zwei Kopien einer Pipeline waren einen
+  Eintrag zuvor schon der eigentliche Befund (`BL-151`).
+
+  **Unter Test:** `test_bl150_plankopf_auszeichnung.py` fährt **fünf
+  Notationen** × zwei Funktionen auf **beiden Bahnen** unter voller Strenge,
+  dazu zwei Gegenproben gegen eine zu weiche Duldung (ein Plan ohne die Zeile
+  bleibt leer und still; ein Prosa-Verweis wird **nicht** gelesen), einen
+  End-zu-End-Lauf durch `ralph.sh` gegen einen fett gesetzten Plankopf und
+  eine Prüfung, dass das Briefing die Regel wirklich trägt. `kit-test.ps1`
+  baut seinen Trockenlauf-Plankopf jetzt **fett** statt blank — er prüfte
+  bisher genau den Fall nie, der im Feld eintrat. Gegenprobe gefahren: am
+  zurückgedrehten Leser werden neun Fälle rot, die blanke Notation bleibt
+  grün.
+
+  ⚠️ **Die pwsh-Hälfte ist geschrieben, aber nicht gefahren** — auf der
+  Entwicklungsmaschine ist kein PowerShell 7. Sie gehört damit auf den Stapel
+  aus `BL-146` und ist eine Behauptung mit Testkörper, keine Zusicherung.
 
 - ⚠️ **`ralph.sh` starb still, bevor die eigene Fehlermeldung lief** (`BL-151`).
   Unter `set -euo pipefail` reißt eine Kommandosubstitution mit leerem `grep`

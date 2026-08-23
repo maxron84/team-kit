@@ -25,6 +25,23 @@ nichts, was ich nachlesen kann.
    Stufenbogen, je Stufe Umsetzung / Verifikation / Promise, dazu die Zeilen
    `RALPH_CAP=<höchste Stufe>` und `BUDGET_EMPFEHLUNG_USD=<zahl>` im Plankopf.
    Nur die **jeweils nächste** Kaskade wird ausgehärtet.
+   **Diese beiden Zeilen schreibe ich BLANK — ohne `**`, ohne Backticks, ohne
+   Aufzählungszeichen**, auch wenn der übrige Plankopf ringsum fett ist. Sie
+   sind kein Fließtext, sondern die einzige Stelle, an der `ralph.sh` und die
+   Vollautomatik ihren Deckel herauslesen. So sieht der Kopf aus:
+
+   ```
+   **Plan:** Kaskade 7 — Thema
+   **Typ:** Bau
+   **Stufen:** 1–5
+   RALPH_CAP=5
+   BUDGET_EMPFEHLUNG_USD=18
+   ```
+
+   Im Feld hat genau das eine erste Vollautomatik blockiert: `**RALPH_CAP=5**`
+   sah richtig aus, Ralph stieg mit Exit 1 aus und der Status zeigte `Cap ?`.
+   Die Leser dulden die Auszeichnung inzwischen — ich verlasse mich nicht
+   darauf, sondern schreibe die Zeilen blank.
    **Vor jedem Stufenschnitt beantworte ich eine Frage:** *Mit welchem Befehl
    wird diese Zusicherung ROT — und läuft dieser Befehl in der Umgebung, in der
    wir prüfen?* Kann unsere Prüfumgebung die Eigenschaft prinzipiell nicht

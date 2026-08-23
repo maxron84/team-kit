@@ -1377,17 +1377,46 @@ team_plan_datei() {
     { head -n1 .ralph-plan 2>/dev/null || true; } | tr -d '[:space:]'
 }
 
+# team_plankopf_wert <schluessel> <plan-datei>: liest eine `<SCHLUESSEL>=<wert>`-
+# Zeile aus dem Kopf einer Plan-Datei. Gemeinsame Ableitung von team_ralph_cap
+# und team_budget_empfehlung — zwei Kopien derselben Pipeline waren schon
+# einmal der eigentliche Befund (BL-151).
+#
+# BL-150: DER PLANKOPF IST MARKDOWN, NICHT KONFIGURATION.
+#
+# Die Anker standen auf `^[[:space:]]*` und lasen den Rest bis Zeilenende. Der
+# Architekt legte den Plankopf aber als `**RALPH_CAP=5**` an — und das ist
+# nicht sein Fehler: Der uebrige Plankopf (`**Plan:**`, `**Stufen:**`,
+# `**Typ:**`) ist durchgehend fett, und sein Briefing verlangte die Zeilen,
+# ohne ein Wort ueber Blank-Pflicht zu sagen. Ein Architekt, der sich exakt an
+# sein Briefing haelt und dem Stil des eigenen Dokuments folgt, blockierte
+# damit den Bau: Ralph stieg mit Exit 1 aus, team-status.sh zeigte `Cap ?`,
+# und die Deckel-Anhebung der Vollautomatik bekam nie einen Wert — ein
+# fehlender Wert, den niemand vermisst, weil sein Fehlen wie ein bewusst
+# niedriger Deckel aussieht.
+#
+# Gefunden im Feld (Feld D) beim ALLERERSTEN Vollautomatik-Start. Das
+# Zeitfenster ist genau ein Plan pro Projekt: Danach wird die Schreibweise vom
+# ersten Plan abgeschrieben und der Fehler ist fuer immer unsichtbar.
+#
+# Geduldet wird deshalb die Auszeichnung, nicht der Sonderfall: fuehrende
+# Auszeichnungs- und Aufzaehlungszeichen vor dem Schluessel, nachlaufende
+# hinter dem Wert. Die Werte sind Zahlen, also kann alles davon spurlos weg.
+team_plankopf_wert() {
+    local schluessel="$1" plan="$2"
+    [ -n "$plan" ] && [ -f "$plan" ] || return 0
+    # `|| true` aus demselben Grund wie in team_architekt_kaskade (BL-111):
+    # Eine Plandatei OHNE die Zeile ist der dokumentierte Normalfall, unter
+    # `set -o pipefail` machte der leere grep daraus einen Abbruch.
+    { grep -E "^[[:space:]*_\`>#+-]*${schluessel}=" "$plan" \
+        | head -1 | cut -d= -f2 | tr -d '[:space:]*_`'; } || true
+}
+
 # team_ralph_cap [plan-datei]: liest RALPH_CAP aus der angegebenen (oder sonst
 # der aktiven) Plan-Datei — dasselbe Muster wie team_budget_empfehlung. Fehlt
 # Datei/Zeile, ist die Ausgabe leer.
 team_ralph_cap() {
-    local plan="${1:-$(team_plan_datei)}"
-    [ -n "$plan" ] && [ -f "$plan" ] || return 0
-    # `|| true` aus demselben Grund wie in team_architekt_kaskade (BL-111):
-    # Eine Plandatei OHNE RALPH_CAP-Zeile ist der dokumentierte Normalfall,
-    # unter `set -o pipefail` machte der leere grep daraus einen Abbruch.
-    { grep -E '^[[:space:]]*RALPH_CAP=' "$plan" \
-        | head -1 | cut -d= -f2 | tr -d '[:space:]'; } || true
+    team_plankopf_wert RALPH_CAP "${1:-$(team_plan_datei)}"
 }
 
 # team_budget_empfehlung [plan-datei]: liest BUDGET_EMPFEHLUNG_USD aus der
@@ -1395,12 +1424,7 @@ team_ralph_cap() {
 # Ausgabe leer — der Aufrufer fällt dann auf seinen Default zurück (kein
 # Abbruch, keine Rateraterei).
 team_budget_empfehlung() {
-    local plan="${1:-$(team_plan_datei)}"
-    [ -n "$plan" ] && [ -f "$plan" ] || return 0
-    # `|| true`: siehe team_architekt_kaskade (BL-111). Der Kommentar oben
-    # sagt "kein Abbruch" — unter `set -o pipefail` galt das bis dahin nicht.
-    { grep -E '^[[:space:]]*BUDGET_EMPFEHLUNG_USD=' "$plan" \
-        | head -1 | cut -d= -f2 | tr -d '[:space:]'; } || true
+    team_plankopf_wert BUDGET_EMPFEHLUNG_USD "${1:-$(team_plan_datei)}"
 }
 
 # team_kontostand_gesamt: kumulierter Kontostand wie `team-status.sh --budget`

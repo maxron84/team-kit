@@ -634,13 +634,41 @@ function team_bau_notiz {
     if ($thema) { Write-Output "K$nummer $thema" } else { Write-Output "K$nummer" }
 }
 
+function team_plankopf_wert {
+    # Liest eine `<SCHLUESSEL>=<wert>`-Zeile aus dem Kopf einer Plan-Datei.
+    # Gemeinsame Ableitung von team_ralph_cap und team_budget_empfehlung —
+    # zwei Kopien derselben Ableitung waren schon einmal der eigentliche
+    # Befund (BL-151).
+    #
+    # BL-150: DER PLANKOPF IST MARKDOWN, NICHT KONFIGURATION.
+    #
+    # Der Anker stand auf '(?m)^\s*' und fing mit '(.*)' den Rest der Zeile.
+    # Der Architekt legte den Plankopf aber als `**RALPH_CAP=5**` an — und das
+    # ist nicht sein Fehler: Der uebrige Plankopf (`**Plan:**`, `**Stufen:**`,
+    # `**Typ:**`) ist durchgehend fett, und sein Briefing verlangte die Zeilen,
+    # ohne ein Wort ueber Blank-Pflicht zu sagen. Die fuehrenden Sterne
+    # verhinderten den Treffer; selbst bei Treffer waere der Wert '5**'
+    # gewesen, also ungueltig.
+    #
+    # Gefunden im Feld (Feld D) beim ALLERERSTEN Vollautomatik-Start. Das
+    # Zeitfenster ist genau ein Plan pro Projekt: Danach wird die Schreibweise
+    # vom ersten Plan abgeschrieben und der Fehler ist fuer immer unsichtbar.
+    #
+    # Geduldet wird die Auszeichnung, nicht der Sonderfall: fuehrende
+    # Auszeichnungs- und Aufzaehlungszeichen vor dem Schluessel, nachlaufende
+    # hinter dem Wert. Die Werte sind Zahlen, also kann alles davon weg.
+    param([string]$Schluessel, [string]$PlanDatei)
+    if (-not $PlanDatei -or -not (Test-Path $PlanDatei)) { return }
+    $muster = '(?m)^[\s*_`>#+-]*' + [regex]::Escape($Schluessel) + '=(.*)$'
+    $m = [regex]::Match([System.IO.File]::ReadAllText((Team-Pfad $PlanDatei)), $muster)
+    if (-not $m.Success) { return }
+    Write-Output ($m.Groups[1].Value -replace '[\s*_`]', '')
+}
+
 function team_ralph_cap {
     param([string]$PlanDatei = $null)
     if (-not $PlanDatei) { $PlanDatei = (team_plan_datei) }
-    if (-not $PlanDatei -or -not (Test-Path $PlanDatei)) { return }
-    $m = [regex]::Match([System.IO.File]::ReadAllText((Team-Pfad $PlanDatei)), '(?m)^\s*RALPH_CAP=(.*)$')
-    if (-not $m.Success) { return }
-    Write-Output ($m.Groups[1].Value -replace '\s', '')
+    team_plankopf_wert 'RALPH_CAP' $PlanDatei
 }
 
 function team_budget_empfehlung {
@@ -649,10 +677,7 @@ function team_budget_empfehlung {
     # Abbruch, keine Raterei).
     param([string]$PlanDatei = $null)
     if (-not $PlanDatei) { $PlanDatei = (team_plan_datei) }
-    if (-not $PlanDatei -or -not (Test-Path $PlanDatei)) { return }
-    $m = [regex]::Match([System.IO.File]::ReadAllText((Team-Pfad $PlanDatei)), '(?m)^\s*BUDGET_EMPFEHLUNG_USD=(.*)$')
-    if (-not $m.Success) { return }
-    Write-Output ($m.Groups[1].Value -replace '\s', '')
+    team_plankopf_wert 'BUDGET_EMPFEHLUNG_USD' $PlanDatei
 }
 
 function team_architekt_schaetzung {
