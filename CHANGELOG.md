@@ -9,11 +9,64 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
-_Offen: drei Einträge, die eine Windows-Maschine brauchen (`BL-117`,_
-_`BL-145`, `BL-146`), dazu `BL-148` — siehe_
-_[plans/backlog.md](plans/backlog.md)._
+_Offen sind noch drei Einträge, und alle drei brauchen eine Windows-Maschine_
+_(`BL-117`, `BL-145`, `BL-146`) — siehe [plans/backlog.md](plans/backlog.md)._
 
 ### Fixed
+
+- ⚠️ **Der `BL-140`-Lint verbot in einem Feldprojekt genau die Schreibweise,
+  die seine eigene Regel als richtig erklärt** (`BL-148`). Die Regel kennt
+  **drei** Sorten — blank = mein Backlog, `Kit-BL-<N>` = der des Kits, ein
+  drittes Projekt wird **benannt**. Durchgesetzt wurde davon nur eine: Der
+  Test verbot **jede** blanke Nummer, mit einer im Testkörper hartkodierten
+  Ausnahmeliste. Im Kit-Repo ist das richtig. In einer **Installation** liest
+  derselbe Test die projekteigene `CLAUDE.md`, und dort sind blanke Nummern
+  der Normalfall — und die Ausnahmeliste lässt sich nicht aufrüsten, weil
+  `--update` `team/tests/` überschreibt.
+
+  **Die dritte Sorte ist jetzt maschinell lesbar**, statt durch eine Liste
+  angenähert zu werden:
+
+  - **(b)** Die Zeile **nennt ein Projekt** in Backticks (`` `Feld A` ``,
+    `` `website-maxron-de` ``) → kein Fund. Gilt **überall**, auch in
+    Vorlagen: Ein benanntes drittes Projekt ist für jeden Leser eindeutig,
+    egal wo der Text landet.
+  - **(a)** Die Nummer steht im **eigenen Backlog oder Beutebuch** des
+    Projekts → kein Fund. Gilt **nur in Projekttexten**, nie in Vorlagen.
+  - **(c)** Alles andere bleibt ein Fund.
+
+  **Der entscheidende Schnitt ist nicht „Kit gegen Installation", sondern
+  Vorlage gegen Projekttext.** Eine Vorlage (`bootstrap/*`,
+  `*/prompts/rolle-*.md`) wird in ein fremdes Projekt geliefert; dort heißt
+  blank „der Backlog *dieses* Projekts", und der existiert zur Lintzeit nicht.
+  Würde (a) dort greifen, löste der Lint die Nummer gegen den Backlog des
+  **Kits** auf und erlaubte genau den Verweis, den `BL-140` verboten hat. Ein
+  eigener Fall hält das fest.
+
+  **Der Beleg, dass die Regel trägt:** Die hartkodierte Ausnahme für
+  `rolle-architekt.md`/`BL-120` ist **ersatzlos entfallen** — Sorte (b)
+  erkennt sie jetzt selbst, weil die Zeile `` `Feld A` `` nennt. Übrig bleiben
+  zwei Ausnahmen, und die tragen eine **vierte** Sorte, die keine Regel
+  erkennen kann: das Formatbeispiel im Glossar („Trägt eine Nummer
+  (`HM-7`)").
+
+  **Am echten Feldprojekt nachgemessen** (`Feld A`, 25 blanke Verweise in
+  seiner `CLAUDE.md`): Die neue Regel räumt **14 davon ohne jede Änderung**
+  ab. Von den verbleibenden elf brauchen **zwei** nur Backticks um einen
+  Projektnamen, der schon dasteht; die anderen neun sind echte Funde — acht
+  meinen den Kit-Backlog, einer zeigt ins Leere.
+
+  **Die Backtick-Pflicht ist eine Entscheidung, kein Versehen**, und sie steht
+  als eigener Fall im Test: `website-maxron-de` und `rollen-agnostisch` haben
+  dieselbe Gestalt. Eine Regel, die beide nimmt, wäre eine Freikarte für jede
+  zweite Zeile; eine, die beide ablehnt, verlöre die dritte Sorte ganz.
+  Backticks sind im Kit ohnehin Hausstil, der Fix kostet eine Sekunde, und ein
+  Projektname in Backticks ist greppbar.
+
+  **Im Kit-Repo ändert sich nichts** — dort gibt es keine Projekttexte, also
+  greift (a) nie. Die Gegenproben laufen deshalb gegen **gebaute** Ablagen:
+  Ein Test, der nur die eigene Ablage kennt, hätte `BL-148` nicht gefunden und
+  würde ihn auch nicht fangen.
 
 - ⚠️ **Die Eichprüfung der Preistabelle konnte nie bestehen — sie las
   `modelUsage` mit den Schlüsseln des Transkripts** (`BL-152`).

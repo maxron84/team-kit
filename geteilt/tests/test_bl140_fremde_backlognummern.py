@@ -38,10 +38,46 @@ WARUM DER FIX NICHT MECHANISCH IST
         Kit-BL-<N>    der Backlog des Kits
         <Projekt>     ein DRITTES Projekt wird BENANNT, nicht praefigiert
 
-WAS DIESER TEST PRUEFT
-    Kein blanker `BL-<N>`/`HM-<N>` in einem Text, den das Kit AUSLIEFERT —
-    ausser er steht in der Ausnahmeliste unten, jede Ausnahme mit Grund. Eine
-    Ausnahmeliste ohne Gruende waere eine Liste von Verstoessen mit Amnestie.
+WAS DIESER TEST PRUEFT (Fassung seit BL-148)
+    Kein blanker `BL-<N>`/`HM-<N>`, der ins Leere zeigt. Die drei Sorten oben
+    sind jetzt MASCHINELL unterscheidbar, statt durch eine Liste angenaehert
+    zu werden:
+
+        (b) Die Zeile NENNT ein Projekt (in Backticks) -> kein Fund, ueberall.
+        (a) Die Nummer steht im EIGENEN Backlog/Beutebuch des Projekts
+            -> kein Fund, aber NUR in Projekttexten (siehe unten).
+        (c) Alles andere -> Fund.
+
+    Dazu die Ausnahmeliste, die bleibt, weil sie eine VIERTE Sorte traegt, die
+    keine Regel erkennen kann: das FORMATBEISPIEL im Glossar ("Traegt eine
+    Nummer (`HM-7`)"). Jede Ausnahme mit Grund — eine Ausnahmeliste ohne
+    Gruende waere eine Liste von Verstoessen mit Amnestie.
+
+WARUM (a) NICHT IN VORLAGEN GILT — der Kern von BL-148
+    Ein Feldprojekt meldete: Der Lint verbietet dort genau die Schreibweise,
+    die seine eigene Regel als richtig erklaert. Gemessen 24 Fundstellen in
+    der projekteigenen `CLAUDE.md`; acht meinten wirklich den Kit-Backlog und
+    waren nachzuziehen, drei nannten ein drittes Projekt beim Namen, die
+    uebrigen DREIZEHN meinten den eigenen Backlog des Projekts — bei zweien
+    stand das woertlich im Satz. Die Ausnahmeliste laesst sich dagegen nicht
+    aufruesten: Sie steht in `team/tests/`, und `--update` ueberschreibt das.
+
+    Die Trennung, die den Fall loest, ist nicht "Kit gegen Installation",
+    sondern VORLAGE gegen PROJEKTTEXT:
+
+        Vorlage      bootstrap/*, */prompts/rolle-*.md
+                     Wird in ein FREMDES Projekt geliefert. Dort heisst blank
+                     "der Backlog DIESES Projekts" — und der existiert zur
+                     Lintzeit nicht. Eine blanke Nummer darf hier also NIE
+                     gegen einen Backlog aufgeloest werden, auch nicht gegen
+                     den des Kits. Genau das war BL-140.
+
+        Projekttext  CLAUDE.md / TEAM.md in der Wurzel
+                     Gehoert dem Projekt, das sie liest. Hier ist blank die
+                     erste Sorte, und (a) kann sie belegen.
+
+    Im Kit-Repo gibt es keine Projekttexte (kein CLAUDE.md, kein TEAM.md in
+    der Wurzel) — dort aendert BL-148 also nichts, und das ist beabsichtigt.
 """
 import re
 from pathlib import Path
@@ -64,10 +100,12 @@ AUSNAHMEN = {
         "DIESES Projekts aussieht. Ein Kit-Praefix waere hier falsch.",
     ("TEAM.md", "AX-3"):
         "Formatbeispiel im Glossar, wie HM-7 — Axels Ermittlungsakte.",
-    ("rolle-architekt.md", "BL-120"):
-        "Meint den Backlog von `Feld A`, nicht den des Kits "
-        "(Kit-BL-116 nennt ihn als Quelle) und nicht den des Zielprojekts. "
-        "Das Projekt wird im Text BENANNT — das ist die dritte Sorte.",
+    # BL-148: Die Ausnahme fuer rolle-architekt.md/BL-120 stand hier und ist
+    # WEGGEFALLEN — nicht vergessen, sondern ueberfluessig geworden. Sie war
+    # die Handarbeit fuer genau die dritte Sorte, die Sorte (b) jetzt
+    # maschinell erkennt: Die Zeile nennt `Feld A` in Backticks. Dass sie
+    # ersatzlos verschwinden konnte, ist der Beleg, dass die Regel traegt —
+    # und der Test unten haelt genau das fest.
 }
 
 
@@ -92,23 +130,101 @@ def _ausgelieferte_texte():
     return treffer
 
 
+# BL-148, Sorte (b): Die Zeile nennt ein Projekt. Erkannt wird ein Name IN
+# BACKTICKS, und diese Anforderung ist Absicht — sie macht die Sorte greppbar,
+# statt sie zu erraten. Zwei Schreibweisen, beide aus dem Feld belegt:
+#
+#     `Feld A`              das anonymisierte Kuerzel der Kit-Doku
+#     `website-maxron-de`   ein Repo-Name (klein, mit Bindestrich, ohne Punkt)
+#
+# Der fehlende Punkt trennt Projektnamen von Dateinamen: `team-status.sh` und
+# `roadmap-skizzen.md` sind keine Projekte. Grossbuchstaben trennen sie von
+# Nummern: `Kit-BL-116` faellt nicht darunter.
+#
+# Der bewusst getragene Preis: Die Regel wirkt auf die ZEILE, nicht auf die
+# Nummer. Steht in derselben Zeile ein Projektname UND ein blanker Verweis auf
+# den Kit-Backlog, geht letzterer durch. Eine Aufloesung je Nummer waere nur
+# mit Satzverstaendnis moeglich; die Zeile ist die groesste Einheit, die sich
+# ohne Raterei pruefen laesst.
+PROJEKT_IN_BACKTICKS = re.compile(
+    r"`(Feld [A-Z]\d?|[a-z0-9]+(?:-[a-z0-9]+)+)`")
+
+
+def _nennt_ein_projekt(zeile):
+    return bool(PROJEKT_IN_BACKTICKS.search(zeile))
+
+
+# Vorlagen: alles, was das Kit in ein FREMDES Projekt liefert. Fuer sie gilt
+# Sorte (a) NICHT — siehe der Kopf dieser Datei.
+def _ist_vorlage(datei):
+    teile = datei.parts
+    return "bootstrap" in teile or "prompts" in teile
+
+
+def _eigene_nummern(wurzel=None):
+    """Alle Nummern, die im EIGENEN Backlog/Beutebuch des Projekts stehen.
+
+    Gelesen wird aus der Konfiguration, nicht geraten: `team.config.sh` bzw.
+    `team.config.ps1` nennen TEAM_BACKLOG und TEAM_BEUTEBUCH. Fehlt beides
+    (Kit-Ablage), bleibt die Menge leer — und dann ist Sorte (a) wirkungslos,
+    genau wie beabsichtigt.
+    """
+    wurzel = wurzel or REPO_ROOT
+    kandidaten = []
+    for konf, muster in ((wurzel / "team.config.sh",
+                          r'^(?:TEAM_BACKLOG|TEAM_BEUTEBUCH)="\$\{[^:]+:-([^}]*)\}"'),
+                         (wurzel / "team.config.ps1",
+                          r"^\$(?:TEAM_BACKLOG|TEAM_BEUTEBUCH)\s*=.*'([^']*)'\s*$")):
+        if not konf.is_file():
+            continue
+        text = konf.read_text(encoding="utf-8-sig")
+        kandidaten += re.findall(muster, text, re.MULTILINE)
+        break
+    if not kandidaten:
+        # Kein team.config in dieser Ablage — die dokumentierten Vorgabewerte.
+        kandidaten = ["plans/backlog.md", "plans/beutebuch.md"]
+    nummern = set()
+    for rel in kandidaten:
+        datei = wurzel / rel
+        if datei.is_file():
+            nummern.update(m.group(0) for m in
+                           BLANK.finditer(datei.read_text(encoding="utf-8-sig")))
+    return nummern
+
+
+def _funde(dateien, eigene):
+    """Die eigentliche Regel, als eine Funktion — damit die Gegenproben sie
+    gegen eine gebaute Ablage fahren koennen statt gegen das echte Repo."""
+    funde = []
+    for datei in dateien:
+        text = datei.read_text(encoding="utf-8-sig")
+        zeilen = text.splitlines()
+        vorlage = _ist_vorlage(datei)
+        for m in BLANK.finditer(text):
+            nummer = m.group(0)
+            if (datei.name, nummer) in AUSNAHMEN:
+                continue
+            nr = text.count("\n", 0, m.start()) + 1
+            zeile = zeilen[nr - 1] if nr <= len(zeilen) else ""
+            if _nennt_ein_projekt(zeile):
+                continue                       # Sorte (b), ueberall
+            if not vorlage and nummer in eigene:
+                continue                       # Sorte (a), nur in Projekttexten
+            funde.append(f"{datei.name}:{nr} — {nummer}: {zeile.strip()[:80]}")
+    return funde
+
+
 def test_kein_blanker_verweis_auf_einen_fremden_backlog():
     dateien = _ausgelieferte_texte()
     if not dateien:
         pytest.skip("keine ausgelieferten Regeltexte in dieser Ablage")
-    funde = []
-    for datei in dateien:
-        text = datei.read_text(encoding="utf-8-sig")
-        for m in BLANK.finditer(text):
-            if (datei.name, m.group(0)) in AUSNAHMEN:
-                continue
-            zeile = text.count("\n", 0, m.start()) + 1
-            funde.append(f"{datei.name}:{zeile} — {m.group(0)}: "
-                         f"{text.splitlines()[zeile - 1].strip()[:80]}")
+    funde = _funde(dateien, _eigene_nummern())
     assert not funde, (
-        "BL-140: Diese Verweise sind blank und meinen damit den Backlog DIESES "
-        "Projekts. Meinen sie den des Kits, gehoert `Kit-` davor; meinen sie "
-        "ein drittes Projekt, gehoert dessen NAME in den Satz:\n  "
+        "BL-140/BL-148: Diese Verweise zeigen ins Leere. Eine blanke Nummer "
+        "meint den Backlog DIESES Projekts — dort steht sie nicht. Drei Wege "
+        "hinaus: `Kit-` davor, wenn der Kit-Backlog gemeint ist; den NAMEN des "
+        "dritten Projekts in Backticks in dieselbe Zeile, wenn es ein drittes "
+        "ist; oder den Eintrag im eigenen Backlog anlegen:\n  "
         + "\n  ".join(funde))
 
 
@@ -148,3 +264,155 @@ def test_die_regel_steht_auch_im_regeltext():
             "beschreibt.")
         return
     pytest.skip("keine CLAUDE.md in dieser Ablage")
+
+
+# --- BL-148: die Gegenproben, die die neue Regel erst gueltig machen ----------
+# Gefahren gegen GEBAUTE Ablagen, nicht gegen das echte Repo. Der Grund ist der
+# Fund selbst: Die Regel muss sich in einer INSTALLATION anders verhalten als
+# im Kit, und das Kit-Repo kann diese Haelfte nicht zeigen — dort gibt es keine
+# Projekttexte. Ein Test, der nur die eigene Ablage kennt, haette BL-148 nicht
+# gefunden und wuerde ihn auch nicht fangen.
+
+def _installation(tmp_path, claude_text, backlog_text):
+    """Eine Ablage, wie sie nach einer Installation aussieht."""
+    (tmp_path / "plans").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "CLAUDE.md").write_text(claude_text, encoding="utf-8")
+    (tmp_path / "plans" / "backlog.md").write_text(backlog_text, encoding="utf-8")
+    (tmp_path / "team.config.sh").write_text(
+        'TEAM_PLAN_ORDNER="${TEAM_PLAN_ORDNER:-plans/}"\n'
+        'TEAM_BACKLOG="${TEAM_BACKLOG:-plans/backlog.md}"\n'
+        'TEAM_BEUTEBUCH="${TEAM_BEUTEBUCH:-plans/beutebuch.md}"\n',
+        encoding="utf-8")
+    return tmp_path / "CLAUDE.md"
+
+
+EIGENER_BACKLOG = """# Backlog — Feldprojekt
+
+| Nr | Was |
+|---|---|
+| BL-1 | der erste eigene Eintrag |
+| BL-115 | hier entstanden |
+"""
+
+
+def test_eigene_nummer_im_projekttext_ist_kein_fund(tmp_path):
+    """Sorte (a), der Feldfall. Dreizehn der 24 Fundstellen waren von dieser
+    Art — bei zweien stand woertlich im Satz, dass die Nummer HIER entstanden
+    ist."""
+    datei = _installation(
+        tmp_path,
+        "Die Lehre ist hier als `BL-115` entstanden, siehe `BL-1`.\n",
+        EIGENER_BACKLOG)
+    assert _funde([datei], _eigene_nummern(tmp_path)) == []
+
+
+def test_eine_nummer_die_es_im_eigenen_backlog_NICHT_gibt_bleibt_rot(tmp_path):
+    """Die Gegenprobe, die der Backlog-Eintrag ausdruecklich verlangt.
+
+    Ohne sie waere der Lint nur noch hoeflich: Er wuerde jede blanke Nummer
+    durchwinken und genau den Zustand herstellen, gegen den BL-140 steht.
+    """
+    datei = _installation(
+        tmp_path,
+        "Das steht in `BL-52` — gemeint ist aber der Kit-Backlog.\n",
+        EIGENER_BACKLOG)
+    funde = _funde([datei], _eigene_nummern(tmp_path))
+    assert len(funde) == 1 and "BL-52" in funde[0], funde
+
+
+def test_in_einer_vorlage_gilt_sorte_a_nicht(tmp_path):
+    """Die Zusicherung von BL-140, unangetastet.
+
+    Dieselbe Nummer, derselbe Satz — aber in einer Datei, die in ein FREMDES
+    Projekt geliefert wird. Dort heisst blank "der Backlog DIESES Projekts",
+    und der existiert zur Lintzeit nicht. Wuerde (a) hier greifen, loeste der
+    Lint die Nummer gegen den Backlog des KITS auf und erlaubte genau den
+    Verweis, den BL-140 verboten hat.
+    """
+    (tmp_path / "bootstrap").mkdir(parents=True)
+    datei = tmp_path / "bootstrap" / "CLAUDE.md.vorlage"
+    datei.write_text("Die Lehre ist hier als `BL-115` entstanden.\n",
+                     encoding="utf-8")
+    funde = _funde([datei], {"BL-115"})
+    assert len(funde) == 1 and "BL-115" in funde[0], (
+        "Sorte (a) greift in einer Vorlage — damit ist BL-140 wieder offen: "
+        f"{funde}")
+
+
+@pytest.mark.parametrize("zeile,warum", [
+    ("Feld-Fall `BL-120` im `Feld A`.", "das anonymisierte Kuerzel der Kit-Doku"),
+    ("Dort ist es `BL-7`, siehe `website-maxron-de`.", "ein Repo-Name"),
+])
+def test_eine_zeile_die_ein_projekt_nennt_ist_kein_fund(tmp_path, zeile, warum):
+    """Sorte (b), und sie gilt AUCH in Vorlagen — ein benanntes drittes Projekt
+    ist fuer jeden Leser eindeutig, egal wo der Text landet."""
+    (tmp_path / "prompts").mkdir(parents=True)
+    datei = tmp_path / "prompts" / "rolle-architekt.md"
+    datei.write_text(zeile + "\n", encoding="utf-8")
+    assert _funde([datei], set()) == [], warum
+
+
+@pytest.mark.parametrize("zeile", [
+    "Der Befehl `team-status.sh` meldet `BL-30`.",
+    "Siehe `roadmap-skizzen.md` zu `BL-30`.",
+    "Kit-BL-116 verweist auf `BL-30`.",
+])
+def test_ein_dateiname_ist_kein_projektname(tmp_path, zeile):
+    """Die Gegenprobe zu Sorte (b). Ohne sie waere jede Zeile mit einem
+    Bindestrich in Backticks eine Freikarte — und davon gibt es im Kit
+    hunderte."""
+    (tmp_path / "prompts").mkdir(parents=True)
+    datei = tmp_path / "prompts" / "rolle-frank.md"
+    datei.write_text(zeile + "\n", encoding="utf-8")
+    assert len(_funde([datei], set())) == 1, (
+        f"'{zeile}' wurde als Projektnennung gelesen — Sorte (b) ist zu weit.")
+
+
+def test_die_architekten_ausnahme_ist_wirklich_ueberfluessig():
+    """Der Beleg fuer BL-148 an der Stelle, an der er zaehlt.
+
+    Die Ausnahme fuer `rolle-architekt.md`/`BL-120` ist geloescht worden, weil
+    Sorte (b) sie ersetzt. Faellt der Satz im Briefing irgendwann anders aus —
+    etwa ohne die Backticks um `Feld A` —, muss dieser Test rot werden und
+    nicht der grosse Lint, denn dort saehe es nach einem neuen Fund aus statt
+    nach einer Regel, die ihren Fall verloren hat.
+    """
+    briefing = kit_pfad("prompts", "rolle-architekt.md")
+    if not briefing.is_file():
+        pytest.skip("rolle-architekt.md nicht in dieser Ablage")
+    treffer = [z for z in briefing.read_text(encoding="utf-8-sig").splitlines()
+               if BLANK.search(z)]
+    assert treffer, "im Briefing steht keine blanke Nummer mehr — Test anpassen"
+    ohne_projekt = [z for z in treffer if not _nennt_ein_projekt(z)]
+    assert not ohne_projekt, (
+        "Eine blanke Nummer im Architekten-Briefing nennt kein Projekt mehr. "
+        "Entweder die Zeile nachziehen (Projektname in Backticks) oder die "
+        "Ausnahme wieder eintragen:\n  " + "\n  ".join(ohne_projekt))
+
+
+def test_ein_projektname_OHNE_backticks_bleibt_ein_fund(tmp_path):
+    """Die Backtick-Pflicht ist eine Entscheidung, kein Versehen.
+
+    Ohne sie muesste die Regel einen Projektnamen aus freier Prosa erkennen,
+    und dafuer gibt es kein tragfaehiges Muster: `website-maxron-de` und
+    `rollen-agnostisch` haben dieselbe Gestalt — klein, mit Bindestrich. Eine
+    Regel, die beide nimmt, waere eine Freikarte fuer jede zweite Zeile des
+    Kits; eine, die beide ablehnt, verloere die dritte Sorte ganz.
+
+    Backticks aufloesen das, weil sie im Kit ohnehin Hausstil sind (`Feld A`,
+    `Kit-BL-116`) und weil der Fix eine Sekunde kostet und den Text besser
+    macht: Ein Projektname in Backticks ist greppbar, ein Wort in Prosa nicht.
+
+    Gemessen am echten Feldprojekt (`Feld A`, 25 blanke Verweise in seiner
+    CLAUDE.md): Die neue Regel raeumt 14 davon ohne jede Aenderung ab. Von den
+    verbleibenden elf brauchen ZWEI nur diese Backticks; die anderen neun sind
+    echte Funde — acht meinen den Kit-Backlog, einer zeigt ins Leere.
+    """
+    (tmp_path / "prompts").mkdir(parents=True)
+    datei = tmp_path / "prompts" / "rolle-frank.md"
+    datei.write_text("Erprobt in website-maxron-de: `BL-27`.\n", encoding="utf-8")
+    funde = _funde([datei], set())
+    assert len(funde) == 1, (
+        "Ein Projektname ohne Backticks wurde als Sorte (b) gelesen. Dann "
+        "waere auch 'rollen-agnostisch' eine Projektnennung — die Regel haette "
+        f"keine Trennschaerfe mehr: {funde}")
