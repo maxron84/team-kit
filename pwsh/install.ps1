@@ -281,6 +281,11 @@ function Setze-Werte {
         '{{WEITERER_CODE}}'    = $WeitererCode
         '{{TEST_BESTAND}}'     = $TestBestand
         '{{PLAN_BESTAND}}'     = $PlanBestand
+        # BL-153: Wo das Kit auf DIESER Maschine liegt. Stand bis einschliesslich 2.12.0 als
+        # ~/Source/team-kit in der Prosa und zeigte damit ueberall dorthin, wo
+        # der Autor geklont hatte. Steht nur in team.config.*; das Werkzeug
+        # kit_meldung.py kann ohne ihn arbeiten, aber nicht ohne Suchen.
+        '{{KIT_PFAD}}'         = $KIT
     }
     # BL-139: die bahnabhaengigen Pfade. Nannten die Regeltexte frueher fest,
     # und in einer einbahnigen Ablage schickten sie damit jede Rolle an Dateien,

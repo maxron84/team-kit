@@ -4,7 +4,7 @@
 [![macOS — nicht belegt](https://img.shields.io/badge/macOS-nicht_belegt-9f9f9f?style=flat-square&logo=apple&logoColor=white)](doku/einrichtung.md#belegstand)
 
 [![Version 2.12.0](https://img.shields.io/badge/Version-2.12.0-007ec6?style=flat-square)](CHANGELOG.md)
-[![Regressionstests 669](https://img.shields.io/badge/Regressionstests-669-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
+[![Regressionstests 698](https://img.shields.io/badge/Regressionstests-698-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
 [![Selbsttest 11 Stufen](https://img.shields.io/badge/Selbsttest-11_Stufen-2ea44f?style=flat-square)](bash/kit-test.sh)
 [![Lizenz MIT](https://img.shields.io/badge/Lizenz-MIT-007ec6?style=flat-square)](LICENSE)
 
@@ -77,10 +77,10 @@ im Linux-Dateisystem. Die ganze Routine für beide Plattformen, mit IDE (VS
 Codium bzw. VS Code) und Agenten-Werkzeug, steht in
 [doku/einrichtung.md](doku/einrichtung.md).
 
-Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 141 Dateien im
+Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 146 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
-`TEAM.md` und 669 Regressionstests.
+`TEAM.md` und 698 Regressionstests.
 
 **Stand: Version 2.12.0** (2026-08-22). Das Neue ist vor allem ein **Beleg**:
 Die pwsh-Bahn hat auf einer echten Windows-Maschine ihre erste Kaskade geplant,
@@ -120,6 +120,7 @@ Arbeit. Alle drei sind behoben, und die Messung liegt jetzt als Werkzeug im Kit
 | [In ein bestehendes Projekt](#in-ein-bestehendes-projekt) | Schreibzone und Prüfumfang im Bestand (`BL-51`, `BL-52`) |
 | [Aufbau des Kits](#aufbau-des-kits) | Welche Datei wo liegt — im Kit und im Zielprojekt |
 | [Betrieb](#betrieb) | Befehle und Exit-Codes |
+| [Rückkanal Feld → Kit](#der-rückkanal-feld--kit) | Wie ein Fund am Kit zurückkommt — und warum der Mensch sendet |
 | [Grenzen](#grenzen) | Was belegt ist und was ausdrücklich nicht |
 | [Lizenz](#lizenz) | MIT |
 
@@ -133,6 +134,7 @@ die Bedienanleitung fürs Zielprojekt ist `TEAM.md`:
 | [doku/anhang-a.md](doku/anhang-a.md) | wer wissen will, *warum* es so gebaut ist | Die Warum-Schicht: Bauentscheide und Feld-Betriebslehren (A.0–A.13) |
 | [doku/regel-inventar.md](doku/regel-inventar.md) | wer eine Regel der Vorlage ändert | Jede Regel als NORM/HERLEITUNG/HISTORIE, mit Träger und wörtlichem Zitat |
 | [CHANGELOG.md](CHANGELOG.md) | wer eine bestehende Installation nachzieht | Jede Änderung mit Begründung und Feldbeleg |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | wer einen Fund am Kit zurückmelden will | Der Meldeweg, die Redaktionsregel, was ein Code-PR nachweisen muss |
 | [plans/backlog.md](plans/backlog.md) | wer am Kit mitbaut | Offene Punkte (Abgetragenes im [Archiv](plans/backlog-archiv.md)) |
 | [plans/windows-nativ.md](plans/windows-nativ.md) | wer die pwsh-Bahn versteht oder erweitert | Der Bauplan der zweiten Bahn: Anlass, verworfene Alternativen, Stufen, Abnahmekriterien |
 | [plans/roadmap-skizzen.md](plans/roadmap-skizzen.md) | wer eine Idee sucht statt einer Aufgabe | Ungehärtete Stränge — bewusst noch kein Plan |
@@ -519,6 +521,7 @@ bash/                   ALLES, was die Bash-Bahn ausmacht
 │   ├── halbautomatik.sh    Schrittweise, mit Halt beim Menschen
 │   ├── team-status.sh      Kontostand, Pipeline, Beutebuch-Übersicht
 │   ├── team-test.sh        Regressionstests der Team-Infrastruktur
+│   ├── kit-melden.sh       Rückkanal: Fund AM KIT melden (`BL-153`)
 │   ├── ralph.sh frank.sh axel.sh harry.sh marv.sh
 │   └── team.config.sh      ALLE Projektwerte an einer Stelle
 └── scripts/            Maschinen-Skripte, NICHT installiert
@@ -535,12 +538,13 @@ pwsh/                   ALLES, was die pwsh-Bahn ausmacht — spiegelbildlich
 └── scripts/            team-auth-setup.ps1  team-init.ps1
 
 geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
-├── tools/              kosten.py, beutebuch.py, zitat_lint.py — Ledger,
+├── tools/              kosten.py, beutebuch.py, zitat_lint.py,
+│                       kit_meldung.py — Ledger,
 │                       Beutebuch und Kostenrechnung liegen auf beiden Wegen
 │                       in denselben Dateien. Die pwsh-Bahn ist eine zweite
 │                       ORCHESTRIERUNG, kein zweiter Zustandscode
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-├── tests/              89 Testdateien, 669 Fälle — der Doppelbahn-Harnisch
+├── tests/              90 Testdateien, 698 Fälle — der Doppelbahn-Harnisch
 │                       fährt jeden Fall gegen BEIDE Bahnen, aus EINEM
 │                       Testkörper
 ├── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
@@ -552,6 +556,10 @@ geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
 plans/                  Roadmap und Backlog DES KITS (nicht die Vorlagen —
                         die liegen in bootstrap/ und werden installiert)
+plans/meldungen/        Meldungen fremder Nutzer, je eine Datei — kommen als
+                        Pull Request an (`BL-153`), Nummer beim Triage
+CONTRIBUTING.md         Der Meldeweg von außen: Redaktionsregel, was ein
+                        Code-PR nachweisen muss
 doku/anhang-a.md        Die Warum-Schicht: Bauentscheide und Feld-Betriebs-
                         lehren (A.0–A.13). Bleibt im Kit, wird nicht installiert
 doku/einrichtung.md     Klonen und Einbinden — Linux und Windows mit WSL,
@@ -612,6 +620,9 @@ Grund für den eigenen Plan-Ordner — siehe `BL-51` oben.
 | `bash <kit>/bash/install.sh . --update` | `pwsh -File <kit>\pwsh\install.ps1 . -Update` | Auf eine neue Kit-Version heben, ohne Projektdaten anzufassen — und ohne die Bahn zu wechseln (`BL-147`) |
 | `bash <kit>/bash/install.sh . --update --beide-bahnen` | `pwsh -File <kit>\pwsh\install.ps1 . -Update -BeideBahnen` | Eine abgewählte Bahn zurückholen (`BL-119`) |
 | `python3 team/tools/beutebuch.py list` | `python team\tools\beutebuch.py list` | Alle Funde mit Status |
+| `./kit-melden.sh neu --titel "…"` | `.\kit-melden.cmd neu --titel "…"` | Fund **am Kit** melden: legt einen Entwurf nach Vorlage an (`BL-153`) |
+| `./kit-melden.sh pruefen` | `.\kit-melden.cmd pruefen` | Redaktionsprüfung vor dem Senden — absolute Pfade, Konto-, Rechner- und Projektnamen, Schlüssel (Exit `4` = Befunde) |
+| `./kit-melden.sh senden <datei>` | `.\kit-melden.cmd senden <datei>` | Pull Request ans Kit-Repo über `gh` — **fragt vorher**. Ohne `gh`: vorbefüllter Issue-Link |
 | `python3 team/tools/zitat_lint.py` | `python team\tools\zitat_lint.py` | Plandateien, die einen erledigten Backlog-Eintrag noch als offene Frage zitieren (`BL-50`) |
 
 > **Der Interpretername gehört der Maschine, nicht der Bahn** (`BL-131`,
@@ -642,6 +653,50 @@ bauen.** Erst prüfen: committet? Suite grün? Dann von Hand quittieren. Im Feld
 kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 (zusammen 19,47 USD).
 
+## Der Rückkanal Feld → Kit
+
+**Jeder Lauf in einem echten Projekt fördert Kit-Fehler zutage** — `BL-1` bis
+`BL-153` sind fast alle so entstanden. Damit das nicht von der Disziplin
+einzelner abhängt, ist der Weg zurück ein Befehl aus dem installierten Projekt
+heraus:
+
+```bash
+./kit-melden.sh neu --titel "Kurz, was schiefging"   # Entwurf nach Vorlage
+$EDITOR plans/kit-meldungen/<datum>-<slug>.md        # ausfüllen
+./kit-melden.sh pruefen                              # Redaktionsprüfung
+./kit-melden.sh senden plans/kit-meldungen/<datum>-<slug>.md
+```
+
+`senden` legt über `gh` einen Pull Request an, der **eine neue Datei** unter
+`plans/meldungen/` hinzufügt und sonst nichts anfasst — so kollidieren zwei
+Meldungen nicht, und niemand muss um eine `BL`-Nummer wettlaufen; die vergibt
+der Maintainer beim Triage. Ohne `gh` kommt stattdessen ein vorbefüllter
+Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+**Drei Entscheidungen, die daran hängen:**
+
+- **Der Loop schreibt, der Mensch sendet.** `neu` und `pruefen` dürfen
+  automatisch laufen — eine Rolle darf einen Fund erkennen und ausformulieren.
+  `senden` nicht: Ein Pull Request wirkt nach außen und lässt sich nicht
+  zurückholen. Das ist *Finder ≠ Fixer*, angewandt auf den Rückkanal.
+- **Redaktion ist Pflicht, nicht Kür.** Die Meldung schreibt eine Rolle, die
+  gerade eine **private** Codebasis gelesen hat. `pruefen` sucht absolute
+  Pfade, Konto- und Rechnernamen, Schlüssel, E-Mail — und den **Namen deines
+  Projekts**: Das Kit führt seine eigenen Feldbelege aus genau diesem Grund
+  unter `Feld A`…`Feld D`. `senden` geht darüber nicht hinweg, ohne dass man es
+  ausdrücklich sagt.
+- **Die Meldung wird immer als Datei abgelegt**, auch wenn das Kit gerade nicht
+  erreichbar ist. Ein Eintrag, der nur im Feld liegt, hat eine Verfallszeit —
+  sie endet beim nächsten `--update`. Genau so ging `BL-42` verloren und musste
+  als `BL-58` ein zweites Mal gemeldet werden.
+
+> **Belegstand 🟠:** Der Weg ist gebaut und auf der bash-Bahn gefahren
+> (`neu`, `pruefen`, `issue-link`, die Suchkaskade). **Der Pull Request selbst
+> ist nicht abgenommen** — `kit-test.sh` kann keinen echten PR anlegen, und es
+> ist bisher keiner angekommen. Bis dahin gilt für ihn dasselbe wie für alles
+> andere hier: gebaut, nicht belegt.
+
 ## Grenzen
 
 - **Sprach- und stackagnostisch, aber python3 wird gebraucht.** Die Team-Werkzeuge
@@ -656,7 +711,8 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
   `BL-1`…`BL-146`, von der toten Fixphase über zwei Löcher in der
   Kostenerfassung und die Zeilenenden bis zur vierten Fehlerklasse „Stufe
   fertig, Quittung fehlt". Die Erwartung ist nicht, dass das aufhört; die
-  Mechanik dafür ist der Rückkanal Feld → Kit.
+  Mechanik dafür ist der [Rückkanal Feld → Kit](#der-rückkanal-feld--kit) —
+  seit `BL-153` ein Werkzeug statt einer Konvention.
 - **Bestandsprojekte: der Einzug ist belegt, der Betrieb nicht.** `BL-51`,
   `BL-52` und `BL-57` stammen aus `Feld C`, einer echten gewachsenen Codebasis,
   und sind gegen die nachgestellte Lage geprüft (`kit-test.sh`, Schritt 6). Was
@@ -679,7 +735,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
   `team/lib.sh`); belegt ist er nicht. Ebenso wenig belegt ist bisher ein Lauf
   mit einem lokalen Open-Weights-Modell — das ist Ziel, nicht Zustand.
 - **Selbstverifikation**: `bash bash/kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 669 Tests — **zweimal**: einmal mit den
+  Wegwerf-Repo und fährt dort die 698 Tests — **zweimal**: einmal mit den
   Auslieferungswerten, einmal mit angepasster `team.config.sh` (Caps,
   Commit-Präfixe, zwei Domänen). Der zweite Lauf ist die Lehre aus `BL-58`: In
   einer frischen Installation stehen dieselben Werte wie in `team/lib.sh`, ein
@@ -712,7 +768,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 
 Benutzen, ändern, weitergeben und in eigene Projekte einziehen ist ausdrücklich
 erlaubt, kommerziell wie privat; es bleibt nur die Namensnennung. Das gilt
-**auch für die 141 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
+**auch für die 146 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
 lösen keine Lizenzpflicht für den Code des Zielprojekts aus. Der Code stammt aus
 einem eigenen Projekt des Autors; das Urheberrecht liegt vollständig bei ihm.
 

@@ -75,6 +75,18 @@ Statuswert „ans Kit gemeldet".
 Automatisierung teurer als das Problem. Das ändert sich ab dem dritten
 Feldprojekt — dann neu bewerten.
 
+**Neu bewertet 2026-08-23 (`BL-153`) — die Antwort hat sich gedreht.** Mit
+`Feld D` ist der Auslöser gefallen, und beim Nachlesen kam ein Grund dazu, den
+die Skizze nicht kannte: Die Konvention nannte `~/Source/team-kit`, also die
+Ablage **einer** Maschine, und das installierte Projekt wusste nirgends, wo das
+Kit liegt. Die Rechnung „ein Mensch, zwei Repos" stimmte auch nur, solange
+**derselbe** Mensch beide hat — für einen fremden Nutzer war sie nie richtig,
+und der hat obendrein kein Schreibrecht. Gebaut als `kit_meldung.py` mit
+`kit-melden.sh`/`.cmd`, mit der Trennung „der Loop schreibt, der Mensch sendet"
+und einer Redaktionsprüfung, die auch den **Projektnamen** sucht. Der
+GitHub-Weg (Fork, Zweig, eine Datei unter `plans/meldungen/`, PR) ist gebaut,
+aber **nicht abgenommen**: `kit-test.sh` kann keinen echten PR anlegen.
+
 ---
 
 ## ~~Skizze D: Das Ledger prüft seine eigene Vollständigkeit nicht~~ — gebaut 2026-08-01

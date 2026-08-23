@@ -74,6 +74,27 @@ TEAM_ROADMAP="${TEAM_ROADMAP:-${TEAM_PLAN_ORDNER}roadmap-skizzen.md}"
 TEAM_BACKLOG="${TEAM_BACKLOG:-${TEAM_PLAN_ORDNER}backlog.md}"
 TEAM_CHANGELOG="${TEAM_CHANGELOG:-CHANGELOG.md}"
 
+# --- Rueckkanal zum Kit (BL-153) ----------------------------------------------
+# Wo liegt das T.E.A.M.-Kit auf DIESER Maschine? Gefuellt vom Installer mit dem
+# Pfad, aus dem installiert wurde.
+#
+# Wozu: Faellt an der Team-Infrastruktur selbst etwas auf — in team/, in einem
+# Entrypoint oder in einer Regel aus CLAUDE.md/TEAM.md —, gehoert der Fund ins
+# KIT zurueck, nicht nur in den Backlog dieses Projekts. Sonst trifft derselbe
+# Fehler jede weitere Installation, und dieses Projekt repariert ihn bei jedem
+# Update aufs Neue. Das Werkzeug dafuer ist team/tools/kit_meldung.py.
+#
+# BL-153: Bis einschliesslich 2.12.0 stand der Pfad als ~/Source/team-kit in der Prosa der
+# Backlog-Vorlage und im Briefing des Architekten — also fest verdrahtet auf
+# die Ablage EINER Maschine. Wer woandershin geklont hatte, bekam eine
+# Anweisung, die ins Leere zeigt; ein fremder Nutzer ohnehin. Der Wert steht
+# deshalb hier, wo ihn ein Mensch korrigieren kann, und das Werkzeug sucht
+# zusaetzlich die ueblichen Orte ab, falls er nicht stimmt.
+#
+# Leer ist erlaubt: Dann sucht das Werkzeug allein, und wenn es nichts findet,
+# legt es die Meldung als Datei im Projekt ab, statt sie zu verlieren.
+TEAM_KIT_PFAD="${TEAM_KIT_PFAD:-{{KIT_PFAD}}}"
+
 # --- Verifikation -------------------------------------------------------------
 # DER kritische Wert: der eine Befehl, mit dem eine Rolle feststellt, dass das
 # Projekt heil ist. Ralph kann ohne ihn keine Stufe abschließen, Frank keinen

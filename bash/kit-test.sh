@@ -668,7 +668,13 @@ a_pruefe() {
     else rot "  ✗ $1 — erwartet: $3, ist: $2"; exit 1; fi
 }
 a_pruefe "keine .ps1/.cmd im Projekt"  "$(ls "$A_REPO" | grep -cE '\.ps1$|\.cmd$')" "0"
-a_pruefe "die Bash-Bahn ist vollstaendig" "$(ls "$A_REPO"/*.sh | wc -l)" "10"
+# BL-154: Hier stand eine 10 — abgeschrieben aus dem Ordnerinhalt zur Zeit
+# der Niederschrift. Mit dem elften Entrypoint (kit-melden.sh) war sie falsch,
+# und die Meldung "die Bash-Bahn ist vollstaendig" behauptete das Gegenteil
+# dessen, was sie gefunden hatte. Gemessen wird gegen die QUELLE: so viele
+# Entrypoints, wie das Kit auf dieser Bahn ausliefert.
+a_pruefe "die Bash-Bahn ist vollstaendig" "$(ls "$A_REPO"/*.sh | wc -l)" \
+    "$(ls "$KIT"/bash/entry/*.sh | wc -l)"
 a_pruefe "kein PowerShell-Kern in team/" \
     "$(ls "$A_REPO/team" | grep -cE '\.psm1$|\.ps1$')" "0"
 a_pruefe "und die Abwahl steht im Protokoll" \
@@ -702,8 +708,11 @@ git -C "$A_REPO" commit -q -m "einbahnig geblieben"
 bash "$KIT/bash/install.sh" "$A_REPO" --update --beide-bahnen > "$A_REPO/.rueckweg.log" 2>&1 \
     || { rot "  ✗ --update --beide-bahnen auf einem einbahnigen Projekt schlug fehl"; \
          sed 's/\x1b\[[0-9;]*m//g' "$A_REPO/.rueckweg.log" | tail -20; exit 1; }
+# BL-154: gemessen gegen die Quelle statt gegen eine abgeschriebene Zahl —
+# siehe die Begruendung bei "die Bash-Bahn ist vollstaendig".
 a_pruefe "--beide-bahnen holt die pwsh-Bahn zurueck" \
-    "$(ls "$A_REPO" | grep -cE '\.ps1$|\.cmd$')" "19"
+    "$(ls "$A_REPO" | grep -cE '\.ps1$|\.cmd$')" \
+    "$(ls "$KIT"/pwsh/entry/*.ps1 "$KIT"/pwsh/entry/*.cmd | wc -l)"
 a_pruefe "auch den PowerShell-Kern" \
     "$(ls "$A_REPO/team" | grep -cE '\.psm1$|\.ps1$')" "2"
 a_pruefe "team.config.ps1 ist wieder da" \
@@ -796,7 +805,8 @@ git -C "$B_REPO" commit -q -m "einbahnig pwsh geblieben"
 bash "$KIT/bash/install.sh" "$B_REPO" --update --beide-bahnen > "$B_REPO/.rueckweg.log" 2>&1 \
     || { rot "  ✗ --update --beide-bahnen auf einem NUR-PWSH-Projekt schlug fehl (BL-126)"; \
          sed 's/\x1b\[[0-9;]*m//g' "$B_REPO/.rueckweg.log" | tail -20; exit 1; }
-a_pruefe "--beide-bahnen holt die Bash-Bahn zurueck" "$(ls "$B_REPO" | grep -cE '\.sh$')" "10"
+a_pruefe "--beide-bahnen holt die Bash-Bahn zurueck" \
+    "$(ls "$B_REPO" | grep -cE '\.sh$')" "$(ls "$KIT"/bash/entry/*.sh | wc -l)"
 a_pruefe "team.config.sh ist wieder da" \
     "$([ -f "$B_REPO/team.config.sh" ] && echo ja || echo nein)" "ja"
 a_pruefe "und VOLLSTAENDIG gefuellt (kein Platzhalter uebrig)" \

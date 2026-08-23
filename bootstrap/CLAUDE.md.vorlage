@@ -509,11 +509,12 @@ Installiert mit dem **T.E.A.M.-Starterkit**. Ablage:
 ```
 ./vollautomatik.sh ./halbautomatik.sh ./team-status.sh ./team-test.sh
 ./ralph.sh ./frank.sh ./axel.sh ./harry.sh ./marv.sh    Entrypoints (Bash-Bahn)
+./kit-melden.sh                                         Rueckkanal ans Kit
 ./*.ps1 + ./*.cmd, gleiche Namen                        dieselben, pwsh-Bahn
 ./team.config.sh  ./team.config.ps1                     ALLE Projektwerte
 team/lib.sh  team/redteam.sh                            Bibliothek (Bash-Bahn)
 team/lib.psm1  team/redteam.ps1                         dieselbe, pwsh-Bahn
-team/tools/  kosten.py beutebuch.py                     Werkzeuge (Python)
+team/tools/  kosten.py beutebuch.py kit_meldung.py    Werkzeuge (Python)
 team/prompts/rolle-*.md                                 Rollen-Briefings
 team/tests/                                             Team-Regressionstests
 ```
@@ -530,6 +531,10 @@ nicht deines Projekts.
 - **Warum das Kit so gebaut ist**: `doku/anhang-a.md` **im Kit-Repo**. Diese
   Datei liegt nicht im Projekt; ein Fund am Team selbst gehört ebenfalls
   dorthin zurück (siehe [`{{PLAN_ORDNER}}/backlog.md`]({{PLAN_ORDNER}}/backlog.md)).
+- **Fund am Team melden**: `{{RUF}}kit-melden{{ENDUNG}} neu --titel "…"` legt
+  einen Entwurf an, `… pruefen` redigiert ihn. **Senden darf nur der Mensch** —
+  ein Pull Request wirkt nach außen, und die Meldung entsteht beim Lesen einer
+  privaten Codebasis. Eine Rolle schreibt und legt ab; sie sendet nie.
 
 Diese Datei bleibt **Regelquelle**: geltende Regeln hierher, Herleitung und
 Historie in ein eigenes Historien-Doc (siehe „Doku-Hygiene").

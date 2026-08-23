@@ -78,6 +78,29 @@ $TEAM_ROADMAP         = Team-Wert 'TEAM_ROADMAP'         "${TEAM_PLAN_ORDNER}roa
 $TEAM_BACKLOG         = Team-Wert 'TEAM_BACKLOG'         "${TEAM_PLAN_ORDNER}backlog.md"
 $TEAM_CHANGELOG       = Team-Wert 'TEAM_CHANGELOG'       'CHANGELOG.md'
 
+# --- Rueckkanal zum Kit (BL-153) ----------------------------------------------
+# Wo liegt das T.E.A.M.-Kit auf DIESER Maschine? Gefuellt vom Installer mit dem
+# Pfad, aus dem installiert wurde.
+#
+# Wozu: Faellt an der Team-Infrastruktur selbst etwas auf — in team/, in einem
+# Entrypoint oder in einer Regel aus CLAUDE.md/TEAM.md —, gehoert der Fund ins
+# KIT zurueck, nicht nur in den Backlog dieses Projekts. Sonst trifft derselbe
+# Fehler jede weitere Installation, und dieses Projekt repariert ihn bei jedem
+# Update aufs Neue. Das Werkzeug dafuer ist team/tools/kit_meldung.py.
+#
+# BL-153: Bis einschliesslich 2.12.0 stand der Pfad als ~/Source/team-kit fest verdrahtet in
+# der Prosa — also auf die Ablage EINER Maschine. Wer woandershin geklont
+# hatte, bekam eine Anweisung, die ins Leere zeigt; ein fremder Nutzer ohnehin.
+#
+# ACHTUNG, wenn install.sh diese Datei geschrieben hat: Der bash-Installer
+# schreibt team.config.ps1 fuer eine Maschine, auf der er selbst nie war — der
+# Pfad hier ist dann der der Linux-Seite. Das Werkzeug faellt in dem Fall auf
+# seine eigene Suche zurueck; von Hand nachtragen ist der bessere Weg.
+#
+# Leer ist erlaubt: Dann sucht das Werkzeug allein, und wenn es nichts findet,
+# legt es die Meldung als Datei im Projekt ab, statt sie zu verlieren.
+$TEAM_KIT_PFAD = Team-Wert 'TEAM_KIT_PFAD' '{{KIT_PFAD}}'
+
 # --- Verifikation -------------------------------------------------------------
 # DER kritische Wert: der eine Befehl, mit dem eine Rolle feststellt, dass das
 # Projekt heil ist. Ralph kann ohne ihn keine Stufe abschliessen, Frank keinen

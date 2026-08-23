@@ -239,7 +239,7 @@ Domäne**, solange du in `{{KONFIG}}` nichts anderes einträgst. Mehrere sind
 nur sinnvoll, wenn *dieses* Projekt fachlich getrennte Stränge hat (etwa
 `backend frontend`). Eine eigene Domäne für die Arbeit am T.E.A.M. brauchst du
 **nicht**: Am Team wird hier nicht entwickelt — was dir am Team auffällt, geht
-ins Kit-Repo zurück und wird dort verbucht.
+über `{{RUF}}kit-melden{{ENDUNG}}` ins Kit-Repo zurück und wird dort verbucht.
 
 **Wenn nach dem Closeout noch eine Rolle lief** (z. B. ein Frank-Fix), bricht ein
 zweiter `--rollen-abschluss` ab, statt die erste Buchung zu überschreiben, und
@@ -297,6 +297,7 @@ Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 | `./team-status.sh --budget` | `.\team-status.cmd --budget` | Kontostand, API vs. Abo getrennt |
 | `./team-test.sh` | `.\team-test.cmd` | Regressionstests der **Team-Infrastruktur** |
 | `python3 team/tools/beutebuch.py list` | *(gleich)* | alle Funde mit Status |
+| `{{RUF}}kit-melden{{ENDUNG}} neu --titel "…"` | *(gleich, mit `.cmd`)* | Fund **am T.E.A.M. selbst** melden — siehe unten |
 
 **Welche Spalte für dich gilt:** die linke, wenn du unter Linux oder in einer
 WSL-Distro arbeitest; die rechte, wenn du Windows **ohne** WSL benutzt. Nicht
@@ -332,6 +333,49 @@ werden auf beiden Wegen identisch aufgerufen.
 > passiert ist: Der dokumentierte Startbefehl war kaputt, der Smoke-Test meldete
 > grün, und gefunden hat es niemand aus dem Team — sondern der Mensch, als er
 > das Produkt zum ersten Mal selbst startete.
+
+---
+
+## Wenn der Fehler am Team liegt, nicht an deinem Projekt
+
+Manchmal ist der Fehler nicht deiner. Erkennungsmerkmal: Er steckt in `team/`,
+in einem Entrypoint hier in der Wurzel oder in einer Regel aus
+`CLAUDE.md`/`TEAM.md` — **nicht** in deinem Produktivcode. Dann trifft er jede
+weitere Installation, und dieses Projekt repariert ihn bei jedem `--update`
+aufs Neue.
+
+```
+{{RUF}}kit-melden{{ENDUNG}} neu --titel "Kurz, was schiefging"
+```
+
+Das legt einen Entwurf unter `{{PLAN_ORDNER}}/kit-meldungen/` an. Ausfüllen,
+dann:
+
+```
+{{RUF}}kit-melden{{ENDUNG}} pruefen                # Exit 4 = bitte ansehen
+{{RUF}}kit-melden{{ENDUNG}} senden <datei>         # Pull Request — fragt vorher
+```
+
+**Drei Dinge, die du wissen solltest:**
+
+- **Deine Meldung wird öffentlich.** `pruefen` sucht deshalb absolute Pfade,
+  Konto- und Rechnernamen, Schlüssel — und den **Namen dieses Projekts**. Das
+  Kit führt seine Feldbelege unter `Feld A`…`Feld D` statt unter Namen; für den
+  Beleg zählt die *Lage* eines Projekts (Plattform, Bahn, Greenfield oder
+  Bestand), nicht sein Name. `senden` geht über Befunde nur hinweg, wenn du es
+  ausdrücklich sagst.
+- **Senden ist deine Entscheidung, nicht die einer Rolle.** Der Architekt und
+  Frank dürfen eine Meldung *schreiben* — das steht in ihren Briefings. Senden
+  darf nur ein Mensch: Ein Pull Request wirkt nach außen und lässt sich nicht
+  zurückholen.
+- **Kein `gh` installiert?** Dann gibt `senden` einen vorbefüllten Issue-Link
+  aus; ein Browser und ein GitHub-Konto genügen. Die Meldung bleibt in jedem
+  Fall als Datei liegen.
+
+**Trag den Fund außerdem in `{{PLAN_ORDNER}}/backlog.md` ein** und setz den
+Status auf „ans Kit gemeldet (…)". Sonst weiß niemand, ob der Rückkanal wirklich
+bedient wurde — und ein lokaler Fix hat eine Verfallszeit: Er endet beim
+nächsten `--update`.
 
 ---
 

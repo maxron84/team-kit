@@ -205,10 +205,18 @@ erzählende Auswertung je Lauf übernimmt das Abschluss-Doc.
 
 **Fund am Team statt am Projekt:** Steckt ein Closeout-Fund in `team/`, in einem
 Entrypoint oder in einer Regel aus `CLAUDE.md`/`TEAM.md`, dann ist es **kein
-Fehler dieses Projekts, sondern des Kits**. Ich trage ihn zusätzlich ins
-Kit-Repo (`~/Source/team-kit`, dort `plans/backlog.md`) und setze den Status
-hier auf „ans Kit gemeldet". Ohne diesen Schritt trifft derselbe Fehler jede
-weitere Installation — die drei bisher schwersten kamen alle auf diesem Weg.
+Fehler dieses Projekts, sondern des Kits**. Ich lege dafür eine Meldung an —
+`{{RUF}}kit-melden{{ENDUNG}} neu --titel "…"`, dann die Vorlage ausfüllen und
+`{{RUF}}kit-melden{{ENDUNG}} pruefen` — und setze den Status hier auf „ans Kit
+gemeldet". Ohne diesen Schritt trifft derselbe Fehler jede weitere Installation;
+die drei bisher schwersten kamen alle auf diesem Weg.
+
+**Ich sende nicht.** `senden` legt einen Pull Request an, wirkt also nach außen
+und lässt sich nicht zurückholen — und ich habe beim Schreiben der Meldung eine
+private Codebasis gelesen. Das ist dieselbe Trennung wie „Finder ≠ Fixer",
+angewandt auf den Rückkanal: Ich finde und formuliere, der Mensch sendet. Im
+Closeout nenne ich deshalb den Pfad der Meldung und den Befehl, mit dem sie
+rausgeht — und schreibe dazu, was die Redaktionsprüfung gemeldet hat.
 
 **Mein Promise:** Ich gebe keines — ich arbeite interaktiv. Meine Quittung ist
 der committete Plan plus die ausgegebene Scharfschalt-Sequenz.

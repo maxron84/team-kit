@@ -14,6 +14,63 @@ _(`BL-117`, `BL-145`, `BL-146`) — siehe [plans/backlog.md](plans/backlog.md)._
 
 ### Added
 
+- **Der Rückkanal Feld → Kit ist ein Werkzeug statt einer Konvention**
+  (`BL-153`). Neu im Zielprojekt: `kit-melden.sh` / `.cmd` mit
+  `team/tools/kit_meldung.py` dahinter — `neu` legt einen Meldungsentwurf nach
+  Vorlage an, `pruefen` redigiert ihn, `senden` legt über `gh` einen Pull
+  Request gegen das Kit-Repo an. Im Kit dazu die Empfangsseite:
+  [`CONTRIBUTING.md`](CONTRIBUTING.md), eine PR-Vorlage und `plans/meldungen/`.
+
+  **Der Anlass war nicht die fehlende Automatik, sondern ein fest verdrahteter
+  Pfad.** Die drei Stellen, die bisher sagten, wohin ein Kit-Fund gehört,
+  nannten alle `~/Source/team-kit` — die Ablage **einer** Maschine. Das
+  installierte Projekt wusste nirgends, wo das Kit liegt: `TEAM_KIT_PFAD` gab es
+  nur im Launcher auf der Kit-Seite. Wer woandershin geklont hatte, bekam eine
+  Anweisung ins Leere; ein fremder Nutzer ohnehin, und der hat zusätzlich kein
+  Schreibrecht. `TEAM_KIT_PFAD` steht deshalb jetzt in **beiden**
+  Konfigurationen und wird von **beiden** Installern gefüllt — in `install.sh`
+  in beiden Füll-Routinen, weil Erstinstallation und Update getrennte haben.
+
+  **Drei Entscheidungen tragen den Entwurf:**
+
+  - **Der Loop schreibt, der Mensch sendet.** `neu` und `pruefen` dürfen
+    automatisch laufen; `senden` verlangt eine Bestätigung und verweigert ohne
+    Terminal den Dienst. Ein Pull Request wirkt nach außen und lässt sich nicht
+    zurückholen — und die Meldung schreibt eine Rolle, die gerade eine **fremde,
+    private** Codebasis gelesen hat. Das ist *Finder ≠ Fixer*, angewandt auf den
+    Rückkanal.
+  - **Die Redaktionsprüfung ist ein Gate, kein Hinweis.** Sie sucht absolute
+    Pfade, Konto-, Rechner- und **Projektnamen**, E-Mail, schlüsselartige
+    Zeichenketten und offene TODO-Marken (Exit `4`). Der Projektname steht
+    bewusst darin: Das Kit führt seine eigenen Feldbelege aus genau diesem Grund
+    unter `Feld A`…`Feld D`. `--ja` bestätigt das **Senden**, nicht die Befunde
+    — dafür gibt es `--trotzdem`.
+  - **Ein PR legt eine neue Datei unter `plans/meldungen/` an** und rührt
+    `plans/backlog.md` nicht an. Sonst kollidiert jede zweite Meldung an
+    derselben Stelle, und der `BL-n`-Nummernraum wird zum Wettlauf zwischen
+    Leuten, die voneinander nichts wissen. Die Nummer vergibt der Maintainer
+    beim Triage.
+
+  Ohne `gh` fällt `senden` auf einen vorbefüllten **Issue-Link** zurück; ein
+  Browser und ein Konto genügen. Und die Meldung wird **immer** als Datei
+  abgelegt, auch ohne erreichbares Kit — ein Eintrag, der nur im Feld liegt, hat
+  eine Verfallszeit, sie endet beim nächsten `--update`. Genau so ging `BL-42`
+  verloren und musste als `BL-58` ein zweites Mal gemeldet werden.
+
+  **Zwei Funde kamen aus den eigenen Tests und sind im Werkzeug behoben, nicht
+  im Test:** Die Prüfung meldete zunächst nur den *ersten* Grund je Zeile — der
+  auffälligste Befund verdeckte damit die leiseren, und wer zweimal nachbessern
+  muss, um alles zu sehen, sendet nach dem ersten Mal. Und ein ausdrücklich
+  getipptes `--kit`, das nicht auf ein Kit zeigte, wich **still** auf ein
+  anderes aus; das ist jetzt ein Bedienfehler, während ein veraltetes
+  `TEAM_KIT_PFAD` aus der Konfiguration weiterhin mit Ansage übersprungen wird
+  (eine Konfiguration darf veralten, ein Tastendruck nicht).
+
+  **Belegstand:** `neu`, `pruefen`, `issue-link` und die Suchkaskade sind auf
+  der bash-Bahn gefahren, 28 neue Testfälle. **Der Pull Request selbst ist
+  nicht abgenommen** — `kit-test.sh` kann keinen echten anlegen, und bisher ist
+  keiner angekommen.
+
 - **Das README sagt jetzt im Kopf, was das hier ist und für wen** — und stellt
   den Antrieb nach vorn, statt ihn über sechs Dokumente zu verteilen. Zwei neue
   Abschnitte:
@@ -55,6 +112,39 @@ _(`BL-117`, `BL-145`, `BL-146`) — siehe [plans/backlog.md](plans/backlog.md)._
   Alleinstellungsanspruch liegt ausdrücklich **nicht** auf Git allein.
 
 ### Fixed
+
+- ⚠️ **Die Ausnahmeliste des `BL-52`-Hinweises war eine Abschrift der
+  Entrypoints** (`BL-154`). `install.sh` meldet beim Update ungeprüften Code in
+  der Projektwurzel und nahm die eigenen Entrypoints per handgepflegter
+  `case`-Liste davon aus — 24 Namen. Ab dem nächsten neuen Entrypoint ist so
+  eine Liste falsch, und zwar auf die unangenehme Art: **Das Kit meldet dann
+  seine eigene Datei als „ungeprüften Projektcode".** Eine Warnung, die in jedem
+  grünen Projekt erscheint, erzieht zum Wegsehen (`BL-14`) — und daneben steht
+  der Hinweis auf *echten* Wurzel-Code, den man dann mit übersieht.
+
+  Nicht theoretisch: Beim Einbau von `BL-153` wurde der Selbsttest an zwei
+  Stellen rot, und die zweite war irreführend. Im Bestandsprojekt meldete
+  Schritt 7 `main.py` **nicht mehr** — die drei neuen `kit-melden`-Dateien
+  standen alphabetisch davor, und die Prüfung sah auf den exakten Zeilenanfang.
+  Ein neuer Entrypoint hat also einen **bestehenden** Fund unsichtbar gemacht.
+
+  Beide Abschriften sind durch eine **Messung an der Quelle** ersetzt: Eine
+  Datei in der Projektwurzel ist ein Entrypoint des Kits, wenn es sie in
+  `bash/entry/` oder `pwsh/entry/` gibt — und `kit-test.sh` zählt „die Bash-Bahn
+  ist vollständig" gegen `ls "$KIT"/bash/entry/*.sh` statt gegen die
+  abgeschriebene `10`. Dieselbe Lehre wie im Kopf von
+  `geteilt/kit-readme-pruefen.py`: *Ein Wächter, der eine Abschrift prüft,
+  veraltet mit ihr.*
+
+  Im selben Zug liest `test_bl133_interpreter_und_ausgabe.py` seine
+  Werkzeugliste jetzt aus dem Ordner statt aus drei fest genannten Namen —
+  sonst wäre die UTF-8-Zusicherung stillschweigend an `kit_meldung.py`
+  vorbeigelaufen, ausgerechnet am ersten Werkzeug, das Prosa mit Umlauten
+  ausgibt.
+
+  **Offen und bewusst nicht mitgenommen:** Die pwsh-Bahn hat den
+  `BL-52`-Hinweis gar nicht — `install.ps1` kennt keine Wurzel-Code-Prüfung.
+  Ältere Asymmetrie, gehört auf die Windows-Maschine zu `BL-145`.
 
 - ⚠️ **Der `BL-140`-Lint verbot in einem Feldprojekt genau die Schreibweise,
   die seine eigene Regel als richtig erklärt** (`BL-148`). Die Regel kennt

@@ -555,20 +555,28 @@ if [ "$UPDATE" -eq 1 ]; then
             # Die Entrypoints des Kits sind kein Projektcode; Doku und
             # Konfigdateien greift kein Red Team an. Alles andere MIT Endung
             # ist Code, der heute ausserhalb des Pruefumfangs liegt.
-            case "$(basename "$f")" in
-                ralph.sh|frank.sh|axel.sh|harry.sh|marv.sh) ;;
-                vollautomatik.sh|halbautomatik.sh|team-status.sh|team-test.sh|team.config.sh) ;;
-                # Die pwsh-Bahn: eigene Entrypoints des Kits, kein
-                # Projektcode. Ohne diese Zeilen meldete der Installer die
-                # eigenen Dateien als "ungeprueft in der Wurzel" — eine
-                # Warnung, die bei jedem Aufruf erscheint, erzieht zum
-                # Wegsehen (BL-14).
-                ralph.ps1|frank.ps1|axel.ps1|harry.ps1|marv.ps1) ;;
-                vollautomatik.ps1|halbautomatik.ps1|team-status.ps1|team-test.ps1|team.config.ps1) ;;
-                ralph.cmd|frank.cmd|axel.cmd|harry.cmd|marv.cmd) ;;
-                vollautomatik.cmd|halbautomatik.cmd|team-status.cmd|team-test.cmd) ;;
+            NAME="$(basename "$f")"
+            # BL-154: Hier stand eine ABSCHRIFT der Entrypoints — 24 Namen,
+            # von Hand gepflegt. Sie war ab dem naechsten neuen Entrypoint
+            # falsch, und zwar auf die unangenehme Art: Das Kit meldete seine
+            # EIGENE Datei als "ungeprueften Projektcode". Eine Warnung, die
+            # in jedem gruenen Projekt erscheint, erzieht zum Wegsehen
+            # (BL-14) — und genau daneben stand der Hinweis auf echten
+            # Wurzel-Code, den man dann mit uebersieht.
+            #
+            # Aufgefallen beim Einbau von kit-melden.sh (BL-153): Der leere
+            # Selbsttest-Ordner meldete plotzlich drei Dateien, und im
+            # Bestandsprojekt verschwand `main.py` hinter ihnen.
+            #
+            # Gefragt wird jetzt das Kit selbst: Was in bash/entry/ oder
+            # pwsh/entry/ liegt, ist ein Entrypoint des Kits. Das kann nicht
+            # veralten, weil es keine zweite Liste mehr gibt.
+            if [ -e "$KIT/bash/entry/$NAME" ] || [ -e "$KIT/pwsh/entry/$NAME" ]; then
+                continue
+            fi
+            case "$NAME" in
                 *.md|LICENSE*|Makefile|*.toml|*.cfg|*.ini|*.txt|*.json|*.yaml|*.yml) ;;
-                *.*) WURZEL_CODE="$WURZEL_CODE $(basename "$f")" ;;
+                *.*) WURZEL_CODE="$WURZEL_CODE $NAME" ;;
             esac
         done
         if [ -n "$WURZEL_CODE" ]; then
@@ -630,12 +638,12 @@ if [ "$UPDATE" -eq 1 ]; then
                            "${TEAM_WEITERER_CODE:-}" "${TEAM_TEST_ORDNER_BESTAND:-}" \
                            "${TEAM_PLAN_ORDNER_BESTAND:-}" "$PYTHON" \
                            "$BAHN_RUF" "$BAHN_ENDUNG" "$BAHN_KONFIG" \
-                           "$BAHN_LIB" "$BAHN_REDTEAM" <<'PY'
+                           "$BAHN_LIB" "$BAHN_REDTEAM" "$KIT" <<'PY'
 import sys, pathlib
 (d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
  domaenen, commit, weiterer, test_bestand, plan_bestand,
  python_name, bahn_ruf, bahn_endung, bahn_konfig,
- bahn_lib, bahn_redteam) = sys.argv[1:21]
+ bahn_lib, bahn_redteam, kit_pfad) = sys.argv[1:22]
 # BL-113: siehe die Begruendung bei fuelle() weiter unten. Die Regel steht
 # hier ein zweites Mal, weil der Update-Pfad eine eigene Fuell-Routine hat —
 # und ein Update, das die Kodierung verliert, ist genau der Fall, in dem ein
@@ -681,7 +689,12 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              # nannte der Regeltext sonst Dateien, die es dort nicht gibt.
              ("{{RUF}}", bahn_ruf), ("{{ENDUNG}}", bahn_endung),
              ("{{KONFIG}}", bahn_konfig), ("{{LIB}}", bahn_lib),
-             ("{{REDTEAM}}", bahn_redteam)]:
+             ("{{REDTEAM}}", bahn_redteam),
+             # BL-153: Wo das Kit auf DIESER Maschine liegt. Stand bis einschliesslich 2.12.0
+             # als ~/Source/team-kit in der Prosa und zeigte damit ueberall
+             # dorthin, wo der Autor geklont hatte. Steht nur in team.config.*;
+             # das Werkzeug kann ohne ihn arbeiten, aber nicht ohne Suchen.
+             ("{{KIT_PFAD}}", kit_pfad)]:
     t = t.replace(a, b)
 # BL-137: schreiben OHNE Uebersetzung der Zeilenenden.
 #
@@ -1333,12 +1346,12 @@ fuelle() {
                        "$DOMAENEN" "$COMMIT_ENTSCHEID" "$WEITERER_CODE" \
                        "$TEST_ORDNER_BESTAND" "$PLAN_ORDNER_BESTAND" "$PYTHON" \
                        "$BAHN_RUF" "$BAHN_ENDUNG" "$BAHN_KONFIG" \
-                       "$BAHN_LIB" "$BAHN_REDTEAM" <<'PY'
+                       "$BAHN_LIB" "$BAHN_REDTEAM" "$KIT" <<'PY'
 import sys, pathlib
 (d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
  domaenen, commit, weiterer, test_bestand, plan_bestand,
  python_name, bahn_ruf, bahn_endung, bahn_konfig,
- bahn_lib, bahn_redteam) = sys.argv[1:21]
+ bahn_lib, bahn_redteam, kit_pfad) = sys.argv[1:22]
 # BL-113: utf-8-sig liest ein vorhandenes BOM weg, statt es als ﻿ mitten
 # in den Text zu nehmen. Ob beim Schreiben wieder eines hinkommt, entscheidet
 # unten allein die Endung — nicht der Zufall, was in der Vorlage stand.
@@ -1372,7 +1385,12 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              # nannte der Regeltext sonst Dateien, die es dort nicht gibt.
              ("{{RUF}}", bahn_ruf), ("{{ENDUNG}}", bahn_endung),
              ("{{KONFIG}}", bahn_konfig), ("{{LIB}}", bahn_lib),
-             ("{{REDTEAM}}", bahn_redteam)]:
+             ("{{REDTEAM}}", bahn_redteam),
+             # BL-153: Wo das Kit auf DIESER Maschine liegt. Stand bis einschliesslich 2.12.0
+             # als ~/Source/team-kit in der Prosa und zeigte damit ueberall
+             # dorthin, wo der Autor geklont hatte. Steht nur in team.config.*;
+             # das Werkzeug kann ohne ihn arbeiten, aber nicht ohne Suchen.
+             ("{{KIT_PFAD}}", kit_pfad)]:
     t = t.replace(a, b)
 # BL-113 — die Kodierungsregel des Kits, zeichengleich mit Team-Kodierung in
 # install.ps1: PowerShell-Quelltext MIT BOM, alles andere OHNE.
