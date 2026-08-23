@@ -9,10 +9,42 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
-_Offen sind drei Backlog-Einträge, die alle eine Windows-Maschine brauchen_
-_(`BL-117`, `BL-145`, `BL-146`) — siehe [plans/backlog.md](plans/backlog.md)._
+_Offen: drei Einträge, die eine Windows-Maschine brauchen (`BL-117`,_
+_`BL-145`, `BL-146`), dazu die Erstlauf-Funde aus `Feld D` und dem Feld_
+_(`BL-148`, `BL-149`, `BL-150`, `BL-152`) — siehe_
+_[plans/backlog.md](plans/backlog.md)._
 
 ### Fixed
+
+- ⚠️ **`ralph.sh` starb still, bevor die eigene Fehlermeldung lief** (`BL-151`).
+  Unter `set -euo pipefail` reißt eine Kommandosubstitution mit leerem `grep`
+  oder fehlgeschlagenem `head` den Aufrufer sofort weg — das `if [ -z … ]`
+  darunter wurde **nie erreicht**. Betroffen waren die `RALPH_CAP`-Zeile und
+  die Stufennummer aus `.ralph-state`; beide Klartextmeldungen waren toter
+  Text.
+
+  Im Feld (`Feld D`, 2026-08-23, allererster Vollautomatik-Start) sah der
+  Mensch genau einen Satz: `Ralph endete mit Fehler (1) — Vollautomatik
+  stoppt`. Das Lauf-Log trug denselben einen Satz, obwohl `vollautomatik.sh`
+  stderr korrekt mitschreibt. **Die Fehlerlage war in 30 Sekunden behoben —
+  sie zu finden kostete Log, Skriptlektüre und eine eigene Messung.**
+
+  **Der Befund ist nicht das fehlende `|| true`, sondern die Doppelpflege.**
+  Neun Zeilen über der kaputten Stelle stand die Schutzform bereits, samt
+  Kommentar; `team_ralph_cap` in `lib.sh` liest denselben Wert und hatte die
+  Härtung mit `BL-111` ausdrücklich bekommen. `ralph.sh` hatte die Funktion
+  nur nicht aufgerufen, sondern die `grep`-Kette danebengestellt — und die
+  Kopie bekam die Härtung nicht mit. Die pwsh-Bahn hatte den Fehler **nie**:
+  `ralph.ps1` ruft `team_ralph_cap` auf und erreicht seine Meldung. Ab jetzt
+  beide.
+
+  **Unter Test:** `test_bl151_ralph_diagnose.py` fährt beide Fehlerlagen als
+  echten Prozess (kein CLI-Stub nötig — sie schlagen zu, *bevor* der erste
+  Agentenaufruf fällig wäre) und hält zusätzlich die **Klasse** fest: In
+  `ralph.sh` darf keine zweite Ableitung von `RALPH_CAP` stehen. Ohne diese
+  dritte Prüfung käme die nächste Kopie ungehärtet zurück und die beiden
+  anderen blieben grün. Gegenprobe gefahren: am zurückgedrehten Code werden
+  alle drei rot.
 
 - ⚠️ **Ein `--update` legte die zweite Bahn dazu — auch in ein Projekt, das nie
   eine wollte** (`BL-147`). Gedacht war das als Rückweg aus einer Abwahl

@@ -41,7 +41,16 @@ fi
 # RALPH_CAP: höchste freigegebene Stufe. Steht als 'RALPH_CAP=<zahl>'-Zeile im
 # Kopf des aktiven Plans (Setzt DER ARCHITEKT bei der Aushärtung der jeweils
 # nächsten Kaskade) — einzige Quelle, keine Doppelpflege in diesem Skript.
-RALPH_CAP="$(grep -E '^[[:space:]]*RALPH_CAP=' "$PLAN_DATEI" | head -1 | cut -d= -f2 | tr -d '[:space:]')"
+#
+# BL-151: Hier stand die Zeile ein zweites Mal, als eigene grep|head|cut-Kette.
+# Die Doppelpflege war der eigentliche Fehler: team_ralph_cap hatte mit BL-111
+# die Schutzform `{ … || true; }` bekommen, die Kopie hier nicht — und ohne sie
+# riss ein leerer grep (Plan OHNE RALPH_CAP-Zeile, der Normalfall beim ersten
+# Aushärten) unter `set -euo pipefail` den Loop weg, BEVOR die Fehlermeldung
+# darunter lief. Der Mensch sah nur "Ralph endete mit Fehler (1)"; die
+# Diagnose, die dieses Skript kennt, wurde nie ausgegeben. ralph.ps1 hat den
+# Fehler nie gehabt — die pwsh-Bahn ruft die Lib-Funktion auf. Ab jetzt beide.
+RALPH_CAP="$(team_ralph_cap "$PLAN_DATEI")"
 if [ -z "$RALPH_CAP" ] || ! [ "$RALPH_CAP" -eq "$RALPH_CAP" ] 2>/dev/null; then
     echo "FEHLER: Keine gültige RALPH_CAP=-Zeile in $PLAN_DATEI." >&2
     exit 1
@@ -57,7 +66,11 @@ LOG_DIR=".ralph-logs"
 mkdir -p "$LOG_DIR"
 
 while true; do
-    STUFE="$(head -n1 "$STATE_FILE" | tr -d '[:space:]')"
+    # BL-151: Schutzform wie oben bei PLAN_ZEIGER. `head` auf ein fehlendes
+    # .ralph-state liefert RC!=0 und riss den Loop unter `set -e -o pipefail`
+    # weg — die Klartextmeldung darunter war damit toter Text, obwohl die
+    # fehlende Datei beim allerersten Start der NORMALFALL ist.
+    STUFE="$( { head -n1 "$STATE_FILE" 2>/dev/null || true; } | tr -d '[:space:]')"
     if [ -z "$STUFE" ] || ! [ "$STUFE" -eq "$STUFE" ] 2>/dev/null; then
         echo "FEHLER: $STATE_FILE enthält keine gültige Stufennummer." >&2
         exit 1
