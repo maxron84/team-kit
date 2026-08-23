@@ -92,7 +92,7 @@ der API-Spalte landete; und eine Architektenzeile, die den Diff maß statt der
 Arbeit. Alle drei sind behoben, und die Messung liegt jetzt als Werkzeug im Kit
 (`kosten.py sitzung-messen`) statt als Skript, das sich jeder neu schreibt.
 
-**Offen sind vier Einträge**, und alle vier brauchen dieselbe Maschine:
+**Offen sind fünf Einträge**, und alle fünf brauchen dieselbe Maschine:
 [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
 [plans/backlog-archiv.md](plans/backlog-archiv.md) (94 Einträge).
 
@@ -330,6 +330,7 @@ Schwester-Repo, nicht Teil dieses Kits.
 # Linux und WSL
 bash bash/install.sh <zielpfad> [--nicht-interaktiv] [--update|--force]
                                 [--nur-bash|--nur-pwsh|--beide-bahnen]
+bash bash/install.sh --hilfe    # alle Optionen mit Erklärung
 ```
 
 ```powershell

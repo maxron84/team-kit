@@ -9,10 +9,37 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
-_Offen sind noch vier Einträge, und alle vier brauchen eine Windows-Maschine_
-_(`BL-117`, `BL-145`, `BL-146`, `BL-155`) — siehe [plans/backlog.md](plans/backlog.md)._
+_Offen sind noch fünf Einträge, und alle fünf brauchen eine Windows-Maschine_
+_(`BL-117`, `BL-145`, `BL-146`, `BL-155`, `BL-156`) — siehe [plans/backlog.md](plans/backlog.md)._
 
 ### Added
+
+- **`install.sh` beantwortet `-h` / `--hilfe` / `--help` mit seiner
+  Optionsliste.** Bisher gab es keinen Weg, die Schalter des Installers zu
+  erfahren, ohne die Datei zu öffnen — und `kit-einrichten.sh`, das Skript
+  davor, kann es seit jeher.
+
+  **Der Hilfetext ist der Dateikopf, keine zweite Fassung daneben.** Das ist
+  dieselbe Erwägung wie bei `BL-154`: Eine Abschrift läuft irgendwann
+  auseinander, und dann sagt `--hilfe` etwas anderes als die Datei. Gelesen
+  wird ab Zeile 3 — Zeile 1 ist die Shebang, Zeile 2 die Bahn-Kopfzeile,
+  beides Maschinensache — bis zur ersten Zeile, die kein Kommentar mehr ist.
+  Anders als das feste `sed -n '2,30p'` in `kit-einrichten.sh` hat die Fassung
+  hier keine Zeilennummer im Bauch: Wächst der Kopf, wächst die Hilfe mit,
+  statt mitten im Satz abzuschneiden.
+
+  **Dabei ist herausgekommen, dass die Liste gar nicht vollständig war.**
+  `--nur-bash`, `--nur-pwsh` und `--beide-bahnen` standen nur in der
+  `Aufruf:`-Zeile und wurden nirgends erklärt — die drei Schalter also, mit
+  denen man eine Bahn abwählt (`BL-119`) und mit `--update` zurückholt
+  (`BL-147`). Sie sind jetzt erklärt, dazu `<zielpfad>` als Pflichtangabe. Und
+  der Abbruch „Kein Zielpfad angegeben" nennt `--hilfe`: Das ist der Weg, auf
+  dem die Liste ohne Vorwissen gefunden wird.
+
+  **Die pwsh-Hälfte fehlt und ist als `BL-156` ausgewiesen**, nicht blind
+  mitgeschrieben — die Lehre aus `BL-113`/`BL-117`. Dort liegt zusätzlich ein
+  älterer Fund aus demselben Durchgang: Der Kopf von `install.ps1` nennt die
+  drei Bahn-Schalter nicht einmal in der `Aufruf:`-Zeile.
 
 - **Der Rückkanal Feld → Kit ist ein Werkzeug statt einer Konvention**
   (`BL-153`). Neu im Zielprojekt: `kit-melden.sh` / `.cmd` mit
@@ -112,6 +139,30 @@ _(`BL-117`, `BL-145`, `BL-146`, `BL-155`) — siehe [plans/backlog.md](plans/bac
   Alleinstellungsanspruch liegt ausdrücklich **nicht** auf Git allein.
 
 ### Fixed
+
+- **`kit-test.sh` starb auf einer Maschine ohne globale Git-Identität mit
+  Exit 128 — vor der ersten Prüfung** (`BL-157`). Der Selbsttest legt sechs
+  Wegwerf-Repos an; drei gaben ihnen eine lokale Identität, drei nicht
+  (`A_REPO`/`B_REPO` in Schritt 8, `E_ZIEL` in Schritt 10). Alle drei
+  committen, und ohne Identität bricht git dort ab.
+
+  **Die Absicht stand ausdrücklich da** — „Lokale Identität, damit der Lauf
+  auch ohne globale Git-Config committen kann", als Kommentar in Schritt 1 —,
+  nur hat sie niemand durchgesetzt. Deshalb ist der Fix nicht das Nachtragen
+  der drei Zeilenpaare, sondern `wegwerf_repo <pfad>`: anlegen und Identität
+  setzen in einem Zug, alle sechs Stellen gehen hindurch. Dazu ein Wächter,
+  der die **Gattung** prüft — jede Zeile, die ein Repo anlegt — statt einer
+  Liste der bekannten Stellen. Seine erste Fassung hatte selbst einen
+  Fehlalarm (`-m init`, also eine Commit-**Nachricht**); `BL-143` in klein, im
+  selben Zug behoben.
+
+  **Warum es so lange grün blieb:** Frühere Läufe fanden auf Maschinen **mit**
+  globaler Identität statt. Die Zusicherung hing damit an einer Einstellung
+  außerhalb des Repos — von der vier der sechs Repos ausdrücklich unabhängig
+  waren. Der Fehlermodus ist der teuerste, den dieses Kit kennt: Er sieht aus
+  wie ein kaputtes Kit, ist keines, und trifft bevorzugt den Erstlauf auf
+  einer frisch aufgesetzten Maschine.
+
 
 - ⚠️ **Die Ausnahmeliste des `BL-52`-Hinweises war eine Abschrift der
   Entrypoints** (`BL-154`). `install.sh` meldet beim Update ungeprüften Code in

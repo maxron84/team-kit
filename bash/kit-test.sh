@@ -61,6 +61,41 @@ gruen(){ printf '\033[32m%s\033[0m\n' "$*"; }
 gelb() { printf '\033[33m%s\033[0m\n' "$*"; }
 kopf() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 
+# wegwerf_repo <pfad> — legt ein Wegwerf-Repo an und gibt ihm SOFORT eine
+# lokale Identität. Beides gehört zusammen, und genau deshalb ist es eine
+# Funktion und keine Konvention: Die Absicht stand als Kommentar in Schritt 1
+# ("damit der Lauf auch ohne globale Git-Config committen kann") und wurde an
+# drei von sechs Stellen nicht befolgt (BL-157). Ein Repo ohne Identität ist
+# stumm, bis jemand committet — dann stirbt der Lauf mit Exit 128, VOR der
+# ersten Prüfung, mit einer git-Meldung, die wie ein kaputtes Kit aussieht.
+# Getroffen wird davon bevorzugt eine frisch aufgesetzte Maschine, also der
+# Erstlauf. Ein `git init` von Hand ist in dieser Datei ab jetzt ein Fehler.
+wegwerf_repo() {
+    mkdir -p "$1"
+    git -C "$1" init -q
+    git -C "$1" config user.email "kit-test@localhost"
+    git -C "$1" config user.name  "Kit-Selbsttest"
+}
+
+# Und der Waechter dazu, denn ein Satz im Kommentar ist genau das, woran
+# BL-157 gescheitert ist: Die Absicht stand da, durchgesetzt hat sie niemand.
+# Geprueft wird die GATTUNG — jede Zeile, die ein Repo anlegt —, nicht eine
+# Liste der bekannten Stellen; eine Liste veraltet mit der naechsten dazu
+# geschriebenen. Erlaubt ist genau eine solche Zeile: die im Helfer oben.
+#
+# Das Muster verlangt `init` als UNTERBEFEHL, direkt hinter dem optionalen
+# `-C <pfad>`. Die lockere Fassung (`git -C .+ init`) schlug an
+# `git -C "$E_ZIEL" commit -q --allow-empty -m init` an — an einer
+# Commit-NACHRICHT also, und damit an einer voellig korrekten Zeile. Ein
+# Waechter mit Fehlalarmen wird abgeschaltet statt befolgt (BL-143).
+EIGENE_INITS="$(grep -cE '^[[:space:]]*git( +-C +[^ ]+)? +init([[:space:]]|$)' "${BASH_SOURCE[0]}" || true)"
+if [ "$EIGENE_INITS" -ne 1 ]; then
+    rot "FEHLER im Selbsttest selbst: $EIGENE_INITS Stellen legen ein Repo an."
+    echo "  Erlaubt ist nur wegwerf_repo() — ein Repo ohne lokale Identitaet" >&2
+    echo "  toetet den Lauf mit Exit 128, sobald jemand darin committet (BL-157)." >&2
+    exit 2
+fi
+
 # KIT_PYTHON: der Name, unter dem Python auf DIESER Maschine antwortet.
 #
 # BL-137. BL-131 hat den festen `python3` aus lib.sh, der Konfigurationsvorlage
@@ -137,10 +172,7 @@ aufraeumen() {
 trap aufraeumen EXIT
 
 kopf "1/11 — Wegwerf-Repo anlegen"
-git -C "$ZIEL" init -q
-# Lokale Identität, damit der Lauf auch ohne globale Git-Config committen kann.
-git -C "$ZIEL" config user.email "kit-test@localhost"
-git -C "$ZIEL" config user.name  "Kit-Selbsttest"
+wegwerf_repo "$ZIEL"
 gruen "  ✓ $ZIEL"
 
 kopf "2/11 — Kit installieren (nicht-interaktiv)"
@@ -208,9 +240,7 @@ gruen "  ✓ Produktivcode-Ordner src/ angelegt, mit .gitkeep"
 # besonderes, der Fehler traf jeden eingegebenen Ordner. Eigenes Wegwerf-Repo,
 # damit die Hauptinstallation unberuehrt bleibt.
 ZIEL2="$(mktemp -d -t team-kit-bl121.XXXXXX)"
-git -C "$ZIEL2" init -q
-git -C "$ZIEL2" config user.email "kit-test@localhost"
-git -C "$ZIEL2" config user.name  "Kit-Selbsttest"
+wegwerf_repo "$ZIEL2"
 if ! TEAM_INIT_PRODUKTIVCODE="quelle/" bash "$KIT/bash/install.sh" "$ZIEL2" \
         --nicht-interaktiv > "$ZIEL2/.install.log" 2>&1; then
     rot "  ✗ install.sh mit TEAM_INIT_PRODUKTIVCODE schlug fehl:"
@@ -559,9 +589,7 @@ kopf "7/11 — Einzug in eine gewachsene Codebasis (BL-51, BL-52)"
 BESTAND_REPO="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-bestand.XXXXXX")"
 bestand_aufraeumen() { [ "$BEHALTEN" -eq 1 ] || rm -rf "$BESTAND_REPO"; }
 trap 'aufraeumen; bestand_aufraeumen' EXIT
-git -C "$BESTAND_REPO" init -q
-git -C "$BESTAND_REPO" config user.email "kit-test@localhost"
-git -C "$BESTAND_REPO" config user.name  "Kit-Selbsttest"
+wegwerf_repo "$BESTAND_REPO"
 # Die Lage aus Feld C: belegtes plans/, gewachsene Testsuite,
 # Einstiegspunkt in der Wurzel.
 mkdir -p "$BESTAND_REPO/plans" "$BESTAND_REPO/tests" "$BESTAND_REPO/src"
@@ -656,8 +684,7 @@ kopf "8/11 — Abwahl einer Bahn, ihr Bestand und ihr Rueckweg (BL-119/BL-147)"
 #
 # Beide stehen hier und nicht in der Doku: Sie brauchen echte Installationen.
 A_REPO="$(mktemp -d)/projekt"
-mkdir -p "$A_REPO"
-git -C "$A_REPO" init -q
+wegwerf_repo "$A_REPO"
 git -C "$A_REPO" commit -q --allow-empty -m "init"
 
 bash "$KIT/bash/install.sh" "$A_REPO" --nicht-interaktiv --nur-bash \
@@ -738,8 +765,7 @@ rm -rf "$(dirname "$A_REPO")"
 # Im Feld getroffen hat es einen Windows-Anwender, also den Normalfall, fuer
 # den die pwsh-Bahn ueberhaupt gebaut ist.
 B_REPO="$(mktemp -d)/projekt"
-mkdir -p "$B_REPO"
-git -C "$B_REPO" init -q
+wegwerf_repo "$B_REPO"
 git -C "$B_REPO" commit -q --allow-empty -m "init"
 
 TEAM_INIT_PRODUKTIVCODE="quellcode/" TEAM_INIT_PROJEKT="einbahnig-pwsh" \
@@ -933,8 +959,9 @@ E_HOME="$(mktemp -d)"
 mkdir -p "$E_HOME/.claude/scripts"
 printf '#!/usr/bin/env bash\n# alte Kopie\nexec bash "$HOME/Source/team-kit/install.sh" "$@"\n' \
     > "$E_HOME/.claude/scripts/team-init.sh"
-E_ZIEL="$(mktemp -d)/projekt"; mkdir -p "$E_ZIEL"
-git -C "$E_ZIEL" init -q; git -C "$E_ZIEL" commit -q --allow-empty -m init
+E_ZIEL="$(mktemp -d)/projekt"
+wegwerf_repo "$E_ZIEL"
+git -C "$E_ZIEL" commit -q --allow-empty -m init
 HOME="$E_HOME" bash "$KIT/bash/install.sh" "$E_ZIEL" --nicht-interaktiv >"$E_LOG" 2>&1 || true
 e_pruefe "Installer meldet eine veraltete Launcher-Kopie" \
     "$(grep -c 'ist eine KOPIE aus einer' "$E_LOG")" "1"
@@ -1104,11 +1131,8 @@ else
     W_B="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-gleich-b-XXXXXX")"
     # Gleicher Basename in beiden Baeumen: Der Projektname leitet sich aus dem
     # Ordner ab und wuerde sonst als Unterschied durchschlagen, der keiner ist.
-    mkdir -p "$W_A/projekt" "$W_B/projekt"
     for d in "$W_A/projekt" "$W_B/projekt"; do
-        git -C "$d" init -q .
-        git -C "$d" config user.email t@l
-        git -C "$d" config user.name T
+        wegwerf_repo "$d"
     done
     bash "$KIT/bash/install.sh" "$W_A/projekt" --nicht-interaktiv >/dev/null 2>&1 || true
     pwsh -NoProfile -File "$KIT/pwsh/install.ps1" "$W_B/projekt" -NichtInteraktiv >/dev/null 2>&1 || true

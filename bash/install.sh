@@ -4,7 +4,10 @@
 #
 # Aufruf:  bash bash/install.sh <zielpfad> [--nicht-interaktiv] [--force|--update]
 #                                          [--nur-bash|--nur-pwsh|--beide-bahnen]
+#          bash bash/install.sh --hilfe
 #
+#   <zielpfad>          Das Projekt, in das das Team einziehen soll. Muss ein
+#                       Git-Repository sein. Pflichtangabe (außer bei --hilfe).
 #   --nicht-interaktiv  Keine Rückfragen; Werte aus den TEAM_INIT_*-Umgebungs-
 #                       variablen oder den Defaults. Für Skripte und Tests.
 #   --update            Nur die Team-INFRASTRUKTUR aktualisieren (Entrypoints
@@ -19,6 +22,16 @@
 #      weg), .ralph-state (Kaskadenstand zurück auf 1), das Beutebuch (alle
 #      Funde weg), CHANGELOG.md, plans/*.md und team.config.sh (Smoke-Test
 #      weg). Empirisch nachgestellt, siehe BL-8. Für Updates: --update.
+#
+#   --nur-bash          Nur die bash-Bahn ablegen (Entrypoints *.sh,
+#                       team/lib.sh, team.config.sh).
+#   --nur-pwsh          Nur die pwsh-Bahn ablegen (Entrypoints *.cmd/*.ps1,
+#                       team/lib.psm1, team.config.ps1).
+#                       Ohne beide Schalter kommen BEIDE Bahnen — die Abwahl
+#                       ist ausdrücklich und kommt vom Anwender (BL-119).
+#   --beide-bahnen      Nur mit --update: eine früher abgewählte Bahn wieder
+#                       zurückholen. Schließt --nur-bash/--nur-pwsh aus.
+#   -h, --hilfe, --help Diesen Kopf ausgeben und sonst nichts tun.
 #
 # Umgebungsvariablen für den nicht-interaktiven Betrieb:
 #   TEAM_INIT_PROJEKT TEAM_INIT_PRODUKTIVCODE TEAM_INIT_TEST_ORDNER
@@ -81,8 +94,22 @@ bahn_werte() {
     fi
 }
 
+# Der Hilfetext IST der Dateikopf, keine zweite Fassung daneben: Eine Abschrift
+# laeuft irgendwann auseinander, und dann sagt --hilfe etwas anderes als die
+# Datei (dieselbe Lehre wie BL-154). Gelesen wird ab Zeile 3 — Zeile 1 ist die
+# Shebang, Zeile 2 die Bahn-Kopfzeile, beides Maschinensache — bis zur ersten
+# Zeile, die kein Kommentar mehr ist. Waechst der Kopf, waechst die Hilfe mit.
+hilfe() {
+    sed -n '3,${
+        /^#/!q
+        s/^# \{0,1\}//
+        p
+    }' "${BASH_SOURCE[0]}"
+}
+
 for arg in "$@"; do
     case "$arg" in
+        -h|--hilfe|--help)  hilfe; exit 0 ;;
         --nicht-interaktiv) INTERAKTIV=0 ;;
         --force)            FORCE=1 ;;
         --update)           UPDATE=1 ;;
@@ -143,7 +170,7 @@ gruen(){ printf '\033[32m%s\033[0m\n' "$*"; }
 gelb() { printf '\033[33m%s\033[0m\n' "$*"; }
 kopf() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 
-[ -n "$ZIEL" ] || { rot "FEHLER: Kein Zielpfad angegeben."; echo "Aufruf: bash bash/install.sh <zielpfad>"; exit 2; }
+[ -n "$ZIEL" ] || { rot "FEHLER: Kein Zielpfad angegeben."; echo "Aufruf: bash bash/install.sh <zielpfad>"; echo "Alle Optionen: bash bash/install.sh --hilfe"; exit 2; }
 ZIEL="$(cd "$ZIEL" 2>/dev/null && pwd)" || { rot "FEHLER: Zielpfad existiert nicht: $ZIEL"; exit 2; }
 
 # BL-109: "Der Block ist da" heisst NICHT "der Block ist vollstaendig". Das
