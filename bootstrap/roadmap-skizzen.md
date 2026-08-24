@@ -3,7 +3,7 @@
 Ungehärtete Stränge. Ziel, grober Umfang, Bezug, offene Fragen — **ohne**
 Stufennummern, **ohne** Cap (Kaskaden-Planungsregel 1).
 
-Erst wenn der Strippenzieher einen Strang zur nächsten Kaskade freigibt, härtet
+Erst wenn der Stakeholder einen Strang zur nächsten Kaskade freigibt, härtet
 der Architekt ihn zu einem eigenen Plan `ralph-kaskade-N-….md` aus.
 
 ---
@@ -22,7 +22,7 @@ der Architekt ihn zu einem eigenen Plan `ralph-kaskade-N-….md` aus.
 - **Bezug**: Ralph schließt **keine** Stufe ohne grünen Smoke-Test ab, Frank
   verifiziert keinen Fix. Bis dieser Strang gebaut ist, arbeitet das gesamte
   Team ohne Sicherheitsnetz und meldet das in jedem Prompt.
-- **Danach**: Den Befehl in `team.config.sh` bei `TEAM_SMOKE_TEST` eintragen —
+- **Danach**: Den Befehl in `{{KONFIG}}` bei `TEAM_SMOKE_TEST` eintragen —
   er wirkt sofort in allen Rollen, ohne Neuinstallation.
 - **Offene Fragen**: Welcher Befehl deckt am meisten ab, ohne langsam zu werden?
 

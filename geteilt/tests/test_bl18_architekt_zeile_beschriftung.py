@@ -2,7 +2,7 @@
 """BL-18: `--budget` behauptete "nicht im Gesamt enthalten" — auch dann, wenn
 die Architekten-Zeile sehr wohl enthalten war.
 
-Aus dem Feld zurueckgespielt (platformer, Architekt-Closeout K3, 2026-08-02).
+Aus dem Feld zurueckgespielt (Feld A, Architekt-Closeout K3, 2026-08-02).
 team-status.sh druckte den Zusatz UNBEDINGT, obwohl team_architekt_stand zwei
 Modi hat:
 
@@ -195,7 +195,11 @@ def test_geschaetzter_wert_bleibt_ausserhalb_des_gesamt(tmp_path):
     ausgabe = _budget(repo)
     zeile = _zeile_mit(ausgabe, "Architekt")
 
-    assert "geschätzt" in zeile
+    # BL-141: Die Beschriftung heisst jetzt "Churn-Proxy". "geschätzt" liess
+    # offen, WORAUS geschaetzt wurde, und lud im Feld dazu ein, die Zahl
+    # fuer eine Messung zu halten — sie lag dort 35 % zu niedrig. Gemessen
+    # wird mit `kosten.py sitzung-messen`.
+    assert "Churn-Proxy" in zeile
     assert "nicht im Gesamt enthalten" in zeile
     gesamt = _betrag(_zeile_mit(ausgabe, "Gesamt (Basis + laufend)"))
     assert gesamt == pytest.approx(

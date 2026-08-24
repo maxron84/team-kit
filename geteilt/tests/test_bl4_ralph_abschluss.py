@@ -2,7 +2,7 @@
 """Regressionstest fuer BL-4: Ralphs BAUKOSTEN muessen im committeten Ledger
 landen.
 
-Realer Ausloeser (Feldprojekt team-kit_project_platformer, Kaskade 1,
+Realer Ausloeser (Feld A, Kaskade 1,
 2026-08-01): Nach vollstaendigem Closeout standen 2,1621 USD Baukosten in
 KEINER Ledger-Zeile. `--rollen-abschluss` ledgert per Definition nur
 .team-logs (Harry/Marv/Frank/Axel); fuer .ralph-logs existierte zwar der

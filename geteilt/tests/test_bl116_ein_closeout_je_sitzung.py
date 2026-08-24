@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """BL-116 — ein Transkript, zwei Closeouts: der zweite bucht die Summe beider.
 
-Aus dem Feld zurueckgespielt (`team-kit_project_platformer`, dortiges
+Aus dem Feld zurueckgespielt (`Feld A`, dortiges
 `BL-120`). Der Abo-Messweg misst das Sitzungstranskript. Wer zwei Kaskaden in
 DERSELBEN Sitzung abschliesst, misst beim zweiten Closeout wieder das GANZE
 Transkript — der bereits gebuchte Teil steckt darin und wandert ein zweites

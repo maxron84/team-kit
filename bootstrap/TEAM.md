@@ -1,7 +1,7 @@
 # T.E.A.M. in {{PROJEKTNAME}} — Bedienung
 
 Dieses Projekt wird von einem **Team aus KI-Rollen** vorangetrieben, das du als
-*Strippenzieher* steuerst. Diese Datei ist für **dich**, den Menschen.
+*Stakeholder* steuerst. Diese Datei ist für **dich**, den Menschen.
 Die Regeln für die KI-Rollen stehen in [`CLAUDE.md`](CLAUDE.md).
 
 **Neu hier?** Erst die Warnung direkt darunter — sie ist die teuerste des
@@ -70,7 +70,7 @@ Diese Wörter tauchen überall auf; hier stehen sie einmal an einem Ort.
 
 | Begriff | Bedeutung |
 |---|---|
-| **Strippenzieher** | Du. Der Mensch, der Richtung, Prioritäten und Freigaben bestimmt. |
+| **Stakeholder** | Du. Der Mensch, der Richtung, Prioritäten und Freigaben bestimmt. |
 | **Kaskade** | Ein geplanter Bauabschnitt, zerlegt in nummerierte Stufen. Die Einheit, in der hier gearbeitet und abgerechnet wird. |
 | **Stufe** | Ein Schritt einer Kaskade — ein Commit, ein grüner Smoke-Test. |
 | **Aushärten** | Eine lose Skizze in einen festen Plan mit Stufennummern und Deckel überführen. Macht der Architekt, erst auf deine Freigabe. |
@@ -113,7 +113,7 @@ pro Lauf überschreiben, ohne irgendetwas neu zu installieren:
 | stark | `TEAM_MODEL_STRONG` | `opus` | Axel — und deine Architekten-Sitzung |
 
 ```bash
-TEAM_MODEL_LOOP=opus ./vollautomatik.sh     # eine Kaskade auf der starken Stufe
+TEAM_MODEL_LOOP=opus {{RUF}}vollautomatik{{ENDUNG}}     # eine Kaskade auf der starken Stufe
 ```
 
 Die Defaults sind **Defaults, keine Voraussetzung**. Vorausgesetzt sind
@@ -126,7 +126,7 @@ das austauschen lässt (Hintergrund: `README.md`, Abschnitt **Modelle**).
 
 **Kosten sind der Grund für die Trennung.** Die schwache Stufe trägt die Masse
 der Aufrufe. Wer sie hochdreht, dreht die Rechnung mit hoch — deshalb steht der
-Kontostand in `./team-status.sh --budget` und nicht im Kleingedruckten.
+Kontostand in `{{RUF}}team-status{{ENDUNG}} --budget` und nicht im Kleingedruckten.
 
 > **T.E.A.M. international** — für Projekte auf Englisch oder Italienisch bleiben
 > die Initialen **T-E-A-M** zwingend erhalten, ebenso die selbstironische Pointe
@@ -164,7 +164,7 @@ einen stillen Fehlstart.
 ### 3. Laufen lassen
 
 ```bash
-TEAM_BUDGET_USD=15 ./vollautomatik.sh
+TEAM_BUDGET_USD=15 {{RUF}}vollautomatik{{ENDUNG}}
 ```
 
 Fährt die ganze Kaskade: Ralph baut → Red Team greift an → Frank fixt →
@@ -173,16 +173,39 @@ Axel knackt die harten Fälle → Abschlussbericht.
 Vorsichtiger, Schritt für Schritt mit Halt bei dir:
 
 ```bash
-./halbautomatik.sh          # zeigt den empfohlenen nächsten Schritt
-./halbautomatik.sh ralph    # nur diesen einen Schritt
+{{RUF}}halbautomatik{{ENDUNG}}          # zeigt den empfohlenen nächsten Schritt
+{{RUF}}halbautomatik{{ENDUNG}} ralph    # nur diesen einen Schritt
 ```
 
 ### 4. Closeout — Pflicht, nicht Kür
 
 ```bash
-./team-status.sh --rollen-abschluss <N> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"]
-./team-status.sh --architekt-abschluss <USD> <domaene> "Kaskade N geplant"
+{{RUF}}team-status{{ENDUNG}} --rollen-abschluss <N> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"]
+{{RUF}}team-status{{ENDUNG}} --architekt-abschluss <USD> <domaene> "Kaskade N geplant"
 ```
+
+**Woher `<USD>` kommt.** Im Abo gibt es keinen Konsolenwert — gemessen wird aus
+dem Sitzungstranskript, nicht geschätzt:
+
+```
+{{PYTHON}} team/tools/kosten.py sitzung-messen --projekt .
+```
+
+Das Werkzeug eicht sich an den abgerechneten Läufen deines Projekts. Sagt es
+„Preistabelle stimmt nicht mehr", ist die Zahl **ungeeicht** — nicht buchen,
+sondern die Tabelle nachziehen (Exit `2`). Die Zeile `Architekt (Churn-Proxy)`
+im Kontostand ist **keine** Messung: Sie rechnet Zeilen-Churn mal Eichfaktor und
+misst damit die Größe des Diffs, nicht die Arbeit. Im Feld lag sie 35 % zu
+niedrig (`Kit-BL-141`).
+
+Der zweite Befehl bucht als **Abo-Gegenwert** (`auth = abo`) — das ist die
+Vorbelegung, weil im Abo kein Geld fließt und die Zeile `real via API
+abgerechnet` im Kontostand genau das behaupten würde. Hast du **wirklich** über
+einen API-Key gearbeitet, hängst du `--auth api` an. Die Erfolgsmeldung nennt
+die Achse, die sie gebucht hat (`… angelegt: 16.3990 USD (abo)`) — lies sie,
+statt sie zu überblättern: Im Feld sind so 16,3990 USD in die falsche Spalte
+gewandert, und aufgefallen ist es erst beim Nachlesen der Ledger-Zeile
+(`Kit-BL-143`).
 
 Der erste Befehl schließt **beide** Kostenquellen des Laufs ab und schreibt
 dafür **zwei** Ledger-Zeilen: `roles` für Harry/Marv/Frank/Axel und `ralph`
@@ -212,11 +235,11 @@ gehört **nach** den Lauf, niemals in eine Loop-Stufe.
 
 **Was `<domaene>` ist:** der Arbeitsstrang, auf den die Kosten gebucht werden —
 bei den meisten Projekten schlicht `produkt`. **Dieses Projekt führt genau eine
-Domäne**, solange du in `team.config.sh` nichts anderes einträgst. Mehrere sind
+Domäne**, solange du in `{{KONFIG}}` nichts anderes einträgst. Mehrere sind
 nur sinnvoll, wenn *dieses* Projekt fachlich getrennte Stränge hat (etwa
 `backend frontend`). Eine eigene Domäne für die Arbeit am T.E.A.M. brauchst du
 **nicht**: Am Team wird hier nicht entwickelt — was dir am Team auffällt, geht
-ins Kit-Repo zurück und wird dort verbucht.
+über `{{RUF}}kit-melden{{ENDUNG}}` ins Kit-Repo zurück und wird dort verbucht.
 
 **Wenn nach dem Closeout noch eine Rolle lief** (z. B. ein Frank-Fix), bricht ein
 zweiter `--rollen-abschluss` ab, statt die erste Buchung zu überschreiben, und
@@ -227,7 +250,7 @@ den Fall, dass die alte Zeile schlicht falsch war.
 **Prüfen statt glauben:**
 
 ```bash
-./team-status.sh --ledger-pruefen
+{{RUF}}team-status{{ENDUNG}} --ledger-pruefen
 ```
 
 Sagt dir, ob für jede Kaskade alles gebucht ist: fehlt eine Zeile je Quelle
@@ -238,7 +261,7 @@ abgeschlossen — im Feld lagen so 33,89 USD ungebucht in den Logordnern, ohne
 dass irgendetwas rot wurde), und — die eigentliche Probe — **ergeben die
 archivierten Rohlogs mehr, als im Ledger steht?** Diese letzte Frage stellt die
 Gegenkennzahl aus einer **anderen** Quelle als das Ledger selbst. Genau daran
-hakte es dreimal: Die schwersten Kostenfehler des Kits (`BL-1`, `BL-4`, `BL-5`)
+hakte es dreimal: Die schwersten Kostenfehler des Kits (`Kit-BL-1`, `Kit-BL-4`, `Kit-BL-5`)
 sind alle **nicht** durch ein Werkzeug aufgefallen, sondern dadurch, dass ein
 Mensch den Bericht neben das Ledger hielt. Exit `4` heißt Warnbefunde, `0`
 sauber. Warnungen laufen bei jedem `--budget` ungefragt mit.
@@ -274,6 +297,7 @@ Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 | `./team-status.sh --budget` | `.\team-status.cmd --budget` | Kontostand, API vs. Abo getrennt |
 | `./team-test.sh` | `.\team-test.cmd` | Regressionstests der **Team-Infrastruktur** |
 | `python3 team/tools/beutebuch.py list` | *(gleich)* | alle Funde mit Status |
+| `{{RUF}}kit-melden{{ENDUNG}} neu --titel "…"` | *(gleich, mit `.cmd`)* | Fund **am T.E.A.M. selbst** melden — siehe unten |
 
 **Welche Spalte für dich gilt:** die linke, wenn du unter Linux oder in einer
 WSL-Distro arbeitest; die rechte, wenn du Windows **ohne** WSL benutzt. Nicht
@@ -283,17 +307,23 @@ trotzdem links.
 **Fehlt eine der beiden Spalten in deinem Projekt?** Wenn hier keine `.cmd`-
 und `.ps1`-Dateien liegen (oder umgekehrt keine `.sh`), ist diese Bahn bei der
 Installation ausdrücklich **abgewählt** worden (`--nur-bash` / `--nur-pwsh`).
-Das ist kein Defekt. Zurückholen — macht das Projekt wieder vollständig, samt
-der fehlenden Konfiguration:
+Das ist kein Defekt, und ein `--update` ändert daran nichts: Es **hält** die
+Bahn, die hier liegt (`Kit-BL-147`). Zurückholen musst du sie **ausdrücklich**
+— das macht das Projekt wieder vollständig, samt der fehlenden Konfiguration:
 
 ```bash
-bash <kit-pfad>/bash/install.sh . --update
-``` Beide
-Spalten tun dasselbe — es sind zwei Schreibweisen, kein Funktionsunterschied.
+bash <kit-pfad>/bash/install.sh . --update --beide-bahnen
+```
+
+```powershell
+pwsh -File <kit-pfad>\pwsh\install.ps1 . -Update -BeideBahnen
+```
+
+Beide Spalten tun dasselbe — es sind zwei Schreibweisen, kein Funktionsunterschied.
 Die letzte Zeile steht bewusst als *(gleich)* da: Die Werkzeuge sind Python und
 werden auf beiden Wegen identisch aufgerufen.
 
-`./team-test.sh` prüft **nicht** dein Projekt. Dein Testbefehl ist:
+`{{RUF}}team-test{{ENDUNG}}` prüft **nicht** dein Projekt. Dein Testbefehl ist:
 `{{SMOKE_TEST}}`
 
 > **Regel: Der Smoke-Test darf keine Umgebung setzen, die die Doku nicht nennt.**
@@ -303,6 +333,49 @@ werden auf beiden Wegen identisch aufgerufen.
 > passiert ist: Der dokumentierte Startbefehl war kaputt, der Smoke-Test meldete
 > grün, und gefunden hat es niemand aus dem Team — sondern der Mensch, als er
 > das Produkt zum ersten Mal selbst startete.
+
+---
+
+## Wenn der Fehler am Team liegt, nicht an deinem Projekt
+
+Manchmal ist der Fehler nicht deiner. Erkennungsmerkmal: Er steckt in `team/`,
+in einem Entrypoint hier in der Wurzel oder in einer Regel aus
+`CLAUDE.md`/`TEAM.md` — **nicht** in deinem Produktivcode. Dann trifft er jede
+weitere Installation, und dieses Projekt repariert ihn bei jedem `--update`
+aufs Neue.
+
+```
+{{RUF}}kit-melden{{ENDUNG}} neu --titel "Kurz, was schiefging"
+```
+
+Das legt einen Entwurf unter `{{PLAN_ORDNER}}/kit-meldungen/` an. Ausfüllen,
+dann:
+
+```
+{{RUF}}kit-melden{{ENDUNG}} pruefen                # Exit 4 = bitte ansehen
+{{RUF}}kit-melden{{ENDUNG}} senden <datei>         # Pull Request — fragt vorher
+```
+
+**Drei Dinge, die du wissen solltest:**
+
+- **Deine Meldung wird öffentlich.** `pruefen` sucht deshalb absolute Pfade,
+  Konto- und Rechnernamen, Schlüssel — und den **Namen dieses Projekts**. Das
+  Kit führt seine Feldbelege unter `Feld A`…`Feld D` statt unter Namen; für den
+  Beleg zählt die *Lage* eines Projekts (Plattform, Bahn, Greenfield oder
+  Bestand), nicht sein Name. `senden` geht über Befunde nur hinweg, wenn du es
+  ausdrücklich sagst.
+- **Senden ist deine Entscheidung, nicht die einer Rolle.** Der Architekt und
+  Frank dürfen eine Meldung *schreiben* — das steht in ihren Briefings. Senden
+  darf nur ein Mensch: Ein Pull Request wirkt nach außen und lässt sich nicht
+  zurückholen.
+- **Kein `gh` installiert?** Dann gibt `senden` einen vorbefüllten Issue-Link
+  aus; ein Browser und ein GitHub-Konto genügen. Die Meldung bleibt in jedem
+  Fall als Datei liegen.
+
+**Trag den Fund außerdem in `{{PLAN_ORDNER}}/backlog.md` ein** und setz den
+Status auf „ans Kit gemeldet (…)". Sonst weiß niemand, ob der Rückkanal wirklich
+bedient wurde — und ein lokaler Fix hat eine Verfallszeit: Er endet beim
+nächsten `--update`.
 
 ---
 
@@ -331,7 +404,7 @@ nennt die zwei Prüfungen, die vorher zu machen sind.
 ## Wo was liegt
 
 ```
-team.config.sh          ALLE Projektwerte — der einzige Ort zum Ändern
+{{KONFIG}}          ALLE Projektwerte — der einzige Ort zum Ändern
 CLAUDE.md               Regeln für die KI-Rollen (geltendes Recht)
 {{PLAN_ORDNER}}/        Kaskaden-Pläne, Beutebuch, Ermittlungsakten, Roadmap
 team/                   Team-Infrastruktur (lib, tools, prompts, tests)
@@ -340,18 +413,18 @@ team/                   Team-Infrastruktur (lib, tools, prompts, tests)
 .ralph-state            nächste zu bauende Stufe
 ```
 
-**Einen Wert ändern?** Immer in `team.config.sh`. Er wirkt sofort in allen
+**Einen Wert ändern?** Immer in `{{KONFIG}}`. Er wirkt sofort in allen
 Rollen, ohne Neuinstallation.
 
 ### Zog das Team in eine gewachsene Codebasis ein?
 
-Zwei Werte in `team.config.sh` tragen dann Gewicht, die im neuen Projekt leer
+Zwei Werte in `{{KONFIG}}` tragen dann Gewicht, die im neuen Projekt leer
 bleiben dürfen:
 
 | Wert | Wozu |
 |---|---|
-| `TEAM_WEITERER_CODE` | Code außerhalb von `{{PRODUKTIVCODE}}`, der mitgeprüft werden soll: Einstiegspunkt in der Wurzel, Build-/Deploy-Skripte. Was hier nicht steht, greift das Red Team **nie** an — und ein sauberer Sweep sieht trotzdem aus wie ein sauberes Projekt (`BL-52`). |
-| `TEAM_TEST_ORDNER_BESTAND` / `TEAM_PLAN_ORDNER_BESTAND` | Was beim Einzug schon in den beiden Schreibordnern lag. Der Guard schlägt dort **nicht** an — Harry, Marv und Axel dürfen dort schreiben und löschen. Die Einträge werden den Rollen im Prompt als fremdes Eigentum genannt: neue Dateien anlegen ja, Bestehendes anfassen nein (`BL-51`). |
+| `TEAM_WEITERER_CODE` | Code außerhalb von `{{PRODUKTIVCODE}}`, der mitgeprüft werden soll: Einstiegspunkt in der Wurzel, Build-/Deploy-Skripte. Was hier nicht steht, greift das Red Team **nie** an — und ein sauberer Sweep sieht trotzdem aus wie ein sauberes Projekt (`Kit-BL-52`). |
+| `TEAM_TEST_ORDNER_BESTAND` / `TEAM_PLAN_ORDNER_BESTAND` | Was beim Einzug schon in den beiden Schreibordnern lag. Der Guard schlägt dort **nicht** an — Harry, Marv und Axel dürfen dort schreiben und löschen. Die Einträge werden den Rollen im Prompt als fremdes Eigentum genannt: neue Dateien anlegen ja, Bestehendes anfassen nein (`Kit-BL-51`). |
 
 Der Installer füllt beides beim Einzug und warnt, wenn Plan- oder Test-Ordner
 belegt sind. **Die harte Variante** bleibt der eigene, leere Plan-Ordner
@@ -377,9 +450,12 @@ git add -A; git commit -m "chore: vor Kit-Update"     # erst committen!
 pwsh -File <kit-pfad>\pwsh\install.ps1 . -Update
 ```
 
-**`--update` fasst nur die Infrastruktur an** — Entrypoints, `team/lib.sh`,
-die Werkzeuge, die Rollen-Briefings, die Team-Tests. **Unangetastet bleiben**
-deine Projektdaten: `team.config.sh`, `team.config.ps1`, `CLAUDE.md`, `CHANGELOG.md`,
+**`--update` fasst nur die Infrastruktur an** — Entrypoints, `{{LIB}}`,
+die Werkzeuge, die Rollen-Briefings, die Team-Tests. **Die Bahn wechselt es
+nicht**: Was einbahnig ist, bleibt einbahnig (`Kit-BL-147`). **Unangetastet
+bleiben**
+deine Projektdaten: deine Konfiguration (`team.config.*` — je Bahn eine),
+`CLAUDE.md`, `CHANGELOG.md`,
 `.budget-ledger`, `.ralph-state` und der ganze Plan-Ordner. Der Lauf listet am
 Ende beides auf.
 

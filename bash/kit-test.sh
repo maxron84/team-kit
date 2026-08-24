@@ -8,11 +8,11 @@
 #
 # WARUM ES DIESES SKRIPT GIBT
 #
-# Die Regressionstests unter team/tests/ (Stand 2.11.0: 494 Fälle in 71 Dateien)
+# Die Regressionstests unter team/tests/ (Stand 2026-08-21: 590 Fälle in 84 Dateien)
 # setzen die INSTALLIERTE Ablage voraus: Entrypoints in der Repo-Wurzel,
 # CLAUDE.md und team.config.sh mit gefüllten Platzhaltern. Im Kit-Repo liegen
 # sie unter bash/entry/, pwsh/entry/ und bootstrap/ — `pytest geteilt/tests`
-# schlägt hier deshalb fehl (Stand 2.11.0: 21 Fehler, 390 grün, 65 über-
+# schlägt hier deshalb fehl (Stand 2026-08-21: 21 Fehler, 490 grün, 79 über-
 # sprungen — dieselben 21 wie vor dem Bahn-Umzug), ohne dass
 # irgendetwas kaputt wäre. Ergebnis: Ein im Kit committeter Fix war bis zur
 # nächsten Feldinstallation ungeprüft. Genau so ging BL-1 (tote Fixphase) durch
@@ -60,6 +60,41 @@ gruen(){ printf '\033[32m%s\033[0m\n' "$*"; }
 # ausgerechnet dann, wenn das Skript etwas erklären wollte.
 gelb() { printf '\033[33m%s\033[0m\n' "$*"; }
 kopf() { printf '\n\033[1m%s\033[0m\n' "$*"; }
+
+# wegwerf_repo <pfad> — legt ein Wegwerf-Repo an und gibt ihm SOFORT eine
+# lokale Identität. Beides gehört zusammen, und genau deshalb ist es eine
+# Funktion und keine Konvention: Die Absicht stand als Kommentar in Schritt 1
+# ("damit der Lauf auch ohne globale Git-Config committen kann") und wurde an
+# drei von sechs Stellen nicht befolgt (BL-157). Ein Repo ohne Identität ist
+# stumm, bis jemand committet — dann stirbt der Lauf mit Exit 128, VOR der
+# ersten Prüfung, mit einer git-Meldung, die wie ein kaputtes Kit aussieht.
+# Getroffen wird davon bevorzugt eine frisch aufgesetzte Maschine, also der
+# Erstlauf. Ein `git init` von Hand ist in dieser Datei ab jetzt ein Fehler.
+wegwerf_repo() {
+    mkdir -p "$1"
+    git -C "$1" init -q
+    git -C "$1" config user.email "kit-test@localhost"
+    git -C "$1" config user.name  "Kit-Selbsttest"
+}
+
+# Und der Waechter dazu, denn ein Satz im Kommentar ist genau das, woran
+# BL-157 gescheitert ist: Die Absicht stand da, durchgesetzt hat sie niemand.
+# Geprueft wird die GATTUNG — jede Zeile, die ein Repo anlegt —, nicht eine
+# Liste der bekannten Stellen; eine Liste veraltet mit der naechsten dazu
+# geschriebenen. Erlaubt ist genau eine solche Zeile: die im Helfer oben.
+#
+# Das Muster verlangt `init` als UNTERBEFEHL, direkt hinter dem optionalen
+# `-C <pfad>`. Die lockere Fassung (`git -C .+ init`) schlug an
+# `git -C "$E_ZIEL" commit -q --allow-empty -m init` an — an einer
+# Commit-NACHRICHT also, und damit an einer voellig korrekten Zeile. Ein
+# Waechter mit Fehlalarmen wird abgeschaltet statt befolgt (BL-143).
+EIGENE_INITS="$(grep -cE '^[[:space:]]*git( +-C +[^ ]+)? +init([[:space:]]|$)' "${BASH_SOURCE[0]}" || true)"
+if [ "$EIGENE_INITS" -ne 1 ]; then
+    rot "FEHLER im Selbsttest selbst: $EIGENE_INITS Stellen legen ein Repo an."
+    echo "  Erlaubt ist nur wegwerf_repo() — ein Repo ohne lokale Identitaet" >&2
+    echo "  toetet den Lauf mit Exit 128, sobald jemand darin committet (BL-157)." >&2
+    exit 2
+fi
 
 # KIT_PYTHON: der Name, unter dem Python auf DIESER Maschine antwortet.
 #
@@ -137,10 +172,7 @@ aufraeumen() {
 trap aufraeumen EXIT
 
 kopf "1/11 — Wegwerf-Repo anlegen"
-git -C "$ZIEL" init -q
-# Lokale Identität, damit der Lauf auch ohne globale Git-Config committen kann.
-git -C "$ZIEL" config user.email "kit-test@localhost"
-git -C "$ZIEL" config user.name  "Kit-Selbsttest"
+wegwerf_repo "$ZIEL"
 gruen "  ✓ $ZIEL"
 
 kopf "2/11 — Kit installieren (nicht-interaktiv)"
@@ -208,9 +240,7 @@ gruen "  ✓ Produktivcode-Ordner src/ angelegt, mit .gitkeep"
 # besonderes, der Fehler traf jeden eingegebenen Ordner. Eigenes Wegwerf-Repo,
 # damit die Hauptinstallation unberuehrt bleibt.
 ZIEL2="$(mktemp -d -t team-kit-bl121.XXXXXX)"
-git -C "$ZIEL2" init -q
-git -C "$ZIEL2" config user.email "kit-test@localhost"
-git -C "$ZIEL2" config user.name  "Kit-Selbsttest"
+wegwerf_repo "$ZIEL2"
 if ! TEAM_INIT_PRODUKTIVCODE="quelle/" bash "$KIT/bash/install.sh" "$ZIEL2" \
         --nicht-interaktiv > "$ZIEL2/.install.log" 2>&1; then
     rot "  ✗ install.sh mit TEAM_INIT_PRODUKTIVCODE schlug fehl:"
@@ -291,15 +321,42 @@ fi
 T_DATEIEN="$(ls "$ZIEL"/team/tests/test_*.py | wc -l | tr -d ' ')"
 T_FAELLE="$("$KIT_PYTHON" -m pytest "$ZIEL/team/tests" --collect-only -q 2>/dev/null \
             | tail -1 | grep -oE '^[0-9]+' || true)"
-if grep -q "$T_DATEIEN Testdateien, $T_FAELLE Fälle" "$KIT/README.md" \
-   && grep -q "die $T_FAELLE Tests" "$KIT/README.md"; then
-    gruen "  ✓ README nennt dieselben Testzahlen ($T_DATEIEN Dateien, $T_FAELLE Fälle)"
-else
-    rot "  ✗ README nennt nicht '$T_DATEIEN Testdateien, $T_FAELLE Fälle' bzw. 'die $T_FAELLE Tests'"
-    echo "      Gemessen an der frischen Installation. Beide Stellen im README"
-    echo "      nachziehen — sonst steht dort wieder eine Zahl, die niemand prueft."
+# Geprueft wird die GATTUNG, nicht die Abschrift: JEDE Zahl im README, die
+# eine Testzahl behauptet, und JEDER Pfad, den es nennt. Der Vorlaeufer hier
+# kannte zwei feste Formulierungen — und uebersah deshalb wochenlang ein
+# drittes "369 Regressionstests" in freier Prosa, also genau die Zahl, vor der
+# der Kommentar oben warnt. Dieselbe Klasse beim Pfad: Der alte Waechter
+# verbot NAMENTLICH den Autorenmaschinen-Pfad und konnte einen neuen falschen
+# (`bash scripts/team-auth-setup.sh`) nicht sehen. Jetzt wird positiv geprueft.
+if ! "$KIT_PYTHON" "$KIT/geteilt/kit-readme-pruefen.py" \
+        --faelle "$T_FAELLE" --testdateien "$T_DATEIEN" --dateien "$GESCHRIEBEN_IST"; then
+    rot "  ✗ Das README steht gegen die frische Installation."
+    echo "      Gemessen wurde an einer FRISCHEN Installation, nicht am Repo." >&2
+    echo "      Die genannten Stellen im README nachziehen." >&2
     exit 1
 fi
+gruen "  ✓ README: Zahlen gemessen ($T_DATEIEN Dateien, $T_FAELLE Fälle), Pfade existieren"
+
+# Gegenprobe: Ein Waechter, der nie rot wird, sichert nichts ab — er
+# beschreibt nur, was ohnehin gilt (Bauart BL-14). Beide Gattungen einzeln
+# zurueckgedreht, an einer KOPIE; das Repo wird dabei nicht angefasst.
+GEGEN="$ZIEL/.readme-gegenprobe.md"
+sed "s/$T_FAELLE Regressionstests/1 Regressionstests/" "$KIT/README.md" > "$GEGEN"
+if "$KIT_PYTHON" "$KIT/geteilt/kit-readme-pruefen.py" --readme "$GEGEN" \
+        --faelle "$T_FAELLE" --testdateien "$T_DATEIEN" --dateien "$GESCHRIEBEN_IST" \
+        >/dev/null 2>&1; then
+    rot "  ✗ Gegenprobe: eine verfaelschte Testzahl blieb unbemerkt."
+    exit 1
+fi
+sed 's#bash/scripts/team-auth-setup.sh#scripts/team-auth-setup.sh#' "$KIT/README.md" > "$GEGEN"
+if "$KIT_PYTHON" "$KIT/geteilt/kit-readme-pruefen.py" --readme "$GEGEN" \
+        --faelle "$T_FAELLE" --testdateien "$T_DATEIEN" --dateien "$GESCHRIEBEN_IST" \
+        >/dev/null 2>&1; then
+    rot "  ✗ Gegenprobe: ein toter Pfad im README blieb unbemerkt."
+    exit 1
+fi
+rm -f "$GEGEN"
+gruen "  ✓ Gegenprobe: verfaelschte Zahl und toter Pfad werden beide rot"
 
 # BL-58: Schritt 4 prüft die Installation im AUSLIEFERUNGSZUSTAND — dort trägt
 # team.config.sh genau die Werte, die auch in team/lib.sh als Default stehen.
@@ -380,6 +437,11 @@ printf '\n# lokaler Fix, noch nicht ans Kit gemeldet\n' >> "$ZIEL/team/tools/beu
 # hat. Der Block ist vorhanden, zwei seither dazugekommene Zeilen fehlen. Der
 # Installer hat das bisher als "enthaelt den Block bereits" abgehakt.
 sed -i '/^\.team-focus-harry$/d; /^\.team-focus-marv$/d' "$ZIEL/.gitignore"
+# BL-136 hat dieselbe Bauart fuer die .gitattributes gebaut, aber nur die
+# pwsh-Bahn hat sie nachgewiesen. Dieselbe Lage hier: Block vorhanden, zwei
+# Zeilen der Vorlage fehlen. Ohne diesen Griff faehrt der Melde-Zweig von
+# gitattributes_abgleich() in der bash-Bahn ueberhaupt nie.
+sed -i '/^\*\.psm1[[:space:]]/d; /^\*\.bat[[:space:]]/d' "$ZIEL/.gitattributes"
 
 if ! bash "$KIT/bash/install.sh" "$ZIEL" --update > "$ZIEL/.update.log" 2>&1; then
     rot "  ✗ install.sh --update schlug fehl:"
@@ -460,9 +522,9 @@ esac
 # Fall ist der teure: Das Update meldete bisher Erfolg und liess das Projekt
 # trotzdem auf dem Fragmentstand seines Installationstages zurueck.
 pruefe "veraltetes .gitignore wird gemeldet" \
-       "$(grep -c 'hinter der Vorlage' "$ZIEL/.update.log")" "1"
+       "$(grep -c '\.gitignore liegt .* hinter der Vorlage' "$ZIEL/.update.log")" "1"
 pruefe "mit der richtigen Zeilenzahl" \
-       "$(grep -c 'liegt 2 Zeile(n) hinter der Vorlage' "$ZIEL/.update.log")" "1"
+       "$(grep -c '\.gitignore liegt 2 Zeile(n) hinter der Vorlage' "$ZIEL/.update.log")" "1"
 # Je zweimal: einmal in der Aufzaehlung, einmal im nachtragbaren Befehl.
 pruefe "erste fehlende Zeile namentlich genannt" \
        "$(grep -c '\.team-focus-harry' "$ZIEL/.update.log")" "2"
@@ -472,18 +534,44 @@ pruefe "zweite fehlende Zeile namentlich genannt" \
 # entfernte sein. Die Meldung ist die risikofreie Haelfte.
 pruefe ".gitignore wird NICHT von selbst ergaenzt" \
        "$(grep -c 'team-focus' "$ZIEL/.gitignore")" "0"
+
+# BL-136, dieselben vier Zusicherungen fuer die .gitattributes. Sie fehlten:
+# Der Fix ist am 2026-08-21 nur gegen kit-test.ps1 (6 Schritte) nachgewiesen
+# worden, und die bash-Bahn hat die Datei seither ueberhaupt nicht angefasst.
+# Genau die Luecke, an der der Fehlbetrag bis zum naechsten Feldlauf sitzt.
+pruefe "veraltete .gitattributes wird gemeldet" \
+       "$(grep -c '\.gitattributes liegt .* hinter der Vorlage' "$ZIEL/.update.log")" "1"
+pruefe "mit der richtigen Zeilenzahl" \
+       "$(grep -c '\.gitattributes liegt 2 Zeile(n) hinter der Vorlage' "$ZIEL/.update.log")" "1"
+# Je zweimal wie oben: Aufzaehlung und nachtragbarer Befehl.
+pruefe "fehlende LF-Zeile namentlich genannt" \
+       "$(grep -c '\*\.psm1' "$ZIEL/.update.log")" "2"
+pruefe "fehlende CRLF-Zeile namentlich genannt" \
+       "$(grep -c '\*\.bat' "$ZIEL/.update.log")" "2"
+# Der zweite Schritt gehoert zur Meldung: Ohne `add --renormalize` wirkt der
+# Nachtrag erst beim naechsten Klon — genau der Abstand zwischen Ursache und
+# Wirkung, den BL-136 schliessen wollte.
+pruefe "und der Renormalisierungs-Schritt dazu" \
+       "$(grep -c 'add --renormalize' "$ZIEL/.update.log")" "1"
+pruefe ".gitattributes wird NICHT von selbst ergaenzt" \
+       "$(grep -c '^\*\.psm1' "$ZIEL/.gitattributes")" "0"
 # Gegenprobe: Eine Meldung, die immer erscheint, ist keine (Bauart BL-14).
 # Mit vollstaendigem Fragment muss derselbe Lauf schweigen.
 printf '.team-focus-harry\n.team-focus-marv\n' >> "$ZIEL/.gitignore"
+printf '*.psm1  text eol=lf\n*.bat   text eol=crlf\n' >> "$ZIEL/.gitattributes"
 if ! bash "$KIT/bash/install.sh" "$ZIEL" --update > "$ZIEL/.update2.log" 2>&1; then
     rot "  ✗ zweiter install.sh --update (Gegenprobe) schlug fehl:"
     tail -20 "$ZIEL/.update2.log" >&2
     exit 1
 fi
 pruefe "vollstaendiges .gitignore wird nicht angemahnt" \
-       "$(grep -c 'hinter der Vorlage' "$ZIEL/.update2.log")" "0"
+       "$(grep -c '\.gitignore liegt .* hinter der Vorlage' "$ZIEL/.update2.log")" "0"
 pruefe "und ausdruecklich als vollstaendig quittiert" \
-       "$(grep -c 'enthält den Block vollständig' "$ZIEL/.update2.log")" "1"
+       "$(grep -c '\.gitignore enthält den Block vollständig' "$ZIEL/.update2.log")" "1"
+pruefe "vollstaendige .gitattributes wird nicht angemahnt" \
+       "$(grep -c '\.gitattributes liegt .* hinter der Vorlage' "$ZIEL/.update2.log")" "0"
+pruefe "und ausdruecklich als vollstaendig quittiert" \
+       "$(grep -c '\.gitattributes enthält den Block vollständig' "$ZIEL/.update2.log")" "1"
 # Auch dieser Lauf legt eine Kit-Fassung zum Abgleich ab — mit aufraeumen,
 # sonst bleibt je Selbsttest ein Verzeichnis in /tmp liegen.
 ABGLEICH2="$(grep -oE 'diff [^"]*-u "[^"]+"' "$ZIEL/.update2.log" | head -1 \
@@ -501,14 +589,12 @@ kopf "7/11 — Einzug in eine gewachsene Codebasis (BL-51, BL-52)"
 BESTAND_REPO="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-bestand.XXXXXX")"
 bestand_aufraeumen() { [ "$BEHALTEN" -eq 1 ] || rm -rf "$BESTAND_REPO"; }
 trap 'aufraeumen; bestand_aufraeumen' EXIT
-git -C "$BESTAND_REPO" init -q
-git -C "$BESTAND_REPO" config user.email "kit-test@localhost"
-git -C "$BESTAND_REPO" config user.name  "Kit-Selbsttest"
-# Die Lage aus Project-Family-ERP: belegtes plans/, gewachsene Testsuite,
+wegwerf_repo "$BESTAND_REPO"
+# Die Lage aus Feld C: belegtes plans/, gewachsene Testsuite,
 # Einstiegspunkt in der Wurzel.
 mkdir -p "$BESTAND_REPO/plans" "$BESTAND_REPO/tests" "$BESTAND_REPO/src"
-echo '# Architektur' > "$BESTAND_REPO/plans/family-erp-architecture.md"
-echo '# Refactoring' > "$BESTAND_REPO/plans/codebase-refactoring-plan.md"
+echo '# Architektur' > "$BESTAND_REPO/plans/bestand-architektur.md"
+echo '# Refactoring' > "$BESTAND_REPO/plans/bestand-refactoring-plan.md"
 echo 'def test_alt(): pass' > "$BESTAND_REPO/tests/test_scanner.py"
 echo 'print("start")' > "$BESTAND_REPO/main.py"
 git -C "$BESTAND_REPO" add -A
@@ -539,10 +625,10 @@ b_pruefe "die Folge wird benannt (Waechter greift dort nicht)" \
 b_pruefe "belegter Test-Ordner wird gemeldet" \
     "$(grep -c "Test-Ordner 'tests/' ist nicht leer" "$BESTAND_REPO/.install.log")" "1"
 b_pruefe "Bestandsdokument namentlich genannt" \
-    "$(grep -c 'family-erp-architecture.md' "$BESTAND_REPO/.install.log")" "1"
+    "$(grep -c 'bestand-architektur.md' "$BESTAND_REPO/.install.log")" "1"
 # Der Vermerk ist der Traeger: Aus ihm holen die Rollen-Prompts den Bestand.
 b_pruefe "Plan-Bestand steht in team.config.sh" \
-    "$(grep -c 'TEAM_PLAN_ORDNER_BESTAND:-.*codebase-refactoring-plan.md' \
+    "$(grep -c 'TEAM_PLAN_ORDNER_BESTAND:-.*bestand-refactoring-plan.md' \
         "$BESTAND_REPO/team.config.sh")" "1"
 b_pruefe "Test-Bestand steht in team.config.sh" \
     "$(grep -c 'TEAM_TEST_ORDNER_BESTAND:-.*test_scanner.py' \
@@ -578,21 +664,27 @@ b_pruefe "im leeren Repo schweigt auch das Update" \
     "$(grep -c 'Ungeprueft in der Wurzel' "$ZIEL/.update.log")" "0"
 [ "$BESTAND_FEHLER" -eq 0 ] || exit 1
 
-kopf "8/11 — Abwahl einer Bahn und ihr Rueckweg (BL-119)"
+kopf "8/11 — Abwahl einer Bahn, ihr Bestand und ihr Rueckweg (BL-119/BL-147)"
 # Der Schalter --nur-bash/--nur-pwsh ist eine ausdrueckliche Abwahl durch den
-# Anwender. Was ihn ueberhaupt erst vertretbar macht, ist der RUECKWEG: Ein
-# spaeteres --update ohne Schalter muss das Projekt wieder vollstaendig
-# machen. Sonst waere die Abwahl eine Einbahnstrasse, und der Anwender saesse
-# mit einem halben Projekt da, ohne es zu merken.
+# Anwender. Zwei Zusicherungen haengen daran, und sie ziehen in verschiedene
+# Richtungen:
 #
-# Beim ersten Bau ist genau das passiert: Die Entrypoints kamen zurueck, die
-# KONFIGURATION nicht — ein Update fasst team.config.* grundsaetzlich nicht
-# an. Richtig, solange sie da ist; fehlt sie, ist "nicht anfassen" kein
-# Schutz, sondern eine halbe Bahn. Deshalb steht der Rueckweg hier und nicht
-# in der Doku.
+#   BESTAND (BL-147): Ein --update ohne Schalter HAELT die Bahn. Der Installer
+#   erkennt die einbahnige Ablage an den Dateien, die das Kit ausliefert, und
+#   legt nichts der anderen Bahn dazu. Bis BL-147 machte das Update das
+#   Projekt "wieder vollstaendig" — im Feld (Feld A, 2026-08-22) waren das 21
+#   ungebetene pwsh-Dateien in einem reinen Bash-Projekt.
+#
+#   RUECKWEG (BL-119): --beide-bahnen macht das Projekt vollstaendig. Ohne ihn
+#   waere die Abwahl eine Einbahnstrasse. Beim ersten Bau ist genau hier der
+#   Haken gesessen: Die Entrypoints kamen zurueck, die KONFIGURATION nicht —
+#   ein Update fasst team.config.* grundsaetzlich nicht an. Richtig, solange
+#   sie da ist; fehlt sie, ist "nicht anfassen" kein Schutz, sondern eine
+#   halbe Bahn.
+#
+# Beide stehen hier und nicht in der Doku: Sie brauchen echte Installationen.
 A_REPO="$(mktemp -d)/projekt"
-mkdir -p "$A_REPO"
-git -C "$A_REPO" init -q
+wegwerf_repo "$A_REPO"
 git -C "$A_REPO" commit -q --allow-empty -m "init"
 
 bash "$KIT/bash/install.sh" "$A_REPO" --nicht-interaktiv --nur-bash \
@@ -603,7 +695,13 @@ a_pruefe() {
     else rot "  ✗ $1 — erwartet: $3, ist: $2"; exit 1; fi
 }
 a_pruefe "keine .ps1/.cmd im Projekt"  "$(ls "$A_REPO" | grep -cE '\.ps1$|\.cmd$')" "0"
-a_pruefe "die Bash-Bahn ist vollstaendig" "$(ls "$A_REPO"/*.sh | wc -l)" "10"
+# BL-154: Hier stand eine 10 — abgeschrieben aus dem Ordnerinhalt zur Zeit
+# der Niederschrift. Mit dem elften Entrypoint (kit-melden.sh) war sie falsch,
+# und die Meldung "die Bash-Bahn ist vollstaendig" behauptete das Gegenteil
+# dessen, was sie gefunden hatte. Gemessen wird gegen die QUELLE: so viele
+# Entrypoints, wie das Kit auf dieser Bahn ausliefert.
+a_pruefe "die Bash-Bahn ist vollstaendig" "$(ls "$A_REPO"/*.sh | wc -l)" \
+    "$(ls "$KIT"/bash/entry/*.sh | wc -l)"
 a_pruefe "kein PowerShell-Kern in team/" \
     "$(ls "$A_REPO/team" | grep -cE '\.psm1$|\.ps1$')" "0"
 a_pruefe "und die Abwahl steht im Protokoll" \
@@ -618,14 +716,30 @@ a_pruefe "Tests bleiben gruen (kein Fehlschlag durch die fehlende Bahn)" \
 a_pruefe "und die Einbahnigkeit steht in der Zusammenfassung" \
     "$(grep -c 'einbahnige Ablage' "$A_REPO/.einbahnig.log")" "1"
 
-# --- Der Rueckweg
+# --- Der Bestand (BL-147): Das Routine-Update haelt die Bahn
 git -C "$A_REPO" add -A >/dev/null 2>&1
 git -C "$A_REPO" commit -q -m "einbahnig installiert"
-bash "$KIT/bash/install.sh" "$A_REPO" --update > "$A_REPO/.rueckweg.log" 2>&1 \
+bash "$KIT/bash/install.sh" "$A_REPO" --update > "$A_REPO/.bestand.log" 2>&1 \
     || { rot "  ✗ --update auf einem einbahnigen Projekt schlug fehl"; \
+         sed 's/\x1b\[[0-9;]*m//g' "$A_REPO/.bestand.log" | tail -20; exit 1; }
+a_pruefe "--update laesst die einbahnige Ablage einbahnig (BL-147)" \
+    "$(ls "$A_REPO" | grep -cE '\.ps1$|\.cmd$')" "0"
+a_pruefe "auch team/ bleibt frei von der anderen Bahn" \
+    "$(ls "$A_REPO/team" | grep -cE '\.psm1$|\.ps1$')" "0"
+a_pruefe "und die Erkennung steht im Protokoll" \
+    "$(grep -c 'Einbahnige Ablage erkannt: nur die bash-Bahn' "$A_REPO/.bestand.log")" "1"
+
+# --- Der Rueckweg, jetzt ausdruecklich (BL-119 + BL-147)
+git -C "$A_REPO" add -A >/dev/null 2>&1
+git -C "$A_REPO" commit -q -m "einbahnig geblieben"
+bash "$KIT/bash/install.sh" "$A_REPO" --update --beide-bahnen > "$A_REPO/.rueckweg.log" 2>&1 \
+    || { rot "  ✗ --update --beide-bahnen auf einem einbahnigen Projekt schlug fehl"; \
          sed 's/\x1b\[[0-9;]*m//g' "$A_REPO/.rueckweg.log" | tail -20; exit 1; }
-a_pruefe "--update holt die pwsh-Bahn zurueck" \
-    "$(ls "$A_REPO" | grep -cE '\.ps1$|\.cmd$')" "19"
+# BL-154: gemessen gegen die Quelle statt gegen eine abgeschriebene Zahl —
+# siehe die Begruendung bei "die Bash-Bahn ist vollstaendig".
+a_pruefe "--beide-bahnen holt die pwsh-Bahn zurueck" \
+    "$(ls "$A_REPO" | grep -cE '\.ps1$|\.cmd$')" \
+    "$(ls "$KIT"/pwsh/entry/*.ps1 "$KIT"/pwsh/entry/*.cmd | wc -l)"
 a_pruefe "auch den PowerShell-Kern" \
     "$(ls "$A_REPO/team" | grep -cE '\.psm1$|\.ps1$')" "2"
 a_pruefe "team.config.ps1 ist wieder da" \
@@ -651,8 +765,7 @@ rm -rf "$(dirname "$A_REPO")"
 # Im Feld getroffen hat es einen Windows-Anwender, also den Normalfall, fuer
 # den die pwsh-Bahn ueberhaupt gebaut ist.
 B_REPO="$(mktemp -d)/projekt"
-mkdir -p "$B_REPO"
-git -C "$B_REPO" init -q
+wegwerf_repo "$B_REPO"
 git -C "$B_REPO" commit -q --allow-empty -m "init"
 
 TEAM_INIT_PRODUKTIVCODE="quellcode/" TEAM_INIT_PROJEKT="einbahnig-pwsh" \
@@ -667,12 +780,59 @@ a_pruefe "keine .sh im Projekt" "$(ls "$B_REPO" | grep -cE '\.sh$')" "0"
 a_pruefe "und der Selbsttest meldet KEINEN Syntaxfehler ueber das Glob-Muster" \
     "$(grep -c 'Syntaxfehler: \*.sh' "$B_REPO/.abwahl.log")" "0"
 
+# BL-129, abgetragen 2026-08-21: Hier stand jahrelang "BEWUSST NICHT geprueft
+# — sie sind es nicht (109 rot)". Das war ehrlich und es war eine Luecke: Die
+# Zusicherung "Tests bleiben gruen in einbahniger Ablage" galt nur in der
+# Richtung, die oben geprueft wird (--nur-bash). Die andere blieb offen, weil
+# ein Test, der EINE Bahn FAEHRT, keinen Uebersprung fuer IHR Fehlen hatte —
+# er lief los und scheiterte an einer Datei, die es dort nicht gibt.
+#
+# Aufgeloest haben es BL-130 und BL-133 nebenbei: Seit die Tests ihre Umgebung
+# ueber basis_umgebung() beziehen und der Harnisch Module mit bash-Abhaengigkeit
+# beim Einsammeln ueberspringt, ist die Ablage gruen. Nachgemessen statt
+# angenommen: 198 gruen, 371 uebersprungen, NULL rot.
+#
+# Der Uebersprung MUSS sichtbar sein. Ein stiller Uebersprung von 371 Faellen
+# liest sich am Ende wie ein bestandener Nachweis, und das waere schlimmer als
+# das rote Bild, das er ersetzt — deshalb steht die Quotenzeile mit unter Test
+# und nicht nur die Farbe.
+( cd "$B_REPO" && "$KIT_PYTHON" -m pytest team/tests -q > .einbahnig.log 2>&1 ) \
+    || { rot "  ✗ Tests in einer nur-pwsh-Ablage sind ROT (BL-129)"; \
+         tail -25 "$B_REPO/.einbahnig.log" >&2; exit 1; }
+a_pruefe "Tests bleiben gruen (kein Fehlschlag durch die fehlende Bahn)" \
+    "$(grep -cE '^[0-9]+ (failed|error)' "$B_REPO/.einbahnig.log")" "0"
+a_pruefe "und die Einbahnigkeit steht in der Zusammenfassung" \
+    "$(grep -c 'einbahnige Ablage' "$B_REPO/.einbahnig.log")" "1"
+# Der eigentliche Inhalt von BL-129: Die uebersprungene Bahn wird BENANNT und
+# GEZAEHLT. Ohne die Zahl bliebe unsichtbar, wie viel der Nachweis ausgelassen
+# hat.
+a_pruefe "die abgewaehlte bash-Bahn ist als Uebersprung ausgewiesen" \
+    "$(grep -c 'bash-Bahn uebersprungen' "$B_REPO/.einbahnig.log")" "1"
+a_pruefe "und der Grund nennt die ABWAHL, nicht einen Defekt" \
+    "$(grep -c 'in dieser Ablage abgewaehlt (--nur-pwsh)' "$B_REPO/.einbahnig.log")" "1"
+a_pruefe "samt Rueckweg" \
+    "$(grep -c 'update --beide-bahnen holt sie zurueck' "$B_REPO/.einbahnig.log")" "2"
+
 git -C "$B_REPO" add -A >/dev/null 2>&1
 git -C "$B_REPO" commit -q -m "einbahnig pwsh installiert"
-bash "$KIT/bash/install.sh" "$B_REPO" --update > "$B_REPO/.rueckweg.log" 2>&1 \
+# Bestand zuerst, spiegelbildlich zu oben: Ein Windows-Projekt bekommt von
+# einem Routine-Update keine .sh dazu (BL-147). Die Richtung wiegt hier
+# schwerer — ein Windows-Projekt OHNE bash ist der Normalfall der pwsh-Bahn.
+bash "$KIT/bash/install.sh" "$B_REPO" --update > "$B_REPO/.bestand.log" 2>&1 \
     || { rot "  ✗ --update auf einem NUR-PWSH-Projekt schlug fehl (BL-126)"; \
+         sed 's/\x1b\[[0-9;]*m//g' "$B_REPO/.bestand.log" | tail -20; exit 1; }
+a_pruefe "--update laesst die nur-pwsh-Ablage einbahnig (BL-147)" \
+    "$(ls "$B_REPO" | grep -cE '\.sh$')" "0"
+a_pruefe "und die Erkennung nennt die pwsh-Bahn" \
+    "$(grep -c 'Einbahnige Ablage erkannt: nur die pwsh-Bahn' "$B_REPO/.bestand.log")" "1"
+
+git -C "$B_REPO" add -A >/dev/null 2>&1
+git -C "$B_REPO" commit -q -m "einbahnig pwsh geblieben"
+bash "$KIT/bash/install.sh" "$B_REPO" --update --beide-bahnen > "$B_REPO/.rueckweg.log" 2>&1 \
+    || { rot "  ✗ --update --beide-bahnen auf einem NUR-PWSH-Projekt schlug fehl (BL-126)"; \
          sed 's/\x1b\[[0-9;]*m//g' "$B_REPO/.rueckweg.log" | tail -20; exit 1; }
-a_pruefe "--update holt die Bash-Bahn zurueck" "$(ls "$B_REPO"/*.sh | wc -l)" "10"
+a_pruefe "--beide-bahnen holt die Bash-Bahn zurueck" \
+    "$(ls "$B_REPO" | grep -cE '\.sh$')" "$(ls "$KIT"/bash/entry/*.sh | wc -l)"
 a_pruefe "team.config.sh ist wieder da" \
     "$([ -f "$B_REPO/team.config.sh" ] && echo ja || echo nein)" "ja"
 a_pruefe "und VOLLSTAENDIG gefuellt (kein Platzhalter uebrig)" \
@@ -687,10 +847,6 @@ a_pruefe "und die Quelle steht im Protokoll" \
     "$(grep -c 'Projektwerte aus team.config.ps1 gelesen' "$B_REPO/.rueckweg.log")" "1"
 a_pruefe "das Nachziehen ist gemeldet worden" \
     "$(grep -c 'team.config.sh fehlte und ist neu erzeugt worden' "$B_REPO/.rueckweg.log")" "1"
-# BEWUSST NICHT geprueft: dass die Tests in einer nur-pwsh-Ablage gruen
-# bleiben. Sie sind es nicht (109 rot) — die bash-getriebenen Faelle laufen
-# dort ins Leere. Das ist ein EIGENER, offener Punkt (BL-129) und wird hier
-# nicht stillschweigend mitbehauptet.
 rm -rf "$(dirname "$B_REPO")"
 
 kopf "9/11 — Regel-Inventar gegen die Regeldatei (A.10, BL-56)"
@@ -803,8 +959,9 @@ E_HOME="$(mktemp -d)"
 mkdir -p "$E_HOME/.claude/scripts"
 printf '#!/usr/bin/env bash\n# alte Kopie\nexec bash "$HOME/Source/team-kit/install.sh" "$@"\n' \
     > "$E_HOME/.claude/scripts/team-init.sh"
-E_ZIEL="$(mktemp -d)/projekt"; mkdir -p "$E_ZIEL"
-git -C "$E_ZIEL" init -q; git -C "$E_ZIEL" commit -q --allow-empty -m init
+E_ZIEL="$(mktemp -d)/projekt"
+wegwerf_repo "$E_ZIEL"
+git -C "$E_ZIEL" commit -q --allow-empty -m init
 HOME="$E_HOME" bash "$KIT/bash/install.sh" "$E_ZIEL" --nicht-interaktiv >"$E_LOG" 2>&1 || true
 e_pruefe "Installer meldet eine veraltete Launcher-Kopie" \
     "$(grep -c 'ist eine KOPIE aus einer' "$E_LOG")" "1"
@@ -867,8 +1024,16 @@ e_pruefe "README verweist nicht mehr auf den Pfad der Autorenmaschine" \
 #    fuer die Maschinen da, auf denen der WSL-Weg ausfaellt.
 e_pruefe "einrichtung.md nennt den nativen Windows-Weg" \
     "$(grep -c '^## Der kurze Weg — Windows nativ' "$KIT/doku/einrichtung.md")" "1"
+# Geprueft wird, DASS der native Weg im Belegstand gefuehrt wird — nicht, WIE
+# er dort beurteilt ist. Der Vorlaeufer verlangte woertlich "gebaut und
+# gefahren" und wurde damit rot, als der Weg auf einer echten Windows-Maschine
+# lief: Er haette bei jedem Zugewinn an Beleg nachgezogen werden muessen. Ein
+# Waechter, der ein URTEIL festschreibt, ist die stille Behauptung, das Urteil
+# duerfe sich nicht aendern — dieselbe Klasse wie der Test, der `auth == "api"`
+# festschrieb (BL-143). Was sich aendern darf, ist der Befund; was nicht fehlen
+# darf, ist der Eintrag.
 e_pruefe "einrichtung.md fuehrt ihn im Belegstand" \
-    "$(grep -c 'Windows nativ (PowerShell): gebaut und gefahren' "$KIT/doku/einrichtung.md")" "1"
+    "$(grep -c '^- \*\*Windows nativ (PowerShell):' "$KIT/doku/einrichtung.md")" "1"
 
 [ "$E_FEHLER" -eq 0 ] || exit 1
 
@@ -966,11 +1131,8 @@ else
     W_B="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-gleich-b-XXXXXX")"
     # Gleicher Basename in beiden Baeumen: Der Projektname leitet sich aus dem
     # Ordner ab und wuerde sonst als Unterschied durchschlagen, der keiner ist.
-    mkdir -p "$W_A/projekt" "$W_B/projekt"
     for d in "$W_A/projekt" "$W_B/projekt"; do
-        git -C "$d" init -q .
-        git -C "$d" config user.email t@l
-        git -C "$d" config user.name T
+        wegwerf_repo "$d"
     done
     bash "$KIT/bash/install.sh" "$W_A/projekt" --nicht-interaktiv >/dev/null 2>&1 || true
     pwsh -NoProfile -File "$KIT/pwsh/install.ps1" "$W_B/projekt" -NichtInteraktiv >/dev/null 2>&1 || true

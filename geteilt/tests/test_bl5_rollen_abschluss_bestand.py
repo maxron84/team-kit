@@ -2,7 +2,7 @@
 """Regressionstest fuer BL-5: `rollen-abschluss` darf einen bestehenden
 Kostenwert NIE stillschweigend ueberschreiben.
 
-Realer Ausloeser (Feldprojekt team-kit_project_platformer, Kaskade 1,
+Realer Ausloeser (Feld A, Kaskade 1,
 2026-08-01): Nach dem Kostenabschluss lief Frank noch drei Fixes. Ein
 zweiter `--rollen-abschluss 1 produkt` zaehlte nur die seither
 entstandenen Logs (2,4114 USD) und ERSETZTE damit die Zeile ueber 1,0969

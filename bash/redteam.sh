@@ -191,7 +191,7 @@ fi
 
 # Budget: Harry/Marv sind read-only (nichts Bezahltes geht durch einen Abbruch
 # verloren) → sofortiger Hard-Cap beim zentralen Soft-Cap-Wert, KEIN Soft-Fenster
-# (team_budget_check ohne hard-limit; Strippenzieher-Entscheid 2026-07-12, HM-32).
+# (team_budget_check ohne hard-limit; Stakeholder-Entscheid 2026-07-12, HM-32).
 # Vor diesem Fix hatte redteam.sh GAR KEINEN Budget-Check — die Sweep-Kosten
 # wurden nur angezeigt, nie gedeckelt.
 ROLLE_BUDGET_USD="${ROLE_BUDGET_USD:-${TEAM_ROLE_BUDGET_USD}}"

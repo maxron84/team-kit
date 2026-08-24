@@ -59,7 +59,7 @@ RALPH_CAP_VALUE="$(team_ralph_cap)"
 # status_architekt_zeile: "beschriftung<TAB>USD" der Architekt-Kennzahl —
 # EINE Quelle für BEIDE Ansichten (Momentaufnahme und --budget).
 #
-# BL-18 (Feld platformer, Closeout K3): Der Zusatz "nicht im Gesamt enthalten"
+# BL-18 (Feld A, Closeout K3): Der Zusatz "nicht im Gesamt enthalten"
 # stand in --budget UNBEDINGT — er gilt aber nur für den Modus "geschätzt".
 # Im Modus "echt" stammt der Wert aus einer Ledger-Zeile DIESER Kaskade, und
 # die summiert team_kontostand_gesamt mit. Der Modus schaltet ausgerechnet
@@ -164,7 +164,7 @@ status_einmal() {
 
 # status_budget: kumulierter Kontostand = historische .budget-ledger-Basis
 # plus aktuelle lokale Logs (.ralph-logs/ + .team-logs/), Abo/API getrennt
-# ausgewiesen (Strippenzieher-Entscheid 3, siehe
+# ausgewiesen (Stakeholder-Entscheid 3, siehe
 # plans/ralph-kaskade-6-budget-governance.md, Stufe 18). Mit leeren
 # Log-Ordnern ist die Ausgabe exakt die Ledger-Basissumme.
 status_budget() {
@@ -279,22 +279,36 @@ print('           nicht gegen den kumulierten Gesamt-Kontostand oben.')
 }
 
 # status_architekt_abschluss: A1-Ersetzung (BL-28, Stufe 43) — haengt die
-# echte Architekt-Ledger-Zeile an (Konsolenwert vom Strippenzieher abgelesen)
+# echte Architekt-Ledger-Zeile an (Konsolenwert vom Stakeholder abgelesen)
 # und ersetzt dabei eine vorhandene Architekt-Zeile derselben Kaskade
 # (Idempotenz). Alle Werte gehen als eigene argv-Elemente an python3 (kein
 # python3 -c mit roher String-Interpolation — Lehre aus BL-23/HM-17).
+#
+# BL-143: Dieser Wrapper las ausschliesslich $1…$3 — genau der Fehler, den
+# BL-26 fuer --akteur-abschluss abgetragen hat, hier nur nie nachgezogen. Das
+# Architekten-Briefing sagt woertlich "Schalter des Werkzeugs — --kaskade,
+# --addieren, --ersetzen — haenge ich hinten an; der Wrapper reicht sie durch",
+# und fuer DIESEN Wrapper stimmte das nicht: Sie fielen kommentarlos weg.
+# Aufgefallen ist es erst, als --auth ueberhaupt etwas zu uebergeben hatte.
 status_architekt_abschluss() {
-    local usd="${1:-}" domaene="${2:-}" notiz="${3:-}"
+    local usd="${1:-}" domaene="${2:-}"
     if [ -z "$usd" ] || [ -z "$domaene" ]; then
-        echo "Nutzung: $0 --architekt-abschluss <USD> <domaene> [\"<notiz>\"]" >&2
+        echo "Nutzung: $0 --architekt-abschluss <USD> <domaene> [\"<notiz>\"] [weitere kosten.py-Schalter]" >&2
         return 1
     fi
+    shift 2
+    # Ein Argument, das mit -- beginnt, ist NIE die Notiz (Lehre BL-26).
+    local notiz=""
+    case "${1:-}" in
+        --*|"") ;;
+        *)      notiz="$1"; shift ;;
+    esac
     if [ -n "$notiz" ]; then
         $TEAM_KOSTEN_TOOL architekt-abschluss --usd "$usd" \
-            --domaene "$domaene" --notiz "$notiz"
+            --domaene "$domaene" --notiz "$notiz" "$@"
     else
         $TEAM_KOSTEN_TOOL architekt-abschluss --usd "$usd" \
-            --domaene "$domaene"
+            --domaene "$domaene" "$@"
     fi
 }
 
@@ -463,7 +477,7 @@ status_ledger_pruefen() {
 
 # status_beutebuch_archivieren: reicht auf beutebuch.py archiviere durch
 # (Kaskade 22/Stufe 91). Bewusst NICHT in vollautomatik.sh verdrahtet
-# (Strippenzieher-Entscheid, plans/ralph-kaskade-22-doku-konsolidierung.md) —
+# (Stakeholder-Entscheid, plans/ralph-kaskade-22-doku-konsolidierung.md) —
 # ein laufender Sweep darf nie unter seinen eigenen Funden rotieren. Rein
 # manuelles Abschluss-Werkzeug wie --rollen-abschluss.
 status_beutebuch_archivieren() {

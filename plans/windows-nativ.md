@@ -637,7 +637,7 @@ angefasst worden. Ergebnis in einem Satz: **Er hat es nicht bis zur ersten
 ausgeführten Zeile geschafft.**
 
 ```
-PS C:\…\team-kit> .\pwsh\kit-einrichten.ps1 C:\…\duke-itam-2026\
+PS C:\…\team-kit> .\pwsh\kit-einrichten.ps1 C:\…\Feld B\
 At …\kit-einrichten.ps1:113 char:39
 +         "Windows 11 bringt 5.1 mit; 7 wird DANEBEN installiert, nicht ...
 +                                       ~~~~

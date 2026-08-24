@@ -2,7 +2,7 @@
 """BL-27/BL-45: Der Waechter war fuer die vergessene Buchung blind, und der
 Buchungsbefehl fuer den falschen Zeitraum.
 
-BL-27 (Feld platformer, Closeout K13): Kaskade 12 war vollstaendig gebaut und
+BL-27 (Feld A, Closeout K13): Kaskade 12 war vollstaendig gebaut und
 abgeschlossen, aber `--rollen-abschluss 12 …` lief nie. 33,89 USD lagen
 ungebucht in den gitignorierten Logordnern, im Ledger stand nur die
 architekt-Zeile — `ledger-pruefen` meldete NULL Warnungen. Grund: P1
@@ -10,7 +10,7 @@ ueberspringt jede Kaskade ohne ralph/roles-Zeile als "geplant, aber nie
 gelaufen". Das Unterscheidungsmerkmal lag daneben: Eine geplante Kaskade hat
 keine unarchivierten Rohlogs, eine vergessene hat welche.
 
-BL-45 (Feld platformer, Closeout K28): Im .team-logs lag ein Axel-Lauf ueber
+BL-45 (Feld A, Closeout K28): Im .team-logs lag ein Axel-Lauf ueber
 4,2560 USD aus einer Out-of-Loop-Fixrunde, die NACH dem Abschluss der Kaskade
 27 und VOR dem ersten Commit der Kaskade 28 stattfand. `--rollen-abschluss`
 bucht schlicht alles, was im Ordner liegt, unter der genannten Nummer. Auffallen

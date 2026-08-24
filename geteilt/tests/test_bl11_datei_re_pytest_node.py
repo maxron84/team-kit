@@ -1,6 +1,6 @@
 """BL-11: DATEI_RE verschluckte per Pytest-Node-ID referenzierte Dateien.
 
-Aus dem Feld zurueckgespielt (dort BL-6, team-kit_project_platformer,
+Aus dem Feld zurueckgespielt (dort BL-6, Feld A,
 Kaskade 2 — real 12,00 USD an HM-4 verbrannt).
 
 Eine im Fund-Block als `datei.py::test_x` referenzierte Datei wurde vom
@@ -48,7 +48,7 @@ def _lade_modul():
         ("siehe `tests/test_welt.py::`", "tests/test_welt.py"),
         # Regression: der schlichte Fall darf sich NICHT veraendert haben.
         ("siehe `tests/test_spieler.py`", "tests/test_spieler.py"),
-        ("siehe `src/platformer/app.py`", "src/platformer/app.py"),
+        ("siehe `src/spiel/app.py`", "src/spiel/app.py"),
         ("siehe `./smoke.sh`", "./smoke.sh"),
     ],
 )

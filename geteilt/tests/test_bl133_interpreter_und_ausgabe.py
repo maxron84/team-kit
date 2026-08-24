@@ -164,7 +164,20 @@ def test_die_bibliothek_rechnet_unter_dieser_umgebung_wirklich(tmp_path):
 
 # --- Der zweite Fund: die Ausgabe der Werkzeuge ------------------------------
 
-WERKZEUGE = ("beutebuch.py", "kosten.py", "zitat_lint.py")
+# BL-153: Die Liste stand hier als ABSCHRIFT — drei Namen, von Hand gepflegt.
+# Das ist genau die Bauart, die `kit-readme-pruefen.py` in seinem Kopf als
+# Fehler beschreibt: Ein Waechter, der eine Abschrift prueft, veraltet mit ihr.
+# Beim vierten Werkzeug (`kit_meldung.py`) waere die Zusicherung stillschweigend
+# an ihm vorbeigelaufen — und genau dieses Werkzeug gibt Prosa mit Umlauten aus.
+# Geprueft wird deshalb die GATTUNG: jedes Werkzeug, das im Ordner liegt.
+def _werkzeuge():
+    ordner = kit_pfad("tools")
+    if not ordner.is_dir():
+        return ("beutebuch.py",)   # der Name, an dem der Skip unten greift
+    return tuple(sorted(p.name for p in ordner.glob("*.py")))
+
+
+WERKZEUGE = _werkzeuge()
 
 
 @pytest.mark.parametrize("werkzeug", WERKZEUGE)

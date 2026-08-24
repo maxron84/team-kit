@@ -47,9 +47,14 @@ param(
     # ist BEIDES — die Begruendung steht am Kopierblock: Die zwei
     # Konfigurationen sind zwei Generate EINER Quelle, und wer nur eine Bahn
     # bekommt, schreibt die andere irgendwann von Hand. Genau dort faengt
-    # Drift an. Zurueckgeholt wird mit -Update ohne Schalter.
+    # Drift an. Zurueckgeholt wird mit -Update -BeideBahnen (BL-147).
     [switch]$NurBash,
-    [switch]$NurPwsh
+    [switch]$NurPwsh,
+    # BL-147: Der Rueckweg aus BL-119 war bis hierher der Default und damit ein
+    # Automatismus — ein Update ohne Schalter legte die zweite Bahn dazu, auch
+    # in ein Projekt, das nie eine wollte. Jetzt ist er ein Schalter.
+    # Begruendung am Erkennungsblock im Update-Pfad.
+    [switch]$BeideBahnen
 )
 
 $ErrorActionPreference = 'Stop'
@@ -75,6 +80,12 @@ if ($NurBash -and $NurPwsh) {
     exit 2
 }
 $NurBahn = if ($NurBash) { 'bash' } elseif ($NurPwsh) { 'pwsh' } else { '' }
+if ($BeideBahnen -and $NurBahn) {
+    $abwahl = if ($NurBahn -eq 'pwsh') { '-NurPwsh' } else { '-NurBash' }
+    Write-Host "FEHLER: -BeideBahnen und $abwahl schliessen sich aus." -ForegroundColor Red
+    Write-Host "  -BeideBahnen holt eine fehlende Bahn zurueck, -Nur* waehlt eine ab."
+    exit 2
+}
 
 function Test-BahnAbgewaehlt {
     <#
@@ -87,6 +98,43 @@ function Test-BahnAbgewaehlt {
     switch ($script:NurBahn) {
         'bash' { return $Pfad -match '\.(ps1|psm1|cmd)$' }
         'pwsh' { return $Pfad -match '\.sh$' }
+    }
+    return $false
+}
+
+function Get-KitBahnDateien {
+    <#
+      BL-147: Die Dateien, die das KIT fuer eine Bahn ausliefert — als Paare
+      aus Zielname und Unterordner. Grundlage fuer die Erkennung UND fuer die
+      Reste-Meldung: Beide duerfen nicht an der Endung entscheiden. Ein
+      projekteigenes deploy.ps1 ist keine pwsh-Bahn, und ein build.sh macht
+      aus einem Windows-Projekt kein zweibahniges.
+    #>
+    param([string]$Bahn)
+    $liste = @()
+    if ($Bahn -eq 'bash') {
+        foreach ($f in (Get-ChildItem (Join-Path $KIT 'bash\entry') -Filter '*.sh' -File)) {
+            $liste += @{ Name = $f.Name; Ordner = '' }
+        }
+        $liste += @{ Name = 'lib.sh';     Ordner = 'team/' }
+        $liste += @{ Name = 'redteam.sh'; Ordner = 'team/' }
+    } else {
+        foreach ($muster in @('*.ps1', '*.cmd')) {
+            foreach ($f in (Get-ChildItem (Join-Path $KIT 'pwsh\entry') -Filter $muster -File)) {
+                $liste += @{ Name = $f.Name; Ordner = '' }
+            }
+        }
+        $liste += @{ Name = 'lib.psm1';    Ordner = 'team/' }
+        $liste += @{ Name = 'redteam.ps1'; Ordner = 'team/' }
+    }
+    return $liste
+}
+
+function Test-BahnLiegtDa {
+    <# BL-147: Liegt diese Bahn im Zielprojekt? #>
+    param([string]$Bahn)
+    foreach ($d in (Get-KitBahnDateien $Bahn)) {
+        if (Test-Path (Join-Path $Ziel "$($d.Ordner)$($d.Name)") -PathType Leaf) { return $true }
     }
     return $false
 }
@@ -213,7 +261,17 @@ function Setze-Werte {
         '{{CHANGELOG}}'        = 'CHANGELOG.md'
         '{{FIX_PRAEFIX}}'      = 'fix(uat)'
         '{{FEAT_PRAEFIX}}'     = 'feat'
+        # BL-149: ZWEI Platzhalter fuer einen Wert. {{SMOKE_TEST}} steht in
+        # Regeltexten — dort sagt der TODO-Satz einem Menschen, was fehlt.
+        # {{SMOKE_TEST_KONFIG}} steht NUR in team.config.*, und dort war er ein
+        # Schaden: Die Weichen der Bibliothek unterscheiden "konfiguriert" von
+        # "nicht konfiguriert" ueber leer/nicht-leer, also galt der Platzhalter
+        # als KONFIGURIERTER Befehl. In Kaskade 1 jedes Projekts landete er im
+        # Prompt der Rollen, in der Werkzeug-Allowlist des Red Teams und wurde
+        # von der Selbstpruefung woertlich ausgefuehrt (Exit 127). Ausfuehrliche
+        # Begruendung in der Fuell-Routine von install.sh.
         '{{SMOKE_TEST}}'       = $(if ($SmokeTest) { $SmokeTest } else { 'TODO: noch keiner — Stufe 1 der ersten Kaskade' })
+        '{{SMOKE_TEST_KONFIG}}' = $SmokeTest
         '{{TECH_STACK}}'       = $TechStack
         '{{DEPLOY}}'           = $Deploy
         '{{DEPLOY_AUSNAHMEN}}' = $DeployAusnahmen
@@ -223,6 +281,33 @@ function Setze-Werte {
         '{{WEITERER_CODE}}'    = $WeitererCode
         '{{TEST_BESTAND}}'     = $TestBestand
         '{{PLAN_BESTAND}}'     = $PlanBestand
+        # BL-153: Wo das Kit auf DIESER Maschine liegt. Stand bis einschliesslich 2.12.0 als
+        # ~/Source/team-kit in der Prosa und zeigte damit ueberall dorthin, wo
+        # der Autor geklont hatte. Steht nur in team.config.*; das Werkzeug
+        # kit_meldung.py kann ohne ihn arbeiten, aber nicht ohne Suchen.
+        '{{KIT_PFAD}}'         = $KIT
+    }
+    # BL-139: die bahnabhaengigen Pfade. Nannten die Regeltexte frueher fest,
+    # und in einer einbahnigen Ablage schickten sie damit jede Rolle an Dateien,
+    # die es dort nicht gibt — still, ohne Meldung. Am teuersten war
+    # team.config.sh: Der Regeltext verlangte Eintraege dort, waehrend
+    # team/lib.psm1 team.config.ps1 liest.
+    #
+    # Vorbelegt ist die bash-Bahn, wie in install.sh: In einer zweibahnigen
+    # Ablage (dem Default) liegt beides, und der gerenderte Text bleibt Byte
+    # fuer Byte der von vorher. Nur die Abwahl der bash-Bahn aendert etwas.
+    if ($script:NurBahn -eq 'pwsh') {
+        $script:Werte['{{RUF}}']     = '.\'
+        $script:Werte['{{ENDUNG}}']  = '.cmd'
+        $script:Werte['{{KONFIG}}']  = 'team.config.ps1'
+        $script:Werte['{{LIB}}']     = 'team/lib.psm1'
+        $script:Werte['{{REDTEAM}}'] = 'team/redteam.ps1'
+    } else {
+        $script:Werte['{{RUF}}']     = './'
+        $script:Werte['{{ENDUNG}}']  = '.sh'
+        $script:Werte['{{KONFIG}}']  = 'team.config.sh'
+        $script:Werte['{{LIB}}']     = 'team/lib.sh'
+        $script:Werte['{{REDTEAM}}'] = 'team/redteam.sh'
     }
 }
 
@@ -610,6 +695,39 @@ if ($Update) {
         exit 2
     }
 
+    # BL-147: Welche Bahn ein Projekt faehrt, sagt die ABLAGE — nicht der
+    # Schalter, den beim Update gerade niemand tippt. Bis hierher galt der
+    # Umkehrschluss: Ein Update ohne Schalter machte das Projekt "wieder
+    # vollstaendig" (BL-119) und legte die zweite Bahn dazu. Als Rueckweg aus
+    # einer Abwahl gedacht — im Feld ist es der Normalfall geworden, und der
+    # Normalfall will keine zweite Bahn.
+    #
+    # Feld A, 2026-08-22: Ein Routine-Update legte 21 pwsh-Dateien in ein
+    # reines Bash-Projekt. Untracked, unbestellt, und weil sie im Baum lagen,
+    # fuhr die Testsuite ab da eine Bahn mit, die dort niemand faehrt (conftest
+    # entscheidet an der ANWESENHEIT der Dateien). Auf dieser Bahn gilt es
+    # spiegelbildlich: Ein Windows-Projekt bekommt keine .sh dazu.
+    #
+    # Der Rueckweg bleibt, er wird nur ausdruecklich: -BeideBahnen. Derselbe
+    # Schnitt wie bei der Abwahl selbst ("kommt vom Anwender, nie vom
+    # Installer") — nur jetzt in beide Richtungen.
+    if (-not $NurBahn -and -not $BeideBahnen) {
+        $hatBash = Test-BahnLiegtDa 'bash'
+        $hatPwsh = Test-BahnLiegtDa 'pwsh'
+        if ($hatBash -and -not $hatPwsh)      { $script:NurBahn = 'bash' }
+        elseif ($hatPwsh -and -not $hatBash)  { $script:NurBahn = 'pwsh' }
+        if ($script:NurBahn) {
+            # Setze-Werte laeuft weiter unten und liest $script:NurBahn — die
+            # Regeltexte bekommen ihre Pfade damit aus der ERKANNTEN Bahn.
+            # Sonst nennt der Systemprompt jeder Rolle Dateien, die es hier
+            # nicht gibt (BL-139).
+            Gruen "  [ok] Einbahnige Ablage erkannt: nur die $($script:NurBahn)-Bahn (BL-147)"
+            Write-Host "    Das Update haelt sie einbahnig und legt keine Dateien der"
+            Write-Host "    anderen Bahn dazu. Zweibahnig machen (ausdruecklich):"
+            Write-Host "      pwsh -File '$KIT\pwsh\install.ps1' '$Ziel' -Update -BeideBahnen"
+        }
+    }
+
     # BL-10: NIEMALS in einen laufenden Lauf hinein aktualisieren. Real
     # passiert: Ein Update waehrend eines aktiven Laufs legte frische,
     # uncommittete Dateien in team/ ab; der naechste Read-Only-Lauf wertete sie
@@ -711,7 +829,7 @@ if ($Update) {
     if ($commitEntscheid) {
         Gruen "  [ok] Commit-Entscheid aus dem bisherigen Briefing uebernommen"
     } else {
-        $commitEntscheid = 'Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Strippenzieher führt sie aus.'
+        $commitEntscheid = 'Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Stakeholder führt sie aus.'
         Gelb "  [!] Commit-Entscheid nicht lesbar — Default (nicht selbst committen) gesetzt."
     }
 
@@ -806,15 +924,15 @@ if ($Update) {
     # Installers hat im Feld einen projekteigenen Test mitgenommen). Genannt
     # wird es, mit dem Befehl daneben.
     if ($script:NurBahn) {
+        # Gezaehlt wird nur, was das KIT ausliefert (BL-147, dieselbe
+        # Ueberlegung wie bei der Erkennung): Ein projekteigenes deploy.ps1
+        # gehoert nicht der abgewaehlten Bahn, und ein "git rm" darauf waere
+        # ein Rat, der fremde Arbeit loescht.
         $reste = @()
-        # Der relative Name wird gebaut, nicht ausgerechnet: Resolve-Path
-        # -RelativeBasePath gibt es erst ab PowerShell 7.4, und der Installer
-        # laeuft auch darunter.
-        foreach ($paar in @(@{ Ordner = $Ziel; Praefix = '' },
-                            @{ Ordner = (Join-Path $Ziel 'team'); Praefix = 'team/' })) {
-            if (-not (Test-Path $paar.Ordner)) { continue }
-            foreach ($f in (Get-ChildItem $paar.Ordner -File)) {
-                if (Test-BahnAbgewaehlt $f.Name) { $reste += "$($paar.Praefix)$($f.Name)" }
+        $andereBahn = if ($script:NurBahn -eq 'pwsh') { 'bash' } else { 'pwsh' }
+        foreach ($d in (Get-KitBahnDateien $andereBahn)) {
+            if (Test-Path (Join-Path $Ziel "$($d.Ordner)$($d.Name)") -PathType Leaf) {
+                $reste += "$($d.Ordner)$($d.Name)"
             }
         }
         if ($reste.Count) {
@@ -1188,7 +1306,7 @@ if (-not $PlanBestand -and -not $TestBestand) {
 $CommitEntscheid = if ($CommitModus.ToLower() -in @('j', 'ja', 'y', 'yes')) {
     'Ich committe Plan-/Doku-Änderungen selbst (docs(plan): …).'
 } else {
-    'Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Strippenzieher führt sie aus.'
+    'Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Stakeholder führt sie aus.'
 }
 
 Setze-Werte $Projekt $Produktivcode $TestOrdner $PlanOrdner $SmokeTest `

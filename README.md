@@ -1,3 +1,26 @@
+[![Linux — verifiziert](https://img.shields.io/badge/Linux-verifiziert-2ea44f?style=flat-square&logo=linux&logoColor=white)](doku/einrichtung.md#belegstand)
+[![Windows WSL2 — hergeleitet](https://img.shields.io/badge/Windows_WSL2-hergeleitet-dfb317?style=flat-square&logo=windows&logoColor=white)](doku/einrichtung.md#belegstand)
+[![Windows nativ — im Feld gelaufen](https://img.shields.io/badge/Windows_nativ-im_Feld_gelaufen-2ea44f?style=flat-square&logo=powershell&logoColor=white)](doku/einrichtung.md#belegstand)
+[![macOS — nicht belegt](https://img.shields.io/badge/macOS-nicht_belegt-9f9f9f?style=flat-square&logo=apple&logoColor=white)](doku/einrichtung.md#belegstand)
+
+[![Version 2.12.0](https://img.shields.io/badge/Version-2.12.0-007ec6?style=flat-square)](CHANGELOG.md)
+[![Regressionstests 698](https://img.shields.io/badge/Regressionstests-698-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
+[![Selbsttest 11 Stufen](https://img.shields.io/badge/Selbsttest-11_Stufen-2ea44f?style=flat-square)](bash/kit-test.sh)
+[![Lizenz MIT](https://img.shields.io/badge/Lizenz-MIT-007ec6?style=flat-square)](LICENSE)
+
+[![Projekt-Stack agnostisch](https://img.shields.io/badge/Projekt--Stack-agnostisch-2ea44f?style=flat-square)](#grenzen)
+[![Antrieb — Nutzen je Token](https://img.shields.io/badge/Antrieb-Nutzen_je_Token-8957e5?style=flat-square)](#der-antrieb-nutzen-je-token)
+[![Modelle agnostisch](https://img.shields.io/badge/Modelle-agnostisch-8957e5?style=flat-square)](#modelle--agnostisch-aber-nicht-anspruchslos)
+[![Agenten-CLI nur Claude Code](https://img.shields.io/badge/Agenten--CLI-nur_Claude_Code-fe7d37?style=flat-square&logo=anthropic&logoColor=white)](#grenzen)
+[![Lokale Modelle Fernziel](https://img.shields.io/badge/Lokale_Modelle-Fernziel-fe7d37?style=flat-square)](#modelle--agnostisch-aber-nicht-anspruchslos)
+[![Binary nicht geplant](https://img.shields.io/badge/Binary-nicht_geplant-e05d44?style=flat-square)](#grenzen)
+
+> **Der Farbcode ist der Belegstand des Kits, nicht die Wunschliste:**
+> 🟢 im Feld belegt · 🟡 hergeleitet und an der Maschine geprüft ·
+> 🟠 gebaut oder gewollt, aber nicht abgenommen · 🔴 nicht vorhanden ·
+> ⚪ nicht belegt. Woher die Einstufung kommt, steht im
+> [Belegstand](doku/einrichtung.md#belegstand) und unter [Grenzen](#grenzen).
+
 ![T.E.A.M. — Toll, ein anderer macht's. Sechs Rollenkarten im Terminal-Look:
 Ralph Wiggum (Bau-Loop), der Architekt (Plan & Closeout), Frank der Fixer
 (Ad-hoc-Fixes) — die drei dürfen Code schreiben; Harry (Red Team Security),
@@ -8,6 +31,34 @@ Leitsatz: Finder ≠ Fixer.](team-banner.webp)
 
 Ein vollständiges KI-Rollenteam auf Knopfdruck in ein Software-Projekt —
 frisch angelegt **oder seit Jahren gewachsen**.
+
+## Was das ist — und für wen
+
+**Was das ist.** Kein Chat-Assistent und kein Autopilot, sondern ein
+**Regiepult**. Sechs KI-Rollen mit harten Auflagen, ein Loop, der einen
+geschriebenen Plan Stufe für Stufe abarbeitet — **ein Commit je Stufe** —, und
+eine Buchführung, die hinterher zeigt, was jede einzelne Stufe gekostet hat. Du
+tippst den Code nicht; du entscheidest, **was** gebaut wird, liest den Diff und
+gibst die nächste Stufe frei.
+
+**Für wen.** Für **erfahrene Entwickler**, die ihren eigenen Code lesen und
+verstehen und ihr KI-Team Schritt für Schritt anleiten wollen — in der Rolle
+eines **fachlich orientierten Stakeholders**: Product Owner, Chefentwickler,
+Tech Lead. Das ist keine Höflichkeitsformel, sondern eine **Betriebsbedingung**.
+Das tragende Prinzip **Finder ≠ Fixer** endet bei einem Menschen, der den Fund
+*beurteilen* muss: Ist der Red-Team-Fund echt oder Rauschen? Behebt Franks Fix
+die Ursache oder das Symptom? Ist die Stufe abnahmereif? Wer den Diff nicht
+liest, kann diese Fragen nicht beantworten — dann wird das Beutebuch zur Ablage
+statt zur Entscheidung, und das Team baut zuverlässig, ausdauernd und teuer am
+Ziel vorbei.
+
+**Warum es das gibt.** Der Antrieb ist **Kosten/Nutzen**, nicht Bequemlichkeit —
+agnostisch gesagt: **Nutzen je Token**. Das ist der Unterschied zum Bauen über
+ein oder mehrere Chatfenster, und es ist derselbe Maßstab, der später für ein
+**lokales Modell offline** gilt. Ausgeführt unter
+[Der Antrieb](#der-antrieb-nutzen-je-token).
+
+## Schnellstart
 
 ```bash
 git clone https://github.com/maxron84/team-kit.git ~/Source/team-kit
@@ -26,20 +77,24 @@ im Linux-Dateisystem. Die ganze Routine für beide Plattformen, mit IDE (VS
 Codium bzw. VS Code) und Agenten-Werkzeug, steht in
 [doku/einrichtung.md](doku/einrichtung.md).
 
-Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 131 Dateien im
+Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 146 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
-`TEAM.md` und 369 Regressionstests.
+`TEAM.md` und 698 Regressionstests.
 
-**Stand: Version 2.10.0** (2026-08-16). Der Backlog des Kits ist wieder leer.
-Neu: Der vierte `BL-41`-Ausgang — Log meldet Erfolg, Quittung fehlt — prüft
-sich selbst, statt die Vollautomatik mitten in der Kaskade anzuhalten; im Feld
-war der Fall neunmal aufgetreten und neunmal gleich ausgegangen. Behoben: ein
-Kit-Test, der am Füllstand des Beutebuchs hing, und ein `install.sh --update`,
-das ein gewachsenes `.gitignore` nie nachzog. Neu dokumentiert ist die
-**Modellhaltung** des Kits (Abschnitt unten): agnostisch, mit benannten
-Fähigkeitsanforderungen und lokalen Modellen als Fernziel. Abgetragene Einträge
-stehen in [plans/backlog-archiv.md](plans/backlog-archiv.md) (63 Stück).
+**Stand: Version 2.12.0** (2026-08-22). Das Neue ist vor allem ein **Beleg**:
+Die pwsh-Bahn hat auf einer echten Windows-Maschine ihre erste Kaskade geplant,
+gebaut und abgeschlossen — einbahnig installiert, mit dem ersten vollständigen
+Kostenabschluss überhaupt. Daraus kam die Runde `BL-120`…`BL-146`, darunter drei
+Fehler in der Kostenkette, die erst beim **vollständigen** Durchlauf zuschlagen:
+ein Abbruch genau bei dem Aufruf, den die Doku vorgibt; eine Abo-Buchung, die in
+der API-Spalte landete; und eine Architektenzeile, die den Diff maß statt der
+Arbeit. Alle drei sind behoben, und die Messung liegt jetzt als Werkzeug im Kit
+(`kosten.py sitzung-messen`) statt als Skript, das sich jeder neu schreibt.
+
+**Offen sind fünf Einträge**, und alle fünf brauchen dieselbe Maschine:
+[plans/backlog.md](plans/backlog.md). Abgetragenes steht in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (94 Einträge).
 
 ---
 
@@ -55,7 +110,9 @@ stehen in [plans/backlog-archiv.md](plans/backlog-archiv.md) (63 Stück).
 
 | Abschnitt | Worum es geht |
 |---|---|
+| [Was das ist — und für wen](#was-das-ist--und-für-wen) | Regiepult statt Autopilot — und die Betriebsbedingung dahinter |
 | [Was das T.E.A.M. ist](#was-das-team-ist) | Die sechs Rollen und das Prinzip *Finder ≠ Fixer* |
+| [Der Antrieb](#der-antrieb-nutzen-je-token) | Nutzen je Token: vier Hebel, die Gegenrechnung zum Chatfenster, die Rolle von Git |
 | [Modelle](#modelle--agnostisch-aber-nicht-anspruchslos) | Zwei Stufen statt Modellnamen, sechs vorausgesetzte Fähigkeiten, Ziel lokal |
 | [Herkunft](#herkunft) | Woher der Code kommt und wo er scharf gelaufen ist |
 | [Installation](#installation) | `install.sh`, das Aufnahme-Interview, `--update` gegen `--force` |
@@ -63,6 +120,7 @@ stehen in [plans/backlog-archiv.md](plans/backlog-archiv.md) (63 Stück).
 | [In ein bestehendes Projekt](#in-ein-bestehendes-projekt) | Schreibzone und Prüfumfang im Bestand (`BL-51`, `BL-52`) |
 | [Aufbau des Kits](#aufbau-des-kits) | Welche Datei wo liegt — im Kit und im Zielprojekt |
 | [Betrieb](#betrieb) | Befehle und Exit-Codes |
+| [Rückkanal Feld → Kit](#der-rückkanal-feld--kit) | Wie ein Fund am Kit zurückkommt — und warum der Mensch sendet |
 | [Grenzen](#grenzen) | Was belegt ist und was ausdrücklich nicht |
 | [Lizenz](#lizenz) | MIT |
 
@@ -72,18 +130,21 @@ die Bedienanleitung fürs Zielprojekt ist `TEAM.md`:
 | Datei | Für wen | Inhalt |
 |---|---|---|
 | **[doku/einrichtung.md](doku/einrichtung.md)** | **wer das Kit auf eine Maschine holt** | **Die Routine: Klonen, Bordmittel, WSL, IDE, Auth, Einbinden, Fehlerbilder, Belegstand** |
-| [doku/faq.md](doku/faq.md) | wer beim Aufsetzen hängt | Ganze Fragen statt Symptomzeilen — beginnend mit *Claude-CLI nicht gefunden* (Linux, WSL, Windows) |
+| [doku/faq.md](doku/faq.md) | wer beim Aufsetzen oder im Betrieb hängt | Vier ganze Fragen statt Symptomzeilen: CLI nicht gefunden, Exit `42`/`43`, abgewählte Bahn zurückholen, Kosten höher als geschätzt |
 | [doku/anhang-a.md](doku/anhang-a.md) | wer wissen will, *warum* es so gebaut ist | Die Warum-Schicht: Bauentscheide und Feld-Betriebslehren (A.0–A.13) |
 | [doku/regel-inventar.md](doku/regel-inventar.md) | wer eine Regel der Vorlage ändert | Jede Regel als NORM/HERLEITUNG/HISTORIE, mit Träger und wörtlichem Zitat |
 | [CHANGELOG.md](CHANGELOG.md) | wer eine bestehende Installation nachzieht | Jede Änderung mit Begründung und Feldbeleg |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | wer einen Fund am Kit zurückmelden will | Der Meldeweg, die Redaktionsregel, was ein Code-PR nachweisen muss |
 | [plans/backlog.md](plans/backlog.md) | wer am Kit mitbaut | Offene Punkte (Abgetragenes im [Archiv](plans/backlog-archiv.md)) |
-| `TEAM.md` | der Strippenzieher im Zielprojekt | Bedienanleitung — wird installiert und liegt danach im Projekt |
+| [plans/windows-nativ.md](plans/windows-nativ.md) | wer die pwsh-Bahn versteht oder erweitert | Der Bauplan der zweiten Bahn: Anlass, verworfene Alternativen, Stufen, Abnahmekriterien |
+| [plans/roadmap-skizzen.md](plans/roadmap-skizzen.md) | wer eine Idee sucht statt einer Aufgabe | Ungehärtete Stränge — bewusst noch kein Plan |
+| `TEAM.md` | der Stakeholder im Zielprojekt | Bedienanleitung — wird installiert und liegt danach im Projekt |
 
 ---
 
 ## Was das T.E.A.M. ist
 
-Sechs KI-Rollen unter der Regie **eines** Menschen (des *Strippenziehers*):
+Sechs KI-Rollen unter der Regie **eines** Menschen (des *Stakeholders*):
 
 | Rolle | Aufgabe | Darf Produktivcode ändern? |
 |---|---|---|
@@ -97,6 +158,89 @@ Sechs KI-Rollen unter der Regie **eines** Menschen (des *Strippenziehers*):
 Tragendes Prinzip: **Finder ≠ Fixer.** Wer einen Fehler findet, behebt ihn nicht
 selbst — das macht Frank. Jede Übergabe läuft über das Beutebuch und bleibt
 nachvollziehbar.
+
+## Der Antrieb: Nutzen je Token
+
+**Der eigentliche Antrieb dieses Kits ist Kosten/Nutzen.** Ein Rollenteam mit
+Loop ist kein Selbstzweck: **Graphen und Loops sind der heutige Stand der
+Technik**, um sich einem guten Ergebnis *iterativ* zu nähern — Schritt für
+Schritt, Commit für Commit, mit einer menschlichen Abnahme dazwischen. Kommt
+morgen eine bessere Mechanik, wird sie getauscht; das Ziel bleibt.
+
+Bewusst formuliert als **Nutzen je Token**, nicht als „Kosten pro Monat". Wer in
+Token rechnet statt in Dollar, hat die Rechnung schon aufgestellt, die für ein
+**lokales Modell offline** gilt — dort kostet nicht der Token Geld, sondern
+Zeit, Strom und Kontextfenster. Es ist dieselbe Optimierung mit anderen
+Einheiten, und deshalb ist das
+[Fernziel lokal](#modelle--agnostisch-aber-nicht-anspruchslos) kein Anhängsel,
+sondern die Konsequenz: Wer sich heute an ein volles Kontextfenster gewöhnt,
+kann später nicht auf ein kleines Modell wechseln. Wer heute mit engen Stufen
+auskommt, kann es.
+
+**Vier Hebel — alle gebaut, alle im Feld gefahren:**
+
+| Hebel | Was dahintersteckt |
+|---|---|
+| **Zwei Stufen statt eines Modells** | Die Rollen kennen keine Modellnamen, sondern `TEAM_MODEL_LOOP` und `TEAM_MODEL_STRONG`. Die **Masse** der Aufrufe (Bau-Loop, Sweeps, Fixes) läuft auf der günstigen Stufe; die starke läuft **nie im Dauer-Loop**, sondern fallweise — ein Fall pro Aufruf |
+| **Caps mit zwei Schwellen** | Soft-Cap = Hinweis, Hard-Cap = Airbag. Die Trennung ist eine bezahlte Feldlehre (`HM-32`): Ein zu enger Cap greift **nach** dem bereits bezahlten Aufruf und wirft plausible Arbeit per Rollback weg — er spart nichts, er **vervielfacht** |
+| **Messen statt schätzen** | Jeder Aufruf schreibt seinen Preis ins Ledger, getrennt nach API-Geld und Abo-Gegenwert. `--budget` zeigt den Kontostand, `--ledger-pruefen` sucht die Lücken, `kosten.py sitzung-messen` holt die interaktiven Sitzungen nach, die von sich aus keinen Wert melden |
+| **Der Commit als Buchungseinheit** | Eine Stufe = ein Commit = eine Ledgerzeile. Damit ist „was hat dieses Feature gekostet" keine Schätzung, sondern eine Abfrage — siehe unten |
+
+### Was das gegenüber einem Chatfenster ändert
+
+In einem Chatfenster wächst der Kontext **monoton**: Jeder Folgeschritt trägt
+die gesamte Vorgeschichte mit, auch die verworfenen Zwischenstände. Caching
+verbilligt das, aber es schafft es nicht ab. Und am Ende weiß niemand, was
+welcher Schritt gekostet hat — im Abo gibt es dafür nicht einmal eine Zahl auf
+der Konsole.
+
+Der Loop dreht beides um. Jeder Rollenaufruf ist ein **eigener Prozess** mit
+*genau* dem Kontext, den die Stufe braucht: die Regeldatei, der aktive Plan,
+die eine Stufe. Was die vorige Stufe an Irrwegen produziert hat, ist nicht
+mehr im Kontext — es steht im Commit, wo man es nachlesen kann, wenn man will,
+und wo es nichts kostet, wenn man nicht will. Der Preis jedes Aufrufs kommt als
+Zahl zurück und landet in der Buchhaltung.
+
+Belegt ist das an `Feld A`: 33 Kaskaden, 157 Stufen, 49 Loop-Läufe,
+rund 1265 USD Abo-Gegenwert — **vollständig geledgert**, aufgeschlüsselt bis
+auf die Stufe. Nicht, weil die Summe klein wäre, sondern weil sie **bekannt**
+ist. Was sich nicht messen lässt, lässt sich auch nicht optimieren; genau
+deshalb waren die drei teuersten Kit-Fehler dieses Jahres alle Löcher in der
+**Kostenerfassung** und nicht im Bau-Code.
+
+### Warum Git hier mehr trägt als anderswo
+
+**Feine, atomare Commits sind kein Alleinstellungsmerkmal** — im gesamten
+Umfeld des agentischen Programmierens gelten sie als empfohlene Praxis, und das
+zu Recht. Der Unterschied liegt darin, **wer** sie durchsetzt und **wozu** sie
+dienen.
+
+Anderswo ist der Commit eine **Empfehlung an den Menschen**, und der Rückweg
+ist typischerweise ein **editor-lokaler Snapshot** — ohne Diff, nicht teilbar,
+nicht in der Historie, beim Maschinenwechsel weg. Hier ist der Commit ein
+**Zustandsübergang der Maschine** und trägt drei Lasten gleichzeitig:
+
+1. **Bedingung des Fortschritts.** Ralph schaltet `.ralph-state` erst **nach**
+   dem Commit weiter. Eine Stufe ohne Commit ist kein halber Erfolg, sondern
+   eine eigene, benannte Fehlerklasse mit eigenem Exit-Code (`43`) — weil die
+   Verwechslung mit „Fehler" im Feld viermal die bereits bezahlte Arbeit
+   gekostet hat (zusammen 19,47 USD).
+2. **Buchungseinheit des Geldes.** Ein Snapshot kostet nichts und bucht nichts;
+   er ist ein Undo. Ein Commit hier ist die Zeile, an der Ledger, Cap und
+   Rollback ansetzen. Deshalb ist auch der Rollback keine kostenlose Geste: Er
+   wirft bezahlte Arbeit weg, und genau das ist der Grund, warum die Caps
+   großzügig stehen.
+3. **Prüfeinheit des Menschen.** Ein Diff je Stufe ist die Menge, die ein
+   Stakeholder noch lesen und verantworten kann. Die Feinkörnigkeit ist keine
+   Ordnungsliebe — sie ist die **Portionierung, in der Kontrolle überhaupt
+   ausübbar bleibt**, und damit die Verbindung zurück zu „für wen".
+
+**Und die Grenze, damit es keine Sparversprechen gibt:** Das Kit senkt nicht
+den Preis pro Token. Es senkt die **Zahl der Token, die für nichts verbrannt
+werden** — durch enge Stufen, billige Rollen, abgebrochene Leerläufe und
+dadurch, dass doppelte Arbeit überhaupt sichtbar wird. Die 1265 USD aus
+`Feld A` sind der Beleg dafür, dass hier gearbeitet wurde, nicht dafür, dass es
+umsonst war.
 
 ## Modelle — agnostisch, aber nicht anspruchslos
 
@@ -153,17 +297,27 @@ den üblichen Cloud-Modellen weiter.
 
 ## Herkunft
 
-Der Code stammt aus dem Projekt `website-maxron-de`, wo er über **22 Kaskaden**
+Der Code stammt aus dem **Ursprungsprojekt**, wo er über **22 Kaskaden**
 scharf gelaufen ist (2026-07-10 bis 2026-08-01): reale Red-Team-Funde `HM-1`…`HM-53`,
 Frank-Fixes, wirksamer Read-Only-Guard. Er wurde **nicht neu geschrieben**, sondern
 übernommen und parametrisiert — die teuer gelernten Details bleiben erhalten.
 
-Seither läuft das Kit im Feldprojekt `team-kit_project_platformer`: **33 Kaskaden,
-157 Stufen, 93 Red-Team-Funde `HM-1`…`HM-93`, 49 `vollautomatik.sh`-Läufe,
-rund 1265 USD Abo-Gegenwert — vollständig geledgert** (Stand 2026-08-11). Aus
-diesem Betrieb und aus Einzügen in fremde Codebasen kommen die Backlog-Einträge
-`BL-1`…`BL-61`; was davon behoben ist, steht im [CHANGELOG](CHANGELOG.md) und
-in [plans/backlog-archiv.md](plans/backlog-archiv.md), der Rest in
+Seither kommen die Befunde aus dem laufenden Betrieb. **Die Projekte werden
+nicht genannt** — für den Beleg zählt nicht, wie sie heißen, sondern was sie
+haben und was sie getan haben. Dafür tragen sie feste Kürzel:
+
+| Kürzel | Profil | Was dort gelaufen ist |
+|---|---|---|
+| **Ursprung** | Web-Projekt, Linux, bash-Bahn | 22 Kaskaden (2026-07-10 bis 2026-08-01), `HM-1`…`HM-53` — die Quelle des Codes |
+| **`Feld A`** | Greenfield, Python mit Spiel-Engine, Linux, bash-Bahn | 33 Kaskaden, 157 Stufen, `HM-1`…`HM-93`, 49 `vollautomatik.sh`-Läufe, rund 1265 USD Abo-Gegenwert — vollständig geledgert (Stand 2026-08-11) |
+| **`Feld B`** | Greenfield, Windows 11, **einbahnig pwsh** installiert | Erste Kaskade geplant, gebaut und abgeschlossen (2026-08-21) — der erste vollständige Kostenabschluss eines Projekts überhaupt |
+| **`Feld C`** | Fremde, **gewachsene** Codebasis: Python/tkinter, Einstiegspunkt in der Wurzel, `src/`, `bin/`, gewachsene `tests/`, belegtes `plans/` | Gelesen (2026-08-11) und installiert (2026-08-13). **Keine** Kaskade — belegt ist der Einzug, nicht der Betrieb |
+| **`Feld D`** | Greenfield, Linux, bash-Bahn: Electron + Python 3 + SQLite — Neubau, dessen tkinter-Vorgänger als reine Lesereferenz danebenliegt | Erste Kaskade geplant und gebaut (2026-08-23), Stufen 1–4 grün, Stufe 5 an der Umgebung blockiert. `BL-149`…`BL-151` — **drei Erstlauf-Funde**, alle aus dem Zeitfenster, das ein laufendes Projekt gar nicht mehr hat |
+
+Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen fünf Quellen
+kommen die Backlog-Einträge `BL-1`…`BL-151`; was davon behoben ist, steht im
+[CHANGELOG](CHANGELOG.md) und in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (94 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors
@@ -175,21 +329,27 @@ Schwester-Repo, nicht Teil dieses Kits.
 ```bash
 # Linux und WSL
 bash bash/install.sh <zielpfad> [--nicht-interaktiv] [--update|--force]
-                                [--nur-bash|--nur-pwsh]
+                                [--nur-bash|--nur-pwsh|--beide-bahnen]
+bash bash/install.sh --hilfe    # alle Optionen mit Erklärung
 ```
 
 ```powershell
 # Windows nativ (PowerShell 7, ohne WSL)
 pwsh -File pwsh\install.ps1 <zielpfad> [-NichtInteraktiv] [-Update|-Force]
-                                       [-NurBash|-NurPwsh]
+                                       [-NurBash|-NurPwsh|-BeideBahnen]
 ```
 
 > **Beide Installer erzeugen aus denselben neun Antworten byte-identische
 > Bäume** — festgenagelt in `kit-test.sh`, Schritt 11/11. Sie schreiben auch
 > **beide** Konfigurationen (`team.config.sh` *und* `team.config.ps1`), damit
 > ein auf Linux eingerichtetes Projekt unter Windows nicht ohne Konfiguration
-> dasteht. Die pwsh-Bahn ist **gebaut, aber noch nicht auf Windows
-> abgenommen** — siehe [doku/einrichtung.md, *Belegstand*](doku/einrichtung.md#belegstand).
+> dasteht. Die pwsh-Bahn ist inzwischen **auf einer echten Windows-Maschine
+> gelaufen**, samt einer vollständigen Kaskade (`Feld B`). Was dort noch fehlt,
+> ist nicht die Bahn, sondern ihr **Selbsttest**: `kit-test.ps1` fährt 6 von 11
+> Stufen und 15 von 127 Prüfungen (`BL-145`). Ein Fix an gemeinsamem Code gilt
+> deshalb erst als nachgewiesen, wenn **`kit-test.sh`** gelaufen ist — nicht,
+> wenn `kit-test.ps1` grün meldet. Siehe
+> [doku/einrichtung.md, *Belegstand*](doku/einrichtung.md#belegstand).
 
 **Nur eine Bahn installieren:** `--nur-bash` bzw. `--nur-pwsh` (PowerShell:
 `-NurBash` / `-NurPwsh`). Ein Projekt bekommt dann statt 29 Entrypoints nur
@@ -200,18 +360,26 @@ anderen System keine Konfiguration — und schreibt sie irgendwann von Hand.
 Genau dort fängt Drift an. Die Abwahl ist deshalb ausdrücklich und kommt vom
 Anwender, nie vom Installer.
 
-**Sie ist keine Einbahnstraße:** Ein späteres `--update` *ohne* Schalter macht
-das Projekt wieder vollständig — samt der fehlenden Konfiguration, erzeugt aus
-den Werten der vorhandenen, nicht aus den Auslieferungswerten. In einem
-einbahnigen Projekt bleiben die Team-Tests grün; die fehlende Bahn erscheint
-als **sichtbarer** Vermerk in der Testzusammenfassung („einbahnige Ablage"),
-nicht als Fehlschlag und nicht als stiller Übersprung.
+**Ein Update hält die Bahn** (`BL-147`): Der Installer erkennt eine einbahnige
+Ablage an den Dateien, die das **Kit** ausliefert — nicht an Endungen, ein
+projekteigenes `deploy.ps1` zählt also nicht — und legt nichts der anderen
+Bahn dazu. Bis `BL-147` war es umgekehrt, und im Feld bekam ein reines
+Bash-Projekt bei einem Routine-Update **21 ungebetene pwsh-Dateien**.
+
+**Sie ist trotzdem keine Einbahnstraße:** `--update --beide-bahnen`
+(`-BeideBahnen`) macht das Projekt vollständig — samt der fehlenden
+Konfiguration, erzeugt aus den Werten der vorhandenen, nicht aus den
+Auslieferungswerten. Der Rückweg kommt damit vom **Anwender**, wie die Abwahl
+selbst. In einem einbahnigen Projekt bleiben die Team-Tests grün; die fehlende
+Bahn erscheint als **sichtbarer** Vermerk in der Testzusammenfassung
+(„einbahnige Ablage"), nicht als Fehlschlag und nicht als stiller Übersprung.
 
 **Ein bestehendes Projekt auf eine neue Kit-Version heben:** `--update`. Es
 fasst **nur** die Infrastruktur an (Entrypoints außer `team.config.sh`,
 `team/lib.sh`, `team/redteam.sh`, `team/tools/`, `team/prompts/`,
 `team/tests/`) und lässt Ledger, Kaskadenstand, Beutebuch, CHANGELOG, `plans/`,
-`CLAUDE.md` und `team.config.sh` unberührt. Zum Schluss meldet es, welche
+`CLAUDE.md` und `team.config.sh` unberührt. **Die Bahn ändert es nicht** — eine
+einbahnige Ablage bleibt einbahnig (`BL-147`). Zum Schluss meldet es, welche
 Doku-Dateien von der Kit-Fassung abweichen — die **Regeln** müssen von Hand
 nachgezogen werden, sonst läuft die Doku der Mechanik hinterher.
 
@@ -223,7 +391,7 @@ nachgezogen werden, sonst läuft die Doku der Mechanik hinterher.
 > `--force` ist nur für eine kaputte **Erst**installation gedacht.
 
 **Voraussetzungen**: Zielpfad ist ein Git-Repository, `claude` im PATH,
-Auth eingerichtet (`bash scripts/team-auth-setup.sh`). Geprüft und erklärt
+Auth eingerichtet (`bash bash/scripts/team-auth-setup.sh`). Geprüft und erklärt
 werden sie von `kit-einrichten.sh` bzw. `kit-einrichten.ps1`; die ausführliche
 Fassung — Linux, Windows mit WSL und Windows nativ — steht in
 [doku/einrichtung.md](doku/einrichtung.md). Welche
@@ -302,7 +470,7 @@ bleibt deiner, der Smoke-Test ist im Bestandsprojekt meist schon vorhanden —
 genau das Feld, das im leeren Projekt zuerst fehlt.
 
 > **Belegstand.** Die Stellen, an denen die Defaults nur für ein Neuprojekt
-> taugten, stammen aus einer fremden Bestandscodebasis (`Project-Family-ERP`,
+> taugten, stammen aus einer fremden Bestandscodebasis (`Feld C`,
 > Python/tkinter, Einstiegspunkt in der Wurzel, `src/`, `bin/`, gewachsene
 > `tests/`, belegtes `plans/`): erst **gelesen** (2026-08-11 → `BL-51`/`BL-52`,
 > gebaut in 2.6.0), dann **installiert** (2026-08-13 → `BL-57`, gebaut in
@@ -354,6 +522,7 @@ bash/                   ALLES, was die Bash-Bahn ausmacht
 │   ├── halbautomatik.sh    Schrittweise, mit Halt beim Menschen
 │   ├── team-status.sh      Kontostand, Pipeline, Beutebuch-Übersicht
 │   ├── team-test.sh        Regressionstests der Team-Infrastruktur
+│   ├── kit-melden.sh       Rückkanal: Fund AM KIT melden (`BL-153`)
 │   ├── ralph.sh frank.sh axel.sh harry.sh marv.sh
 │   └── team.config.sh      ALLE Projektwerte an einer Stelle
 └── scripts/            Maschinen-Skripte, NICHT installiert
@@ -370,20 +539,28 @@ pwsh/                   ALLES, was die pwsh-Bahn ausmacht — spiegelbildlich
 └── scripts/            team-auth-setup.ps1  team-init.ps1
 
 geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
-├── tools/              kosten.py, beutebuch.py, zitat_lint.py — Ledger,
+├── tools/              kosten.py, beutebuch.py, zitat_lint.py,
+│                       kit_meldung.py — Ledger,
 │                       Beutebuch und Kostenrechnung liegen auf beiden Wegen
 │                       in denselben Dateien. Die pwsh-Bahn ist eine zweite
 │                       ORCHESTRIERUNG, kein zweiter Zustandscode
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-├── tests/              79 Testdateien, 556 Fälle — der Doppelbahn-Harnisch
+├── tests/              90 Testdateien, 698 Fälle — der Doppelbahn-Harnisch
 │                       fährt jeden Fall gegen BEIDE Bahnen, aus EINEM
 │                       Testkörper
-└── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
-                        bewacht die Vorlage, nicht die installierte CLAUDE.md
+├── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
+│                       bewacht die Vorlage, nicht die installierte CLAUDE.md
+└── kit-readme-pruefen.py Prüfer für dieses README (Stufe 5). Kit-only — jede
+                        Zahl gegen die frische Installation, jeder genannte
+                        Pfad gegen das Dateisystem
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
 plans/                  Roadmap und Backlog DES KITS (nicht die Vorlagen —
                         die liegen in bootstrap/ und werden installiert)
+plans/meldungen/        Meldungen fremder Nutzer, je eine Datei — kommen als
+                        Pull Request an (`BL-153`), Nummer beim Triage
+CONTRIBUTING.md         Der Meldeweg von außen: Redaktionsregel, was ein
+                        Code-PR nachweisen muss
 doku/anhang-a.md        Die Warum-Schicht: Bauentscheide und Feld-Betriebs-
                         lehren (A.0–A.13). Bleibt im Kit, wird nicht installiert
 doku/einrichtung.md     Klonen und Einbinden — Linux und Windows mit WSL,
@@ -441,8 +618,12 @@ Grund für den eigenen Plan-Ordner — siehe `BL-51` oben.
 | `./team-status.sh --ledger-pruefen` | `.\team-status.cmd --ledger-pruefen` | Ist für jede Kaskade alles gebucht? Gegenprobe gegen die archivierten Rohlogs (Exit `4` = Warnbefunde) |
 | `./team-status.sh --altlast [N]` | `.\team-status.cmd --altlast [N]` | Produktivdateien, die seit N Kaskaden in keinem Diff lagen — die Auswahlhilfe für einen Altlast-Sweep (`BL-40`) |
 | `./team-test.sh` | `.\team-test.cmd` | Regressionstests der Team-Infrastruktur (pytest) |
-| `bash <kit>/bash/install.sh . --update` | `pwsh -File <kit>\pwsh\install.ps1 . -Update` | Auf eine neue Kit-Version heben, ohne Projektdaten anzufassen |
+| `bash <kit>/bash/install.sh . --update` | `pwsh -File <kit>\pwsh\install.ps1 . -Update` | Auf eine neue Kit-Version heben, ohne Projektdaten anzufassen — und ohne die Bahn zu wechseln (`BL-147`) |
+| `bash <kit>/bash/install.sh . --update --beide-bahnen` | `pwsh -File <kit>\pwsh\install.ps1 . -Update -BeideBahnen` | Eine abgewählte Bahn zurückholen (`BL-119`) |
 | `python3 team/tools/beutebuch.py list` | `python team\tools\beutebuch.py list` | Alle Funde mit Status |
+| `./kit-melden.sh neu --titel "…"` | `.\kit-melden.cmd neu --titel "…"` | Fund **am Kit** melden: legt einen Entwurf nach Vorlage an (`BL-153`) |
+| `./kit-melden.sh pruefen` | `.\kit-melden.cmd pruefen` | Redaktionsprüfung vor dem Senden — absolute Pfade, Konto-, Rechner- und Projektnamen, Schlüssel (Exit `4` = Befunde) |
+| `./kit-melden.sh senden <datei>` | `.\kit-melden.cmd senden <datei>` | Pull Request ans Kit-Repo über `gh` — **fragt vorher**. Ohne `gh`: vorbefüllter Issue-Link |
 | `python3 team/tools/zitat_lint.py` | `python team\tools\zitat_lint.py` | Plandateien, die einen erledigten Backlog-Eintrag noch als offene Frage zitieren (`BL-50`) |
 
 > **Der Interpretername gehört der Maschine, nicht der Bahn** (`BL-131`,
@@ -473,25 +654,80 @@ bauen.** Erst prüfen: committet? Suite grün? Dann von Hand quittieren. Im Feld
 kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 (zusammen 19,47 USD).
 
+## Der Rückkanal Feld → Kit
+
+**Jeder Lauf in einem echten Projekt fördert Kit-Fehler zutage** — `BL-1` bis
+`BL-153` sind fast alle so entstanden. Damit das nicht von der Disziplin
+einzelner abhängt, ist der Weg zurück ein Befehl aus dem installierten Projekt
+heraus:
+
+```bash
+./kit-melden.sh neu --titel "Kurz, was schiefging"   # Entwurf nach Vorlage
+$EDITOR plans/kit-meldungen/<datum>-<slug>.md        # ausfüllen
+./kit-melden.sh pruefen                              # Redaktionsprüfung
+./kit-melden.sh senden plans/kit-meldungen/<datum>-<slug>.md
+```
+
+`senden` legt über `gh` einen Pull Request an, der **eine neue Datei** unter
+`plans/meldungen/` hinzufügt und sonst nichts anfasst — so kollidieren zwei
+Meldungen nicht, und niemand muss um eine `BL`-Nummer wettlaufen; die vergibt
+der Maintainer beim Triage. Ohne `gh` kommt stattdessen ein vorbefüllter
+Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+**Drei Entscheidungen, die daran hängen:**
+
+- **Der Loop schreibt, der Mensch sendet.** `neu` und `pruefen` dürfen
+  automatisch laufen — eine Rolle darf einen Fund erkennen und ausformulieren.
+  `senden` nicht: Ein Pull Request wirkt nach außen und lässt sich nicht
+  zurückholen. Das ist *Finder ≠ Fixer*, angewandt auf den Rückkanal.
+- **Redaktion ist Pflicht, nicht Kür.** Die Meldung schreibt eine Rolle, die
+  gerade eine **private** Codebasis gelesen hat. `pruefen` sucht absolute
+  Pfade, Konto- und Rechnernamen, Schlüssel, E-Mail — und den **Namen deines
+  Projekts**: Das Kit führt seine eigenen Feldbelege aus genau diesem Grund
+  unter `Feld A`…`Feld D`. `senden` geht darüber nicht hinweg, ohne dass man es
+  ausdrücklich sagt.
+- **Die Meldung wird immer als Datei abgelegt**, auch wenn das Kit gerade nicht
+  erreichbar ist. Ein Eintrag, der nur im Feld liegt, hat eine Verfallszeit —
+  sie endet beim nächsten `--update`. Genau so ging `BL-42` verloren und musste
+  als `BL-58` ein zweites Mal gemeldet werden.
+
+> **Belegstand 🟠:** Der Weg ist gebaut und auf der bash-Bahn gefahren
+> (`neu`, `pruefen`, `issue-link`, die Suchkaskade). **Der Pull Request selbst
+> ist nicht abgenommen** — `kit-test.sh` kann keinen echten PR anlegen, und es
+> ist bisher keiner angekommen. Bis dahin gilt für ihn dasselbe wie für alles
+> andere hier: gebaut, nicht belegt.
+
 ## Grenzen
 
 - **Sprach- und stackagnostisch, aber python3 wird gebraucht.** Die Team-Werkzeuge
   sind Python und liegen unter `team/tools/`. Das ist eine Abhängigkeit der
   **Team-Infrastruktur** — auf einer Ebene mit `git`, `flock` und der Agenten-CLI —
   nicht deines Projekts. Verifiziert in Go-, Rust- und PHP-Projektstrukturen.
-- **Im Feld gelaufen, aber an einem Projekttyp.** Die 33 Kaskaden stammen aus
-  **einem** Feldprojekt (Python/pygame, von null aufgebaut). Jeder Lauf hat
-  Kit-Fehler zutage gefördert — `BL-1`…`BL-56`, von der toten Fixphase über
-  zwei Löcher in der Kostenerfassung bis zur vierten Fehlerklasse „Stufe
+- **Im Feld gelaufen, aber schmal aufgestellt.** Der Dauerbetrieb liegt bei
+  **einem** Projekt (`Feld A`: 33 Kaskaden, Greenfield, Linux, bash-Bahn);
+  `Feld B` hat **eine** Kaskade auf der pwsh-Bahn gefahren, `Feld C` gar keine.
+  Zwei Plattformen und zwei Bahnen sind damit berührt, aber nur **eine**
+  Kombination ist eingelaufen. Jeder Lauf hat Kit-Fehler zutage gefördert —
+  `BL-1`…`BL-146`, von der toten Fixphase über zwei Löcher in der
+  Kostenerfassung und die Zeilenenden bis zur vierten Fehlerklasse „Stufe
   fertig, Quittung fehlt". Die Erwartung ist nicht, dass das aufhört; die
-  Mechanik dafür ist der Rückkanal Feld → Kit.
+  Mechanik dafür ist der [Rückkanal Feld → Kit](#der-rückkanal-feld--kit) —
+  seit `BL-153` ein Werkzeug statt einer Konvention.
 - **Bestandsprojekte: der Einzug ist belegt, der Betrieb nicht.** `BL-51`,
-  `BL-52` und `BL-57` stammen aus einer echten gewachsenen Codebasis und sind
-  gegen die nachgestellte Lage geprüft (`kit-test.sh`, Schritt 6). Was fehlt,
-  ist eine Kaskade mit echten Agenten in einem Bestandsprojekt — bis dahin ist
-  belegt, dass das Team dort **einzieht**, nicht, dass es dort **arbeitet**.
-- **Noch nie gelaufen: Axel.** Der Forensiker hat in 33 Kaskaden keine einzige
+  `BL-52` und `BL-57` stammen aus `Feld C`, einer echten gewachsenen Codebasis,
+  und sind gegen die nachgestellte Lage geprüft (`kit-test.sh`, Schritt 6). Was
+  fehlt, ist eine Kaskade mit echten Agenten in einem Bestandsprojekt — bis
+  dahin ist belegt, dass das Team dort **einzieht**, nicht, dass es dort
+  **arbeitet**.
+- **Noch nie gelaufen: Axel.** Der Forensiker hat in keinem Feld eine einzige
   Ledgerzeile — sein Pfad ist getestet, aber nicht im Feld belegt.
+- **Kein Binary, keine Fassung ohne Bordmittel.** Das Kit ist eine Sammlung von
+  Skripten und setzt `git`, `bash` ≥ 4 bzw. PowerShell ≥ 7, `python3` und
+  `flock` voraus. Eine gepackte, abhängigkeitsfreie Auslieferung ist **nicht
+  geplant** — und macOS ist damit nicht verboten, aber unbelegt: Die
+  Bordmittel-`bash` ist dort 3.2 und `flock` fehlt. `kit-einrichten.sh` sagt
+  das an der Maschine, statt es vorauszusetzen.
 - **Modellagnostisch ja, CLI-agnostisch nein.** Die Rollen sprechen zwei Stufen
   an (`TEAM_MODEL_LOOP`/`TEAM_MODEL_STRONG`), keine Modellnamen — aber der
   einzige erprobte Weg zu einem Modell führt heute über `claude -p`. Daran
@@ -500,7 +736,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
   `team/lib.sh`); belegt ist er nicht. Ebenso wenig belegt ist bisher ein Lauf
   mit einem lokalen Open-Weights-Modell — das ist Ziel, nicht Zustand.
 - **Selbstverifikation**: `bash bash/kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 556 Tests — **zweimal**: einmal mit den
+  Wegwerf-Repo und fährt dort die 698 Tests — **zweimal**: einmal mit den
   Auslieferungswerten, einmal mit angepasster `team.config.sh` (Caps,
   Commit-Präfixe, zwei Domänen). Der zweite Lauf ist die Lehre aus `BL-58`: In
   einer frischen Installation stehen dieselben Werte wie in `team/lib.sh`, ein
@@ -533,7 +769,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 
 Benutzen, ändern, weitergeben und in eigene Projekte einziehen ist ausdrücklich
 erlaubt, kommerziell wie privat; es bleibt nur die Namensnennung. Das gilt
-**auch für die 131 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
+**auch für die 146 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
 lösen keine Lizenzpflicht für den Code des Zielprojekts aus. Der Code stammt aus
 einem eigenen Projekt des Autors; das Urheberrecht liegt vollständig bei ihm.
 

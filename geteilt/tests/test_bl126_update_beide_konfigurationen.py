@@ -6,8 +6,9 @@ Ein mit `--nur-pwsh` installiertes Projekt hat diese Datei nicht. Der
 Installer erklaerte es fuer keine Installation ("sieht nicht nach einer
 T.E.A.M.-Installation aus") und stieg mit Exit 2 aus — BEVOR er die
 fehlende Bahn nachziehen konnte. Damit war der Rueckweg, den `BL-119`
-ausdruecklich verspricht ("ein Update ohne Schalter macht das Projekt
-wieder vollstaendig"), in dieser Richtung versperrt: Die Abwahl war die
+ausdruecklich verspricht ("ein Update holt eine fehlende Bahn zurueck"
+— seit `BL-147` auf ausdrueckliche Anforderung, `--beide-bahnen`), in
+dieser Richtung versperrt: Die Abwahl war die
 Einbahnstrasse, die sie nicht sein darf.
 
 Warum es durchrutschte, ist in `kit-test.sh` Stufe 8 ablesbar: Der

@@ -54,7 +54,7 @@ def _fund(feld):
     vorher/nachher. Ein angehaengter `HM-1`, den es dort laengst gibt, erhoeht
     die naechste freie Nummer nicht — der Sweep meldet korrekt "keine neuen
     Funde", und der Test faellt um, obwohl die Mechanik stimmt. Im Feld
-    (platformer, Beutebuch bis HM-100) sind daran zwei Gegenproben nach einem
+    (Feld A, Beutebuch bis HM-100) sind daran zwei Gegenproben nach einem
     Kit-Update rot geworden."""
     return FUND_BLOCK.replace("{nr}", "{" + feld + "}")
 

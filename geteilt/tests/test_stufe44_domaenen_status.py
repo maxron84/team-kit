@@ -9,7 +9,8 @@ Stufe 44 nutzt:
 - `team_architekt_stand [ledger-pfad] [plan-datei]` — liefert "USD<TAB>status":
   "echt", wenn für die aus der Plan-Datei abgeleitete Kaskade bereits eine
   echte Architekt-Ledger-Zeile existiert (Stufe 43, `architekt-abschluss`),
-  sonst "geschätzt" mit der A2-Live-Schätzung (Stufe 42).
+  sonst "Churn-Proxy" mit der A2-Live-Schätzung (Stufe 42; bis BL-141 hiess
+  dieser Modus "geschätzt").
 
 Netz-/CLI-frei über `bash -c` + `subprocess` (Muster wie
 test_bl27_abo_key_startwarnung.py) gegen Fixture-Ledger/-Pläne im temporären
@@ -89,7 +90,11 @@ def test_architekt_stand_geschaetzt_ohne_ledger_zeile(tmp_path):
     assert result.returncode == 0, result.stderr
     usd, status = result.stdout.strip().split("\t")
     float(usd)  # muss eine Zahl bleiben (0.0000 im gepinnten Fixture-Repo)
-    assert status == "geschätzt"
+    # BL-141: Die Beschriftung heisst jetzt "Churn-Proxy". "geschätzt" liess
+    # offen, WORAUS geschaetzt wurde, und lud im Feld dazu ein, die Zahl
+    # fuer eine Messung zu halten — sie lag dort 35 % zu niedrig. Gemessen
+    # wird mit `kosten.py sitzung-messen`.
+    assert status == "Churn-Proxy"
 
 
 def test_architekt_stand_andere_kaskade_zaehlt_nicht_als_echt(tmp_path):
@@ -103,7 +108,11 @@ def test_architekt_stand_andere_kaskade_zaehlt_nicht_als_echt(tmp_path):
     )
     assert result.returncode == 0, result.stderr
     _usd, status = result.stdout.strip().split("\t")
-    assert status == "geschätzt"
+    # BL-141: Die Beschriftung heisst jetzt "Churn-Proxy". "geschätzt" liess
+    # offen, WORAUS geschaetzt wurde, und lud im Feld dazu ein, die Zahl
+    # fuer eine Messung zu halten — sie lag dort 35 % zu niedrig. Gemessen
+    # wird mit `kosten.py sitzung-messen`.
+    assert status == "Churn-Proxy"
 
 
 def test_team_status_budget_laeuft_und_zeigt_architekt_status():
@@ -117,7 +126,8 @@ def test_team_status_budget_laeuft_und_zeigt_architekt_status():
     # BL-18: Die Beschriftung traegt seither ggf. die Kaskade ("Architekt K3
     # (echt, …)") — der Marker wird deshalb ohne die Klammer geprueft.
     assert "Architekt" in result.stdout
-    assert "geschätzt" in result.stdout or "echt" in result.stdout
+    # BL-141: "geschätzt" heisst jetzt "Churn-Proxy".
+    assert "Churn-Proxy" in result.stdout or "echt" in result.stdout
 
 
 def test_eine_domaene_zeigt_keinen_domaenenblock():

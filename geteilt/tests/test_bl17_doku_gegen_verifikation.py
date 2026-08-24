@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """BL-17: Die Verifikationskette darf sich den Erfolg nicht selbst einrichten.
 
-Aus dem Feld zurueckgespielt (dort BL-10, team-kit_project_platformer). Der
+Aus dem Feld zurueckgespielt (dort BL-10, Feld A). Der
 dokumentierte Startbefehl war kaputt, waehrend der Smoke-Test GRUEN meldete —
 weil Smoke-Test und pytest.ini still ein PYTHONPATH dazusetzten, das es beim
 Anwender nie gibt. Verifiziert wurde damit eine Umgebung, die nur auf dem
@@ -13,7 +13,7 @@ wird aber nie wirklich ausgefuehrt"), und KEINER der Sweeps hat diesen
 gefunden. Harry und Marv lesen den Code; die Luecke klafft aber zwischen Doku
 und Testaufruf, und dorthin schaute kein Auftrag.
 
-Entscheid (Strippenzieher, 2026-08-02): Regel in den Vorlagen PLUS benannter
+Entscheid (Stakeholder, 2026-08-02): Regel in den Vorlagen PLUS benannter
 Sweep-Schwerpunkt in den Briefings. Kein maschineller Diff — der waere
 stackagnostisch schwer und mit hoher Falschmelderate zu erwarten; er kommt
 erst, wenn ein zweiter Fall dieser Bauart auftritt.

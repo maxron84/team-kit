@@ -10,7 +10,7 @@ soll, bestaetigt einen Fehler, statt ihn zu zeigen. `ledger-pruefen` zieht
 seine Gegenkennzahl deshalb aus den archivierten ROHLOGS.
 
 Die beiden schwersten Faelle werden mit den ECHTEN Feldzahlen nachgestellt
-(Feldprojekt team-kit_project_platformer, Kaskade 1, 2026-08-01):
+(Feld A, Kaskade 1, 2026-08-01):
   * BL-4: 2,1621 USD Baukosten in KEINER Ledger-Zeile,
   * BL-5: eine roles-Zeile ueber 2,4114 USD, die 1,0969 USD ueberschrieben hat.
 Beide muessen als WARNUNG anschlagen und Exit 4 ergeben.
@@ -298,7 +298,7 @@ def test_team_status_reicht_durch(tmp_path):
 # --- BL-13: eine Rohquelle speist MEHRERE Ledger-Rollen ----------------------
 
 def test_frank_zeile_zaehlt_gegen_team_logs(tmp_path):
-    """BL-13 (Feldfund aus website-maxron-de, 2026-08-01).
+    """BL-13 (Feldfund aus dem Ursprungsprojekt, 2026-08-01).
 
     redteam.sh, frank.sh, axel.sh UND vollautomatik.sh setzen alle
     LOG_DIR=".team-logs" -- die Rohlogs dieses Ordners gehoeren also nicht nur
@@ -385,7 +385,7 @@ def test_befund_nennt_die_gezaehlten_rollen(tmp_path):
 # --- BL-14: benannte Kaskaden sind Out-of-Loop-Buchungen ---------------------
 
 def test_benannte_kaskade_ohne_ralph_ist_nur_hinweis(tmp_path):
-    """BL-14 (Feldfund aus website-maxron-de, 2026-08-01).
+    """BL-14 (Feldfund aus dem Ursprungsprojekt, 2026-08-01).
 
     Die Regel "roles ohne ralph => Warnung" stimmt fuer NUMMERIERTE Kaskaden:
     wo gesweept wurde, wurde auch gebaut. Benannte Kaskaden (`post-20`,

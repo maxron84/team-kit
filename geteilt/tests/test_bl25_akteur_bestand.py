@@ -2,7 +2,7 @@
 """BL-25/BL-26: Der Akteur-Abschluss darf eine bestehende Zeile nicht mehr
 still ersetzen — und der Wrapper darf keine Schalter verschlucken.
 
-BL-25 (Feld platformer, Lageaufnahme K9): `rollen-abschluss` bricht seit BL-5
+BL-25 (Feld A, Lageaufnahme K9): `rollen-abschluss` bricht seit BL-5
 bei bestehender Zeile ab und nennt Alt-, Neu- und Summenwert. `akteur-abschluss`
 hatte dieselbe Ersetzungslogik OHNE diesen Schutzschalter. Im Feld stand die
 Architektenzeile der Kaskade 9 auf 5,5515 USD; eine Folgesitzung an derselben
@@ -10,7 +10,7 @@ Kaskade buchte erneut und ersetzte sie — der erste Wert war weg, ohne Warnung.
 Der Fall ist der Normalfall, nicht der Ausreisser: Wer vormittags aushaertet
 und abends abschliesst, bucht zwangslaeufig zweimal.
 
-BL-26 (Feld platformer, Zwischenstandssicherung vor K23): `team-status.sh
+BL-26 (Feld A, Zwischenstandssicherung vor K23): `team-status.sh
 --akteur-abschluss` las nur $1…$5. `--kaskade vor-23` fiel damit weg, das
 Werkzeug leitete die Nummer aus .ralph-plan ab und ersetzte die abgeschlossene
 Architektenzeile der Kaskade 22 ueber 8,4678 USD. Verschaerfend: Ein veralteter

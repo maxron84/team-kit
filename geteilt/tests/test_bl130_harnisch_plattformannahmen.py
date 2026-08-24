@@ -209,15 +209,33 @@ AUSGENOMMEN = {"conftest.py", "test_bl122_native_exitcode.py",
 
 
 def test_keine_testdatei_faellt_in_die_vier_annahmen_zurueck():
+    """Gesucht wird im GANZEN Text, die Zeilennummer wird daraus abgeleitet.
+
+    Vorher lief die Suche zeilenweise, und das erzeugte einen FEHLALARM: Der
+    Vorausschau-Teil von `text=True(?!\s*,\s*encoding=)` kann eine
+    Zeilengrenze nicht ueberspringen, ein voellig korrektes
+
+        capture_output=True, text=True,
+        encoding="utf-8", errors="replace")
+
+    wurde also angemahnt. Die Kommentare oben nennen die Gegenrichtung
+    desselben Problems (ein Aufruf ueber zwei Zeilen wird zeilenweise gar nicht
+    gefunden) und arbeiten sie um, indem sie auf das Listenliteral zielen — die
+    Vorausschau laesst sich so nicht retten.
+
+    Warum das mehr ist als Kosmetik: Ein Waechter, der an einer richtigen
+    Stelle rot wird, wird nicht befolgt, sondern abgeschaltet — und nimmt die
+    Faelle mit, fuer die er da ist. Aufgefallen beim Anlegen des BL-143-Tests.
+    """
     funde = []
     for datei in sorted(TESTS.glob("test_*.py")):
         if datei.name in AUSGENOMMEN:
             continue
-        for nummer, zeile in enumerate(
-                datei.read_text(encoding="utf-8").splitlines(), 1):
-            for muster, warum in VERBOTEN:
-                if muster.search(zeile):
-                    funde.append(f"{datei.name}:{nummer} — {warum}")
+        text = datei.read_text(encoding="utf-8")
+        for muster, warum in VERBOTEN:
+            for treffer in muster.finditer(text):
+                nummer = text.count("\n", 0, treffer.start()) + 1
+                funde.append(f"{datei.name}:{nummer} — {warum}")
     assert not funde, (
         "Diese Stellen setzen einen POSIX-Wirt voraus (BL-130):\n  "
         + "\n  ".join(funde))

@@ -9,7 +9,7 @@
 # Axel denkt, Frank tippt. Startet NIE von selbst im Dauer-Loop — nur ein Fall.
 #
 # Modell: TEAM_MODEL_STRONG (Default opus; 'fable'/'claude-fable-5' möglich).
-# Strippenzieher-Entscheid 2026-07-10: Auth auch bei Axel Abo-first + API-Fallback.
+# Stakeholder-Entscheid 2026-07-10: Auth auch bei Axel Abo-first + API-Fallback.
 # Exit: 0 = Akte erstellt · 3 = kein Axel-Fall · 1 = Fehler/Guard-Bruch
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -17,7 +17,7 @@ cd "$(dirname "$0")"
 source ./team/lib.sh
 team_lock axel || exit 1
 
-# Zwei-Schwellen-Modell (Strippenzieher-Entscheid 2026-07-12, HM-32): Axel ist
+# Zwei-Schwellen-Modell (Stakeholder-Entscheid 2026-07-12, HM-32): Axel ist
 # wie Frank ein iterierendes "Sorgenkind". Soft-Cap = nur Hinweis (die Akte bleibt
 # gültig, wenn sie bereits bezahlt ist); erst der Hard-Cap bricht ab.
 AXEL_BUDGET_USD="${AXEL_BUDGET_USD:-${TEAM_ROLE_BUDGET_USD}}"

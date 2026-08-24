@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """BL-115 — zwei Haelften desselben Fehlers, beide teuer, beide still.
 
-Im Feld (`team-kit_project_platformer`, HM-106, 2026-08-19) entstand die
+Im Feld (`Feld A`, HM-106, 2026-08-19) entstand die
 Statuszeile `- **Status**: offen → an Frank übergeben`, weil die Regeldatei
 den UEBERGANG in Feldwert-Schreibweise vorschrieb ("Status auf
 `offen → an Frank übergeben` setzen"). Folge: `list` zeigt den Fund weiter an,

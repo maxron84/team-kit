@@ -27,12 +27,42 @@ Import-Module ./team/lib.psm1 -Force -DisableNameChecking
 
 $ralphCapWert = team_ralph_cap
 
+function Rest-Ohne-Erstes {
+    <#
+      Gibt $Liste ohne ihr erstes Element zurueck — IMMER als Array.
+
+      BL-142: Hier stand dreimal `$rest = if ($rest.Count -gt 1) {
+      @($rest[1..($rest.Count - 1)]) } else { @() }`. Der `@(...)`-Ausdruck
+      erzeugt zwar ein Array, aber die Rueckgabe aus einem if-BLOCK laeuft
+      durch die Ausgabepipeline, und die entpackt ein EINELEMENTIGES Array zu
+      seinem Element. Bei genau zwei Notizen wurde $rest damit zum String.
+
+      Der Fehlermodus ist keiner, den man beim Lesen sieht: Ein String HAT eine
+      Count-Property (Wert 1), die Bedingung `$rest.Count` traegt also weiter —
+      erst `$rest[0]` liefert dann einen [Char] statt einer Zeichenkette, und
+      `.StartsWith()` gibt es dort nicht. Die Meldung im Feld lautete
+      "[System.Char] does not contain a method named 'StartsWith'", gefolgt von
+      "Unbekannter Modus 'K'" — dem ersten Zeichen der zweiten Notiz.
+
+      Das unaere Komma ist der Grund, warum diese Funktion ueberhaupt existiert:
+      `return ,$neu` legt das Array in ein einelementiges Array, die Pipeline
+      entpackt genau diese eine Schicht, und beim Aufrufer kommt das Array
+      unversehrt an. Ohne das Komma haette die Funktion denselben Fehler wie
+      die drei Zeilen, die sie ersetzt.
+    #>
+    param([object]$Liste)
+    $n = @($Liste).Count
+    if ($n -le 1) { return ,@() }
+    $neu = @($Liste)[1..($n - 1)]
+    return ,@($neu)
+}
+
 function Status-ArchitektZeile {
     <#
       "beschriftung<TAB>USD" der Architekt-Kennzahl — EINE Quelle fuer BEIDE
       Ansichten (Momentaufnahme und --budget).
 
-      BL-18 (Feld platformer, Closeout K3): Der Zusatz "nicht im Gesamt
+      BL-18 (Feld A, Closeout K3): Der Zusatz "nicht im Gesamt
       enthalten" stand in --budget UNBEDINGT — er gilt aber nur fuer den Modus
       "geschaetzt". Im Modus "echt" stammt der Wert aus einer Ledger-Zeile
       DIESER Kaskade, und die summiert der Kontostand mit. Der Modus schaltet
@@ -214,18 +244,35 @@ function Status-Budget {
 }
 
 function Status-ArchitektAbschluss {
-    # A1-Ersetzung (BL-28): haengt die echte Architekt-Ledger-Zeile an und
-    # ersetzt dabei eine vorhandene Zeile derselben Kaskade (Idempotenz).
+    <#
+      A1-Ersetzung (BL-28): haengt die echte Architekt-Ledger-Zeile an und
+      ersetzt dabei eine vorhandene Zeile derselben Kaskade (Idempotenz).
+
+      BL-143: Dieser Wrapper las ausschliesslich die ersten DREI Argumente —
+      genau der Fehler, den BL-26 fuer --akteur-abschluss abgetragen hat, hier
+      nur nie nachgezogen. Das Architekten-Briefing sagt woertlich "Schalter
+      des Werkzeugs — --kaskade, --addieren, --ersetzen — haenge ich hinten an;
+      der Wrapper reicht sie durch", und fuer DIESEN Wrapper stimmte das nicht.
+      Aufgefallen ist es erst, als --auth ueberhaupt etwas zu uebergeben hatte.
+    #>
     param([string[]]$Argumente)
     $usd = if ($Argumente.Count -ge 1) { $Argumente[0] } else { '' }
     $domaene = if ($Argumente.Count -ge 2) { $Argumente[1] } else { '' }
-    $notiz = if ($Argumente.Count -ge 3) { $Argumente[2] } else { '' }
     if (-not $usd -or -not $domaene) {
-        Team-Fehler 'Nutzung: team-status --architekt-abschluss <USD> <domaene> ["<notiz>"]'
+        Team-Fehler 'Nutzung: team-status --architekt-abschluss <USD> <domaene> ["<notiz>"] [weitere kosten.py-Schalter]'
         return 1
+    }
+    $rest = @()
+    if ($Argumente.Count -gt 2) { $rest = @($Argumente[2..($Argumente.Count - 1)]) }
+    # Ein Argument, das mit -- beginnt, ist NIE die Notiz (Lehre BL-26).
+    $notiz = ''
+    if ($rest.Count -and $rest[0] -and -not $rest[0].StartsWith('--')) {
+        $notiz = $rest[0]
+        $rest = Rest-Ohne-Erstes $rest      # BL-142
     }
     $a = @('architekt-abschluss', '--usd', $usd, '--domaene', $domaene)
     if ($notiz) { $a += @('--notiz', $notiz) }
+    if ($rest.Count) { $a += $rest }
     Team-Werkzeug $TEAM_KOSTEN_TOOL $a
     return $LASTEXITCODE
 }
@@ -256,7 +303,7 @@ function Status-AkteurAbschluss {
     $notiz = ''
     if ($rest.Count -and $rest[0] -and -not $rest[0].StartsWith('--')) {
         $notiz = $rest[0]
-        $rest = if ($rest.Count -gt 1) { @($rest[1..($rest.Count - 1)]) } else { @() }
+        $rest = Rest-Ohne-Erstes $rest
     }
     team_akteur_abschluss $rolle $auth $usd $domaene $notiz '.budget-ledger' '.' @rest
     return $LASTEXITCODE
@@ -289,10 +336,10 @@ function Status-RollenAbschluss {
     $notiz = ''
     $bauNotiz = ''
     if ($rest.Count -and $rest[0] -and -not $rest[0].StartsWith('--')) {
-        $notiz = $rest[0]; $rest = if ($rest.Count -gt 1) { @($rest[1..($rest.Count - 1)]) } else { @() }
+        $notiz = $rest[0]; $rest = Rest-Ohne-Erstes $rest
     }
     if ($rest.Count -and $rest[0] -and -not $rest[0].StartsWith('--')) {
-        $bauNotiz = $rest[0]; $rest = if ($rest.Count -gt 1) { @($rest[1..($rest.Count - 1)]) } else { @() }
+        $bauNotiz = $rest[0]; $rest = Rest-Ohne-Erstes $rest
     }
     $modus = if ($rest.Count) { $rest[0] } else { '' }
     if ($modus -and $modus -notin @('--addieren', '--ersetzen')) {

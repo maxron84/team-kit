@@ -70,12 +70,14 @@ Nutzung:
                                         echten Konsolenwert). --repo zeigt auf
                                         ein anderes Arbeitsverzeichnis (Tests).
     kosten.py architekt-abschluss --usd USD --domaene <domaene>
-              [--kaskade N] [--notiz TEXT] [--pfad PFAD] [--repo DIR]
+              [--auth abo|api] [--kaskade N] [--notiz TEXT] [--pfad PFAD]
+              [--repo DIR]
                                         A1-Ersetzung (BL-28, Kaskade 13/
                                         Stufe 43): haengt die ECHTE
-                                        Architekt-Ledger-Zeile an (auth=api,
-                                        rolle=architekt) fuer die Kaskade, die
-                                        der Strippenzieher aus der Anthropic-
+                                        Architekt-Ledger-Zeile an
+                                        (rolle=architekt, auth VORBELEGT mit
+                                        abo — BL-143) fuer die Kaskade, die
+                                        der Stakeholder aus der Anthropic-
                                         Konsole abliest. Ohne --kaskade wird
                                         die Nummer aus .ralph-plan abgeleitet
                                         (Muster "ralph-kaskade-<N>-..."). Ein
@@ -91,10 +93,21 @@ Nutzung:
                                         veraendern (Lehre aus BL-23/HM-17:
                                         keine rohe Interpolation). Duenner
                                         Alias auf akteur-abschluss mit
-                                        --rolle architekt --auth api
-                                        vorbelegt (BL-33, Stufe 50) —
-                                        bleibt unveraendert, rueckwaerts-
-                                        kompatibel.
+                                        --rolle architekt vorbelegt (BL-33,
+                                        Stufe 50).
+
+                                        BL-143: --auth war hier FEST "api"
+                                        und buchte damit gegen die eigene
+                                        Regel ("keine Rolle ist mehr fest
+                                        api"); im Feld landeten 16,3990 USD
+                                        Abo-Gegenwert in der Zeile "real via
+                                        API abgerechnet". Jetzt vorbelegt mit
+                                        "abo" und ueberschreibbar, fuer den
+                                        Architekten, der wirklich ueber einen
+                                        API-Key gearbeitet hat. Die
+                                        Erfolgsmeldung NENNT die Achse —
+                                        ohne sie liest sich ein Fehlgriff
+                                        nicht.
     kosten.py akteur-abschluss --usd USD --domaene <domaene>
               --rolle ROLLE --auth abo|api
               [--kaskade N] [--notiz TEXT] [--pfad PFAD] [--repo DIR]
@@ -125,7 +138,7 @@ Nutzung:
                                         auth="abo"/"api"/"abo/api" je nach
                                         Split; Kaskadenschaerfe schlaegt
                                         Abo/API-Schaerfe je Rollenzeile,
-                                        Strippenzieher-Entscheid). Steht fuer
+                                        Stakeholder-Entscheid). Steht fuer
                                         die Kaskade schon eine roles-Zeile,
                                         BRICHT der Aufruf AB und nennt Alt-,
                                         Neu- und Summenwert (BL-5) —
@@ -934,6 +947,321 @@ def architekt_schaetzung(seit, pfade=("plans", "CLAUDE.md"), repo="."):
     return churn, churn * ARCHITEKT_USD_PRO_CHURN_ZEILE
 
 
+# --- BL-141: Sitzungskosten MESSEN statt schaetzen -------------------------
+#
+# architekt_schaetzung() oben rechnet Zeilen-Churn mal Eichfaktor. Das misst
+# die GROESSE DES DIFFS, nicht die Arbeit: Eine Sitzung mit viel Lesen, Pruefen
+# und Gegenproben und wenig geschriebenem Text wird systematisch unterschaetzt,
+# eine Prosa-Sitzung ueberschaetzt. Im Feld (Feld B, Kaskade 1) meldete
+# die Zeile 7,6861 USD; die Messung aus dem Sitzungstranskript ergab 11,7582 —
+# 35 % zu niedrig.
+#
+# Das Architekten-Briefing verlangt die Transkript-Messung ausdruecklich, aber
+# KEIN Werkzeug des Kits konnte sie. Also schrieb sich jeder Architekt das
+# Skript neu, oder er nahm die Churn-Zahl und buchte sie als gemessen.
+#
+# DIE DREI FALLEN, ALLE DREI IM FELD GETRETEN
+#
+#   (1) Ueber die NACHRICHTEN-ID deduplizieren. Eine Antwort erzeugt mehrere
+#       Transkriptzeilen mit DERSELBEN usage-Angabe. Wer Zeilen zaehlt,
+#       ueberschaetzt grob — im Feld 172 rohe Saetze, nach Dedup 76.
+#   (2) Cache-Write nach LAUFZEIT trennen. 1h kostet das 2,0-Fache des Inputs,
+#       5m nur das 1,25-Fache. Das Transkript gibt beide getrennt her.
+#   (3) Den Basispreis am MODELL festmachen und sagen, wenn die ID unbekannt
+#       ist. Eine stille Annahme ist hier teurer als eine Luecke.
+PREIS_VIELFACHE = {
+    # Nur der BASISPREIS haengt am Modell; diese vier Verhaeltnisse gelten
+    # modelluebergreifend. Gegengeprueft an der Preistabelle des Anbieters
+    # (Opus 5: 5 USD Input / 25 USD Output je Mio Token) UND an acht
+    # headless-Laeufen des Kits, deren abgerechnete total_cost_usd sich damit
+    # reproduzieren liessen.
+    "output":         5.00,
+    "cache_write_1h": 2.00,
+    "cache_write_5m": 1.25,
+    "cache_read":     0.10,
+}
+
+# USD je 1 Mio INPUT-Token, nach Modell-ID. Laengster Praefix gewinnt, damit
+# datierte Varianten (claude-opus-5-20260101) und Plattform-Praefixe
+# (anthropic.claude-opus-5 auf Bedrock) mitlaufen, ohne die Tabelle zu
+# verdoppeln.
+PREIS_INPUT_USD_PRO_MTOK = {
+    "claude-fable-5":   10.00,
+    "claude-mythos-5":  10.00,
+    "claude-opus-5":     5.00,
+    "claude-opus-4-8":   5.00,
+    "claude-opus-4-7":   5.00,
+    "claude-opus-4-6":   5.00,
+    "claude-opus-4-5":   5.00,
+    "claude-sonnet-5":   3.00,
+    "claude-sonnet-4-6": 3.00,
+    "claude-sonnet-4-5": 3.00,
+    "claude-haiku-4-5":  1.00,
+}
+
+
+def modell_basispreis(modell_id):
+    """Basispreis je Mio Input-Token, oder None bei unbekannter ID.
+
+    None ist ein Ergebnis, kein Fehler: Der Aufrufer weist die unbekannte ID
+    aus, statt einen Preis zu raten. Eine geratene Zahl waere hier genau der
+    Fehler, den BL-141 abtraegt — sie sieht aus wie eine Messung.
+    """
+    if not modell_id:
+        return None
+    kern = str(modell_id).split(".")[-1]        # Bedrock: anthropic.claude-...
+    treffer = [n for n in PREIS_INPUT_USD_PRO_MTOK if kern.startswith(n)]
+    if not treffer:
+        return None
+    return PREIS_INPUT_USD_PRO_MTOK[max(treffer, key=len)]
+
+
+def _tokenkuebel():
+    return {"input": 0, "output": 0, "cache_read": 0,
+            "cache_write_5m": 0, "cache_write_1h": 0}
+
+
+def _usage_addieren(kuebel, usage):
+    kuebel["input"] += usage.get("input_tokens", 0) or 0
+    kuebel["output"] += usage.get("output_tokens", 0) or 0
+    kuebel["cache_read"] += usage.get("cache_read_input_tokens", 0) or 0
+    erstellung = usage.get("cache_creation") or {}
+    if erstellung:
+        kuebel["cache_write_5m"] += erstellung.get("ephemeral_5m_input_tokens", 0) or 0
+        kuebel["cache_write_1h"] += erstellung.get("ephemeral_1h_input_tokens", 0) or 0
+    else:
+        # Aeltere Transkripte tragen nur die Summe. Konservativ als 5m buchen:
+        # Das ist der GUENSTIGERE Satz, die Zahl faellt also eher zu niedrig
+        # aus als zu hoch — und eine zu niedrige gebuchte Zahl faellt beim
+        # Abgleich auf, eine zu hohe wird geglaubt.
+        kuebel["cache_write_5m"] += usage.get("cache_creation_input_tokens", 0) or 0
+
+
+def _modelusage_kuebel(u, cache_art):
+    """Token-Kuebel aus einem `modelUsage`-Eintrag eines headless-Logs.
+
+    BL-152. Bewusst NICHT `_usage_addieren`: Die beiden Strukturen sehen sich
+    aehnlich und kommen aus verschiedenen Quellen.
+
+        Transkript  `usage`       snake_case, Cache-Erstellung nach Laufzeit
+                                  aufgeschluesselt (`cache_creation`)
+        headless    `modelUsage`  camelCase, Cache-Erstellung als EINE Summe
+
+    Zusammengelegt sah das nach Sparsamkeit aus und war ein stiller
+    Leserfehler: Jeder Schluessel ging ins Leere, jeder Kuebel blieb 0, und
+    die Eichung konnte nie bestehen. Zwei Leser fuer zwei Formate sind hier
+    billiger als eine Funktion, die beide zu kennen behauptet.
+
+    `cache_art` sagt, als welche Laufzeit die Cache-Erstellung gebucht wird —
+    die Angabe fehlt in dieser Struktur, siehe die Begruendung in
+    `preise_nachrechnen`.
+    """
+    kuebel = _tokenkuebel()
+    kuebel["input"] = u.get("inputTokens", 0) or 0
+    kuebel["output"] = u.get("outputTokens", 0) or 0
+    kuebel["cache_read"] = u.get("cacheReadInputTokens", 0) or 0
+    kuebel[cache_art] = u.get("cacheCreationInputTokens", 0) or 0
+    return kuebel
+
+
+def sitzung_messen(pfade):
+    """Liest Transkripte und gibt (je_modell, antworten, doppelt) zurueck.
+
+    je_modell bildet die Modell-ID auf einen Token-Kuebel ab. Getrennt gehalten,
+    weil eine Sitzung das Modell wechseln kann und der Basispreis daran haengt —
+    ein gemeinsamer Kuebel waere mit dem ersten Wechsel falsch.
+    """
+    gesehen = set()
+    je_modell = {}
+    antworten = doppelt = 0
+    for pfad in pfade:
+        with open(pfad, encoding="utf-8") as f:
+            for zeile in f:
+                try:
+                    d = json.loads(zeile)
+                except ValueError:
+                    continue                     # halbe Zeile am Dateiende
+                nachricht = d.get("message")
+                if not isinstance(nachricht, dict):
+                    continue
+                usage = nachricht.get("usage")
+                if not usage:
+                    continue
+                # Falle (1): ueber die Nachrichten-ID, nicht ueber die Zeile.
+                kennung = (nachricht.get("id") or d.get("requestId")
+                           or d.get("uuid"))
+                if kennung in gesehen:
+                    doppelt += 1
+                    continue
+                gesehen.add(kennung)
+                antworten += 1
+                modell = nachricht.get("model") or "unbekannt"
+                _usage_addieren(je_modell.setdefault(modell, _tokenkuebel()),
+                                usage)
+    return je_modell, antworten, doppelt
+
+
+def kosten_aus_tokens(kuebel, basispreis):
+    """USD fuer einen Token-Kuebel bei gegebenem Basispreis je Mio Input."""
+    gesamt = kuebel["input"] / 1_000_000 * basispreis
+    for art, faktor in PREIS_VIELFACHE.items():
+        gesamt += kuebel[art] / 1_000_000 * basispreis * faktor
+    return gesamt
+
+
+def sitzung_kosten(je_modell):
+    """(gesamt_usd, zeilen, unbekannte_modelle).
+
+    Unbekannte Modelle gehen NICHT in die Summe ein und werden namentlich
+    zurueckgegeben. Der Aufrufer muss sie nennen; eine Summe, die stillschweigend
+    Teile auslaesst, ist schlimmer als gar keine.
+    """
+    gesamt = 0.0
+    zeilen = []
+    unbekannt = []
+    for modell, kuebel in sorted(je_modell.items()):
+        preis = modell_basispreis(modell)
+        if preis is None:
+            unbekannt.append(modell)
+            continue
+        usd = kosten_aus_tokens(kuebel, preis)
+        gesamt += usd
+        zeilen.append((modell, preis, kuebel, usd))
+    return gesamt, zeilen, unbekannt
+
+
+def transkripte_aus_projekt(projektpfad):
+    """Das zuletzt geaenderte CLI-Transkript zu einem Projektpfad.
+
+    Die Agenten-CLI legt Transkripte unter ~/.claude/projects/<slug>/<id>.jsonl
+    ab, wobei <slug> der Projektpfad mit Bindestrichen statt Trennzeichen ist.
+    Die Kodierung ist VERLUSTBEHAFTET: Sowohl "/" als auch "_" werden zu "-",
+    zwei verschiedene Projekte koennen also denselben Ordner ergeben. Das ist
+    nicht zu reparieren (die Umkehrung ist mehrdeutig) — deshalb gibt diese
+    Funktion den Pfad zurueck, den sie gelesen hat, und der Aufrufer DRUCKT ihn.
+    Wer die Zahl bucht, sieht dann, woher sie stammt.
+    """
+    wurzel = os.path.join(os.path.expanduser("~"), ".claude", "projects")
+    voll = os.path.abspath(os.path.expanduser(projektpfad))
+    ordner = os.path.join(wurzel, voll.replace(os.sep, "-").replace("_", "-"))
+    if not os.path.isdir(ordner):
+        return []
+    dateien = [os.path.join(ordner, d) for d in os.listdir(ordner)
+               if d.endswith(".jsonl")]
+    if not dateien:
+        return []
+    return [max(dateien, key=os.path.getmtime)]
+
+
+def preise_nachrechnen(logs):
+    """Rechnet die headless-Logs mit DEMSELBEN Code nach und vergleicht.
+
+    Das ist die Gegenprobe, die die Messung erst gueltig macht. Die Logs des
+    Kits (.ralph-logs/*.json, .team-logs/*.json) tragen BEIDES: dieselbe
+    usage-Struktur wie das Transkript UND den abgerechneten `total_cost_usd`,
+    je Modell aufgeschluesselt in `modelUsage`. Das sind fertige Eichpunkte —
+    ohne sie waere die Preistabelle eine Behauptung.
+
+    Weicht die Rechnung ab, ist die Tabelle veraltet, und das WERKZEUG SAGT DAS,
+    statt eine falsche Zahl zu buchen. Genau diese Richtung ist der Punkt: Der
+    teure Fehler ist nicht die falsche Zahl, sondern die falsche Zahl, die wie
+    eine Messung aussieht.
+
+    Rueckgabe: Liste von (pfad, gemeldet_usd, gerechnet_usd, abweichung_relativ)
+    — nur fuer Logs, die BEIDE Angaben tragen. Ein Log ohne modelUsage ist
+    kein Befund, sondern nur kein Eichpunkt.
+    """
+    befunde = []
+    for pfad in logs:
+        try:
+            with open(pfad, encoding="utf-8") as f:
+                d = json.load(f)
+        except (ValueError, OSError):
+            continue
+        gemeldet = d.get("total_cost_usd")
+        nutzung = d.get("modelUsage")
+        if gemeldet is None or not isinstance(nutzung, dict) or not nutzung:
+            continue
+        # BL-152: Die beiden Kuebel-Formate haben VERSCHIEDENE HERKUNFT und
+        # duerfen nicht in eine Funktion gezwaengt werden. `_usage_addieren`
+        # liest die `usage`-Struktur des TRANSKRIPTS (snake_case); hier steht
+        # `modelUsage` aus dem headless-Log, und das traegt camelCase. Der
+        # Leser fragte bis hierher nach `input_tokens`, wo `inputTokens`
+        # stand — jeder Kuebel blieb auf 0, `gerechnet` wurde 0.0000, und die
+        # Abweichung war IMMER exakt 100 %, unabhaengig davon, ob die Tabelle
+        # stimmte. Die Warnung zeigte also genau dorthin, wo der Fehler nicht
+        # war, und riet von einer Buchung ab, die in Ordnung gewesen waere.
+        #
+        # Nachgemessen an 920 abgerechneten Laeufen aus vier Feldprojekten:
+        # mit den richtigen Schluesseln reproduzieren ALLE 920 den
+        # abgerechneten Betrag auf ein Promille; mit den alten war es keiner.
+        nenner = gemeldet if gemeldet else 1.0
+        abweichungen = []
+        for art in ("cache_write_1h", "cache_write_5m"):
+            gerechnet = 0.0
+            vollstaendig = True
+            for modell, u in nutzung.items():
+                preis = modell_basispreis(modell)
+                if preis is None:
+                    vollstaendig = False
+                    break
+                gerechnet += kosten_aus_tokens(_modelusage_kuebel(u, art), preis)
+            if not vollstaendig:
+                break
+            abweichungen.append((abs(gerechnet - gemeldet) / nenner, gerechnet))
+        if not vollstaendig:
+            continue
+        # Die KLEINERE der beiden Abweichungen zaehlt — und das ist keine
+        # Nachsicht, sondern die Beseitigung einer Unbekannten, die diese
+        # Funktion gar nicht beobachten kann.
+        #
+        # `modelUsage` traegt die Cache-Erstellung als EINE Summe, ohne die
+        # 5m/1h-Aufteilung, die das Transkript hergibt. Die beiden Saetze
+        # unterscheiden sich (Faktor 2,00 gegen 1,25), also braucht es eine
+        # Annahme. Gemessen an denselben 920 Laeufen zerfaellt das sauber in
+        # zwei Gruppen:
+        #
+        #     808 Abo-Laeufe          1h trifft, 5m nicht
+        #     112 API-Fallback-Laeufe 110 mal 5m, 2 mal 1h
+        #
+        # Eine FESTE Annahme ist damit fuer eine der beiden Gruppen immer
+        # falsch: "immer 1h" haette 110 von 920 Laeufen als "Preistabelle
+        # veraltet" gemeldet — ein leiserer Fehlalarm als vorher, aber
+        # derselbe Fehler. Ein Waechter mit Fehlalarmen wird abgeschaltet
+        # (Bauart BL-14).
+        #
+        # Die Erkennung an der Laufart festzumachen (der Dateiname traegt
+        # "-api-fallback") waere die naheliegende Alternative und ist
+        # nachweislich schlechter: 2 der 112 Fallback-Laeufe rechnen mit 1h ab.
+        #
+        # Der Waechter bleibt dadurch scharf, ebenfalls gemessen: Eine um 5 %
+        # verstellte Preistabelle wird bei 920 von 920 Laeufen erkannt, eine um
+        # 20 % verstellte bei 907. Die Annahme betrifft nur EINEN Kuebel; der
+        # Basispreis, um den es bei einer Preisaenderung geht, steckt in allen.
+        rel, gerechnet = min(abweichungen)
+        befunde.append((pfad, gemeldet, gerechnet, rel))
+    return befunde
+
+
+# Wieviel Abweichung noch Rundung ist. Die acht Feld-Laeufe reproduzierten auf
+# 4e-16 genau; ein Promille ist dagegen sehr grosszuegig und trifft trotzdem
+# jede echte Preisaenderung, weil die in Sprüngen von 20 % und mehr kommt.
+PREIS_TOLERANZ = 0.001
+
+
+def logs_einsammeln(repo="."):
+    """Alle headless-Logs des Projekts, archivierte eingeschlossen."""
+    treffer = []
+    for ordner in (".ralph-logs", ".team-logs"):
+        wurzel = os.path.join(repo, ordner)
+        if not os.path.isdir(wurzel):
+            continue
+        for pfad, _, dateien in os.walk(wurzel):
+            treffer.extend(os.path.join(pfad, d) for d in sorted(dateien)
+                           if d.endswith(".json"))
+    return sorted(treffer)
+
+
 def kaskade_aus_plan(repo="."):
     """Leitet die Kaskaden-Nummer aus der Zeiger-Datei .ralph-plan ab (Muster
     "ralph-kaskade-<N>-..." im Dateinamen). None, wenn die Datei fehlt oder
@@ -1192,7 +1520,7 @@ def akteur_abschluss(usd, domaene, kaskade, rolle, auth, notiz="",
     mehrere Sitzungen an einer Kaskade arbeitet (Aushaertung vormittags,
     Closeout abends), bucht zwangslaeufig zweimal — und der zweite Aufruf
     loeschte den ersten Wert wortlos. Im Feld sind so 5,5515 USD aus einem
-    Ledger verschwunden (platformer, Kaskade 9). Der Default bricht ab
+    Ledger verschwunden (Feld A, Kaskade 9). Der Default bricht ab
     statt zu addieren, weil ein Wiederholungsaufruf mit denselben Zahlen
     (Vertipper, zweiter Anlauf) sonst verdoppeln wuerde — dieselbe
     Symmetrieueberlegung, die BL-5 fuer rollen_abschluss angestellt hat.
@@ -1271,7 +1599,7 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     16/Stufe 54): haengt EINE rolle=roles-Ledger-Zeile fuer die
     .team-logs-Kosten (Harry/Marv/Frank/Axel) EINER Kaskade an. usd = abo +
     api; auth = "abo" (api==0), "api" (abo==0), sonst "abo/api" —
-    Strippenzieher-Entscheid: Kaskadenschaerfe schlaegt Abo/API-Schaerfe je
+    Stakeholder-Entscheid: Kaskadenschaerfe schlaegt Abo/API-Schaerfe je
     Rollenzeile, der gemischte Fall ist erwartet und wird ehrlich als
     "abo/api" ausgewiesen (kein geratener Split). notiz wird um den exakten
     Split ergaenzt und traegt voran den Rollenbezug ("Rollen: …" / "Bau: …",
@@ -1344,7 +1672,7 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     # dieses Feld ist die einzige Prosa-Spur je Zeile. Ein Rueckfall obendrein
     # — genau diese Beschwerde stand schon in Feld-BL-5, der BL-4-Fix hat sie
     # strukturell wieder eingebaut.
-    # Strippenzieher-Entscheid 2026-08-02: der Vorspann entsteht HIER, aus der
+    # Stakeholder-Entscheid 2026-08-02: der Vorspann entsteht HIER, aus der
     # Zielrolle, nicht aus einem zweiten Bedienparameter — die Bedienung
     # bleibt einhaendig (ein Notiztext), und auch ein direkter kosten.py-
     # Aufruf bekommt die Zuordnung, ohne sie mitschreiben zu muessen.
@@ -1584,6 +1912,84 @@ def _main(argv):
               f"{len(befunde) - len(warnungen)} Hinweis(e).")
         return 4 if warnungen else 0
 
+    if befehl == "sitzung-messen":
+        # BL-141: der Weg, den das Architekten-Briefing verlangt und den bis
+        # hierher kein Werkzeug des Kits gehen konnte.
+        pfade = []
+        projekt = None
+        i = 0
+        while i < len(rest):
+            if rest[i] == "--projekt":
+                if i + 1 >= len(rest):
+                    print("Fehler: --projekt braucht einen Pfad", file=sys.stderr)
+                    return 1
+                projekt = rest[i + 1]
+                i += 2
+            else:
+                pfade.append(rest[i])
+                i += 1
+        if projekt:
+            gefunden = transkripte_aus_projekt(projekt)
+            if not gefunden:
+                print(f"Fehler: kein Transkript zu {projekt} gefunden",
+                      file=sys.stderr)
+                return 1
+            pfade = gefunden
+        if not pfade:
+            print("Nutzung: kosten.py sitzung-messen (--projekt PFAD | TRANSKRIPT...)",
+                  file=sys.stderr)
+            return 1
+
+        # ZUERST die Gegenprobe, dann die Zahl. Andersherum liest der Mensch
+        # die Summe und ueberblaettert die Warnung darunter.
+        befunde = preise_nachrechnen(logs_einsammeln("."))
+        schief = [b for b in befunde if b[3] > PREIS_TOLERANZ]
+        if befunde:
+            if schief:
+                print(f"  ! Preistabelle stimmt nicht mehr: {len(schief)} von "
+                      f"{len(befunde)} nachgerechneten Laeufen weichen ab.",
+                      file=sys.stderr)
+                for pfad, gemeldet, gerechnet, rel in schief[:3]:
+                    print(f"      {os.path.basename(pfad)}: abgerechnet "
+                          f"{gemeldet:.4f}, gerechnet {gerechnet:.4f} "
+                          f"({rel * 100:.1f} % daneben)", file=sys.stderr)
+                print("    Die Zahl unten ist damit UNGEEICHT. Preistabelle in "
+                      "kosten.py nachziehen, bevor du sie buchst.",
+                      file=sys.stderr)
+            else:
+                print(f"  ✓ Preistabelle geeicht an {len(befunde)} "
+                      f"abgerechneten Laeufen dieses Projekts")
+        else:
+            print("  ! Keine abgerechneten Laeufe zum Eichen gefunden — die "
+                  "Zahl unten ruht allein auf der Preistabelle.",
+                  file=sys.stderr)
+
+        je_modell, antworten, doppelt = sitzung_messen(pfade)
+        if not antworten:
+            print("Fehler: keine Nutzungsdaten im Transkript", file=sys.stderr)
+            return 1
+        gesamt, zeilen, unbekannt = sitzung_kosten(je_modell)
+        for pfad in pfade:
+            print(f"  gelesen: {pfad}")
+        print(f"  Antworten: {antworten}  (Duplikate verworfen: {doppelt})")
+        for modell, preis, kuebel, usd in zeilen:
+            print(f"    {modell}  ({preis:.2f} USD/Mio Input)")
+            for art in ("input", "output", "cache_read",
+                        "cache_write_5m", "cache_write_1h"):
+                print(f"      {art:<15} {kuebel[art]:>12,} Tok")
+            print(f"      {'= Summe':<15} {usd:>12.4f} USD")
+        for modell in unbekannt:
+            print(f"  ! Modell '{modell}' steht nicht in der Preistabelle — "
+                  f"seine Token sind in der Summe NICHT enthalten.",
+                  file=sys.stderr)
+        print(f"  GESAMT: {gesamt:.4f} USD")
+        print("  Im Abo ist das ein Abo-Gegenwert, kein abgerechneter Betrag.")
+        print(f"  Buchen: team-status --akteur-abschluss architekt abo "
+              f"{gesamt:.4f} <domaene> \"<notiz>\"")
+        print("  Erst NACH dem letzten Schritt messen — mittendrin gemessen "
+              "untertreibt der Wert systematisch.")
+        return 2 if (schief or unbekannt) else 0
+
     if befehl == "architekt-schaetzung":
         seit = None
         repo = "."
@@ -1623,7 +2029,23 @@ def _main(argv):
         domaene = None
         kaskade = None
         rolle = "architekt" if befehl == "architekt-abschluss" else None
-        auth = "api" if befehl == "architekt-abschluss" else None
+        # BL-143: Hier stand `"api" if befehl == "architekt-abschluss"`. Der
+        # Alias buchte damit FEST die API-Achse — gegen die Regel, die seit der
+        # Abo-Umstellung in CLAUDE.md und im Architekten-Briefing steht: "Auch
+        # Axel und Der Architekt laufen Abo-first — KEINE Rolle ist mehr fest
+        # api", und der Architektenwert sei "als Abo-Gegenwert zu buchen und NIE
+        # stillschweigend als abgerechneter Betrag auszugeben".
+        #
+        # Im Feld (Feld B, Kaskade 1) landeten so 16,3990 USD in der
+        # Zeile "real via API abgerechnet" des Kontostands — echtes Geld, das
+        # nie geflossen ist. Gemerkt hat es niemand beim Buchen, sondern erst
+        # beim Lesen der geschriebenen Ledger-Zeile: Die Erfolgsmeldung nannte
+        # die Auth-Achse nicht (siehe unten, dieselbe BL-Nummer).
+        #
+        # Vorbelegung statt Festlegung: --auth bleibt ueberschreibbar, damit ein
+        # Architekt, der TATSAECHLICH ueber einen API-Key gearbeitet hat, das
+        # sagen kann. Der haeufige Fall ist die Vorgabe, der seltene der Schalter.
+        auth = "abo" if befehl == "architekt-abschluss" else None
         notiz = ""
         pfad = ".budget-ledger"
         repo = "."
@@ -1661,7 +2083,7 @@ def _main(argv):
                     return 1
                 rolle = rest[i + 1]
                 i += 2
-            elif befehl == "akteur-abschluss" and rest[i] == "--auth":
+            elif rest[i] == "--auth":   # BL-143: beide Befehle, nicht nur akteur
                 if i + 1 >= len(rest):
                     print("Fehler: --auth braucht einen Wert (abo|api)",
                           file=sys.stderr)
@@ -1724,8 +2146,13 @@ def _main(argv):
             aktion = "angelegt"
         else:
             aktion = "addiert" if bestand == "addieren" else "ersetzt"
+        # BL-143: Die Achse GEHOERT in die Meldung. Vorher las sich ein
+        # Fehlgriff nicht — "Architekt-Zeile Kaskade 1 (produkt) angelegt:
+        # 16.3990 USD" ist wahr und verschweigt genau das Feld, in dem der
+        # Fehler sass. Die Roles-/Ralph-Zeilen nennen ihre Achse laengst
+        # ("abo 4.5571 / api 0.0000"); ausgerechnet diese nicht.
         print(f"{rolle.capitalize()}-Zeile Kaskade {kaskade} ({domaene}) "
-              f"{aktion}: {usd:.4f} USD")
+              f"{aktion}: {usd:.4f} USD ({auth})")
         return 0
 
     # BL-4: ralph-abschluss ist derselbe Mechanismus mit anderer Quelle und

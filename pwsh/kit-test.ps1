@@ -259,8 +259,16 @@ Kopf '6/6 — Trockenlauf der Rollen (TEAM_DRY_RUN=1, keine CLI-Kosten)'
 Push-Location $ziel
 try {
   try {
+    # BL-150: Der Plankopf steht hier ABSICHTLICH fett — so, wie ein Architekt
+    # ihn im Feld angelegt hat, der dem Stil des uebrigen Kopfes folgte
+    # (`**Plan:**`, `**Stufen:**`). Bis dahin baute dieser Selbsttest seinen
+    # Plankopf immer blank und pruefte damit genau den Fall nie, der im Feld
+    # eintrat: Ralph stieg mit Exit 1 aus, `Cap ?` im Status, und die
+    # Budget-Empfehlung kam nie an. Blank wird von den Funktionstests der
+    # Suite abgedeckt (test_bl150_plankopf_auszeichnung.py, fuenf Notationen
+    # auf beiden Bahnen) — hier steht die Notation, die weh getan hat.
     Set-Content -Path 'plans/ralph-kaskade-1-selbsttest.md' `
-        -Value "RALPH_CAP=1`nBUDGET_EMPFEHLUNG_USD=9`n`n# Stufe 1`n" -Encoding utf8
+        -Value "**RALPH_CAP=1**`n**BUDGET_EMPFEHLUNG_USD=9**`n`n# Stufe 1`n" -Encoding utf8
     Set-Content -Path '.ralph-plan' -Value 'plans/ralph-kaskade-1-selbsttest.md' -Encoding ascii
     # Zurueck auf Stufe 1: Schritt 5 hat den Kaskadenstand auf 5 gesetzt (das
     # war dort der Beweis, dass ein Update ihn nicht anfasst). Ohne das Zuruecksetzen

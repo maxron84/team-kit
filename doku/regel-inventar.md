@@ -32,7 +32,7 @@ machen. Erlaubte Träger: `Regeldatei`, `TEAM.md`, `anhang-a`,
 `rolle-axel`.
 
 Die drei Träger tragen verschiedene Adressaten — der Zuschnitt aus `BL-56`:
-**Regeldatei** = was Rollen befolgen, **`TEAM.md`** = was der Strippenzieher an
+**Regeldatei** = was Rollen befolgen, **`TEAM.md`** = was der Stakeholder an
 seiner Maschine tut, **`anhang-a`** = warum es so gebaut ist. `HERLEITUNG` und
 `HISTORIE` landen regulär in `anhang-a` (Doku-Hygiene-Regel 1).
 
@@ -100,7 +100,7 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | **5. Abschluss-Doc ist Pflicht pro gebauter Kaskade** |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | rolle-architekt | Textvolumen-gebundene Prosa-Arbeit (Doku umbauen, verdichten, umziehen) plane ich als **eigene Handarbeit** |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | Wert probeweise auf **zwei fremde Werte** (höher/niedriger), Suite laufen lassen, danach **nachweislich zurücksetzen** |
-| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | wird sie als `Kit-BL-<N>` geschrieben, nie als blankes `BL-<N>` |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | den eines **dritten** Projekts: Es wird **benannt**, nicht präfigiert |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | HERLEITUNG | Regeldatei | ⚓ Im Feld fand `grep` **fünf** Stellen, das Verstellen **sieben** |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | HERLEITUNG | anhang-a | Prosa-Stufen **3,23 / 3,97 / 4,68 USD** gegenüber **2,16 / 2,35 USD** für Code-Stufen |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | HERLEITUNG | Regeldatei | Im Feld stand eine Skizze drei Kaskaden lang auf einer Prämisse, die der zitierte Eintrag selbst widerlegte |

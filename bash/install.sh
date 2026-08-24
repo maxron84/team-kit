@@ -3,8 +3,11 @@
 # install.sh — installiert das T.E.A.M. in ein Zielprojekt.
 #
 # Aufruf:  bash bash/install.sh <zielpfad> [--nicht-interaktiv] [--force|--update]
-#                                          [--nur-bash|--nur-pwsh]
+#                                          [--nur-bash|--nur-pwsh|--beide-bahnen]
+#          bash bash/install.sh --hilfe
 #
+#   <zielpfad>          Das Projekt, in das das Team einziehen soll. Muss ein
+#                       Git-Repository sein. Pflichtangabe (außer bei --hilfe).
 #   --nicht-interaktiv  Keine Rückfragen; Werte aus den TEAM_INIT_*-Umgebungs-
 #                       variablen oder den Defaults. Für Skripte und Tests.
 #   --update            Nur die Team-INFRASTRUKTUR aktualisieren (Entrypoints
@@ -19,6 +22,16 @@
 #      weg), .ralph-state (Kaskadenstand zurück auf 1), das Beutebuch (alle
 #      Funde weg), CHANGELOG.md, plans/*.md und team.config.sh (Smoke-Test
 #      weg). Empirisch nachgestellt, siehe BL-8. Für Updates: --update.
+#
+#   --nur-bash          Nur die bash-Bahn ablegen (Entrypoints *.sh,
+#                       team/lib.sh, team.config.sh).
+#   --nur-pwsh          Nur die pwsh-Bahn ablegen (Entrypoints *.cmd/*.ps1,
+#                       team/lib.psm1, team.config.ps1).
+#                       Ohne beide Schalter kommen BEIDE Bahnen — die Abwahl
+#                       ist ausdrücklich und kommt vom Anwender (BL-119).
+#   --beide-bahnen      Nur mit --update: eine früher abgewählte Bahn wieder
+#                       zurückholen. Schließt --nur-bash/--nur-pwsh aus.
+#   -h, --hilfe, --help Diesen Kopf ausgeben und sonst nichts tun.
 #
 # Umgebungsvariablen für den nicht-interaktiven Betrieb:
 #   TEAM_INIT_PROJEKT TEAM_INIT_PRODUKTIVCODE TEAM_INIT_TEST_ORDNER
@@ -44,18 +57,79 @@ UPDATE=0
 # Hand. Die Abwahl ist deshalb ausdruecklich und kommt vom Anwender, nie vom
 # Installer (BL-119).
 NUR_BAHN=""
+# BL-147: Der Rueckweg aus BL-119 — "ein Update macht das Projekt wieder
+# vollstaendig" — war bis hierher der Default und damit ein Automatismus.
+# Jetzt ist er ein Schalter. Begruendung am Erkennungsblock im Update-Pfad.
+BEIDE_BAHNEN=0
+
+# BL-139: Die Regeltexte nennen Pfade — und in einer einbahnigen Ablage nennen
+# sie damit Dateien, die es dort nicht gibt. Im Feld (Feld B, mit
+# --nur-pwsh installiert) waren das 14 tote .sh-Pfade in CLAUDE.md und 23 in
+# TEAM.md. Am teuersten team.config.sh: Der Regeltext schickte jede Rolle
+# dorthin, um TEAM_SMOKE_TEST nachzutragen, waehrend team/lib.psm1
+# team.config.ps1 liest — zwei einander widersprechende Anweisungen im selben
+# Systemprompt, und der Fehlermodus ist STILL. Wer der Regel folgt, legt eine
+# Datei an, die nie gelesen wird: kein Abbruch, keine Meldung, der Wert wirkt
+# einfach nicht.
+#
+# Gebaut als Platzhalter statt als Nachbearbeitung der fertigen Datei: Die
+# Vorlage sagt dann selbst, welche Stellen bahnabhaengig sind, und eine neu
+# dazugeschriebene Zeile faellt im Test auf, statt still die alte Bahn zu
+# nennen. Die Zwei-Bahnen-Tabelle in TEAM.md und der Ablage-Block in
+# CLAUDE.md.vorlage bleiben ausdruecklich literal — sie STELLEN die Bahnen
+# GEGENUEBER, das ist ihr Zweck.
+#
+# Vorbelegt ist die bash-Bahn: In einer zweibahnigen Ablage (dem Default) liegt
+# beides, und der gerenderte Text bleibt damit Byte fuer Byte der von vorher.
+# Nur --nur-pwsh aendert etwas.
+bahn_werte() {
+    if [ "$NUR_BAHN" = "pwsh" ]; then
+        BAHN_RUF='.\'         ; BAHN_ENDUNG='.cmd'
+        BAHN_KONFIG='team.config.ps1'
+        BAHN_LIB='team/lib.psm1'; BAHN_REDTEAM='team/redteam.ps1'
+    else
+        BAHN_RUF='./'          ; BAHN_ENDUNG='.sh'
+        BAHN_KONFIG='team.config.sh'
+        BAHN_LIB='team/lib.sh' ; BAHN_REDTEAM='team/redteam.sh'
+    fi
+}
+
+# Der Hilfetext IST der Dateikopf, keine zweite Fassung daneben: Eine Abschrift
+# laeuft irgendwann auseinander, und dann sagt --hilfe etwas anderes als die
+# Datei (dieselbe Lehre wie BL-154). Gelesen wird ab Zeile 3 — Zeile 1 ist die
+# Shebang, Zeile 2 die Bahn-Kopfzeile, beides Maschinensache — bis zur ersten
+# Zeile, die kein Kommentar mehr ist. Waechst der Kopf, waechst die Hilfe mit.
+hilfe() {
+    sed -n '3,${
+        /^#/!q
+        s/^# \{0,1\}//
+        p
+    }' "${BASH_SOURCE[0]}"
+}
 
 for arg in "$@"; do
     case "$arg" in
+        -h|--hilfe|--help)  hilfe; exit 0 ;;
         --nicht-interaktiv) INTERAKTIV=0 ;;
         --force)            FORCE=1 ;;
         --update)           UPDATE=1 ;;
         --nur-bash)         NUR_BAHN="bash" ;;
         --nur-pwsh)         NUR_BAHN="pwsh" ;;
+        --beide-bahnen)     BEIDE_BAHNEN=1 ;;
         -*) echo "Unbekannte Option: $arg" >&2; exit 2 ;;
         *)  ZIEL="$arg" ;;
     esac
 done
+
+if [ "$BEIDE_BAHNEN" -eq 1 ] && [ -n "$NUR_BAHN" ]; then
+    printf '\033[31m%s\033[0m\n' "FEHLER: --beide-bahnen und --nur-$NUR_BAHN schliessen sich aus."
+    echo "  --beide-bahnen holt eine fehlende Bahn zurueck, --nur-* waehlt eine ab."
+    exit 2
+fi
+
+# BL-139: Erst JETZT stehen die Schalter fest — vorher waeren die Werte geraten.
+# (Nach der Bahn-Erkennung im Update-Pfad wird erneut gerufen, BL-147.)
+bahn_werte
 
 # Gehoert die Datei zu einer abgewaehlten Bahn? Entscheidet ueber die ENDUNG,
 # weil das Kit an dieser Stelle Kit-Pfade (bash/entry/…) auf Projekt-Pfade
@@ -68,12 +142,35 @@ bahn_abgewaehlt() {
     return 1
 }
 
+# BL-147: Liegt diese Bahn im Zielprojekt? Gefragt wird nach den Dateien, die
+# das KIT ausliefert — nicht nach der Endung. Ein projekteigenes deploy.ps1
+# ist keine pwsh-Bahn, und ein build.sh macht aus einem Windows-Projekt kein
+# zweibahniges. Genau daran haette eine Endungs-Heuristik im Feld vorbeigelesen.
+bahn_liegt_da() {  # bahn_liegt_da <bash|pwsh> — 0, wenn diese Bahn da ist
+    local f
+    if [ "$1" = "bash" ]; then
+        for f in "$KIT"/bash/entry/*.sh; do
+            [ -f "$ZIEL/$(basename "$f")" ] && return 0
+        done
+        [ -f "$ZIEL/team/lib.sh" ] && return 0
+        [ -f "$ZIEL/team/redteam.sh" ] && return 0
+    else
+        for f in "$KIT"/pwsh/entry/*.ps1 "$KIT"/pwsh/entry/*.cmd; do
+            [ -e "$f" ] || continue
+            [ -f "$ZIEL/$(basename "$f")" ] && return 0
+        done
+        [ -f "$ZIEL/team/lib.psm1" ] && return 0
+        [ -f "$ZIEL/team/redteam.ps1" ] && return 0
+    fi
+    return 1
+}
+
 rot()  { printf '\033[31m%s\033[0m\n' "$*"; }
 gruen(){ printf '\033[32m%s\033[0m\n' "$*"; }
 gelb() { printf '\033[33m%s\033[0m\n' "$*"; }
 kopf() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 
-[ -n "$ZIEL" ] || { rot "FEHLER: Kein Zielpfad angegeben."; echo "Aufruf: bash bash/install.sh <zielpfad>"; exit 2; }
+[ -n "$ZIEL" ] || { rot "FEHLER: Kein Zielpfad angegeben."; echo "Aufruf: bash bash/install.sh <zielpfad>"; echo "Alle Optionen: bash bash/install.sh --hilfe"; exit 2; }
 ZIEL="$(cd "$ZIEL" 2>/dev/null && pwd)" || { rot "FEHLER: Zielpfad existiert nicht: $ZIEL"; exit 2; }
 
 # BL-109: "Der Block ist da" heisst NICHT "der Block ist vollstaendig". Das
@@ -81,7 +178,7 @@ ZIEL="$(cd "$ZIEL" 2>/dev/null && pwd)" || { rot "FEHLER: Zielpfad existiert nic
 # gefahren hat, blieb bisher dauerhaft auf dem Fragmentstand seines
 # Installationstages — der Installer meldete dabei sogar Erfolg ("enthaelt den
 # Block bereits") und der --update-Pfad sah gar nicht erst hin. Im Feld
-# (team-kit_project_platformer) fehlten so .team-focus-harry und
+# (Feld A) fehlten so .team-focus-harry und
 # .team-focus-marv: beide standen nach JEDEM Sweep als untracked im Baum, sahen
 # im Closeout wie unfertige Arbeit aus, und ein unachtsames `git add -A` haette
 # einen Fokus-String verewigt, der fuer genau einen Lauf galt.
@@ -353,8 +450,40 @@ if [ "$UPDATE" -eq 1 ]; then
         exit 2
     fi
 
+    # BL-147: Welche Bahn ein Projekt faehrt, sagt die ABLAGE — nicht der
+    # Schalter, den beim Update gerade niemand tippt. Bis hierher galt der
+    # Umkehrschluss: Ein --update ohne Schalter machte das Projekt "wieder
+    # vollstaendig" (BL-119) und legte die zweite Bahn dazu. Als Rueckweg aus
+    # einer Abwahl gedacht — im Feld ist es der Normalfall geworden, und der
+    # Normalfall will keine zweite Bahn.
+    #
+    # Feld A, 2026-08-22: Ein Routine-Update legte 21 pwsh-Dateien in ein
+    # reines Bash-Projekt. Untracked, unbestellt, und weil sie im Baum lagen,
+    # fuhr die Testsuite ab da eine Bahn mit, die dort niemand faehrt
+    # (conftest entscheidet an der ANWESENHEIT der Dateien). Der Anwender
+    # bemerkt es an 19 fremden Dateien in `git status` — falls er hinsieht.
+    #
+    # Der Rueckweg bleibt, er wird nur ausdruecklich: --beide-bahnen. Das ist
+    # derselbe Schnitt wie bei der Abwahl selbst ("kommt vom Anwender, nie vom
+    # Installer") — nur jetzt in beide Richtungen.
+    if [ -z "$NUR_BAHN" ] && [ "$BEIDE_BAHNEN" -eq 0 ]; then
+        if   bahn_liegt_da bash && ! bahn_liegt_da pwsh; then NUR_BAHN="bash"
+        elif bahn_liegt_da pwsh && ! bahn_liegt_da bash; then NUR_BAHN="pwsh"
+        fi
+        if [ -n "$NUR_BAHN" ]; then
+            # Die Bahn steht erst JETZT fest — die Regeltexte muessen ihre
+            # Pfade daraus bekommen, sonst nennt der Systemprompt jeder Rolle
+            # Dateien, die es hier nicht gibt (BL-139).
+            bahn_werte
+            gruen "  ✓ Einbahnige Ablage erkannt: nur die ${NUR_BAHN}-Bahn (BL-147)"
+            echo  "    Das Update haelt sie einbahnig und legt keine Dateien der"
+            echo  "    anderen Bahn dazu. Zweibahnig machen (ausdruecklich):"
+            echo  "      bash $KIT/bash/install.sh \"$ZIEL\" --update --beide-bahnen"
+        fi
+    fi
+
     # BL-10: NIEMALS in einen laufenden Lauf hinein aktualisieren. Real
-    # passiert (2026-08-01, team-kit_project_platformer): Ein Update waehrend
+    # passiert (2026-08-01, Feld A): Ein Update waehrend
     # eines aktiven vollautomatik.sh-Laufs legte frische, uncommittete Dateien
     # in team/ ab. Der naechste Read-Only-Lauf (Axel, Whitelist nur plans/)
     # wertete sie als GUARD-VERLETZUNG, rollte sie chirurgisch zurueck und
@@ -453,20 +582,28 @@ if [ "$UPDATE" -eq 1 ]; then
             # Die Entrypoints des Kits sind kein Projektcode; Doku und
             # Konfigdateien greift kein Red Team an. Alles andere MIT Endung
             # ist Code, der heute ausserhalb des Pruefumfangs liegt.
-            case "$(basename "$f")" in
-                ralph.sh|frank.sh|axel.sh|harry.sh|marv.sh) ;;
-                vollautomatik.sh|halbautomatik.sh|team-status.sh|team-test.sh|team.config.sh) ;;
-                # Die pwsh-Bahn: eigene Entrypoints des Kits, kein
-                # Projektcode. Ohne diese Zeilen meldete der Installer die
-                # eigenen Dateien als "ungeprueft in der Wurzel" — eine
-                # Warnung, die bei jedem Aufruf erscheint, erzieht zum
-                # Wegsehen (BL-14).
-                ralph.ps1|frank.ps1|axel.ps1|harry.ps1|marv.ps1) ;;
-                vollautomatik.ps1|halbautomatik.ps1|team-status.ps1|team-test.ps1|team.config.ps1) ;;
-                ralph.cmd|frank.cmd|axel.cmd|harry.cmd|marv.cmd) ;;
-                vollautomatik.cmd|halbautomatik.cmd|team-status.cmd|team-test.cmd) ;;
+            NAME="$(basename "$f")"
+            # BL-154: Hier stand eine ABSCHRIFT der Entrypoints — 24 Namen,
+            # von Hand gepflegt. Sie war ab dem naechsten neuen Entrypoint
+            # falsch, und zwar auf die unangenehme Art: Das Kit meldete seine
+            # EIGENE Datei als "ungeprueften Projektcode". Eine Warnung, die
+            # in jedem gruenen Projekt erscheint, erzieht zum Wegsehen
+            # (BL-14) — und genau daneben stand der Hinweis auf echten
+            # Wurzel-Code, den man dann mit uebersieht.
+            #
+            # Aufgefallen beim Einbau von kit-melden.sh (BL-153): Der leere
+            # Selbsttest-Ordner meldete plotzlich drei Dateien, und im
+            # Bestandsprojekt verschwand `main.py` hinter ihnen.
+            #
+            # Gefragt wird jetzt das Kit selbst: Was in bash/entry/ oder
+            # pwsh/entry/ liegt, ist ein Entrypoint des Kits. Das kann nicht
+            # veralten, weil es keine zweite Liste mehr gibt.
+            if [ -e "$KIT/bash/entry/$NAME" ] || [ -e "$KIT/pwsh/entry/$NAME" ]; then
+                continue
+            fi
+            case "$NAME" in
                 *.md|LICENSE*|Makefile|*.toml|*.cfg|*.ini|*.txt|*.json|*.yaml|*.yml) ;;
-                *.*) WURZEL_CODE="$WURZEL_CODE $(basename "$f")" ;;
+                *.*) WURZEL_CODE="$WURZEL_CODE $NAME" ;;
             esac
         done
         if [ -n "$WURZEL_CODE" ]; then
@@ -491,7 +628,7 @@ if [ "$UPDATE" -eq 1 ]; then
     if [ -n "$COMMIT_ENTSCHEID" ]; then
         gruen "  ✓ Commit-Entscheid aus dem bisherigen Briefing uebernommen"
     else
-        COMMIT_ENTSCHEID="Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Strippenzieher führt sie aus."
+        COMMIT_ENTSCHEID="Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Stakeholder führt sie aus."
         gelb "  ! Commit-Entscheid nicht lesbar — Default (nicht selbst committen) gesetzt."
     fi
 
@@ -526,11 +663,14 @@ if [ "$UPDATE" -eq 1 ]; then
                            "$SMOKE_TEST" "$TECH_STACK" "$DEPLOY" "$DEPLOY_AUSNAHMEN" \
                            "$DOMAENEN" "$COMMIT_ENTSCHEID" \
                            "${TEAM_WEITERER_CODE:-}" "${TEAM_TEST_ORDNER_BESTAND:-}" \
-                           "${TEAM_PLAN_ORDNER_BESTAND:-}" "$PYTHON" <<'PY'
+                           "${TEAM_PLAN_ORDNER_BESTAND:-}" "$PYTHON" \
+                           "$BAHN_RUF" "$BAHN_ENDUNG" "$BAHN_KONFIG" \
+                           "$BAHN_LIB" "$BAHN_REDTEAM" "$KIT" <<'PY'
 import sys, pathlib
 (d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
  domaenen, commit, weiterer, test_bestand, plan_bestand,
- python_name) = sys.argv[1:16]
+ python_name, bahn_ruf, bahn_endung, bahn_konfig,
+ bahn_lib, bahn_redteam, kit_pfad) = sys.argv[1:22]
 # BL-113: siehe die Begruendung bei fuelle() weiter unten. Die Regel steht
 # hier ein zweites Mal, weil der Update-Pfad eine eigene Fuell-Routine hat —
 # und ein Update, das die Kodierung verliert, ist genau der Fall, in dem ein
@@ -541,7 +681,28 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{BEUTEBUCH}}", plan.rstrip("/") + "/beutebuch.md"),
              ("{{CHANGELOG}}", "CHANGELOG.md"),
              ("{{FIX_PRAEFIX}}", "fix(uat)"), ("{{FEAT_PRAEFIX}}", "feat"),
+             # BL-149: ZWEI Platzhalter fuer einen Wert, und der Unterschied
+             # ist der Unterschied zwischen Prosa und Konfiguration.
+             #
+             # {{SMOKE_TEST}} steht in Regeltexten (CLAUDE.md, TEAM.md,
+             # roadmap-skizzen, Ralphs Briefing). Dort ist der TODO-Satz genau
+             # richtig: Er sagt einem Menschen, was noch fehlt.
+             #
+             # {{SMOKE_TEST_KONFIG}} steht NUR in team.config.*, und dort war
+             # derselbe Satz ein Schaden. Die Weichen der Bibliothek
+             # unterscheiden "konfiguriert" von "nicht konfiguriert" ueber
+             # leer/nicht-leer — ein nicht-leerer Platzhalter war fuer sie ein
+             # KONFIGURIERTER Befehl. Folge in Kaskade 1 JEDES Projekts: Die
+             # Rollen bekamen "Smoke-Test ausfuehren: TODO: noch keiner …" in
+             # den Prompt, das Red Team ein Bash(TODO …) in die Allowlist, und
+             # die Selbstpruefung fuehrte den Satz WOERTLICH aus (Exit 127,
+             # "ist ROT"). Getroffen wurde ausschliesslich der Erstlauf — die
+             # Lage mit der geringsten Projekterfahrung.
+             #
+             # Dieselbe Bauart wie {{WEITERER_CODE}} weiter unten: Ein
+             # Platzhalter, der leer werden darf, gehoert in keine Prosa.
              ("{{SMOKE_TEST}}", smoke or "TODO: noch keiner — Stufe 1 der ersten Kaskade"),
+             ("{{SMOKE_TEST_KONFIG}}", smoke),
              ("{{TECH_STACK}}", stack), ("{{DEPLOY}}", deploy),
              ("{{DEPLOY_AUSNAHMEN}}", ausn), ("{{DOMAENEN}}", domaenen),
              ("{{COMMIT_ENTSCHEID}}", commit),
@@ -550,7 +711,17 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{PYTHON}}", python_name),
              ("{{WEITERER_CODE}}", weiterer),
              ("{{TEST_BESTAND}}", test_bestand),
-             ("{{PLAN_BESTAND}}", plan_bestand)]:
+             ("{{PLAN_BESTAND}}", plan_bestand),
+             # BL-139: die bahnabhaengigen Pfade. In einer einbahnigen Ablage
+             # nannte der Regeltext sonst Dateien, die es dort nicht gibt.
+             ("{{RUF}}", bahn_ruf), ("{{ENDUNG}}", bahn_endung),
+             ("{{KONFIG}}", bahn_konfig), ("{{LIB}}", bahn_lib),
+             ("{{REDTEAM}}", bahn_redteam),
+             # BL-153: Wo das Kit auf DIESER Maschine liegt. Stand bis einschliesslich 2.12.0
+             # als ~/Source/team-kit in der Prosa und zeigte damit ueberall
+             # dorthin, wo der Autor geklont hatte. Steht nur in team.config.*;
+             # das Werkzeug kann ohne ihn arbeiten, aber nicht ohne Suchen.
+             ("{{KIT_PFAD}}", kit_pfad)]:
     t = t.replace(a, b)
 # BL-137: schreiben OHNE Uebersetzung der Zeilenenden.
 #
@@ -706,11 +877,21 @@ PY
     # pauschales rm des Installers hat im Feld einen projekteigenen Test
     # mitgenommen. Genannt wird es, mit dem Befehl daneben.
     if [ -n "$NUR_BAHN" ]; then
+        # Gezaehlt wird nur, was das KIT ausliefert (BL-147, dieselbe
+        # Ueberlegung wie bei der Erkennung): Ein projekteigenes deploy.ps1
+        # gehoert nicht der abgewaehlten Bahn, und ein "git rm" darauf waere
+        # ein Rat, der fremde Arbeit loescht.
         RESTE=""
-        for f in "$ZIEL"/* "$ZIEL"/team/*; do
-            [ -f "$f" ] || continue
+        for f in "$KIT"/bash/entry/*.sh "$KIT"/pwsh/entry/*.ps1 "$KIT"/pwsh/entry/*.cmd; do
+            [ -e "$f" ] || continue
             bahn_abgewaehlt "$f" || continue
-            RESTE="$RESTE ${f#"$ZIEL"/}"
+            [ -f "$ZIEL/$(basename "$f")" ] && RESTE="$RESTE $(basename "$f")"
+        done
+        for f in "$KIT/bash/lib.sh" "$KIT/bash/redteam.sh" \
+                 "$KIT/pwsh/lib.psm1" "$KIT/pwsh/redteam.ps1"; do
+            [ -e "$f" ] || continue
+            bahn_abgewaehlt "$f" || continue
+            [ -f "$ZIEL/team/$(basename "$f")" ] && RESTE="$RESTE team/$(basename "$f")"
         done
         if [ -n "$RESTE" ]; then
             kopf "Abgewaehlte Bahn liegt noch da (BL-119/BL-133)"
@@ -1073,7 +1254,7 @@ frage COMMIT_MODUS "Architekt committet selbst? (j/n)" "n"
 
 # Kollision Pruefumfang/Schreibzone: Derselbe Ordner kann nicht beides sein.
 # Stand er in beiden Antworten, sagte der Rollen-Prompt in EINEM Absatz "tabu"
-# und "schreib hierhin" — beobachtet an Project-Family-ERP, wo tests/ in beiden
+# und "schreib hierhin" — beobachtet an Feld C, wo tests/ in beiden
 # stand und Harrys Reproducer-Auftrag damit widerspruechlich war. Wer seinen
 # Testbestand schuetzen will, ist bei BL-51 richtig, nicht beim Pruefumfang.
 if [ -n "$WEITERER_CODE" ]; then
@@ -1101,7 +1282,7 @@ fi
 # Projekt ist das folgenlos (die Ordner entstehen erst). In einer gewachsenen
 # Codebasis ist "plans/" oder "docs/" typischerweise belegt — und Harry, Marv
 # und Axel bekommen stillschweigend Schreib- und Loeschrecht auf
-# Bestandsdokumente. Beobachtet an Project-Family-ERP: zehn fachliche Dokumente
+# Bestandsdokumente. Beobachtet an Feld C: zehn fachliche Dokumente
 # in plans/, darunter die Architektur- und die Refactoring-Planung.
 #
 # Gewarnt wird, nicht verboten: Ein bewusst geteilter Ordner kann legitim sein.
@@ -1156,7 +1337,7 @@ DEPLOY="TODO: in CLAUDE.md nachtragen"
 DEPLOY_AUSNAHMEN="keine"
 case "${COMMIT_MODUS,,}" in
     j|ja|y|yes) COMMIT_ENTSCHEID="Ich committe Plan-/Doku-Änderungen selbst (docs(plan): …)." ;;
-    *)          COMMIT_ENTSCHEID="Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Strippenzieher führt sie aus." ;;
+    *)          COMMIT_ENTSCHEID="Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Stakeholder führt sie aus." ;;
 esac
 
 # ---------------------------------------------------------------- Kopieren
@@ -1190,11 +1371,14 @@ fuelle() {
     "$PYTHON" - "$datei" "$PROJEKT" "$PRODUKTIVCODE" "$TEST_ORDNER" "$PLAN_ORDNER" \
                        "$SMOKE_TEST" "$TECH_STACK" "$DEPLOY" "$DEPLOY_AUSNAHMEN" \
                        "$DOMAENEN" "$COMMIT_ENTSCHEID" "$WEITERER_CODE" \
-                       "$TEST_ORDNER_BESTAND" "$PLAN_ORDNER_BESTAND" "$PYTHON" <<'PY'
+                       "$TEST_ORDNER_BESTAND" "$PLAN_ORDNER_BESTAND" "$PYTHON" \
+                       "$BAHN_RUF" "$BAHN_ENDUNG" "$BAHN_KONFIG" \
+                       "$BAHN_LIB" "$BAHN_REDTEAM" "$KIT" <<'PY'
 import sys, pathlib
 (d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
  domaenen, commit, weiterer, test_bestand, plan_bestand,
- python_name) = sys.argv[1:16]
+ python_name, bahn_ruf, bahn_endung, bahn_konfig,
+ bahn_lib, bahn_redteam, kit_pfad) = sys.argv[1:22]
 # BL-113: utf-8-sig liest ein vorhandenes BOM weg, statt es als ﻿ mitten
 # in den Text zu nehmen. Ob beim Schreiben wieder eines hinkommt, entscheidet
 # unten allein die Endung — nicht der Zufall, was in der Vorlage stand.
@@ -1204,7 +1388,13 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              ("{{BEUTEBUCH}}", plan.rstrip("/") + "/beutebuch.md"),
              ("{{CHANGELOG}}", "CHANGELOG.md"),
              ("{{FIX_PRAEFIX}}", "fix(uat)"), ("{{FEAT_PRAEFIX}}", "feat"),
+             # BL-149: siehe die Begruendung in der Fuell-Routine des
+             # Update-Pfads weiter oben. {{SMOKE_TEST}} ist Prosa und darf den
+             # TODO-Satz tragen; {{SMOKE_TEST_KONFIG}} steht nur in
+             # team.config.* und muss LEER bleiben, weil die Weichen der
+             # Bibliothek an leer/nicht-leer haengen.
              ("{{SMOKE_TEST}}", smoke or "TODO: noch keiner — Stufe 1 der ersten Kaskade"),
+             ("{{SMOKE_TEST_KONFIG}}", smoke),
              ("{{TECH_STACK}}", stack), ("{{DEPLOY}}", deploy),
              ("{{DEPLOY_AUSNAHMEN}}", ausn), ("{{DOMAENEN}}", domaenen),
              ("{{COMMIT_ENTSCHEID}}", commit),
@@ -1217,7 +1407,17 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              # zerreisst.
              ("{{WEITERER_CODE}}", weiterer),
              ("{{TEST_BESTAND}}", test_bestand),
-             ("{{PLAN_BESTAND}}", plan_bestand)]:
+             ("{{PLAN_BESTAND}}", plan_bestand),
+             # BL-139: die bahnabhaengigen Pfade. In einer einbahnigen Ablage
+             # nannte der Regeltext sonst Dateien, die es dort nicht gibt.
+             ("{{RUF}}", bahn_ruf), ("{{ENDUNG}}", bahn_endung),
+             ("{{KONFIG}}", bahn_konfig), ("{{LIB}}", bahn_lib),
+             ("{{REDTEAM}}", bahn_redteam),
+             # BL-153: Wo das Kit auf DIESER Maschine liegt. Stand bis einschliesslich 2.12.0
+             # als ~/Source/team-kit in der Prosa und zeigte damit ueberall
+             # dorthin, wo der Autor geklont hatte. Steht nur in team.config.*;
+             # das Werkzeug kann ohne ihn arbeiten, aber nicht ohne Suchen.
+             ("{{KIT_PFAD}}", kit_pfad)]:
     t = t.replace(a, b)
 # BL-113 — die Kodierungsregel des Kits, zeichengleich mit Team-Kodierung in
 # install.ps1: PowerShell-Quelltext MIT BOM, alles andere OHNE.
@@ -1246,7 +1446,7 @@ with p.open("w", newline="",
 PY
 }
 
-# Entrypoints in die Repo-Wurzel — der Strippenzieher tippt sie direkt
+# Entrypoints in die Repo-Wurzel — der Stakeholder tippt sie direkt
 # (Ablage-Konvention aus dem Feld: Einstiegspunkte sichtbar oben).
 # BEIDE Bahnen werden installiert, auch wenn dieser Installer unter Linux
 # laeuft und den Windows-Teil hier niemand braucht. Der Grund ist die

@@ -25,6 +25,12 @@ ohne Dreisatz zählt nicht als erledigt.
 Pflicht neben dem Fix, sondern die Bedingung dafür, dass der Fix beweisbar
 ist.)
 
+**Fehler in `team/`, einem Entrypoint oder einer Regel = Fehler des Kits.** Er
+trifft jede Installation, mein lokaler Fix verfällt beim nächsten `--update`.
+Ich melde ihn zusätzlich (`{{RUF}}kit-melden{{ENDUNG}} neu --titel "…"`,
+ausfüllen, `… pruefen`), Backlog-Status „ans Kit gemeldet". **Senden tue ich
+nie** — das wirkt nach außen und macht der Mensch.
+
 **Wenn mein Fix einen zentralen Wert ändert** (Konstante, Default,
 Schwellwert, Balancing-Zahl), gilt er erst als vollständig, wenn ich den Wert
 **probeweise gegen zwei fremde Werte** gefahren habe — einen höheren, einen

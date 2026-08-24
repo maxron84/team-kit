@@ -17,13 +17,40 @@ else
     echo "[team-lib] WARNUNG: team.config.sh fehlt — Bibliotheks-Defaults aktiv." >&2
 fi
 
+# --- Ein Platzhalter ist kein Befehl (BL-149) ---------------------------------
+# Jede Weiche unterhalb unterscheidet "konfiguriert" von "nicht konfiguriert"
+# ueber leer/nicht-leer. Das ist richtig — nur ist "noch nicht ausgefuellt" im
+# Kit jahrelang als TODO-SATZ geschrieben worden, und der ist nicht leer.
+#
+# Im Feld traf das jede erste Kaskade: Der Satz "TODO: noch keiner — Stufe 1
+# der ersten Kaskade" stand als Vorbelegung in team.config.sh, galt damit als
+# Befehl, landete im Prompt jeder bauenden Rolle ("Smoke-Test ausfuehren:
+# TODO: …"), in der Werkzeug-Allowlist des Red Teams (Bash(TODO …)) und wurde
+# von team_quittung_selbstpruefung WOERTLICH ausgefuehrt — Exit 127, Meldung
+# "ist ROT". Der vierte Ausgang aus BL-41 konnte in Stufe 1 damit nie
+# automatisch quittieren, obwohl genau diese Stufe die Aufgabe hat, den
+# Smoke-Test ueberhaupt erst zu bauen.
+#
+# Die Vorbelegung ist weg (der Installer fuellt team.config.* jetzt LEER). Diese
+# Weiche steht trotzdem hier, und zwar aus zwei Gruenden: Ein Mensch traegt in
+# eine leere Zeile gern selbst ein "TODO" ein, und ein Platzhalter dieser Sorte
+# wird im Kit erfahrungsgemaess an anderer Stelle wieder eingefuehrt. Sie
+# normalisiert EINMAL, oben, statt an drei Verbrauchsstellen einzeln.
+#
+# Bewusst nur der Praefix und bewusst gross geschrieben: "TODO" am Anfang ist
+# im ganzen Kit die Marke fuer "noch nicht ausgefuellt". Ein echter Pruefbefehl
+# faengt nicht so an; ein Skript namens ./todo.sh bleibt unangetastet.
+case "${TEAM_SMOKE_TEST:-}" in
+    TODO*) TEAM_SMOKE_TEST="" ;;
+esac
+
 # --- Abgeleitete Prompt-Bausteine (Starterkit) --------------------------------
 # Smoke-Test-Zeile für die bauenden Rollen. Ist kein Befehl konfiguriert, wird
 # der Schritt AUSDRÜCKLICH als offener Punkt benannt, statt still zu
 # verschwinden — sonst merkt niemand, dass das Sicherheitsnetz fehlt.
 if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
     # Der Nachsatz ist eine Notbremse gegen einen teuren Fehlermodus, nicht
-    # Ausschmückung (BL-41, Feld platformer K27/K28): Eine bauende Rolle
+    # Ausschmückung (BL-41, Feld A K27/K28): Eine bauende Rolle
     # startete den Smoke-Test als HINTERGRUND-Task und wartete danach auf eine
     # Benachrichtigung, die in einer headless-Sitzung nie eintrifft. Der Lauf
     # endet mit subtype=success und is_error=false — er SIEHT AUS WIE EIN
@@ -62,7 +89,7 @@ TEAM_MODEL_LOOP="${TEAM_MODEL_LOOP:-sonnet}"
 TEAM_MODEL_STRONG="${TEAM_MODEL_STRONG:-opus}"
 
 # --- Budget pro Rolle (Zwei-Schwellen-Modell) --------------------------------
-# Strippenzieher-Entscheid 2026-07-12 (realer Auslöser HM-32): Ein zu tiefes
+# Stakeholder-Entscheid 2026-07-12 (realer Auslöser HM-32): Ein zu tiefes
 # Pro-Rolle-Budget ist ökonomisch absurd — der alte 1-USD-Frank-Cap griff ERST
 # NACH dem (bereits bezahlten) Claude-Aufruf und warf über den Rollback die
 # schon bezahlte Arbeit weg, der nächste Versuch kostete erneut: der Cap
@@ -204,7 +231,7 @@ team_resolve_auth_mode() {
 # --- Zentraler Claude-Aufruf ---------------------------------------------------
 # team_claude <rolle> <modell> <outfile> <prompt> [weitere claude-Flags …]
 #
-# Abo-first mit automatischem API-Fallback (Strippenzieher-Entscheid 2026-07-10:
+# Abo-first mit automatischem API-Fallback (Stakeholder-Entscheid 2026-07-10:
 # gilt für ALLE Rollen, auch Axel): Auth wird pro Aufruf frisch aufgelöst;
 # scheitert der Abo-Aufruf (Exit ≠ 0 oder is_error), folgt genau EIN API-Retry.
 # Nach dem Aufruf stehen TEAM_LAST_COST (USD) und TEAM_LAST_OUT (Log-Datei).
@@ -214,7 +241,7 @@ team_resolve_auth_mode() {
 # TEAM_LAST_OUT bleibt das FINALE Log (Promise-Pruefung, HM-20).
 #
 # Session-Limit (429, Kaskade 9 / Stufe 30, Strategie A+B; API-Fallback-Reihenfolge
-# per Strippenzieher-Entscheid 2026-07-11 umgestellt, Commit f787936): Bei JEDEM
+# per Stakeholder-Entscheid 2026-07-11 umgestellt, Commit f787936): Bei JEDEM
 # Abo-Fehler — Timeout, normaler Fehler ODER 429/Session-Limit — versucht
 # team_claude SOFORT den einmaligen API-Fallback (eigenes, separates Kontingent;
 # hilft auch bei einem Abo-429). Erst wenn AUCH das finale (ggf. API-)Ergebnis
@@ -356,7 +383,7 @@ PY
     versuch_logs+=("$out")
     if team_bewerte_ergebnis "$rolle" "$out" "$cli_exit"; then fehler=0; else fehler=1; fi
 
-    # Strippenzieher-Entscheid (2026-07-11): Bei JEDEM Abo-Fehler — egal ob
+    # Stakeholder-Entscheid (2026-07-11): Bei JEDEM Abo-Fehler — egal ob
     # Timeout, normaler Fehler ODER 429/Session-Limit — SOFORT den API-Fallback
     # versuchen. Der API-Key hat ein eigenes, separates Kontingent (bewiesen
     # 2026-07-11: bei erschöpftem Abo-Kontingent liefert derselbe Prompt mit dem
@@ -534,7 +561,7 @@ team_quittung_fehlt_melden() {
 #
 # WARUM ES SIE GIBT: Die Erkennung oben ist richtig, aber sie hält den Lauf an
 # und legt einem Menschen eine Prüfliste vor, deren drei Schritte IMMER
-# dieselben sind. Im Feld (Projekt platformer) ist der Fall in neun Kaskaden
+# dieselben sind. Im Feld (Feld A) ist der Fall in neun Kaskaden
 # aufgetreten — K27, K28, K29, K33, K34, K35 (dort dreimal), K36, K37 — und
 # JEDES Mal lautete das Ergebnis "Arbeit fertig, nur die Quittung fehlt". Eine
 # Prüfliste, die neunmal dasselbe ergibt, ist eine Funktion, die noch niemand
@@ -925,7 +952,7 @@ team_guard_verify() {
 # team_guard_urteil <rolle> <uebergriff 0|1> <ergebnis-liegt-vor 0|1>
 #   Exit 0 = die Runde zählt · 1 = der Aufruf gilt als gescheitert.
 #
-# BL-16 Ebene 2 (Strippenzieher-Entscheid 2026-08-02): Ein Guard-Übergriff
+# BL-16 Ebene 2 (Stakeholder-Entscheid 2026-08-02): Ein Guard-Übergriff
 # kassiert den ÜBERGRIFF, nicht die Arbeit. Liegt das eigentliche Ergebnis der
 # Rolle vor, ist die Leistung erbracht — der Grenzübertritt ist bereits
 # chirurgisch zurückgerollt und laut gemeldet, und ein zusätzlicher Fehlschlag
@@ -1179,7 +1206,7 @@ team_kosten_summe() {
 # team_kosten_seit <epoch> <dir…>: Summe total_cost_usd nur über *.json, deren
 # mtime >= <epoch> ist — die Kosten EINES Laufs (seit dem gemerkten Startpunkt),
 # nicht lebenslang. Grundlage der Pro-Lauf-Deckel-Durchsetzung in vollautomatik.sh
-# (BL-18, Strippenzieher-Entscheid: „Pro-Lauf-Deckel = operative Grenze,
+# (BL-18, Stakeholder-Entscheid: „Pro-Lauf-Deckel = operative Grenze,
 # Gesamtrahmen nur dokumentiert" — CLAUDE.md/BL-13). Der lebenslange Kontostand
 # bleibt team_kontostand_gesamt (Anzeige, nicht Durchsetzung).
 team_kosten_seit() {
@@ -1310,7 +1337,7 @@ team_bau_notiz() {
 
 # team_architekt_stand [ledger-pfad] [plan-datei]: liefert "USD<TAB>status"
 # fuer die Architekt-Kosten der AKTIVEN Kaskade — BL-28-Hybrid A2->A1
-# (Kaskade 13/Stufe 44): Hat der Strippenzieher fuer diese Kaskade bereits
+# (Kaskade 13/Stufe 44): Hat der Stakeholder fuer diese Kaskade bereits
 # eine echte Architekt-Zeile per `architekt-abschluss` (Stufe 43)
 # eingetragen, ist status "echt" und der Wert kommt aus der Ledger. Sonst
 # status "geschaetzt" mit der A2-Live-Schaetzung (team_architekt_schaetzung).
@@ -1333,7 +1360,12 @@ team_architekt_stand() {
             return 0
         fi
     fi
-    printf '%s\tgeschätzt\n' "$(team_architekt_schaetzung)"
+    # BL-141: NICHT mehr "geschätzt" — der Wert ist Zeilen-Churn mal
+    # Eichfaktor, misst also die Groesse des Diffs und nicht die Arbeit.
+    # Im Feld lag er 35 % zu niedrig, und die alte Beschriftung liess
+    # offen, woraus geschaetzt wurde. Gemessen wird mit
+    # `kosten.py sitzung-messen`.
+    printf '%s\tChurn-Proxy\n' "$(team_architekt_schaetzung)"
 }
 
 # team_architekt_schaetzung: A2-Live-Schaetzung der Architekt-Kosten (BL-28,
@@ -1372,17 +1404,46 @@ team_plan_datei() {
     { head -n1 .ralph-plan 2>/dev/null || true; } | tr -d '[:space:]'
 }
 
+# team_plankopf_wert <schluessel> <plan-datei>: liest eine `<SCHLUESSEL>=<wert>`-
+# Zeile aus dem Kopf einer Plan-Datei. Gemeinsame Ableitung von team_ralph_cap
+# und team_budget_empfehlung — zwei Kopien derselben Pipeline waren schon
+# einmal der eigentliche Befund (BL-151).
+#
+# BL-150: DER PLANKOPF IST MARKDOWN, NICHT KONFIGURATION.
+#
+# Die Anker standen auf `^[[:space:]]*` und lasen den Rest bis Zeilenende. Der
+# Architekt legte den Plankopf aber als `**RALPH_CAP=5**` an — und das ist
+# nicht sein Fehler: Der uebrige Plankopf (`**Plan:**`, `**Stufen:**`,
+# `**Typ:**`) ist durchgehend fett, und sein Briefing verlangte die Zeilen,
+# ohne ein Wort ueber Blank-Pflicht zu sagen. Ein Architekt, der sich exakt an
+# sein Briefing haelt und dem Stil des eigenen Dokuments folgt, blockierte
+# damit den Bau: Ralph stieg mit Exit 1 aus, team-status.sh zeigte `Cap ?`,
+# und die Deckel-Anhebung der Vollautomatik bekam nie einen Wert — ein
+# fehlender Wert, den niemand vermisst, weil sein Fehlen wie ein bewusst
+# niedriger Deckel aussieht.
+#
+# Gefunden im Feld (Feld D) beim ALLERERSTEN Vollautomatik-Start. Das
+# Zeitfenster ist genau ein Plan pro Projekt: Danach wird die Schreibweise vom
+# ersten Plan abgeschrieben und der Fehler ist fuer immer unsichtbar.
+#
+# Geduldet wird deshalb die Auszeichnung, nicht der Sonderfall: fuehrende
+# Auszeichnungs- und Aufzaehlungszeichen vor dem Schluessel, nachlaufende
+# hinter dem Wert. Die Werte sind Zahlen, also kann alles davon spurlos weg.
+team_plankopf_wert() {
+    local schluessel="$1" plan="$2"
+    [ -n "$plan" ] && [ -f "$plan" ] || return 0
+    # `|| true` aus demselben Grund wie in team_architekt_kaskade (BL-111):
+    # Eine Plandatei OHNE die Zeile ist der dokumentierte Normalfall, unter
+    # `set -o pipefail` machte der leere grep daraus einen Abbruch.
+    { grep -E "^[[:space:]*_\`>#+-]*${schluessel}=" "$plan" \
+        | head -1 | cut -d= -f2 | tr -d '[:space:]*_`'; } || true
+}
+
 # team_ralph_cap [plan-datei]: liest RALPH_CAP aus der angegebenen (oder sonst
 # der aktiven) Plan-Datei — dasselbe Muster wie team_budget_empfehlung. Fehlt
 # Datei/Zeile, ist die Ausgabe leer.
 team_ralph_cap() {
-    local plan="${1:-$(team_plan_datei)}"
-    [ -n "$plan" ] && [ -f "$plan" ] || return 0
-    # `|| true` aus demselben Grund wie in team_architekt_kaskade (BL-111):
-    # Eine Plandatei OHNE RALPH_CAP-Zeile ist der dokumentierte Normalfall,
-    # unter `set -o pipefail` machte der leere grep daraus einen Abbruch.
-    { grep -E '^[[:space:]]*RALPH_CAP=' "$plan" \
-        | head -1 | cut -d= -f2 | tr -d '[:space:]'; } || true
+    team_plankopf_wert RALPH_CAP "${1:-$(team_plan_datei)}"
 }
 
 # team_budget_empfehlung [plan-datei]: liest BUDGET_EMPFEHLUNG_USD aus der
@@ -1390,12 +1451,7 @@ team_ralph_cap() {
 # Ausgabe leer — der Aufrufer fällt dann auf seinen Default zurück (kein
 # Abbruch, keine Rateraterei).
 team_budget_empfehlung() {
-    local plan="${1:-$(team_plan_datei)}"
-    [ -n "$plan" ] && [ -f "$plan" ] || return 0
-    # `|| true`: siehe team_architekt_kaskade (BL-111). Der Kommentar oben
-    # sagt "kein Abbruch" — unter `set -o pipefail` galt das bis dahin nicht.
-    { grep -E '^[[:space:]]*BUDGET_EMPFEHLUNG_USD=' "$plan" \
-        | head -1 | cut -d= -f2 | tr -d '[:space:]'; } || true
+    team_plankopf_wert BUDGET_EMPFEHLUNG_USD "${1:-$(team_plan_datei)}"
 }
 
 # team_kontostand_gesamt: kumulierter Kontostand wie `team-status.sh --budget`
@@ -1440,7 +1496,7 @@ team_logs_archivieren() {
 }
 
 # team_resolve_budget_cap <aktueller-deckel> <user-hat-gesetzt:0|1> <empfehlung>
-# Reine Rechenlogik der "nur anheben, nie senken"-Regel (Strippenzieher-
+# Reine Rechenlogik der "nur anheben, nie senken"-Regel (Stakeholder-
 # Entscheid 2, Stufe 19) — isoliert testbar ohne echten vollautomatik.sh-Lauf:
 #   - hat der User TEAM_BUDGET_USD explizit gesetzt, gewinnt IMMER der
 #     aktuelle Wert (auch wenn die Empfehlung höher läge);
@@ -1460,7 +1516,7 @@ team_resolve_budget_cap() {
 
 # team_budget_check <kosten> <soft-limit> <label> [hard-limit]
 #
-# Zwei-Schwellen-Modell (Strippenzieher-Entscheid 2026-07-12, HM-32).
+# Zwei-Schwellen-Modell (Stakeholder-Entscheid 2026-07-12, HM-32).
 # Rückgabe:
 #   0 = ok (unter der Warnschwelle)
 #   1 = Warnschwelle (80 % des Soft-Limits) erreicht — reiner Hinweis
@@ -1489,7 +1545,7 @@ if cost >= soft:
     print(f"SOFT-CAP ÜBERSCHRITTEN ({label}): {cost:.2f} USD >= Soft-Cap {soft:.2f} USD.")
     sys.exit(2)
 if cost >= 0.8 * soft:
-    print(f"WARNSCHWELLE ({label}): {cost:.2f} USD >= 80 % von {soft:.2f} USD — Strippenzieher informieren.")
+    print(f"WARNSCHWELLE ({label}): {cost:.2f} USD >= 80 % von {soft:.2f} USD — Stakeholder informieren.")
     sys.exit(1)
 sys.exit(0)
 ' "$1" "$2" "$3" "${4:-}"

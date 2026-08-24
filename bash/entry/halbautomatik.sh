@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Bahn: bash | Gegenstueck: halbautomatik.ps1
 # halbautomatik.sh — die T.E.A.M.-HALBAUTOMATIK.
-# Wie die Vollautomatik (vollautomatik.sh), aber der Strippenzieher entscheidet
+# Wie die Vollautomatik (vollautomatik.sh), aber der Stakeholder entscheidet
 # zwischen JEDEM Schritt selbst. Nutzt dieselben Rollen-Skripte
 # (Ralph/Harry/Marv/Frank/Axel), hält das Lock über die Sitzung und reicht es an
 # die Kinder weiter.

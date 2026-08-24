@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fixture-Test für das Zwei-Schwellen-Budget-Modell (HM-32).
 
-Strippenzieher-Entscheid 2026-07-12: Der alte 1-USD-Frank-Cap griff ERST NACH
+Stakeholder-Entscheid 2026-07-12: Der alte 1-USD-Frank-Cap griff ERST NACH
 dem (bereits bezahlten) Claude-Aufruf und warf über den Rollback die schon
 bezahlte Arbeit weg — der Cap "sparte" nichts, sondern vervielfachte die Kosten
 und blockierte den Fund (realer Auslöser: HM-32, Frank Versuch 2 kostete
@@ -51,7 +51,7 @@ def _lib_default(schale, name):
     genau die Datei ist, in der ein Projekt seine Caps anpassen soll und die
     `install.sh --update` bewusst ueberlebt.
 
-    Gefunden am 2026-08-09 (Feldprojekt platformer, Untersuchung BL-100): Das
+    Gefunden am 2026-08-09 (Feld A, Untersuchung BL-100): Das
     Projekt hob seinen Soft-Cap regelkonform in team.config.sh von 5 auf 10 —
     und brach damit diesen Kit-Test, der eine Kit-Zusicherung zu pruefen
     behauptete. Die Zusicherung selbst bleibt richtig und wird hier
