@@ -84,11 +84,11 @@ Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
 
 **Stand: Version 2.13.1** (2026-08-25). Drei Fehlerbehebungen aus dem Feld,
 ausgelöst durch eine Frage statt durch eine rote Zeile: „Hängt der Installer
-beim Selbsttest?" Er hing nicht — er war **stumm** (`BL-165`), und ein stummer
+beim Selbsttest?" Er hing nicht — er war **stumm** (`BL-176`), und ein stummer
 Lauf ist von einem hängenden nicht zu unterscheiden. Beim Nachsehen lag
-darunter der schwerere Fund: **`TEAM.md` fiel durch jedes Update** (`BL-164`),
+darunter der schwerere Fund: **`TEAM.md` fiel durch jedes Update** (`BL-175`),
 die Bedienungsanleitung eines aktualisierten Projekts blieb auf dem Stand des
-Einzugstags. Dessen Rest wurde `BL-166`: Ein Projekt, das vor `BL-139` einzog,
+Einzugstags. Dessen Rest wurde `BL-177`: Ein Projekt, das vor `BL-139` einzog,
 behält seinen kaputten Regeltext — beide Installer melden das jetzt, ohne ihn
 anzufassen.
 

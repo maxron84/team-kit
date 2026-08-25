@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""BL-166: Ein Projekt, das VOR BL-139/BL-140 eingezogen ist, behaelt seinen
+"""BL-177: Ein Projekt, das VOR BL-139/BL-140 eingezogen ist, behaelt seinen
 kaputten Regeltext — und kein Update sagt das je.
 
-DIE LUECKE, DIE BL-164 AUSGEWIESEN HAT
+DIE LUECKE, DIE BL-175 AUSGEWIESEN HAT
     `BL-139` hat die bahnabhaengigen Stellen der VORLAGEN auf Platzhalter
     gestellt, `BL-140` die Backlognummern auf `Kit-`. Beides wirkt beim
     RENDERN — also erst bei der naechsten ERSTINSTALLATION. Ein Projekt, das
     vorher eingezogen ist, behaelt seine `CLAUDE.md` unveraendert, und das
     Update fasst sie zu Recht nicht an: Sie traegt Projektarbeit.
 
-    `TEAM.md` liess sich mit `BL-164` einfach nachziehen, weil sie keine
+    `TEAM.md` liess sich mit `BL-175` einfach nachziehen, weil sie keine
     Projektarbeit traegt. Bei `CLAUDE.md` geht das NICHT — und damit bleibt
     genau der Zustand stehen, gegen den `BL-139` gebaut wurde.
 
@@ -76,7 +76,7 @@ def test_beide_installer_melden_den_veralteten_regeltext(installer, funktion):
         f"{installer} muss den veralteten Regeltext melden ({funktion}). "
         "Ohne die Meldung bleibt ein Projekt, das vor BL-139 eingezogen ist, "
         "dauerhaft mit toten Pfaden im Systemprompt jeder Rolle stehen — und "
-        "NICHTS sagt es (BL-166).")
+        "NICHTS sagt es (BL-177).")
     # Der Aufruf, nicht nur die Definition: Eine Funktion, die niemand ruft,
     # ist eine Zusicherung, die niemand einloest (Bauart BL-119).
     assert quelle.count(funktion) >= 2, (
@@ -92,7 +92,7 @@ def test_die_zwei_bahnen_region_wird_ausgenommen(installer):
     assert "Installiert mit dem **T.E.A.M.-Starterkit**. Ablage:" in quelle, (
         f"{installer} schneidet die Zwei-Bahnen-Region nicht aus. Sie nennt "
         "beide Bahnen mit Absicht; wer sie mitprueft, meldet in jeder "
-        "einbahnigen Ablage einen Fehler, den es nicht gibt (BL-166).")
+        "einbahnigen Ablage einen Fehler, den es nicht gibt (BL-177).")
 
 
 @pytest.mark.parametrize("installer", ["install.sh", "install.ps1"])

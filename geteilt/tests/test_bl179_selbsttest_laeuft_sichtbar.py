@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""BL-168: Auch die SELBSTTESTS liefen stumm — der laengste Lauf des Kits am
+"""BL-179: Auch die SELBSTTESTS liefen stumm — der laengste Lauf des Kits am
 laengsten.
 
-WAS BL-165 OFFEN GELASSEN HAT
-    `BL-165` hat die Suite-Laeufe der beiden INSTALLER sichtbar gemacht: roh
+WAS BL-176 OFFEN GELASSEN HAT
+    `BL-176` hat die Suite-Laeufe der beiden INSTALLER sichtbar gemacht: roh
     ins Log, eingerueckt auf den Bildschirm. Die Selbsttests blieben uebrig,
     und dort wiegt derselbe Fehler schwerer:
 
@@ -12,7 +12,7 @@ WAS BL-165 OFFEN GELASSEN HAT
         55 Minuten die schwerste des Selbsttests (gemessen 2026-08-25).
 
     Ein stummer Lauf ist von einem HAENGENDEN nicht zu unterscheiden. Genau
-    diese Frage — „haengt das?" — hat `BL-165` ausgeloest, und die teure
+    diese Frage — „haengt das?" — hat `BL-176` ausgeloest, und die teure
     Antwort darauf ist der Abbruch: Er wirft einen gesunden Lauf weg, der nur
     Geduld gebraucht haette, und beim Selbsttest sind das Stunden.
 
@@ -95,7 +95,7 @@ def test_kein_pytest_lauf_verschwindet_vollstaendig_im_log(rel):
         if _ist_stummer_lauf(zeile):
             treffer.append(f"{rel}:{nr}: {nackt}")
     assert not treffer, (
-        "BL-168: Diese pytest-Laeufe verschwinden vollstaendig in einer Datei. "
+        "BL-179: Diese pytest-Laeufe verschwinden vollstaendig in einer Datei. "
         "Wer zusieht, sieht minutenlang nichts und kann einen laufenden Lauf "
         "nicht von einem haengenden unterscheiden:\n  " + "\n  ".join(treffer)
         + "\n\nBauart: roh ins Log, eingerueckt auf den Bildschirm — "
@@ -124,18 +124,18 @@ def test_der_puffer_ist_abgeschaltet(rel):
     assert "PYTHONUNBUFFERED" in _quelle(rel), (
         f"{rel} schaltet den Python-Puffer nicht ab. In eine Pipe puffert "
         "Python blockweise; der Fortschritt kaeme dann praktisch erst am "
-        "Schluss (BL-168).")
+        "Schluss (BL-179).")
 
 
 def test_das_transkript_der_installer_bleibt_bewusst_stumm():
     """Die Ausnahme, ausdruecklich unter Test: `kit-test.ps1` faengt die
     Ausgabe der Installer als TRANSKRIPT ein. Wuerde jemand die Gattungsregel
     auch darauf anwenden, flutete ein Lauf mit 17 Installer-Aufrufen das
-    Terminal — und der Fortschritt, den BL-168 sichtbar machen soll, ginge
+    Terminal — und der Fortschritt, den BL-179 sichtbar machen soll, ginge
     darin unter. Ein Fix, der seinen eigenen Zweck erschlaegt."""
     quelle = _quelle("pwsh/kit-test.ps1")
     assert re.search(r"install\.ps1'\)[^\n]*\*>\s*\$\w*[Ll]og", quelle), (
         "Die Transkript-Umleitung der Installer-Aufrufe ist verschwunden. "
-        "Sie ist Absicht (BL-168): Ein Transkript wird NACH dem Lauf gelesen, "
+        "Sie ist Absicht (BL-179): Ein Transkript wird NACH dem Lauf gelesen, "
         "ein Fortschritt WAEHREND. Wurde sie durch einen Mitschnitt ersetzt, "
         "flutet der Selbsttest das Terminal.")

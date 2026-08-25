@@ -162,10 +162,10 @@ try {
     }
     if ($ptBefehl -or (Get-Command pytest -ErrorAction SilentlyContinue)) {
         $log = Join-Path $basis 'pytest.log'
-        # BL-168, Bauart aus BL-165: roh ins Log, eingerueckt auf den
+        # BL-179, Bauart aus BL-176: roh ins Log, eingerueckt auf den
         # Bildschirm — gleichzeitig. Vorher ging alles nur ins Log, und dieser
         # Lauf steht rund 14 Minuten still. Ein stummer Lauf ist von einem
-        # HAENGENDEN nicht zu unterscheiden; genau diese Frage hat BL-165
+        # HAENGENDEN nicht zu unterscheiden; genau diese Frage hat BL-176
         # ausgeloest. Dort ist sie nur fuer die INSTALLER beantwortet worden —
         # der Selbsttest selbst blieb uebrig, und er ist der laengste Lauf,
         # den das Kit kennt.

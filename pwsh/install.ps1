@@ -466,7 +466,7 @@ function Finde-Pytest {
 
 function Melde-VeraltetenRegeltext {
     <#
-      BL-166. Der Rest, den BL-164 ausgewiesen hat.
+      BL-177. Der Rest, den BL-175 ausgewiesen hat.
 
       BL-139 hat die bahnabhaengigen Stellen der VORLAGEN auf Platzhalter
       gestellt, BL-140 die Backlognummern auf `Kit-`. Beides wirkt beim
@@ -538,7 +538,7 @@ function Melde-VeraltetenRegeltext {
 
     if ($tot.Count -eq 0 -and $blank.Count -eq 0) { return }
 
-    Kopf "CLAUDE.md stammt aus einer Fassung vor Kit-BL-139/Kit-BL-140 (Kit-BL-166)"
+    Kopf "CLAUDE.md stammt aus einer Fassung vor Kit-BL-139/Kit-BL-140 (Kit-BL-177)"
     Write-Host "  Diese Datei steht im Systemprompt JEDER Rolle. Das Update hat sie"
     Write-Host "  nicht angefasst — sie traegt Projektarbeit, und die gehoert dir."
     if ($tot.Count) {
@@ -824,7 +824,7 @@ function Kopiere {
     # nach dem Kopieren gerendert. Ihre installierte Fassung weicht deshalb
     # IMMER von der Kit-Fassung ab — die Platzhalter sind dort gefuellt. Ein
     # Warner, der bei jedem Lauf dieselben Dateien meldet, erzieht dazu, ihn zu
-    # ueberlesen; dann geht der echte Fund darin unter (BL-164).
+    # ueberlesen; dann geht der echte Fund darin unter (BL-175).
     if ($Immer -and (Test-Path $zielDatei) -and
         $Rel -notlike 'team/prompts/*' -and $Rel -ne 'TEAM.md') {
         $a = [System.IO.File]::ReadAllBytes($Quelle)
@@ -1151,7 +1151,7 @@ if ($Update) {
         Fuelle-Datei $f.FullName
     }
 
-    # BL-164: TEAM.md ist Kit-Doku, keine Projektdatei — und fiel bis
+    # BL-175: TEAM.md ist Kit-Doku, keine Projektdatei — und fiel bis
     # hierher durch JEDES Update. Geschrieben wurde sie nur bei der
     # Erstinstallation; in der Liste "Unangetastet geblieben (Projektdaten)"
     # weiter unten steht sie auch nicht. Sie fiel zwischen beide Listen, und

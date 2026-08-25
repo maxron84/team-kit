@@ -10,21 +10,21 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 ## [Unreleased]
 
 _Nichts Offenes. Die vier verbliebenen Backlog-Einträge (`BL-117`, `BL-144`,_
-_`BL-145`, `BL-167`) sind Bauvorhaben, keine Reste dieser Version —_
+_`BL-145`, `BL-178`) sind Bauvorhaben, keine Reste dieser Version —_
 _siehe [plans/backlog.md](plans/backlog.md)._
 
 ## [2.13.1] — 2026-08-25
 
 **Vier Funde, ausgelöst durch eine Frage statt durch eine rote Zeile:**
 „Hängt der Installer beim Selbsttest?" Er hing nicht — er war stumm
-(`BL-165`). Beim Nachsehen lag darunter der schwerere Fund (`BL-164`), beim
-Abtragen fiel dessen Rest heraus (`BL-166`), und beim Aufräumen zeigte sich,
-dass die Selbsttests selbst noch stumm liefen (`BL-168`).
+(`BL-176`). Beim Nachsehen lag darunter der schwerere Fund (`BL-175`), beim
+Abtragen fiel dessen Rest heraus (`BL-177`), und beim Aufräumen zeigte sich,
+dass die Selbsttests selbst noch stumm liefen (`BL-179`).
 
 ### Fixed
 
 - ⚠️ **`TEAM.md` fiel durch JEDES Update — die Bedienungsanleitung blieb auf
-  dem Stand des Einzugstags** (`BL-164`). Beide Installer rendern sie nur bei
+  dem Stand des Einzugstags** (`BL-175`). Beide Installer rendern sie nur bei
   der Erstinstallation. `Kopiere-Infrastruktur` kennt sie nicht, und in der
   Liste „Unangetastet geblieben (Projektdaten)" steht sie auch nicht — sie
   fiel zwischen beide Listen. Das fällt nicht auf: **Eine veraltete Anleitung
@@ -54,7 +54,7 @@ dass die Selbsttests selbst noch stumm liefen (`BL-168`).
   Exit 0 — die drei roten Fälle (`BL-139` zweimal, `BL-140`) sind weg.
 
 - **Der Selbsttest lief stumm — und ein stummer Lauf ist von einem hängenden
-  nicht zu unterscheiden** (`BL-165`). Beide Installer leiteten den
+  nicht zu unterscheiden** (`BL-176`). Beide Installer leiteten den
   pytest-Lauf ihres Selbsttests vollständig in eine Logdatei um. Auf dem
   Bildschirm stand `Selbsttest`, danach minutenlang nichts. Gemessen: Der
   Prozess lief 3 min 41 und war zu keinem Zeitpunkt hängengeblieben. Die teure
@@ -77,7 +77,7 @@ dass die Selbsttests selbst noch stumm liefen (`BL-168`).
   Terminal.
 
 - **Ein Projekt, das vor `BL-139`/`BL-140` einzog, behält seinen kaputten
-  Regeltext — und kein Update sagt das je** (`BL-166`). Der Rest, den `BL-164`
+  Regeltext — und kein Update sagt das je** (`BL-177`). Der Rest, den `BL-175`
   ausgewiesen hat: `TEAM.md` ließ sich nachziehen, `CLAUDE.md` **nicht**. Sie
   trägt Projektarbeit — gefüllte TODO-Stellen, eigene Regeln —, und ein
   Installer, der darin ersetzt, überschreibt fremde Arbeit (`BL-12`).
@@ -102,7 +102,7 @@ dass die Selbsttests selbst noch stumm liefen (`BL-168`).
   Projekts.
 
 - **Auch die Selbsttests liefen stumm — der längste Lauf des Kits am längsten**
-  (`BL-168`). `BL-165` hat die Suite-Läufe der beiden **Installer** sichtbar
+  (`BL-179`). `BL-176` hat die Suite-Läufe der beiden **Installer** sichtbar
   gemacht und die Selbsttests übersehen, wo derselbe Fehler schwerer wiegt:
 
   | Stelle | war still |
@@ -110,7 +110,7 @@ dass die Selbsttests selbst noch stumm liefen (`BL-168`).
   | `kit-test.ps1`, ein direkter Suite-Lauf | ~14 min |
   | `kit-test.sh`, Stufe 8, zwei Läufe | Stufe 8 dauert ~55 min |
 
-  Dieselbe Bauart wie `BL-165` an allen drei Stellen. In `kit-test.sh` als
+  Dieselbe Bauart wie `BL-176` an allen drei Stellen. In `kit-test.sh` als
   **ein** Helfer statt zweier Abschriften — zwei Fassungen desselben Aufrufs
   laufen irgendwann auseinander.
 
@@ -136,11 +136,11 @@ dass die Selbsttests selbst noch stumm liefen (`BL-168`).
   Briefings, Tests und `TEAM.md`) und was ausdrücklich unangetastet bleibt
   (`team.config.*`, `CLAUDE.md`, `CHANGELOG.md`, Ledger, State, `plans/`).
   Dass `TEAM.md` in keiner der beiden Aufzählungen stand, war die Lücke, durch
-  die `BL-164` fiel.
+  die `BL-175` fiel.
 
-**Was diese Version NICHT bringt:** `BL-167` — `install.ps1` fehlt der Block
+**Was diese Version NICHT bringt:** `BL-178` — `install.ps1` fehlt der Block
 „Bitte von Hand abgleichen", den `install.sh` seit langem fährt. Beim Bauen von
-`BL-166` gefunden, ausgewiesen statt verschwiegen, und ein Teil der Antwort
+`BL-177` gefunden, ausgewiesen statt verschwiegen, und ein Teil der Antwort
 darauf, warum der kaputte Regeltext im Feld so lange unbemerkt blieb.
 
 ## [2.13.0] — 2026-08-25

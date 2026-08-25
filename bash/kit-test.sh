@@ -38,12 +38,12 @@
 set -euo pipefail
 
 # suite_mitschnitt: Faehrt die Suite eines Wegwerf-Repos und zeigt sie
-# GLEICHZEITIG auf dem Bildschirm und im Log (BL-168, Bauart aus BL-165).
+# GLEICHZEITIG auf dem Bildschirm und im Log (BL-179, Bauart aus BL-176).
 #
 # Vorher ging alles nur ins Log. Stufe 8 ist mit rund 55 Minuten die schwerste
 # des Selbsttests, und zwei ihrer Suite-Laeufe standen darin still — wer
 # zusieht, sieht minutenlang nichts und kann einen laufenden Selbsttest nicht
-# von einem haengenden unterscheiden. Genau die Frage hat BL-165 ausgeloest.
+# von einem haengenden unterscheiden. Genau die Frage hat BL-176 ausgeloest.
 #
 # PYTHONUNBUFFERED, weil Python in eine Pipe blockweise puffert; das Log bleibt
 # ROH, damit die grep-Auswertungen der Aufrufer unveraendert lesen; und der

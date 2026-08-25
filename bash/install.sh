@@ -464,7 +464,7 @@ team_pytest() {
 # Aufruf:  pytest_mitschnitt <logpfad> $PYTEST_AUFRUF
 #          ^ $PYTEST_AUFRUF bewusst UNGEQUOTET — es ist ein mehrwortiger Aufruf
 #            ("python3 -m pytest"), und die Wortzerlegung ist gewollt.
-# melde_veralteten_regeltext: BL-166, der Rest aus BL-164.
+# melde_veralteten_regeltext: BL-177, der Rest aus BL-175.
 #
 # BL-139 hat die bahnabhaengigen Stellen der VORLAGEN auf Platzhalter gestellt,
 # BL-140 die Backlognummern auf `Kit-`. Beides wirkt beim RENDERN — also nur
@@ -527,7 +527,7 @@ PY
     rm -f "$arbeit"
     [ -n "$tot$blank" ] || return 0
 
-    kopf "CLAUDE.md stammt aus einer Fassung vor Kit-BL-139/Kit-BL-140 (Kit-BL-166)"
+    kopf "CLAUDE.md stammt aus einer Fassung vor Kit-BL-139/Kit-BL-140 (Kit-BL-177)"
     echo "  Diese Datei steht im Systemprompt JEDER Rolle. Das Update hat sie"
     echo "  nicht angefasst — sie traegt Projektarbeit, und die gehoert dir."
     if [ -n "$tot" ]; then
@@ -772,7 +772,7 @@ if [ "$UPDATE" -eq 1 ]; then
         # deshalb IMMER von der Kit-Fassung ab — die Platzhalter sind dort
         # gefuellt. Ein Warner, der bei jedem Lauf dieselben Dateien meldet,
         # erzieht dazu, ihn zu ueberlesen; dann geht der echte Fund darin unter
-        # (BL-164).
+        # (BL-175).
         case "$rel" in
             team/prompts/*|TEAM.md) ;;
             *) [ -e "$ziel" ] && ! cmp -s "$quelle" "$ziel" \
@@ -945,7 +945,7 @@ PY
     done
     for d in "$ZIEL"/team/prompts/*.md; do fuelle "team/prompts/$(basename "$d")"; done
 
-    # BL-164: TEAM.md ist Kit-Doku, keine Projektdatei — und fiel bis
+    # BL-175: TEAM.md ist Kit-Doku, keine Projektdatei — und fiel bis
     # hierher durch JEDES Update. Geschrieben wurde sie nur bei der
     # Erstinstallation; in der Liste "Unangetastet geblieben (Projektdaten)"
     # weiter unten steht sie auch nicht. Sie fiel zwischen beide Listen, und
