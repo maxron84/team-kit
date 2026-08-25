@@ -12,9 +12,12 @@
 #                       variablen oder den Defaults. Für Skripte und Tests.
 #   --update            Nur die Team-INFRASTRUKTUR aktualisieren (Entrypoints
 #                       ausser team.config.sh, team/lib.sh, team/redteam.sh,
-#                       team/tools/, team/prompts/, team/tests/). Rührt KEINE
-#                       Projektdaten an. Der richtige Weg, um ein bestehendes
-#                       Projekt auf eine neue Kit-Version zu heben.
+#                       team/tools/, team/prompts/, team/tests/ und TEAM.md,
+#                       die Bedienungsanleitung). Rührt KEINE Projektdaten an:
+#                       team.config.*, CLAUDE.md, CHANGELOG.md, Ledger, State
+#                       und plans/ bleiben, wie sie sind. Der richtige Weg, um
+#                       ein bestehendes Projekt auf eine neue Kit-Version zu
+#                       heben.
 #   --force             Vorhandene Dateien überschreiben (Standard: überspringen).
 #
 #   ⚠  --force ist NUR für eine kaputte Erstinstallation gedacht, NIE für ein
@@ -433,6 +436,39 @@ team_pytest() {
     return 1
 }
 
+# pytest_mitschnitt: Fährt die Regressionssuite und zeigt sie GLEICHZEITIG auf
+# dem Bildschirm und im Log. Gegenstück zu Pytest-Mitschnitt in install.ps1.
+#
+# Vorher ging alles nur ins Log (`>… 2>&1`). Der Bildschirm zeigte dann
+# "Selbsttest" und danach minutenlang nichts — im Feld sieht das aus wie ein
+# Hänger und ist keiner: Die Suite läuft, nur stumm. Wer nicht weiß, dass sie
+# einbahnig rund vier und zweibahnig rund zwanzig Minuten braucht, bricht ab und
+# hält einen gesunden Installer für kaputt.
+#
+# Zwei Feinheiten, ohne die es nur halb wirkt:
+#
+#   1. PYTHONUNBUFFERED. Schreibt Python nicht auf ein Terminal, sondern in eine
+#      Pipe, puffert es blockweise. Die Fortschrittszeilen kämen dann in Schüben
+#      von einigen KB, also praktisch erst am Schluss — der Hänger wäre nur
+#      kürzer geworden, nicht weg.
+#   2. `tee` schreibt ROH ins Log; die Einrückung entsteht erst danach für den
+#      Bildschirm. Damit bleibt die Datei genau das, was pytest geschrieben hat
+#      — die `grep -oE '[0-9]+ passed'` und `tail -3` der Aufrufer lesen
+#      unverändert weiter, und wer das Log verschickt, verschickt kein
+#      eingerücktes Zerrbild.
+#
+# Der Exit-Code ist der von pytest, nicht der von sed: Dieses Skript läuft unter
+# `set -o pipefail` (Zeile 43), und das ist hier keine Nebensache, sondern die
+# Bedingung dafür, dass ein roter Testlauf überhaupt noch rot ankommt.
+#
+# Aufruf:  pytest_mitschnitt <logpfad> $PYTEST_AUFRUF
+#          ^ $PYTEST_AUFRUF bewusst UNGEQUOTET — es ist ein mehrwortiger Aufruf
+#            ("python3 -m pytest"), und die Wortzerlegung ist gewollt.
+pytest_mitschnitt() {
+    local log="$1"; shift
+    PYTHONUNBUFFERED=1 "$@" -q team/tests 2>&1 | tee "$log" | sed 's/^/      /'
+}
+
 if [ "$UPDATE" -eq 1 ]; then
     kopf "Update — nur Team-Infrastruktur"
     # BL-126: Als Merkmal einer Installation zaehlt JEDE der beiden
@@ -641,10 +677,15 @@ if [ "$UPDATE" -eq 1 ]; then
         # BL-12: Wich die installierte Fassung vom Kit ab, kann darin ein
         # LOKALER Fix stecken, den noch niemand ans Kit zurueckgemeldet hat.
         # Genau so ging im Feld ein 12-USD-Fix an beutebuch.py verloren.
-        # Briefings sind ausgenommen: Sie werden ohnehin neu gerendert und
-        # weichen durch die gefuellten Platzhalter immer ab.
+        #
+        # Zwei Ausnahmen, beide aus demselben Grund: Briefings UND TEAM.md
+        # werden nach dem Kopieren gerendert. Ihre installierte Fassung weicht
+        # deshalb IMMER von der Kit-Fassung ab — die Platzhalter sind dort
+        # gefuellt. Ein Warner, der bei jedem Lauf dieselben Dateien meldet,
+        # erzieht dazu, ihn zu ueberlesen; dann geht der echte Fund darin unter
+        # (Kit-BL-164).
         case "$rel" in
-            team/prompts/*) ;;
+            team/prompts/*|TEAM.md) ;;
             *) [ -e "$ziel" ] && ! cmp -s "$quelle" "$ziel" \
                    && ABWEICHEND="$ABWEICHEND $rel" ;;
         esac
@@ -814,6 +855,32 @@ PY
             FREMDE_TESTS="$FREMDE_TESTS $(basename "$f")"
     done
     for d in "$ZIEL"/team/prompts/*.md; do fuelle "team/prompts/$(basename "$d")"; done
+
+    # Kit-BL-164: TEAM.md ist Kit-Doku, keine Projektdatei — und fiel bis
+    # hierher durch JEDES Update. Geschrieben wurde sie nur bei der
+    # Erstinstallation; in der Liste "Unangetastet geblieben (Projektdaten)"
+    # weiter unten steht sie auch nicht. Sie fiel zwischen beide Listen, und
+    # das faellt nicht auf: Eine veraltete Anleitung sieht aus wie eine
+    # Anleitung.
+    #
+    # Der Schaden ist zweigeteilt, und der zweite Teil ist der schwerere:
+    #
+    #   1. Die Bedienungsanleitung eines aktualisierten Projekts bleibt auf dem
+    #      Stand des Einzugstags. Exit-Codes, Befehle, Fehlersuche — alles, was
+    #      das Kit seither gelernt hat, kommt dort nie an.
+    #   2. In einer EINBAHNIGEN Ablage nennt die alte Fassung die ABGEWAEHLTE
+    #      Bahn. Im Feld standen in einer --nur-pwsh-Installation 15 tote
+    #      .sh-Pfade in TEAM.md; der Text schickte jeden Leser an Dateien, die
+    #      es dort nicht gibt. Das ist genau der Befund, den BL-139 fuer die
+    #      Vorlagen abgestellt hat — TEAM.md blieb uebrig, weil die Reparatur
+    #      am Rendern ansetzte und diese Datei nie neu gerendert wurde.
+    #
+    # CLAUDE.md bleibt bewusst aussen vor. Die traegt Projektarbeit — gefuellte
+    # TODO-Stellen, projekteigene Regeln — und gehoert zu den Projektdaten.
+    # TEAM.md traegt keine: Sie wird gerendert und sonst nicht angefasst.
+    kopiere "$KIT/bootstrap/TEAM.md" "TEAM.md"
+    fuelle "TEAM.md"
+
     gruen "  ✓ $GESCHRIEBEN Infrastruktur-Dateien aktualisiert"
 
     if [ -n "$ABWEICHEND" ]; then
@@ -988,7 +1055,7 @@ PY
     # jeder Test mit domaene="team" scheitert an einem Projekt, das diese
     # Domaene gar nicht fuehrt — ein Fehlalarm, der nur im Update auftraete.
     if PYTEST_AUFRUF="$(team_pytest)"; then
-        if (cd "$ZIEL" && unset "${!TEAM_@}" && $PYTEST_AUFRUF -q team/tests >/tmp/team-update-pytest.log 2>&1); then
+        if (cd "$ZIEL" && unset "${!TEAM_@}" && pytest_mitschnitt /tmp/team-update-pytest.log $PYTEST_AUFRUF); then
             gruen "  ✓ Regressionstests grün ($(grep -oE '[0-9]+ passed' /tmp/team-update-pytest.log | head -1))"
         else
             rot "  ✗ Regressionstests NICHT grün — Log: /tmp/team-update-pytest.log"
@@ -1545,7 +1612,7 @@ else
 fi
 
 if PYTEST_AUFRUF="$(team_pytest)"; then
-    if (cd "$ZIEL" && $PYTEST_AUFRUF -q team/tests >/tmp/team-init-pytest.log 2>&1); then
+    if (cd "$ZIEL" && pytest_mitschnitt /tmp/team-init-pytest.log $PYTEST_AUFRUF); then
         gruen "  ✓ Regressionstests grün ($(grep -oE '[0-9]+ passed' /tmp/team-init-pytest.log | head -1))"
     else
         gelb "  ! Regressionstests nicht vollständig grün — Log: /tmp/team-init-pytest.log"

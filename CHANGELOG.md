@@ -9,9 +9,77 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
-_Nichts Offenes. Die drei verbliebenen Backlog-Einträge (`BL-117`, `BL-144`,_
-_`BL-145`) sind Bauvorhaben, keine Reste dieser Version —_
-_siehe [plans/backlog.md](plans/backlog.md)._
+**Zwei Funde aus dem Feld, ausgelöst durch eine Frage statt durch eine rote
+Zeile:** „Hängt der Installer beim Selbsttest?" Er hing nicht — er war stumm
+(`BL-165`). Beim Nachsehen lag darunter der schwerere Fund (`BL-164`).
+
+### Fixed
+
+- ⚠️ **`TEAM.md` fiel durch JEDES Update — die Bedienungsanleitung blieb auf
+  dem Stand des Einzugstags** (`BL-164`). Beide Installer rendern sie nur bei
+  der Erstinstallation. `Kopiere-Infrastruktur` kennt sie nicht, und in der
+  Liste „Unangetastet geblieben (Projektdaten)" steht sie auch nicht — sie
+  fiel zwischen beide Listen. Das fällt nicht auf: **Eine veraltete Anleitung
+  sieht aus wie eine Anleitung.**
+
+  Der Schaden ist zweigeteilt, und der zweite Teil ist der schwerere:
+
+  1. Exit-Codes, Befehle, Fehlersuche — alles, was das Kit seit dem Einzug
+     gelernt hat, kommt in einem aktualisierten Projekt nie an.
+  2. In einer **einbahnigen** Ablage nennt die alte Fassung die **abgewählte**
+     Bahn. Im Feld standen in einer `--nur-pwsh`-Installation **15 tote
+     `.sh`-Pfade** in `TEAM.md`; der Text schickte jeden Leser an Dateien, die
+     es dort nicht gibt.
+
+  Punkt 2 ist genau der Befund, den `BL-139` abgestellt hat. `TEAM.md` blieb
+  übrig, **weil die Reparatur am Rendern ansetzte** — ein Fix an einer Vorlage
+  repariert die nächste Installation, nicht die bestehende.
+
+  Beide Installer ziehen `TEAM.md` jetzt im Update-Pfad mit, direkt neben den
+  Briefings. `CLAUDE.md` bleibt ausdrücklich draußen: Die trägt Projektarbeit.
+  Im selben Zug ist `TEAM.md` aus dem `BL-12`-Abweichungswarner genommen — sie
+  wird gerendert und weicht deshalb immer von der Kit-Fassung ab, genau wie die
+  Briefings; ein Warner, der bei jedem Lauf dieselbe Datei meldet, erzieht
+  dazu, ihn zu überlesen (`BL-14`).
+
+  **Nachweis:** Update im Feldprojekt gefahren, `315 passed, 420 skipped`,
+  Exit 0 — die drei roten Fälle (`BL-139` zweimal, `BL-140`) sind weg.
+
+- **Der Selbsttest lief stumm — und ein stummer Lauf ist von einem hängenden
+  nicht zu unterscheiden** (`BL-165`). Beide Installer leiteten den
+  pytest-Lauf ihres Selbsttests vollständig in eine Logdatei um. Auf dem
+  Bildschirm stand `Selbsttest`, danach minutenlang nichts. Gemessen: Der
+  Prozess lief 3 min 41 und war zu keinem Zeitpunkt hängengeblieben. Die teure
+  Antwort auf die Frage „hängt das?" ist der Abbruch — er wirft einen gesunden
+  Lauf weg, der nur Geduld gebraucht hätte.
+
+  `Pytest-Mitschnitt` (pwsh) und `pytest_mitschnitt` (bash) schreiben jetzt
+  beides: roh ins Log, eingerückt auf den Bildschirm. Drei Teile, ohne die es
+  nur halb wirkt:
+
+  | | Warum es sonst nicht wirkt |
+  |---|---|
+  | `PYTHONUNBUFFERED=1` | Python puffert in eine Pipe blockweise — die Zeilen kämen erst am Schluss, der Hänger wäre nur kürzer |
+  | Log bleibt **roh** | Die Einrückung entsteht erst nach `tee` für den Bildschirm. Sonst brechen die Auswertungen der Aufrufer, die aus dem Log lesen |
+  | Exit-Code überlebt die Pipe | `$LASTEXITCODE` nach der Pipeline bzw. `set -o pipefail`. Sonst meldet `sed` grün, was pytest rot gemeldet hat |
+
+  **Nicht umgestellt** sind die Transkript-Umleitungen in
+  `kit-test.ps1`/`kit-test.sh`, die die Installer-Ausgabe einfangen — dort ist
+  die Stille gewollt, sonst flutet ein Lauf mit 17 Installer-Aufrufen das
+  Terminal.
+
+### Changed
+
+- Die Hilfe beider Installer nennt bei `--update`/`-Update` jetzt **beide**
+  Seiten: was aktualisiert wird (Entrypoints, Bibliothek, `team/`-Werkzeuge,
+  Briefings, Tests und `TEAM.md`) und was ausdrücklich unangetastet bleibt
+  (`team.config.*`, `CLAUDE.md`, `CHANGELOG.md`, Ledger, State, `plans/`).
+  Dass `TEAM.md` in keiner der beiden Aufzählungen stand, war die Lücke, durch
+  die `BL-164` fiel.
+
+_Die drei verbliebenen Backlog-Einträge (`BL-117`, `BL-144`, `BL-145`) sind_
+_Bauvorhaben, keine Reste dieser Version — siehe_
+_[plans/backlog.md](plans/backlog.md)._
 
 ## [2.13.0] — 2026-08-25
 

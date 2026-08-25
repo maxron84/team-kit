@@ -42,6 +42,31 @@ pwsh-Bahn keine Behauptung mit Testkörper mehr.
 > `test_bl153_rueckkanal_meldung.py` löst das seit langem, indem es die Marke
 > zur Laufzeit zusammensetzt). Beides kostet sonst je 20 Minuten pro Runde.
 
+**Nachtrag 2026-08-25 — zwei Funde aus dem Feld, beide am selben Tag
+abgetragen** (`BL-164`, `BL-165`, Begründungen im
+[Archiv](backlog-archiv.md)). Ausgelöst hat sie eine Frage, keine rote Zeile:
+„Hängt der Installer?"
+
+- **`BL-165`** — er hing nicht, er war **stumm**. Beide Installer leiteten den
+  pytest-Lauf ihres Selbsttests vollständig ins Log um; auf dem Bildschirm
+  stand `Selbsttest` und danach minutenlang nichts. Gemessen: 3 min 41, zu
+  keinem Zeitpunkt hängengeblieben. Ein stummer Lauf ist von einem hängenden
+  nicht zu unterscheiden, und die teure Antwort auf diese Frage ist der Abbruch.
+- **`BL-164`** — und im Regressionslauf derselben Sitzung lag der schwerere
+  Fund: **`TEAM.md` fiel durch JEDES Update.** Sie wird nur bei der
+  Erstinstallation gerendert und steht auch nicht in der Liste „Unangetastet
+  geblieben (Projektdaten)" — sie fiel zwischen beide Listen. In der
+  einbahnigen Feldablage nannte die alte Fassung damit 15 tote `.sh`-Pfade:
+  **genau der Befund, den `BL-139` abgestellt hat.** Der Fix dort setzte am
+  Rendern an und erreichte deshalb kein bestehendes Projekt.
+
+> **Die Lehre ist die von `BL-139`, eine Ebene höher:** Ein Fix an einer
+> Vorlage repariert die nächste Installation. Er repariert **keine** Datei, die
+> das Update nicht anfasst — und welche das sind, stand nirgends geschrieben.
+> `TEAM.md` war in keiner der beiden Listen, weder bei den aktualisierten noch
+> bei den geschonten. Beide Installer nennen jetzt in ihrer Hilfe ausdrücklich
+> beide Seiten.
+
 **Was noch offen ist:** `BL-145` (`kit-test.ps1` auf Deckung bringen — 6 von 11
 Stufen), `BL-117` (Prompt-Gleichstand am LAUF) und `BL-144` (die
 Ausführungsrichtlinie aus dem Feld). Alle drei sind Bauvorhaben, keine Reste

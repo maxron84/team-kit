@@ -10,9 +10,13 @@
                       Git-Repository sein. Pflichtangabe (ausser bei -Hilfe).
     -NichtInteraktiv  Keine Rueckfragen; Werte aus den TEAM_INIT_*-Umgebungs-
                       variablen oder den Defaults. Fuer Skripte und Tests.
-    -Update           Nur die Team-INFRASTRUKTUR aktualisieren. Ruehrt KEINE
-                      Projektdaten an. Der richtige Weg, um ein bestehendes
-                      Projekt auf eine neue Kit-Version zu heben.
+    -Update           Nur die Team-INFRASTRUKTUR aktualisieren — Entrypoints,
+                      team\lib.psm1, team\tools, team\prompts, team\tests und
+                      TEAM.md, die Bedienungsanleitung. Ruehrt KEINE
+                      Projektdaten an: team.config.*, CLAUDE.md, CHANGELOG.md,
+                      Ledger, State und plans\ bleiben, wie sie sind. Der
+                      richtige Weg, um ein bestehendes Projekt auf eine neue
+                      Kit-Version zu heben.
     -Force            Vorhandene Dateien ueberschreiben (Standard: ueberspringen).
 
     ACHTUNG  -Force ist NUR fuer eine kaputte Erstinstallation gedacht, NIE fuer
@@ -460,6 +464,54 @@ function Finde-Pytest {
     return $null
 }
 
+function Pytest-Mitschnitt {
+    <#
+      Faehrt die Regressionssuite und zeigt sie GLEICHZEITIG auf dem Bildschirm
+      und im Log.
+
+      Vorher ging alles nur ins Log (`*> $log`). Der Bildschirm zeigte dann
+      "Selbsttest" und danach minutenlang nichts — im Feld sah das aus wie ein
+      Haenger und war keiner: Die Suite lief, nur stumm. Einbahnig sind das rund
+      drei bis vier Minuten, zweibahnig rund zwanzig. Wer das nicht weiss, bricht
+      ab und haelt einen gesunden Installer fuer kaputt.
+
+      Zwei Feinheiten, ohne die es nur halb wirkt:
+
+      1. PYTHONUNBUFFERED. Schreibt Python nicht auf ein Terminal, sondern in
+         eine Pipe, puffert es blockweise. Die Fortschrittszeilen kaemen dann in
+         Schueben von einigen KB, also praktisch erst am Schluss — der Haenger
+         waere nur kuerzer geworden, nicht weg. Die Variable schaltet das ab und
+         wird danach auf ihren alten Wert zurueckgesetzt (auch wenn sie vorher
+         gar nicht gesetzt war).
+      2. Tee-Object schreibt ROH ins Log; die Einrueckung entsteht erst danach
+         fuer den Bildschirm. Damit bleibt die Datei genau das, was pytest
+         geschrieben hat — `Select-String '\d+ passed'` und `Get-Content -Tail`
+         der Aufrufer lesen unveraendert weiter, und wer das Log verschickt,
+         verschickt kein eingeruecktes Zerrbild.
+
+      Rueckgabe: der Exit-Code von pytest.
+    #>
+    param([hashtable]$Pt, [string]$Log)
+
+    # Nur fuer diesen Aufruf: `2>&1` macht aus Fremdprozess-stderr Fehlerobjekte
+    # im Datenstrom. Unter 'Stop' waere die erste stderr-Zeile von pytest ein
+    # Abbruch statt einer Ausgabe. Die Zuweisung gilt nur in dieser Funktion.
+    $ErrorActionPreference = 'Continue'
+
+    $gemerktPuffer = $env:PYTHONUNBUFFERED
+    $env:PYTHONUNBUFFERED = '1'
+    try {
+        $vorab = $Pt.Vorab
+        & $Pt.Befehl @vorab -q team/tests 2>&1 |
+            Tee-Object -FilePath $Log |
+            ForEach-Object { Write-Host "      $_" }
+        return $LASTEXITCODE
+    } finally {
+        if ($null -eq $gemerktPuffer) { Remove-Item Env:PYTHONUNBUFFERED -ErrorAction SilentlyContinue }
+        else { $env:PYTHONUNBUFFERED = $gemerktPuffer }
+    }
+}
+
 function Python-Fuer-Config {
     # Was als {{PYTHON}} in team.config.ps1 landet. Faellt die Probe aus, wird
     # der Wert trotzdem gesetzt — aber die Luecke wird GENANNT statt verdeckt.
@@ -666,10 +718,15 @@ function Kopiere {
     }
     # BL-12: Wich die installierte Fassung vom Kit ab, kann darin ein LOKALER
     # Fix stecken, den noch niemand ans Kit zurueckgemeldet hat. Genau so ging
-    # im Feld ein 12-USD-Fix an beutebuch.py verloren. Briefings sind
-    # ausgenommen: Sie werden ohnehin neu gerendert und weichen durch die
-    # gefuellten Platzhalter immer ab.
-    if ($Immer -and (Test-Path $zielDatei) -and $Rel -notlike 'team/prompts/*') {
+    # im Feld ein 12-USD-Fix an beutebuch.py verloren.
+    #
+    # Zwei Ausnahmen, beide aus demselben Grund: Briefings UND TEAM.md werden
+    # nach dem Kopieren gerendert. Ihre installierte Fassung weicht deshalb
+    # IMMER von der Kit-Fassung ab — die Platzhalter sind dort gefuellt. Ein
+    # Warner, der bei jedem Lauf dieselben Dateien meldet, erzieht dazu, ihn zu
+    # ueberlesen; dann geht der echte Fund darin unter (Kit-BL-164).
+    if ($Immer -and (Test-Path $zielDatei) -and
+        $Rel -notlike 'team/prompts/*' -and $Rel -ne 'TEAM.md') {
         $a = [System.IO.File]::ReadAllBytes($Quelle)
         $b = [System.IO.File]::ReadAllBytes($zielDatei)
         if ($a.Length -ne $b.Length -or [System.Convert]::ToBase64String($a) -ne [System.Convert]::ToBase64String($b)) {
@@ -993,6 +1050,32 @@ if ($Update) {
     foreach ($f in (Get-ChildItem (Join-Path $Ziel 'team\prompts') -Filter '*.md' -File)) {
         Fuelle-Datei $f.FullName
     }
+
+    # Kit-BL-164: TEAM.md ist Kit-Doku, keine Projektdatei — und fiel bis
+    # hierher durch JEDES Update. Geschrieben wurde sie nur bei der
+    # Erstinstallation; in der Liste "Unangetastet geblieben (Projektdaten)"
+    # weiter unten steht sie auch nicht. Sie fiel zwischen beide Listen, und
+    # das faellt nicht auf: Eine veraltete Anleitung sieht aus wie eine
+    # Anleitung.
+    #
+    # Der Schaden ist zweigeteilt, und der zweite Teil ist der schwerere:
+    #
+    #   1. Die Bedienungsanleitung eines aktualisierten Projekts bleibt auf dem
+    #      Stand des Einzugstags. Exit-Codes, Befehle, Fehlersuche — alles, was
+    #      das Kit seither gelernt hat, kommt dort nie an.
+    #   2. In einer EINBAHNIGEN Ablage nennt die alte Fassung die ABGEWAEHLTE
+    #      Bahn. Im Feld standen in einer -NurPwsh-Installation 15 tote
+    #      .sh-Pfade in TEAM.md; der Text schickte jeden Leser an Dateien, die
+    #      es dort nicht gibt. Das ist genau der Befund, den BL-139 fuer die
+    #      Vorlagen abgestellt hat — TEAM.md blieb uebrig, weil die Reparatur
+    #      am Rendern ansetzte und diese Datei nie neu gerendert wurde.
+    #
+    # CLAUDE.md bleibt bewusst aussen vor. Die traegt Projektarbeit — gefuellte
+    # TODO-Stellen, projekteigene Regeln — und gehoert zu den Projektdaten.
+    # TEAM.md traegt keine: Sie wird gerendert und sonst nicht angefasst.
+    Kopiere (Join-Path $KIT 'bootstrap\TEAM.md') 'TEAM.md' -Immer
+    Fuelle-Datei (Join-Path $Ziel 'TEAM.md')
+
     Gruen "  [ok] $($script:Geschrieben) Infrastruktur-Dateien aktualisiert"
 
     if ($script:Abweichend.Count) {
@@ -1094,9 +1177,8 @@ if ($Update) {
         try {
             Push-Location $Ziel
             $log = Join-Path ([System.IO.Path]::GetTempPath()) 'team-update-pytest.log'
-            $vorab = $pt.Vorab
-            & $pt.Befehl @vorab -q team/tests *> $log
-            if ($LASTEXITCODE -eq 0) {
+            $rc = Pytest-Mitschnitt -Pt $pt -Log $log
+            if ($rc -eq 0) {
                 $zeile = (Select-String -Path $log -Pattern '\d+ passed' | Select-Object -First 1)
                 Gruen "  [ok] Regressionstests gruen ($($zeile.Matches[0].Value))"
             } else {
@@ -1510,9 +1592,8 @@ if ($pt) {
     Push-Location $Ziel
     try {
         $log = Join-Path ([System.IO.Path]::GetTempPath()) 'team-init-pytest.log'
-        $vorab = $pt.Vorab
-        & $pt.Befehl @vorab -q team/tests *> $log
-        if ($LASTEXITCODE -eq 0) {
+        $rc = Pytest-Mitschnitt -Pt $pt -Log $log
+        if ($rc -eq 0) {
             $zeile = (Select-String -Path $log -Pattern '\d+ passed' | Select-Object -First 1)
             Gruen "  [ok] Regressionstests gruen ($($zeile.Matches[0].Value))"
         } else {
