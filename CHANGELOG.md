@@ -9,9 +9,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
-_Nichts Offenes. Die vier verbliebenen Backlog-Einträge (`BL-117`, `BL-144`,_
-_`BL-145`, `BL-178`) sind Bauvorhaben, keine Reste dieser Version —_
-_siehe [plans/backlog.md](plans/backlog.md)._
+_Nichts Offenes aus dieser Version. Die 15 offenen Backlog-Einträge sind_
+_eigene Vorhaben: vier am Kit selbst (`BL-117`, `BL-144`, `BL-145`, `BL-178`)_
+_und elf Meldungen aus `Feld E` (`BL-164`…`BL-174`) — siehe_
+_[plans/backlog.md](plans/backlog.md)._
 
 ## [2.13.1] — 2026-08-25
 
