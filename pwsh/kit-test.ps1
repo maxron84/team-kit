@@ -162,9 +162,35 @@ try {
     }
     if ($ptBefehl -or (Get-Command pytest -ErrorAction SilentlyContinue)) {
         $log = Join-Path $basis 'pytest.log'
-        if ($ptBefehl) { & $ptBefehl -m pytest -q team/tests *> $log }
-        else           { & pytest -q team/tests *> $log }
-        $rc = $LASTEXITCODE
+        # BL-168, Bauart aus BL-165: roh ins Log, eingerueckt auf den
+        # Bildschirm — gleichzeitig. Vorher ging alles nur ins Log, und dieser
+        # Lauf steht rund 14 Minuten still. Ein stummer Lauf ist von einem
+        # HAENGENDEN nicht zu unterscheiden; genau diese Frage hat BL-165
+        # ausgeloest. Dort ist sie nur fuer die INSTALLER beantwortet worden —
+        # der Selbsttest selbst blieb uebrig, und er ist der laengste Lauf,
+        # den das Kit kennt.
+        #
+        # PYTHONUNBUFFERED, weil Python in eine Pipe blockweise puffert: Ohne
+        # das kaemen die Fortschrittszeilen erst am Schluss und der Haenger
+        # waere nur kuerzer geworden, nicht weg. Das Log bleibt ROH — die
+        # Einrueckung entsteht erst danach fuer den Bildschirm, damit die
+        # Select-String-Auswertung darunter unveraendert liest. Ein lokales
+        # $ErrorActionPreference braucht es hier nicht: Diese Datei steht seit
+        # BL-122 ohnehin auf 'Continue' (Zeile 26).
+        $befehl = if ($ptBefehl) { $ptBefehl } else { 'pytest' }
+        $vorab  = if ($ptBefehl) { @('-m', 'pytest') } else { @() }
+        $gemerktPuffer = $env:PYTHONUNBUFFERED
+        $env:PYTHONUNBUFFERED = '1'
+        try {
+            & $befehl @vorab -q team/tests 2>&1 |
+                Tee-Object -FilePath $log |
+                ForEach-Object { Zeile $_ }
+            $rc = $LASTEXITCODE
+        } finally {
+            if ($null -eq $gemerktPuffer) {
+                Remove-Item Env:PYTHONUNBUFFERED -ErrorAction SilentlyContinue
+            } else { $env:PYTHONUNBUFFERED = $gemerktPuffer }
+        }
         $zeile = (Select-String -Path $log -Pattern '\d+ passed' | Select-Object -First 1)
         if ($rc -eq 0) { Gruen "grün ($($zeile.Matches[0].Value))" }
         else {

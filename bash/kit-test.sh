@@ -36,6 +36,22 @@
 # gelöscht (außer bei --behalten). Dieses Skript ruft KEINE Agenten-CLI auf und
 # kostet daher nichts.
 set -euo pipefail
+
+# suite_mitschnitt: Faehrt die Suite eines Wegwerf-Repos und zeigt sie
+# GLEICHZEITIG auf dem Bildschirm und im Log (BL-168, Bauart aus BL-165).
+#
+# Vorher ging alles nur ins Log. Stufe 8 ist mit rund 55 Minuten die schwerste
+# des Selbsttests, und zwei ihrer Suite-Laeufe standen darin still — wer
+# zusieht, sieht minutenlang nichts und kann einen laufenden Selbsttest nicht
+# von einem haengenden unterscheiden. Genau die Frage hat BL-165 ausgeloest.
+#
+# PYTHONUNBUFFERED, weil Python in eine Pipe blockweise puffert; das Log bleibt
+# ROH, damit die grep-Auswertungen der Aufrufer unveraendert lesen; und der
+# Exit-Code ueberlebt die Pipe ueber das oben gesetzte `set -o pipefail`.
+suite_mitschnitt() {
+    local log="$1"; shift
+    PYTHONUNBUFFERED=1 "$@" -m pytest team/tests -q 2>&1 | tee "$log" | sed 's/^/      /'
+}
 # Seit der Bahn-Trennung liegt dieses Skript unter bash/. Gearbeitet wird
 # weiterhin von der KIT-WURZEL aus — alle Pruefungen unten nennen ihre
 # Pfade bahnweise (bash/, pwsh/, geteilt/), und genau das ist der Punkt:
@@ -763,7 +779,7 @@ a_pruefe "und die Abwahl steht im Protokoll" \
 # Die Tests des Projekts duerfen in einer einbahnigen Ablage nicht ROT sein.
 # Eine abgewaehlte Bahn ist kein Defekt — aber der Uebersprung muss SICHTBAR
 # sein, sonst liest er sich am Ende wie ein bestandener Nachweis.
-( cd "$A_REPO" && "$KIT_PYTHON" -m pytest team/tests -q > .einbahnig.log 2>&1 )
+( cd "$A_REPO" && suite_mitschnitt .einbahnig.log "$KIT_PYTHON" )
 a_pruefe "Tests bleiben gruen (kein Fehlschlag durch die fehlende Bahn)" \
     "$(grep -cE '^[0-9]+ (failed|error)' "$A_REPO/.einbahnig.log")" "0"
 a_pruefe "und die Einbahnigkeit steht in der Zusammenfassung" \
@@ -849,7 +865,7 @@ a_pruefe "und der Selbsttest meldet KEINEN Syntaxfehler ueber das Glob-Muster" \
 # liest sich am Ende wie ein bestandener Nachweis, und das waere schlimmer als
 # das rote Bild, das er ersetzt — deshalb steht die Quotenzeile mit unter Test
 # und nicht nur die Farbe.
-( cd "$B_REPO" && "$KIT_PYTHON" -m pytest team/tests -q > .einbahnig.log 2>&1 ) \
+( cd "$B_REPO" && suite_mitschnitt .einbahnig.log "$KIT_PYTHON" ) \
     || { rot "  ✗ Tests in einer nur-pwsh-Ablage sind ROT (BL-129)"; \
          tail -25 "$B_REPO/.einbahnig.log" >&2; exit 1; }
 a_pruefe "Tests bleiben gruen (kein Fehlschlag durch die fehlende Bahn)" \

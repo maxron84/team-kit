@@ -9,9 +9,17 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
-**Zwei Funde aus dem Feld, ausgelöst durch eine Frage statt durch eine rote
-Zeile:** „Hängt der Installer beim Selbsttest?" Er hing nicht — er war stumm
-(`BL-165`). Beim Nachsehen lag darunter der schwerere Fund (`BL-164`).
+_Nichts Offenes. Die vier verbliebenen Backlog-Einträge (`BL-117`, `BL-144`,_
+_`BL-145`, `BL-167`) sind Bauvorhaben, keine Reste dieser Version —_
+_siehe [plans/backlog.md](plans/backlog.md)._
+
+## [2.13.1] — 2026-08-25
+
+**Vier Funde, ausgelöst durch eine Frage statt durch eine rote Zeile:**
+„Hängt der Installer beim Selbsttest?" Er hing nicht — er war stumm
+(`BL-165`). Beim Nachsehen lag darunter der schwerere Fund (`BL-164`), beim
+Abtragen fiel dessen Rest heraus (`BL-166`), und beim Aufräumen zeigte sich,
+dass die Selbsttests selbst noch stumm liefen (`BL-168`).
 
 ### Fixed
 
@@ -68,6 +76,59 @@ Zeile:** „Hängt der Installer beim Selbsttest?" Er hing nicht — er war stum
   die Stille gewollt, sonst flutet ein Lauf mit 17 Installer-Aufrufen das
   Terminal.
 
+- **Ein Projekt, das vor `BL-139`/`BL-140` einzog, behält seinen kaputten
+  Regeltext — und kein Update sagt das je** (`BL-166`). Der Rest, den `BL-164`
+  ausgewiesen hat: `TEAM.md` ließ sich nachziehen, `CLAUDE.md` **nicht**. Sie
+  trägt Projektarbeit — gefüllte TODO-Stellen, eigene Regeln —, und ein
+  Installer, der darin ersetzt, überschreibt fremde Arbeit (`BL-12`).
+
+  Der Fehlermodus ist still. Ein totes `ralph.sh` scheitert sichtbar; ein
+  `team.config.sh`, in das eine Rolle `TEAM_SMOKE_TEST` eintragen soll, während
+  `team/lib.psm1` `team.config.ps1` liest, scheitert nie — der Wert wird
+  eingetragen und nie gelesen.
+
+  Beide Installer melden den Zustand jetzt beim Update: welche Pfade tot sind,
+  welche Nummern blank, und die Zuordnung für **diese** Ablage. **Repariert
+  wird ausdrücklich nicht**, und die Meldung sagt auch, warum nicht.
+
+  Zwei Bauentscheidungen machen ihn erst brauchbar: Die Zwei-Bahnen-Region wird
+  ausgeschnitten (sonst Fehlalarm in **jeder** einbahnigen Ablage — und ein
+  Wächter mit Fehlalarm wird abgeschaltet statt befolgt, `BL-143`), und die
+  Kit-Nummern kommen aus der **Vorlage** statt aus einer Liste im Installer
+  (eine Liste wäre ab der nächsten Nummer falsch, `BL-154`).
+
+  Daher findet er am Feldtext **7** blanke Nummern, wo der `BL-140`-Wächter
+  dort 5 fand: Er misst gegen den Maßstab des Kits, nicht gegen den Backlog des
+  Projekts.
+
+- **Auch die Selbsttests liefen stumm — der längste Lauf des Kits am längsten**
+  (`BL-168`). `BL-165` hat die Suite-Läufe der beiden **Installer** sichtbar
+  gemacht und die Selbsttests übersehen, wo derselbe Fehler schwerer wiegt:
+
+  | Stelle | war still |
+  |---|---|
+  | `kit-test.ps1`, ein direkter Suite-Lauf | ~14 min |
+  | `kit-test.sh`, Stufe 8, zwei Läufe | Stufe 8 dauert ~55 min |
+
+  Dieselbe Bauart wie `BL-165` an allen drei Stellen. In `kit-test.sh` als
+  **ein** Helfer statt zweier Abschriften — zwei Fassungen desselben Aufrufs
+  laufen irgendwann auseinander.
+
+  Der Wächter prüft die **Gattung**, nicht die drei bekannten Stellen: Kein
+  Selbsttest und kein Installer darf einen pytest-Lauf, der ein
+  Testverzeichnis nennt, vollständig in eine Datei umleiten. Dass er dabei
+  einen **Lauf** von einer `--version`-**Probe** unterscheidet, ist keine
+  Feinarbeit, sondern die Bedingung: Der erste Entwurf hatte die
+  Unterscheidung nicht und meldete drei Proben als Befund — ein Wächter, der
+  an einer richtigen Stelle rot schlägt, wird abgeschaltet statt befolgt
+  (`BL-143`).
+
+  **Die Ausnahme steht ausdrücklich unter Test:** `kit-test.ps1` fängt die
+  Installer-Ausgabe weiter als **Transkript** ein. Ein Lauf mit 17
+  Installer-Aufrufen würde das Terminal sonst fluten und genau den Fortschritt
+  erschlagen, den dieser Fix sichtbar macht. Ein Transkript wird **nach** dem
+  Lauf gelesen, ein Fortschritt **während**.
+
 ### Changed
 
 - Die Hilfe beider Installer nennt bei `--update`/`-Update` jetzt **beide**
@@ -77,9 +138,10 @@ Zeile:** „Hängt der Installer beim Selbsttest?" Er hing nicht — er war stum
   Dass `TEAM.md` in keiner der beiden Aufzählungen stand, war die Lücke, durch
   die `BL-164` fiel.
 
-_Die drei verbliebenen Backlog-Einträge (`BL-117`, `BL-144`, `BL-145`) sind_
-_Bauvorhaben, keine Reste dieser Version — siehe_
-_[plans/backlog.md](plans/backlog.md)._
+**Was diese Version NICHT bringt:** `BL-167` — `install.ps1` fehlt der Block
+„Bitte von Hand abgleichen", den `install.sh` seit langem fährt. Beim Bauen von
+`BL-166` gefunden, ausgewiesen statt verschwiegen, und ein Teil der Antwort
+darauf, warum der kaputte Regeltext im Feld so lange unbemerkt blieb.
 
 ## [2.13.0] — 2026-08-25
 

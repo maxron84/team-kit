@@ -464,6 +464,106 @@ function Finde-Pytest {
     return $null
 }
 
+function Melde-VeraltetenRegeltext {
+    <#
+      BL-166. Der Rest, den BL-164 ausgewiesen hat.
+
+      BL-139 hat die bahnabhaengigen Stellen der VORLAGEN auf Platzhalter
+      gestellt, BL-140 die Backlognummern auf `Kit-`. Beides wirkt beim
+      RENDERN — also nur bei der naechsten Erstinstallation. Ein Projekt, das
+      vorher eingezogen ist, behaelt seine CLAUDE.md unveraendert, und das
+      Update fasst sie zu Recht nicht an: Sie traegt Projektarbeit.
+
+      Damit steht in einem gelebten Projekt weiter ein Regeltext, der
+      Dateien nennt, die es dort nicht gibt — und der Fehlermodus ist STILL.
+      Ein totes `.\ralph.cmd` scheitert sichtbar; ein `team.config.sh`, in das
+      eine Rolle `TEAM_SMOKE_TEST` eintragen soll, waehrend `team/lib.psm1`
+      `team.config.ps1` liest, scheitert nie: Der Wert wird eingetragen und
+      nie gelesen. Jede Rolle hat diesen Text im Systemprompt.
+
+      Im Feld (`duke-itam-2026`) war das am 2026-08-25 nachweisbar: 14 tote
+      Pfade und 5 blanke Kit-Nummern in CLAUDE.md, ein Jahr nach dem Einzug
+      und ueber mehrere Updates hinweg — niemandem gemeldet.
+
+      REPARIERT WIRD NICHT AUTOMATISCH (Lehre BL-12). CLAUDE.md ist
+      Projektdatei; ein Installer, der darin ersetzt, ueberschreibt fremde
+      Arbeit. Gemeldet wird mit der Zuordnung, die der Anwender braucht.
+    #>
+    $datei = Join-Path $Ziel 'CLAUDE.md'
+    if (-not (Test-Path $datei)) { return }
+    $text = [System.IO.File]::ReadAllText($datei)
+
+    # Die Zwei-Bahnen-Region ausschneiden: Dort ist das Nennen BEIDER Bahnen
+    # die Aufgabe, kein Fehler. An ihrem TEXT erkannt, nicht an Zeilennummern
+    # — die verschieben sich beim naechsten Absatz, und eine Ausnahme, die
+    # dann die falsche Stelle schuetzt, faellt niemandem auf (BL-139).
+    $regionAuf = 'Installiert mit dem **T.E.A.M.-Starterkit**. Ablage:'
+    $regionZu  = '**Der `team/`-Ordner gehört der Infrastruktur'
+    $i = $text.IndexOf($regionAuf)
+    if ($i -ge 0) {
+        $j = $text.IndexOf($regionZu, $i)
+        if ($j -lt 0) { $j = $text.Length }
+        $text = $text.Substring(0, $i) + $text.Substring($j)
+    }
+
+    # (1) Pfade, die der Text nennt und die es hier nicht gibt. Kit-Pfade sind
+    # ausgenommen: Sie liegen im Kit bzw. global, nicht im Zielprojekt, und
+    # ihre Abwesenheit ist keine Aussage ueber die Bahn.
+    $kitPfade = @('install.sh', 'install.ps1', 'team-auth-setup.sh',
+                  'team-auth-setup.ps1', 'team-init.sh', 'team-init.ps1')
+    $tot = [System.Collections.Generic.List[string]]::new()
+    $muster = '(?<![\w/.\\-])(?:\./|\.\\)?((?:team/)?[A-Za-z0-9_.-]+\.(?:sh|ps1|psm1|cmd))'
+    foreach ($m in [regex]::Matches($text, $muster)) {
+        $rel = $m.Groups[1].Value
+        if ($kitPfade -contains ($rel -split '/')[-1]) { continue }
+        if (Test-Path (Join-Path $Ziel $rel)) { continue }
+        if (-not $tot.Contains($rel)) { $tot.Add($rel) }
+    }
+
+    # (2) Blanke Backlognummern, die die VORLAGE inzwischen `Kit-` schreibt.
+    # Die Vorlage ist der Massstab, nicht eine Liste hier: Eine Liste waere ab
+    # der naechsten neuen Nummer falsch (BL-154).
+    $blank = [System.Collections.Generic.List[string]]::new()
+    $vorlage = Join-Path $KIT 'bootstrap\CLAUDE.md.vorlage'
+    if (Test-Path $vorlage) {
+        $vorlagentext = [System.IO.File]::ReadAllText($vorlage)
+        foreach ($m in [regex]::Matches($vorlagentext, 'Kit-((?:BL|HM)-\d+)')) {
+            $nummer = $m.Groups[1].Value
+            if ($blank.Contains($nummer)) { continue }
+            if ([regex]::IsMatch($text, '(?<!Kit-)\b' + [regex]::Escape($nummer) + '\b')) {
+                $blank.Add($nummer)
+            }
+        }
+    }
+
+    if ($tot.Count -eq 0 -and $blank.Count -eq 0) { return }
+
+    Kopf "CLAUDE.md stammt aus einer Fassung vor Kit-BL-139/Kit-BL-140 (Kit-BL-166)"
+    Write-Host "  Diese Datei steht im Systemprompt JEDER Rolle. Das Update hat sie"
+    Write-Host "  nicht angefasst — sie traegt Projektarbeit, und die gehoert dir."
+    if ($tot.Count) {
+        Rot "  [x] $($tot.Count) genannte Pfade gibt es in dieser Ablage nicht:"
+        foreach ($p in $tot) { Write-Host "        $p" }
+        Gelb "      Der teuerste Fall ist der leiseste: Verlangt der Text Eintraege"
+        Gelb "      in einer Konfiguration, die hier nicht gelesen wird, wird der"
+        Gelb "      Wert eingetragen und wirkt nie. Kein Abbruch, keine Meldung."
+        Write-Host "      Zuordnung fuer diese Ablage:"
+        Write-Host "        $($script:Werte['{{KONFIG}}'])  <- team.config.*"
+        Write-Host "        $($script:Werte['{{LIB}}'])  <- team/lib.*"
+        Write-Host "        $($script:Werte['{{REDTEAM}}'])  <- team/redteam.*"
+        Write-Host "        $($script:Werte['{{RUF}}'])<name>$($script:Werte['{{ENDUNG}}'])  <- Entrypoints in der Wurzel"
+    }
+    if ($blank.Count) {
+        Rot "  [x] $($blank.Count) blanke Backlognummern meinen den KIT-Backlog:"
+        Write-Host "        $($blank -join ', ')"
+        Gelb "      Blank gelesen zeigen sie auf deinen eigenen Backlog — dort"
+        Gelb '      steht etwas anderes oder gar nichts. Kit- davorsetzen.'
+    }
+    Gelb "  Nicht automatisch ersetzt (Lehre BL-12): In CLAUDE.md steckt deine"
+    Gelb "  Arbeit. Die Zwei-Bahnen-Region ('Ablage:') bleibt ausdruecklich, wie"
+    Gelb "  sie ist — dort ist das Nennen beider Bahnen die Aufgabe."
+}
+
 function Pytest-Mitschnitt {
     <#
       Faehrt die Regressionssuite und zeigt sie GLEICHZEITIG auf dem Bildschirm
@@ -724,7 +824,7 @@ function Kopiere {
     # nach dem Kopieren gerendert. Ihre installierte Fassung weicht deshalb
     # IMMER von der Kit-Fassung ab — die Platzhalter sind dort gefuellt. Ein
     # Warner, der bei jedem Lauf dieselben Dateien meldet, erzieht dazu, ihn zu
-    # ueberlesen; dann geht der echte Fund darin unter (Kit-BL-164).
+    # ueberlesen; dann geht der echte Fund darin unter (BL-164).
     if ($Immer -and (Test-Path $zielDatei) -and
         $Rel -notlike 'team/prompts/*' -and $Rel -ne 'TEAM.md') {
         $a = [System.IO.File]::ReadAllBytes($Quelle)
@@ -1051,7 +1151,7 @@ if ($Update) {
         Fuelle-Datei $f.FullName
     }
 
-    # Kit-BL-164: TEAM.md ist Kit-Doku, keine Projektdatei — und fiel bis
+    # BL-164: TEAM.md ist Kit-Doku, keine Projektdatei — und fiel bis
     # hierher durch JEDES Update. Geschrieben wurde sie nur bei der
     # Erstinstallation; in der Liste "Unangetastet geblieben (Projektdaten)"
     # weiter unten steht sie auch nicht. Sie fiel zwischen beide Listen, und
@@ -1153,6 +1253,8 @@ if ($Update) {
             Gelb "    git -C '$Ziel' rm $($reste -join ' ')"
         }
     }
+
+    Melde-VeraltetenRegeltext
 
     Kopf "Selbsttest"
     $fehler = 0

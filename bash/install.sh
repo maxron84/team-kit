@@ -464,6 +464,95 @@ team_pytest() {
 # Aufruf:  pytest_mitschnitt <logpfad> $PYTEST_AUFRUF
 #          ^ $PYTEST_AUFRUF bewusst UNGEQUOTET — es ist ein mehrwortiger Aufruf
 #            ("python3 -m pytest"), und die Wortzerlegung ist gewollt.
+# melde_veralteten_regeltext: BL-166, der Rest aus BL-164.
+#
+# BL-139 hat die bahnabhaengigen Stellen der VORLAGEN auf Platzhalter gestellt,
+# BL-140 die Backlognummern auf `Kit-`. Beides wirkt beim RENDERN — also nur
+# bei der naechsten Erstinstallation. Ein Projekt, das vorher eingezogen ist,
+# behaelt seine CLAUDE.md, und das Update fasst sie zu Recht nicht an: Sie
+# traegt Projektarbeit.
+#
+# Damit steht in einem gelebten Projekt weiter ein Regeltext, der Dateien
+# nennt, die es dort nicht gibt — und der Fehlermodus ist STILL. Ein totes
+# ./ralph.sh scheitert sichtbar; ein team.config.sh, in das eine Rolle
+# TEAM_SMOKE_TEST eintragen soll, waehrend team/lib.psm1 team.config.ps1
+# liest, scheitert nie: Der Wert wird eingetragen und nie gelesen. Jede Rolle
+# hat diesen Text im Systemprompt.
+#
+# REPARIERT WIRD NICHT AUTOMATISCH (Lehre BL-12) — gemeldet wird mit der
+# Zuordnung, die der Anwender braucht.
+melde_veralteten_regeltext() {
+    local datei="$ZIEL/CLAUDE.md"
+    [ -f "$datei" ] || return 0
+    local arbeit; arbeit="$(mktemp)"
+    # Die Zwei-Bahnen-Region ausschneiden: Dort ist das Nennen BEIDER Bahnen
+    # die Aufgabe, kein Fehler. An ihrem TEXT erkannt, nicht an Zeilennummern
+    # — die verschieben sich beim naechsten Absatz (BL-139).
+    "$PYTHON" - "$datei" "$KIT/bootstrap/CLAUDE.md.vorlage" > "$arbeit" <<'PY'
+import re, sys
+from pathlib import Path
+text = Path(sys.argv[1]).read_text(encoding="utf-8-sig")
+auf = "Installiert mit dem **T.E.A.M.-Starterkit**. Ablage:"
+zu  = "**Der `team/`-Ordner geh\u00f6rt der Infrastruktur"
+i = text.find(auf)
+if i >= 0:
+    j = text.find(zu, i)
+    text = text[:i] + (text[j:] if j >= 0 else "")
+muster = re.compile(r"(?<![\w/.\\-])(?:\./|\.\\)?((?:team/)?[A-Za-z0-9_.-]+\.(?:sh|ps1|psm1|cmd))")
+kit = {"install.sh", "install.ps1", "team-auth-setup.sh", "team-auth-setup.ps1",
+       "team-init.sh", "team-init.ps1"}
+wurzel = Path(sys.argv[1]).resolve().parent
+tot = []
+for m in muster.finditer(text):
+    rel = m.group(1)
+    if rel.split("/")[-1] in kit or rel in tot:
+        continue
+    if not (wurzel / rel).exists():
+        tot.append(rel)
+blank = []
+vorlage = Path(sys.argv[2])
+if vorlage.is_file():
+    for m in re.finditer(r"Kit-((?:BL|HM)-\d+)", vorlage.read_text(encoding="utf-8-sig")):
+        nr = m.group(1)
+        if nr in blank:
+            continue
+        if re.search(r"(?<!Kit-)\b" + re.escape(nr) + r"\b", text):
+            blank.append(nr)
+print("TOT " + " ".join(tot))
+print("BLANK " + " ".join(blank))
+PY
+    local tot blank
+    tot="$(sed -n 's/^TOT //p' "$arbeit")"
+    blank="$(sed -n 's/^BLANK //p' "$arbeit")"
+    rm -f "$arbeit"
+    [ -n "$tot$blank" ] || return 0
+
+    kopf "CLAUDE.md stammt aus einer Fassung vor Kit-BL-139/Kit-BL-140 (Kit-BL-166)"
+    echo "  Diese Datei steht im Systemprompt JEDER Rolle. Das Update hat sie"
+    echo "  nicht angefasst — sie traegt Projektarbeit, und die gehoert dir."
+    if [ -n "$tot" ]; then
+        rot "  ✗ Diese genannten Pfade gibt es in dieser Ablage nicht:"
+        for p in $tot; do echo "        $p"; done
+        gelb "      Der teuerste Fall ist der leiseste: Verlangt der Text Eintraege"
+        gelb "      in einer Konfiguration, die hier nicht gelesen wird, wird der"
+        gelb "      Wert eingetragen und wirkt nie. Kein Abbruch, keine Meldung."
+        echo  "      Zuordnung fuer diese Ablage:"
+        echo  "        $BAHN_KONFIG  <- team.config.*"
+        echo  "        $BAHN_LIB  <- team/lib.*"
+        echo  "        $BAHN_REDTEAM  <- team/redteam.*"
+        echo  "        $BAHN_RUF<name>$BAHN_ENDUNG  <- Entrypoints in der Wurzel"
+    fi
+    if [ -n "$blank" ]; then
+        rot "  ✗ Diese blanken Backlognummern meinen den KIT-Backlog:"
+        echo "        $blank"
+        gelb "      Blank gelesen zeigen sie auf deinen eigenen Backlog — dort"
+        gelb "      steht etwas anderes oder gar nichts. Kit- davorsetzen."
+    fi
+    gelb "  Nicht automatisch ersetzt (Lehre BL-12): In CLAUDE.md steckt deine"
+    gelb "  Arbeit. Die Zwei-Bahnen-Region ('Ablage:') bleibt ausdruecklich, wie"
+    gelb "  sie ist — dort ist das Nennen beider Bahnen die Aufgabe."
+}
+
 pytest_mitschnitt() {
     local log="$1"; shift
     PYTHONUNBUFFERED=1 "$@" -q team/tests 2>&1 | tee "$log" | sed 's/^/      /'
@@ -683,7 +772,7 @@ if [ "$UPDATE" -eq 1 ]; then
         # deshalb IMMER von der Kit-Fassung ab — die Platzhalter sind dort
         # gefuellt. Ein Warner, der bei jedem Lauf dieselben Dateien meldet,
         # erzieht dazu, ihn zu ueberlesen; dann geht der echte Fund darin unter
-        # (Kit-BL-164).
+        # (BL-164).
         case "$rel" in
             team/prompts/*|TEAM.md) ;;
             *) [ -e "$ziel" ] && ! cmp -s "$quelle" "$ziel" \
@@ -856,7 +945,7 @@ PY
     done
     for d in "$ZIEL"/team/prompts/*.md; do fuelle "team/prompts/$(basename "$d")"; done
 
-    # Kit-BL-164: TEAM.md ist Kit-Doku, keine Projektdatei — und fiel bis
+    # BL-164: TEAM.md ist Kit-Doku, keine Projektdatei — und fiel bis
     # hierher durch JEDES Update. Geschrieben wurde sie nur bei der
     # Erstinstallation; in der Liste "Unangetastet geblieben (Projektdaten)"
     # weiter unten steht sie auch nicht. Sie fiel zwischen beide Listen, und
@@ -981,6 +1070,8 @@ PY
     # die installierte Datei — sonst meldet der Abgleich immer eine Abweichung
     # (gefuellte gegen ungefuellte Platzhalter) und wird zur Warnung, die man
     # wegklickt.
+    melde_veralteten_regeltext
+
     kopf "Bitte von Hand abgleichen"
     ABGLEICH=0
     # Die gerenderte Vorlage BLEIBT LIEGEN, wenn es eine Abweichung gibt, und
