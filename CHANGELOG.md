@@ -9,8 +9,43 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
-_Offen sind noch fünf Einträge, und alle fünf brauchen eine Windows-Maschine_
-_(`BL-117`, `BL-145`, `BL-146`, `BL-155`, `BL-156`) — siehe [plans/backlog.md](plans/backlog.md)._
+_Nichts Offenes. Die drei verbliebenen Backlog-Einträge (`BL-117`, `BL-144`,_
+_`BL-145`) sind Bauvorhaben, keine Reste dieser Version —_
+_siehe [plans/backlog.md](plans/backlog.md)._
+
+## [2.13.0] — 2026-08-25
+
+**Die Runde, in der die pwsh-Bahn ihren Selbsttest bestanden hat.** `BL-146`
+war seit dem 2026-08-21 der Eintrag, der alles andere trug: Vier Testfälle und
+drei Code-Stellen der pwsh-Bahn waren geschrieben und **nie ausgeführt**
+worden, und bis zum Release wuchs die Liste auf die gesamte pwsh-Hälfte des
+Rückkanals. Alles davon war eine Behauptung mit Testkörper.
+
+Am 2026-08-25 ist `bash bash/kit-test.sh` auf einer echten Windows-Maschine
+durchgelaufen: **11 von 11 Stufen, 141 Prüfungen grün, Exit 0.** Damit ist die
+zweite Bahn keine Herleitung mehr.
+
+**Der Ertrag war nicht der grüne Lauf, sondern die sechs davor.** Der Erstlauf
+hat sechs Einträge erzeugt, und **fünf davon sind auf einem Linux-Wirt
+prinzipiell unsichtbar**:
+
+| | Was nur ein Windows-Lauf zeigt |
+|---|---|
+| `BL-158` | Die Kit-eigenen Prüfer starben unter cp1252 auf ihrer **Erfolgs**-Spur — `kit-test.sh` hätte das als inhaltlichen Befund gemeldet, den es nicht gibt |
+| `BL-159` | `kit-einrichten.sh` fällte ein POSIX-Urteil über einen Windows-Wirt und riet zu einem Paket, das es dort nicht gibt |
+| `BL-160` | `--verknuepfen` meldete „✓ Verknüpft" und legte eine **Kopie** an — die Reparatur erzeugte den Schaden, gegen den sie gebaut ist |
+| `BL-161` | Ein MSYS-Pfad in `pwsh -Command` ließ die Syntaxprüfung **null** statt achtzehn Dateien sehen — wirkungslos, nicht bloß rot |
+| `BL-162` | Der Gleichstands-Prüfer **starb an seinem eigenen Befund**: `diff` endet mit 1, wenn es etwas findet |
+| `BL-163` | Dieselbe Marke, zwei Werte — der erste **gemessene** Fall der Gattung, die `BL-117` seit Tagen benennt |
+
+**Kein einziger fallender Fall wurde grün gedreht.** In jedem Fall lag der
+Fehler im Werkzeug oder in der Erwartung, nie im Testkörper — genau das, was
+`BL-146` als Bedingung formuliert hatte: *„Fällt er, ist entweder der Fix
+falsch oder der Test — und die Antwort steht im Fall selbst."*
+
+Dazu die beiden fehlenden Hälften der pwsh-Bahn, die den Anlass für die Sitzung
+gaben: `BL-155` (die Wurzel-Code-Prüfung aus `BL-52`) und `BL-156` (`-Hilfe`
+für `install.ps1`). Feldbefunde sind mit ⚠️ markiert.
 
 ### Added
 
@@ -36,10 +71,43 @@ _(`BL-117`, `BL-145`, `BL-146`, `BL-155`, `BL-156`) — siehe [plans/backlog.md]
   der Abbruch „Kein Zielpfad angegeben" nennt `--hilfe`: Das ist der Weg, auf
   dem die Liste ohne Vorwissen gefunden wird.
 
-  **Die pwsh-Hälfte fehlt und ist als `BL-156` ausgewiesen**, nicht blind
-  mitgeschrieben — die Lehre aus `BL-113`/`BL-117`. Dort liegt zusätzlich ein
-  älterer Fund aus demselben Durchgang: Der Kopf von `install.ps1` nennt die
-  drei Bahn-Schalter nicht einmal in der `Aufruf:`-Zeile.
+  **Die pwsh-Hälfte wurde als `BL-156` ausgewiesen statt blind mitgeschrieben**
+  — die Lehre aus `BL-113`/`BL-117` — und ist am 2026-08-24 auf der
+  Windows-Maschine nachgezogen worden (siehe den nächsten Eintrag).
+
+- **`install.ps1` beantwortet `-Hilfe` / `-Help` / `-h` mit seiner Optionsliste,
+  und sein Kopf erklärt endlich die drei Bahn-Schalter** (`BL-156`). Dieselbe
+  Bauart wie auf der bash-Bahn: Der Hilfetext **ist** der `<# … #>`-Block am
+  Dateianfang, gelesen zur Laufzeit aus `$PSCommandPath`. Die drei Aliasse
+  bilden `-h`/`--hilfe`/`--help` nach — ein Wechsel der Bahn soll kein Wechsel
+  der Gewohnheit sein. Der Abbruch „Kein Zielpfad angegeben" verweist auf
+  `-Hilfe`, wie drüben auf `--hilfe`.
+
+  **Der schwerere Teil war der Kopf, nicht der Schalter.** `-NurBash`,
+  `-NurPwsh` und `-BeideBahnen` standen ausschließlich in `param()` — anders
+  als in `install.sh` nicht einmal in der `Aufruf:`-Zeile. Wer unter Windows
+  eine Bahn abwählen (`BL-119`) oder mit `-Update` zurückholen (`BL-147`)
+  wollte, fand im Skript keinen Hinweis darauf, dass das überhaupt geht. Beide
+  Köpfe erklären jetzt dieselben Schalter.
+
+  **`Get-Help` wäre der pwsh-übliche Weg gewesen und ist es nicht geworden —
+  gemessen, nicht vermutet.** Auf der Zielmaschine (pwsh 7.6.5) findet
+  `Get-Help` den `<# … #>`-Block **nicht**, solange die Zeile
+  `# Bahn: pwsh | Gegenstueck: install.sh` davorsteht: Die Ausgabe schrumpft
+  auf die blanke Syntaxzeile. Ohne die Bahn-Zeile funktioniert es. Die
+  Bahn-Zeile ist aber nicht verhandelbar — `test_bahn_kopfzeile.py` verlangt
+  sie in den ersten drei Zeilen, und sie ist die einzige Stelle, an der eine
+  Datei ihre Bahn selbst nennt. Also liest die Hilfe die eigene Datei, statt
+  den Kopf für ein Werkzeug umzubauen. Genau diese Frage hatte `BL-156` auf
+  die Maschine verwiesen, auf der sie beantwortbar ist.
+
+  **Geprüft wird am LAUF, nicht am Quelltext**
+  ([`test_bl156_installer_hilfe.py`](geteilt/tests/test_bl156_installer_hilfe.py),
+  13 Fälle): Beide Installer werden wirklich gestartet — das geht ohne
+  Zielprojekt und ohne Installation. Der tragende Fall vergleicht die Ausgabe
+  **zeichenweise mit dem Dateikopf**; er fällt, sobald daneben eine zweite
+  Fassung entsteht. Ein Fall hält zusätzlich die `Get-Help`-Messung fest, damit
+  die Entscheidung nicht später still zurückgedreht wird.
 
 - **Der Rückkanal Feld → Kit ist ein Werkzeug statt einer Konvention**
   (`BL-153`). Neu im Zielprojekt: `kit-melden.sh` / `.cmd` mit
@@ -140,6 +208,190 @@ _(`BL-117`, `BL-145`, `BL-146`, `BL-155`, `BL-156`) — siehe [plans/backlog.md]
 
 ### Fixed
 
+- ⚠️ **Dieselbe Marke, zwei Werte — der Fall, den `BL-117` vorhergesagt hat**
+  (`BL-163`). Der erste Gleichstands-Vergleich der beiden Installer auf einer
+  echten Windows-Maschine fand genau **einen** inhaltlichen Unterschied:
+
+  ```
+  install.sh    TEAM_KIT_PFAD = C:/Users/…/team-kit
+  install.ps1   TEAM_KIT_PFAD = C:\Users\…\team-kit
+  ```
+
+  Beide Installer schreiben **beide** Konfigurationen. In einer mit
+  `install.ps1` erzeugten Ablage stand die Rückstrich-Form also auch in
+  `team.config.sh`.
+
+  **Nachgemessen ist keine der beiden Formen kaputt:** Beide werden in bash
+  (auch nach dem Sourcen der Konfiguration), in Python und in PowerShell
+  korrekt aufgelöst. Der Pfad zeigte nie ins Leere.
+
+  **Die Wirkung lag woanders.** `kit-test.sh` Stufe 11 prüft „beide Installer
+  erzeugen denselben Baum", und diese Prüfung war damit auf Windows **dauerhaft
+  rot**. Eine Prüfung, die immer rot steht, wird nicht gelesen (`BL-14`) — und
+  sie ist die einzige, die einen *echten* Auseinanderlauf der beiden Installer
+  fände. Der harmlose Unterschied hätte den schädlichen verdeckt.
+
+  `install.ps1` normalisiert den Wert jetzt auf Schrägstriche; die bash-Fassung
+  bleibt unverändert, weil die MSYS-Schicht dort ohnehin schon diese Form
+  liefert. Genommen wurde die Schrägstrich-Form, weil sie in allen drei
+  Sprachen ohne Maskierung durch jeden Kontext geht — ein Rückstrich tut das in
+  bash ausdrücklich nicht.
+
+  **Der Zusammenhang mit `BL-117` ist der eigentliche Ertrag.** Jener Eintrag
+  hält fest, dass der Prompt-Gleichstand am *Quelltext* bewiesen ist und nicht
+  am *Lauf*, und benennt die Lücke wörtlich: „Setzen die beiden Bahnen in
+  denselben Platzhalter **verschiedene Werte** ein … sind die Prompts
+  verschieden und der Test bleibt grün." Das hier ist der erste **gemessene**
+  Fall dieser Gattung. Er traf nicht einen Rollen-Prompt, sondern
+  `team.config.*` — dieselbe Mechanik, anderer Adressat.
+
+  Im selben Zug nimmt Stufe 11 `.pytest_cache` aus dem Vergleich, mit derselben
+  Begründung, mit der `__pycache__` schon draußen war: `lastfailed` entsteht
+  nur, *wenn* etwas fehlschlug, und `nodeids` hängt am Stand der Testdateien im
+  Moment des Laufs. Beides beschreibt den Testlauf, nicht das Erzeugnis des
+  Installers.
+
+- ⚠️ **Der Gleichstands-Prüfer starb an seinem eigenen Befund** (`BL-162`).
+  Stufe 11 von `kit-test.sh` misst, ob `install.sh` und `install.ps1` denselben
+  Baum erzeugen:
+
+  ```
+  W_DIFF="$(diff -r --exclude=.git "$W_A" "$W_B" | head -20)"
+  ```
+
+  `diff` endet mit **1**, wenn es Unterschiede gibt — also genau in dem Fall,
+  für den die Prüfung existiert. Unter `set -euo pipefail` reißt das die
+  Zuweisung und damit den ganzen Lauf weg, **still und ohne Meldung**: Der
+  Selbsttest endete nach sechs Stunden mit Exit 1 und ohne ein Wort darüber,
+  was er gefunden hatte.
+
+  Auf Linux ist es nie aufgefallen, weil die Bäume dort immer gleich waren und
+  `diff` 0 lieferte. **Ein Prüfer, der nur überlebt, solange er nichts findet,
+  ist keiner** — dieselbe Gattung wie `BL-111`, eine Ebene höher: dort starb
+  eine Ableitung an ihrem leeren Normalfall, hier ein Test an seinem Fund.
+
+  Der Wächter dazu prüft die **Bauart**, nicht die zwei bekannten Stellen: jede
+  Zuweisung `VAR="$( … )"`, deren Befehl seinen Exit-Code als *Aussage* führt
+  (`diff`, `cmp` — „gefunden" ist dort 1, nicht 0), muss ihn abfangen. Mit
+  Gegenprobe an der wörtlichen Fassung von vorher.
+
+- ⚠️ **Ein MSYS-Pfad wanderte roh in ein `pwsh -Command`** (`BL-161`). Dieselbe
+  Stufe reicht `$KIT` in einen PowerShell-Aufruf hinein. Als **Argument**
+  wandelt die MSYS-Schicht von Git-Bash einen Pfad selbst um — deshalb laufen
+  die `-File`-Aufrufe unverändert. **Innerhalb** eines `-Command`-Strings ist er
+  bloßer Text: PowerShell las den POSIX-Pfad `/c/Users/…` als einen relativen
+  Windows-Pfad unterhalb von `C:` und meldete „Cannot find path".
+
+  **Die Folge war nicht nur eine rote Zeile.** Die Syntaxprüfung sah damit
+  **null** PowerShell-Dateien statt achtzehn — sie war auf dieser Bahn
+  wirkungslos, und an der Stelle, an der sonst die Liste der kaputten Dateien
+  steht, stand der Fehlertext. Nach dem Fix werden die 18 Dateien wirklich
+  geparst. `pwsh_pfad` schaltet über `cygpath -w`, wo es das gibt, und reicht
+  den Pfad sonst unverändert durch — auf POSIX ist er bereits richtig.
+
+  Beide Funde stammen aus dem **dritten** `kit-test.sh`-Lauf auf der
+  Windows-Maschine — dem ersten, der Stufe 11 überhaupt erreicht hat. Sie ist
+  die Stufe, auf der laut ihrem eigenen Kommentar „die ganze pwsh-Bahn ruht",
+  und sie war dort nie gefahren worden.
+
+- ⚠️ **`kit-einrichten.sh` fällte ein POSIX-Urteil über einen Windows-Wirt —
+  und schickte den Anwender an ein Paket, das es dort nicht gibt** (`BL-159`).
+  Auf einer nativen Windows-Maschine unter Git for Windows meldete die
+  Vorflug-Prüfung **drei Fehler** und „die Maschine ist noch nicht bereit":
+  `flock` fehlt, `chmod +x` wirkt nicht, `flock` greift nicht.
+
+  **Alle drei Befunde sind wahr** — Git for Windows liefert kein `flock`, und
+  NTFS trägt unter Git-Bash kein Exec-Bit. Falsch war der **Schweregrad**. Die
+  Zwei-Bahnen-Tabelle im README sagt „Bash-Bahn (Linux · WSL)" gegen
+  „pwsh-Bahn (Windows ohne WSL)": Nativ unter Windows ist die bash-Bahn die
+  zweite Wahl. Das Kit erklärte damit eine Maschine für unbereit, auf der
+  seine **native** Bahn tadellos läuft — und empfahl `sudo apt install
+  util-linux`. Eine Abhilfe, die auf dieser Maschine nicht ausführbar ist, ist
+  keine; dieselbe Erwägung wie bei `BL-144`.
+
+  **Die Befunde verschwinden nicht, sie werden Warnungen** — und sie erklären
+  jetzt mehr als vorher, nicht weniger: Jede nennt ihre Folge und die Bahn, auf
+  der es die Folge nicht gibt (die `.cmd`-Einstiege der pwsh-Bahn statt
+  `./ralph.sh`; dieselbe Bahn sperrt über Betriebssystem-Dateisperren statt
+  über `flock`). Und die
+  Umgebungszeile sagt nicht mehr „Unbekanntes System" zu Git for Windows — das
+  war es nie: Das Kit fährt mit genau dieser bash seinen eigenen Selbsttest.
+
+  **Ein zweiter, kleinerer Fund derselben Sorte im selben Zug:** Fehlte `flock`
+  als Werkzeug, meldete das Skript den Befund **zweimal** — in 2/5 („Werkzeug
+  fehlt") und in 3/5 („Sperre greift nicht"). Zwei Meldungen für *eine* Ursache
+  lesen sich wie zwei Probleme. Die Sperrprobe schweigt jetzt, wenn es nichts
+  zu proben gibt; `kit-test.sh` prüft dafür die **Gattung** („probiert *oder*
+  Fehlen benannt") statt einer festen Zeile — Schweigen geht weiterhin nicht
+  durch.
+
+- ⚠️ **`--verknuepfen` meldete „✓ Verknüpft" und legte eine Kopie an**
+  (`BL-160`). Unter MSYS/Git-Bash erzeugt `ln -s` ohne Symlink-Recht keine
+  Verknüpfung, sondern kopiert — und meldet Erfolg. `kit-einrichten.sh` gab das
+  ungeprüft weiter, **mit Pfeil**: `✓ Verknüpft: …/team-init.sh → …`.
+
+  **Das wiegt schwerer, als es klingt.** `~/.claude/scripts/team-init.sh` ist
+  laut `kit-test.sh` „das einzige Stück des Kits, von dem eine Kopie außerhalb
+  des Repos liegen kann"; das Kit hat eine eigene Erkennung dafür gebaut, weil
+  so eine Kopie veraltet und dann stillsteht. Ausgerechnet die **Reparatur**
+  erzeugte sie — und der Satz daneben, „Eine Verknüpfung kann nicht veralten —
+  die Kopie konnte es", war damit eine Falschaussage.
+
+  Beide Verknüpfungs-Pfade gehen jetzt durch `verknuepfung_bestaetigen`: erst
+  `[ -L … ]`, dann die Meldung. Schlägt es fehl, nennt die Warnung die Folge und
+  **drei** Abhilfen — Entwicklermodus plus `MSYS=winsymlinks:nativestrict`, der
+  Aufruf über den vollen Pfad, oder die pwsh-Bahn. Die mittlere ist die, die
+  auf einer verwalteten Maschine als einzige bleibt. Dieselbe Erwägung wie
+  `BL-144`, und dieselbe wie ein Abschnitt weiter oben. Der Erklärblock steht
+  **einmal**, nicht zweimal hintereinander (`BL-14`).
+
+  **Gemessen, nicht vermutet:** Auf der Fundmaschine legt `ln -s` eine reguläre
+  Datei an; `MSYS=winsymlinks:nativestrict ln -s` und `cmd /c mklink` scheitern
+  beide mit „Operation not permitted" (kein Entwicklermodus, keine
+  Administratorrechte). Der Symlink-Fall des Launchers in `kit-test.sh` Stufe 10
+  prüfte dort deshalb gar keinen Symlink — und war trotzdem **grün**, weil die
+  Kopie am fremden Ort ebenfalls mit 2 endet. Ein grüner Haken aus dem falschen
+  Grund; aufgedeckt erst durch die Folgezusicherung „und es ist der Installer,
+  der sich meldet". Stufe 10 probiert die Symlink-Fähigkeit jetzt, überspringt
+  den Fall **sichtbar**, wenn sie fehlt, und prüft an seiner Stelle die
+  wichtigere Zusicherung: dass `--verknuepfen` keine Verknüpfung *behauptet*.
+
+- ⚠️ **Die beiden Kit-eigenen Prüfer starben unter Windows auf ihrer
+  *Erfolgs*-Spur — mit einer Meldung, die etwas völlig anderes behauptet**
+  (`BL-158`). `geteilt/kit-readme-pruefen.py` und `geteilt/kit-regelinventar.py`
+  geben ihr Ergebnis mit einem Häkchen aus. Für `stdout`/`stderr` gilt Pythons
+  Default, und der ist unter Windows die ANSI-Codepage der Maschine, sobald die
+  Ausgabe in eine Pipe geht statt in eine Konsole — auf einem deutschen System
+  cp1252. Beide sterben dort mit `UnicodeEncodeError` und Exit 1, **und zwar
+  genau dann, wenn alles in Ordnung ist**.
+
+  `kit-test.sh` fährt sie in Schritt 3 und Schritt 9 unter `if ! …` und meldet
+  daraufhin „Das README steht gegen die frische Installation" bzw. ein rotes
+  Regel-Inventar. Das ist der teuerste Fehlermodus, den dieses Repo kennt: Er
+  **sieht aus wie ein inhaltlicher Befund, ist keiner**, und er schickt den
+  Leser an eine Stelle, an der nichts kaputt ist.
+
+  **Der Fix ist eine Zeile, die es im Kit längst gibt.** `team/tools/*.py`
+  tragen die UTF-8-Umstellung seit `BL-133`. Dessen Wächter prüft ausdrücklich
+  die **Gattung** statt einer Namensliste — nur eben die Gattung
+  `team/tools/*.py`. Die zweite Gattung `geteilt/kit-*.py` (die Prüfer, die der
+  Installer bewusst *nicht* mitkopiert) lag daneben und war von nichts gedeckt.
+  Zwei Gattungen, ein Fehler, ein Wächter, der nur eine kannte. Er deckt jetzt
+  beide — wieder als Gattung: Jedes `geteilt/kit-*.py` wird unter gestelltem
+  `PYTHONIOENCODING=cp1252` als **Prozess** gestartet, erwartet werden Exit 0
+  *und* ein UTF-8-Häkchen in den Rohbytes. Ein Programm, das seine
+  Erfolgsmeldung nicht loswird, ist nicht erfolgreich.
+
+  **Gegenprobe, die den Fix erst gültig macht:** die Umstellung in
+  `kit-readme-pruefen.py` zurückgedreht → der Fall fällt, mit genau dem
+  `UnicodeEncodeError` im Fehlertext; wieder eingesetzt → grün.
+
+  Nicht über `PYTHONIOENCODING` beim Aufrufer gelöst: Das müssten
+  `kit-test.sh`, `kit-test.ps1` und der Mensch auf der Kommandozeile jeder für
+  sich setzen — dieselbe Erwägung wie im Kopf von `beutebuch.py`. *Eine
+  Zusicherung, die an fünf Stellen wiederholt werden muss, ist eine, die eine
+  Stelle vergisst.*
+
 - **`kit-test.sh` starb auf einer Maschine ohne globale Git-Identität mit
   Exit 128 — vor der ersten Prüfung** (`BL-157`). Der Selbsttest legt sechs
   Wegwerf-Repos an; drei gaben ihnen eine lokale Identität, drei nicht
@@ -193,14 +445,50 @@ _(`BL-117`, `BL-145`, `BL-146`, `BL-155`, `BL-156`) — siehe [plans/backlog.md]
   vorbeigelaufen, ausgerechnet am ersten Werkzeug, das Prosa mit Umlauten
   ausgibt.
 
-  **Offen und bewusst nicht mitgenommen:** Die pwsh-Bahn hat den
-  `BL-52`-Hinweis gar nicht — `install.ps1` kennt keine Wurzel-Code-Prüfung.
-  Das ist keine ungeprüfte Hälfte, sondern eine **fehlende**, und sie steht
-  jetzt als `BL-155` im Backlog: Bau auf der Windows-Maschine, mit derselben
-  Regel wie hier (Entrypoint = liegt in `bash/entry/` oder `pwsh/entry/`),
-  nicht mit einer zweiten Liste. Blind geschrieben würde der pwsh-Zweig bei
-  seiner ersten Ausführung dort *angepasst* statt gelesen — die Lehre aus
-  `BL-113`/`BL-117`.
+  **Damals offen und bewusst nicht mitgenommen:** Die pwsh-Bahn hatte den
+  `BL-52`-Hinweis gar nicht — `install.ps1` kannte keine Wurzel-Code-Prüfung.
+  Das war keine ungeprüfte Hälfte, sondern eine **fehlende**. Ausgewiesen als
+  `BL-155`, nachgezogen am 2026-08-24 auf der Windows-Maschine; siehe den
+  nächsten Eintrag.
+
+- ⚠️ **`install.ps1` kannte die Wurzel-Code-Prüfung aus `BL-52` gar nicht**
+  (`BL-155`). Ein einbahnig-pwsh installiertes Bestandsprojekt — also genau
+  die Lage, für die die pwsh-Bahn gebaut ist — erfuhr beim Update nie, dass
+  sein Einstiegspunkt in der Wurzel außerhalb des Prüfumfangs liegt. Der
+  Hinweis steht jetzt an derselben Stelle wie drüben: direkt hinter dem
+  `BL-51`-Block im Update-Pfad, mit demselben Wortlaut, damit ein Befund nicht
+  zwei Fehlermeldungen hat.
+
+  **Die Entrypoints werden gemessen, nicht abgeschrieben** — dieselbe Regel wie
+  in `BL-154`, nicht eine zweite Liste. Eine eigene Aufzählung hier wäre die
+  Abschrift gewesen, nur umgezogen.
+
+  **Eine Stelle ist besser als das Vorbild.** Die bash-Fassung nennt in der
+  Abhilfe fest `team.config.sh`. In einer einbahnig-pwsh installierten Ablage
+  gibt es diese Datei nicht — die Abhilfe verwiese dort auf etwas, das der
+  Leser nicht findet. Die pwsh-Fassung nennt die Quelle, aus der sie die Werte
+  wirklich gelesen hat, und zeigt die Schreibweise, die dort gilt.
+
+  **Beim Bau ist ein Unterschied zwischen den Bahnen aufgefallen, den die
+  Portierung sonst geerbt hätte:** In `install.sh` fallen `.ralph-state`,
+  `.budget-ledger`, `.gitignore` und `.gitattributes` durch das Glob —
+  `"$ZIEL"/*` fasst keine Punktdatei an. Unter Windows trägt eine Punktdatei
+  **kein** Hidden-Attribut, `Get-ChildItem` liefert sie also ganz normal mit.
+  Ohne ausdrücklichen Ausschluss hätte das Update den eigenen Zustand des
+  Teams als „ungeprüften Projektcode" gemeldet — die Warnung in jedem grünen
+  Projekt, also genau der Fehlermodus, den `BL-154` gerade abgeschafft hatte.
+  Der Ausschluss steht deshalb **mit Begründung** im Code und nicht als
+  stiller Einzeiler.
+
+  **Nachgewiesen wird auf zwei Ebenen.** Am Quelltext für beide Bahnen
+  ([`test_bl155_wurzel_code_auf_beiden_bahnen.py`](geteilt/tests/test_bl155_wurzel_code_auf_beiden_bahnen.py),
+  7 Fälle, laufen auch ohne PowerShell) — darunter die Gegenprobe, dass in
+  `install.ps1` **keine** Entrypoint-Aufzählung danebenstehen geblieben ist.
+  Und am Lauf in `kit-test.sh` Stufe 7, wo das Bestandsprojekt mit `main.py`
+  in der Wurzel bereits steht: Dort fährt jetzt auch `install.ps1 -Update` und
+  muss denselben Befund melden — ohne einen Entrypoint des Kits und ohne eine
+  Punktdatei zu nennen. Fehlt `pwsh`, wird das ausdrücklich als **ungeprüft**
+  ausgegeben statt still übersprungen.
 
 - ⚠️ **Der `BL-140`-Lint verbot in einem Feldprojekt genau die Schreibweise,
   die seine eigene Regel als richtig erklärt** (`BL-148`). Die Regel kennt

@@ -27,6 +27,25 @@ import re
 import sys
 from pathlib import Path
 
+# BL-158: stdout/stderr ausdruecklich auf UTF-8 stellen — dieselbe Zeile, die
+# `team/tools/*.py` seit BL-133 tragen, hier aber vergessen. Pythons Default
+# fuer einen NICHT-Terminal-Strom ist die ANSI-Codepage der Maschine (auf einem
+# deutschen Windows cp1252), und dieses Werkzeug gibt auf seiner ERFOLGS-Spur
+# ein Haekchen aus. Ohne die Umstellung stirbt es also genau dann, wenn alles
+# in Ordnung ist — mit UnicodeEncodeError und Exit 1. `kit-test.sh` liest das
+# als "Das README steht gegen die frische Installation" und bricht ab: eine
+# Kit-Meldung, die etwas voellig anderes behauptet als das, was passiert ist.
+#
+# Der BL-133-Waechter hat das nicht gesehen, weil er die GATTUNG
+# `team/tools/*.py` prueft — und diese Datei liegt in `geteilt/`, weil der
+# Installer sie nicht ins Zielprojekt kopiert. Zwei Gattungen, ein Fehler.
+for _strom in (sys.stdout, sys.stderr):
+    try:
+        _strom.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError, OSError):
+        # Ein umgelenkter Strom (pytest-capture) ist kein TextIOWrapper.
+        pass
+
 # Das Werkzeug liegt seit der Bahn-Trennung unter geteilt/ — die Wurzel des
 # Kits ist deshalb die ELTERN-Ebene. Vorher stand es selbst in der Wurzel.
 WURZEL = Path(__file__).resolve().parent.parent

@@ -662,6 +662,59 @@ b_pruefe "Update erinnert an den Bestand in der Schreibzone" \
     "$(grep -c 'Bestand in der Schreibzone' "$BESTAND_REPO/.update.log")" "1"
 b_pruefe "im leeren Repo schweigt auch das Update" \
     "$(grep -c 'Ungeprueft in der Wurzel' "$ZIEL/.update.log")" "0"
+
+# BL-155: Dieselbe Zusicherung auf der pwsh-Bahn. Dort FEHLTE der Hinweis bis
+# 2026-08-24 ganz — keine ungepruefte Haelfte, sondern eine ungebaute. Der Lauf
+# steht hier und nicht in einer eigenen Stufe, weil das Bestandsprojekt schon
+# fertig danebenliegt: main.py und build.ps1 in der Wurzel, die Konfiguration
+# ohne TEAM_WEITERER_CODE. Ein eigenes Wegwerf-Repo waere ein weiterer
+# Installer-Lauf fuer denselben Befund — auf Windows sind das ~15 Minuten.
+if command -v pwsh >/dev/null 2>&1; then
+    if ! pwsh -NoProfile -File "$KIT/pwsh/install.ps1" "$BESTAND_REPO" -Update \
+            > "$BESTAND_REPO/.update-pwsh.log" 2>&1; then
+        rot "  ✗ install.ps1 -Update schlug im Bestandsprojekt fehl:"
+        tail -20 "$BESTAND_REPO/.update-pwsh.log" >&2
+        exit 1
+    fi
+    b_pruefe "pwsh-Update meldet ungeprueften Code in der Wurzel (BL-155)" \
+        "$(grep -c 'Ungeprueft in der Wurzel:.*main\.py' "$BESTAND_REPO/.update-pwsh.log")" "1"
+    # Die teure Haelfte von BL-154, jetzt auf der pwsh-Bahn geprueft: Die
+    # Entrypoints des Kits liegen in DIESEM Repo in der Wurzel. Taucht einer
+    # von ihnen in der Meldung auf, ist die Ausnahmeliste wieder eine
+    # Abschrift — und die Warnung erscheint ab da in jedem gruenen Projekt,
+    # neben dem echten Fund, den man dann mit uebersieht (BL-14).
+    #
+    # Geprueft wird, was die Meldung WIRKLICH aufzaehlt, gegen das, was das
+    # Kit ausliefert. Hier eine Liste der bekannten Entrypoint-Namen
+    # hinzuschreiben waere derselbe Fehler eine Ebene hoeher: ein Waechter,
+    # der eine Abschrift prueft, veraltet mit ihr.
+    GEMELDET="$(sed -n 's/.*Ungeprueft in der Wurzel: //p' \
+                "$BESTAND_REPO/.update-pwsh.log")"
+    #
+    # Die if-Form ist Absicht, nicht Geschmack: `[ … ] || [ … ] && zaehl` ist
+    # EIN Kommando, das bei Nicht-Treffer mit 1 endet — unter `set -e` reisst
+    # das den Lauf mitten in der Schleife ab (BL-111, dieselbe Gattung).
+    FREMD=0; PUNKT=0
+    for n in $GEMELDET; do
+        if [ -e "$KIT/bash/entry/$n" ] || [ -e "$KIT/pwsh/entry/$n" ]; then
+            FREMD=$((FREMD + 1))
+        fi
+        case "$n" in .*) PUNKT=$((PUNKT + 1)) ;; esac
+    done
+    b_pruefe "und nennt keinen Entrypoint des Kits (BL-154)" "$FREMD" "0"
+    # Dieselbe Erwaegung eine Ebene tiefer: Der Installer legt .ralph-state,
+    # .budget-ledger und .gitignore in die Wurzel. In der bash-Fassung fallen
+    # sie durch das Glob (`"$ZIEL"/*` fasst keine Punktdateien an) — in pwsh
+    # tut Get-ChildItem das sehr wohl, denn eine Punktdatei traegt unter
+    # Windows kein Hidden-Attribut. Ohne ausdruecklichen Ausschluss meldete
+    # das Update den eigenen Zustand des Teams als Projektcode.
+    b_pruefe "und keine Punktdatei des Teams" "$PUNKT" "0"
+else
+    gelb "  ! pwsh fehlt — die Wurzel-Code-Pruefung der pwsh-Bahn ist hier"
+    echo  "      UNGEPRUEFT (BL-155). Nachholen auf einer Maschine mit"
+    echo  "      PowerShell 7:  bash bash/kit-test.sh"
+fi
+
 [ "$BESTAND_FEHLER" -eq 0 ] || exit 1
 
 kopf "8/11 — Abwahl einer Bahn, ihr Bestand und ihr Rueckweg (BL-119/BL-147)"
@@ -889,14 +942,25 @@ e_pruefe "und fasst nichts an (keine Verknuepfung angelegt)" \
 # festen — die Beschriftung hier muss mitziehen, sonst prueft dieser Schritt
 # auf eine Zeile, die es nicht mehr gibt, und meldet die Einrichtungsroutine
 # als kaputt, obwohl sie richtig geworden ist.
+# BL-159: Das Muster nimmt jetzt auch das Warnzeichen. Gefragt ist "WURDE das
+# Bordmittel geprueft?", nicht "hat es bestanden?" — und seit BL-159 kann die
+# Antwort auf einem Windows-Wirt eine Warnung sein (flock fehlt dort, und Git
+# for Windows liefert keines nach). Die alte Fassung kannte nur ✓ und ✗ und
+# meldete deshalb "flock ungeprueft", obwohl es in derselben Zeile steht.
 for pflicht in git Python flock bash; do
     e_pruefe "Bordmittel geprueft: $pflicht" \
-        "$(grep -cE "✓ $pflicht|✗ $pflicht" "$E_LOG")" "1"
+        "$(grep -cE "✓ $pflicht|✗ $pflicht|! $pflicht" "$E_LOG")" "1"
 done
 e_pruefe "Exec-Bit wird PROBIERT, nicht vorausgesetzt" \
     "$(grep -c 'chmod +x wirkt' "$E_LOG")" "1"
-e_pruefe "Dateisperre wird PROBIERT" \
-    "$(grep -c 'flock) funktionieren hier\|flock greift in diesem Ordner nicht' "$E_LOG")" "1"
+# BL-159: Fehlt flock als Werkzeug, gibt es hier nichts zu proben — der Befund
+# steht dann schon in 2/5, und kit-einrichten.sh gibt ihn bewusst KEIN zweites
+# Mal aus: Zwei Meldungen fuer EINE Ursache lesen sich wie zwei Probleme.
+# Geprueft wird deshalb die Gattung: Entweder die Probe lief, ODER das Fehlen
+# ist benannt. Was ausdruecklich NICHT durchgeht, ist Schweigen — die
+# Zusicherung "wird PROBIERT, nicht vorausgesetzt" bleibt damit unangetastet.
+e_pruefe "Dateisperre wird PROBIERT (oder ihr Fehlen benannt)" \
+    "$(grep -c 'flock) funktionieren hier\|flock greift in diesem Ordner nicht\|flock fehlt' "$E_LOG")" "1"
 e_pruefe "keine Probendatei zurueckgelassen" \
     "$(find "$KIT" -maxdepth 1 -name '.einrichten-probe.*' | wc -l)" "0"
 
@@ -914,15 +978,39 @@ rm -rf "$E_OHNE_GIT"
 e_pruefe "Zielpfad ohne Git wird abgelehnt (Exit 1)" "$E_EXIT" "1"
 e_pruefe "und der Ausweg steht dabei" "$(grep -c 'git -C .* init' "$E_LOG")" "1"
 
+# BL-160: Kann dieser Wirt ueberhaupt Symlinks? PROBIERT, nicht vorausgesetzt —
+# genau wie kit-einrichten.sh es mit chmod und flock haelt.
+#
+# Der Anlass ist gemessen: Unter MSYS/Git-Bash legt `ln -s` ohne Symlink-Recht
+# eine KOPIE an. Der Fall unten pruefte dann nicht, was sein Name sagt — und er
+# war trotzdem GRUEN, weil die Kopie am fremden Ort das Kit nicht findet und
+# mit ihrem EIGENEN Fehler ebenfalls 2 zurueckgibt. Ein gruener Haken aus dem
+# falschen Grund ist schlimmer als ein roter: Erst die Folgezusicherung
+# ("es ist der Installer, der sich meldet") hat es aufgedeckt.
+E_SYMLINK=0
+ln -sfn "$KIT/bash/scripts/team-init.sh" "$ZIEL/.symlink-probe" 2>/dev/null || true
+if [ -L "$ZIEL/.symlink-probe" ]; then E_SYMLINK=1; fi
+rm -f "$ZIEL/.symlink-probe"
+
 # c) Der Launcher findet das Kit ueber den Symlink — genau so liegt er nach
 #    --verknuepfen unter ~/.claude/scripts/. Ohne Zielpfad muss er den
 #    Installer erreichen und dessen Aufruffehler (Exit 2) durchreichen.
-ln -sfn "$KIT/bash/scripts/team-init.sh" "$ZIEL/team-init-link.sh"
-E_EXIT=0
-bash "$ZIEL/team-init-link.sh" >"$E_LOG" 2>&1 || E_EXIT=$?
-e_pruefe "Launcher erreicht den Installer ueber einen Symlink (Exit 2)" "$E_EXIT" "2"
-e_pruefe "und es ist der Installer, der sich meldet" \
-    "$(grep -c 'Kein Zielpfad angegeben' "$E_LOG")" "1"
+if [ "$E_SYMLINK" -eq 1 ]; then
+    ln -sfn "$KIT/bash/scripts/team-init.sh" "$ZIEL/team-init-link.sh"
+    E_EXIT=0
+    bash "$ZIEL/team-init-link.sh" >"$E_LOG" 2>&1 || E_EXIT=$?
+    e_pruefe "Launcher erreicht den Installer ueber einen Symlink (Exit 2)" "$E_EXIT" "2"
+    e_pruefe "und es ist der Installer, der sich meldet" \
+        "$(grep -c 'Kein Zielpfad angegeben' "$E_LOG")" "1"
+else
+    # KEIN Fehler, aber auch kein Schweigen — dieselbe Bauart wie beim
+    # fehlenden pwsh in Stufe 11. Ein uebersprungener Nachweis, den niemand
+    # sieht, liest sich am Ende wie ein bestandener.
+    gelb "  ! 'ln -s' legt auf diesem Wirt eine KOPIE an (MSYS ohne Symlink-Recht)."
+    echo  "      Der Symlink-Fall des Launchers ist hier UNGEPRUEFT, nicht gruen."
+    echo  "      Nachholen: Entwicklermodus einschalten, dann"
+    echo  "        MSYS=winsymlinks:nativestrict bash bash/kit-test.sh"
+fi
 
 # c2) Der Launcher als KOPIE — der Fall, der im Feld weh getan hat.
 #     ~/.claude/scripts/team-init.sh ist das einzige Stueck des Kits, von dem
@@ -993,8 +1081,26 @@ printf '#!/bin/bash\n# mein eigenes Auth-Skript\necho hallo\n' \
 
 HOME="$E_HOME" bash "$KIT/bash/kit-einrichten.sh" --verknuepfen --nicht-interaktiv \
     >"$E_LOG" 2>&1 || true
-e_pruefe "--verknuepfen ersetzt die Kit-Kopie durch eine Verknuepfung" \
-    "$([ -L "$E_HOME/.claude/scripts/team-init.sh" ] && echo ja || echo nein)" "ja"
+# BL-160: Auf einem Wirt ohne Symlink-Recht wird hier nicht uebersprungen,
+# sondern die ANDERE Zusicherung geprueft — und die ist die wichtigere. Bis
+# 2026-08-24 meldete --verknuepfen dort "✓ Verknuepft: … → …", mit Pfeil, und
+# hatte eine regulaere Kopie hingelegt. Ausgerechnet die REPARATUR erzeugte
+# damit die veraltete Launcher-Kopie, gegen die sie gebaut ist, und der Satz
+# daneben ("Eine Verknuepfung kann nicht veralten") war eine Falschaussage.
+#
+# Ein Skip waere hier also zu wenig: Nicht die Verknuepfung ist das Pruefbare,
+# sondern die Ehrlichkeit der Meldung.
+if [ "$E_SYMLINK" -eq 1 ]; then
+    e_pruefe "--verknuepfen ersetzt die Kit-Kopie durch eine Verknuepfung" \
+        "$([ -L "$E_HOME/.claude/scripts/team-init.sh" ] && echo ja || echo nein)" "ja"
+else
+    e_pruefe "--verknuepfen behauptet keine Verknuepfung, die es nicht gibt (BL-160)" \
+        "$([ -L "$E_HOME/.claude/scripts/team-init.sh" ] && echo ja || echo nein)" "nein"
+    e_pruefe "und benennt die Kopie samt Folge" \
+        "$(grep -c 'Kopie statt Verknüpfung' "$E_LOG")" "1"
+    e_pruefe "und behauptet nirgends Erfolg" \
+        "$(grep -c '✓ Verknüpft\|✓ Ersetzt' "$E_LOG")" "0"
+fi
 e_pruefe "und legt die alte Fassung als Sicherung daneben" \
     "$([ -f "$E_HOME/.claude/scripts/team-init.sh.vor-verknuepfung" ] && echo ja || echo nein)" "ja"
 e_pruefe "die FREMDE Datei bleibt unangetastet" \
@@ -1115,10 +1221,21 @@ if ! command -v pwsh >/dev/null 2>&1; then
     echo  "      einer Maschine mit PowerShell 7:  bash bash/kit-test.sh"
 else
     gruen "  ✓ pwsh $(pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()' 2>/dev/null)"
+    # BL-161: Ein Pfad, der von bash nach pwsh gereicht wird, muss die
+    # Schreibweise des ZIELS tragen. Als ARGUMENT erledigt das die MSYS-Schicht
+    # von Git-Bash selbst — deshalb laufen die `-File`-Aufrufe weiter unten
+    # unveraendert. INNERHALB eines `-Command`-Strings ist der Pfad aber blosser
+    # TEXT, und den fasst sie nicht an: PowerShell las `/c/Users/...` als
+    # `C:\c\Users\...` und meldete "Cannot find path". Auf Linux faellt das nie
+    # auf, weil dort beide Seiten dieselbe Schreibweise haben — der Fehler war
+    # erst im ersten Windows-Lauf zu sehen (BL-146).
+    pwsh_pfad() {  # pwsh_pfad <pfad> — in der Schreibweise, die pwsh liest
+        if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi
+    }
     # c) Syntax aller PowerShell-Dateien — das Gegenstueck zu `bash -n`.
     W_SYNTAX="$(pwsh -NoProfile -Command "
         \$schlecht = @()
-        foreach (\$f in (Get-ChildItem -Path '$KIT' -Filter *.ps1 -Recurse -File)) {
+        foreach (\$f in (Get-ChildItem -Path '$(pwsh_pfad "$KIT")' -Filter *.ps1 -Recurse -File)) {
             \$e = \$null
             [System.Management.Automation.Language.Parser]::ParseFile(\$f.FullName, [ref]\$null, [ref]\$e) | Out-Null
             if (\$e) { \$schlecht += \$f.Name }
@@ -1137,8 +1254,25 @@ else
     bash "$KIT/bash/install.sh" "$W_A/projekt" --nicht-interaktiv >/dev/null 2>&1 || true
     pwsh -NoProfile -File "$KIT/pwsh/install.ps1" "$W_B/projekt" -NichtInteraktiv >/dev/null 2>&1 || true
     # __pycache__ ist ein Artefakt der Testlaeufe beider Installer, kein Erzeugnis.
-    find "$W_A/projekt" "$W_B/projekt" -name __pycache__ -type d -exec rm -rf {} + 2>/dev/null || true
-    W_DIFF="$(diff -r --exclude=.git "$W_A/projekt" "$W_B/projekt" 2>&1 | head -20)"
+    # BL-163: .pytest_cache gehoert aus demselben Grund dazu — es schreibt
+    # `lastfailed` nur, WENN etwas fehlschlug, und `nodeids` haengt am Stand
+    # der Testdateien im Moment des Laufs. Beides beschreibt den Testlauf, nicht
+    # das, was der Installer erzeugt hat.
+    find "$W_A/projekt" "$W_B/projekt" \( -name __pycache__ -o -name .pytest_cache \) \
+         -type d -exec rm -rf {} + 2>/dev/null || true
+    # BL-162: `diff` endet mit 1, WENN es Unterschiede gibt — also genau in dem
+    # Fall, fuer den diese Pruefung existiert. Unter `set -euo pipefail` riss
+    # das den Lauf ab, still und ohne Meldung: Der Selbsttest starb an seinem
+    # eigenen Befund, statt ihn auszugeben. Dieselbe Gattung wie BL-111.
+    #
+    # Sichtbar wurde es erst hier, weil die Baeume auf Linux immer gleich waren
+    # und `diff` dort 0 lieferte. Ein Pruefer, der nur ueberlebt, solange er
+    # nichts findet, ist keiner.
+    #
+    # `|| true` faengt beide Sorten: den Unterschied (1) und den echten Fehler
+    # (2). Unterscheiden muss die Pruefung sie nicht — sie vergleicht die
+    # AUSGABE gegen "identisch", und in beiden Faellen steht dort etwas.
+    W_DIFF="$(diff -r --exclude=.git "$W_A/projekt" "$W_B/projekt" 2>&1 | head -20 || true)"
     w_pruefe "install.sh und install.ps1 erzeugen denselben Baum" "${W_DIFF:-identisch}" "identisch"
     w_pruefe "beide schreiben team.config.sh UND team.config.ps1" \
         "$([ -f "$W_B/projekt/team.config.sh" ] && [ -f "$W_A/projekt/team.config.ps1" ] && echo ja || echo nein)" "ja"

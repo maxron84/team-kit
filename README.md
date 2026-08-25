@@ -3,8 +3,8 @@
 [![Windows nativ — im Feld gelaufen](https://img.shields.io/badge/Windows_nativ-im_Feld_gelaufen-2ea44f?style=flat-square&logo=powershell&logoColor=white)](doku/einrichtung.md#belegstand)
 [![macOS — nicht belegt](https://img.shields.io/badge/macOS-nicht_belegt-9f9f9f?style=flat-square&logo=apple&logoColor=white)](doku/einrichtung.md#belegstand)
 
-[![Version 2.12.0](https://img.shields.io/badge/Version-2.12.0-007ec6?style=flat-square)](CHANGELOG.md)
-[![Regressionstests 698](https://img.shields.io/badge/Regressionstests-698-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
+[![Version 2.13.0](https://img.shields.io/badge/Version-2.13.0-007ec6?style=flat-square)](CHANGELOG.md)
+[![Regressionstests 735](https://img.shields.io/badge/Regressionstests-735-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
 [![Selbsttest 11 Stufen](https://img.shields.io/badge/Selbsttest-11_Stufen-2ea44f?style=flat-square)](bash/kit-test.sh)
 [![Lizenz MIT](https://img.shields.io/badge/Lizenz-MIT-007ec6?style=flat-square)](LICENSE)
 
@@ -77,24 +77,30 @@ im Linux-Dateisystem. Die ganze Routine für beide Plattformen, mit IDE (VS
 Codium bzw. VS Code) und Agenten-Werkzeug, steht in
 [doku/einrichtung.md](doku/einrichtung.md).
 
-Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 146 Dateien im
+Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 151 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
-`TEAM.md` und 698 Regressionstests.
+`TEAM.md` und 735 Regressionstests.
 
-**Stand: Version 2.12.0** (2026-08-22). Das Neue ist vor allem ein **Beleg**:
-Die pwsh-Bahn hat auf einer echten Windows-Maschine ihre erste Kaskade geplant,
-gebaut und abgeschlossen — einbahnig installiert, mit dem ersten vollständigen
-Kostenabschluss überhaupt. Daraus kam die Runde `BL-120`…`BL-146`, darunter drei
-Fehler in der Kostenkette, die erst beim **vollständigen** Durchlauf zuschlagen:
-ein Abbruch genau bei dem Aufruf, den die Doku vorgibt; eine Abo-Buchung, die in
-der API-Spalte landete; und eine Architektenzeile, die den Diff maß statt der
-Arbeit. Alle drei sind behoben, und die Messung liegt jetzt als Werkzeug im Kit
-(`kosten.py sitzung-messen`) statt als Skript, das sich jeder neu schreibt.
+**Stand: Version 2.13.0** (2026-08-25). Das Neue ist ein **Nachweis**: Der
+Selbsttest des Kits ist auf einer echten Windows-Maschine vollständig
+durchgelaufen — **11 von 11 Stufen, 141 Prüfungen grün**. Bis dahin war die
+pwsh-Bahn an mehreren Stellen geschrieben und nie ausgeführt worden (`BL-146`),
+also eine Behauptung mit Testkörper.
 
-**Offen sind fünf Einträge**, und alle fünf brauchen dieselbe Maschine:
+**Der Ertrag waren die sechs Läufe davor.** Der Erstlauf hat sechs Einträge
+erzeugt, und fünf davon sind auf einem Linux-Wirt prinzipiell unsichtbar: zwei
+Werkzeuge, die unter der Windows-Codepage auf ihrer **Erfolgs**-Spur starben;
+eine Vorflug-Prüfung, die eine Maschine für unbereit erklärte, auf der die
+native Bahn tadellos läuft; ein `--verknuepfen`, das „✓ Verknüpft" meldete und
+eine **Kopie** anlegte; eine Syntaxprüfung, die null statt achtzehn Dateien sah;
+und ein Gleichstands-Prüfer, der **an seinem eigenen Befund starb**, weil `diff`
+mit 1 endet, wenn es etwas findet. Keiner der fallenden Fälle wurde grün
+gedreht.
+
+**Offen sind drei Einträge** — Bauvorhaben, keine Reste dieser Version:
 [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (94 Einträge).
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (111 Einträge).
 
 ---
 
@@ -545,7 +551,7 @@ geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 │                       in denselben Dateien. Die pwsh-Bahn ist eine zweite
 │                       ORCHESTRIERUNG, kein zweiter Zustandscode
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-├── tests/              90 Testdateien, 698 Fälle — der Doppelbahn-Harnisch
+├── tests/              95 Testdateien, 735 Fälle — der Doppelbahn-Harnisch
 │                       fährt jeden Fall gegen BEIDE Bahnen, aus EINEM
 │                       Testkörper
 ├── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
@@ -736,7 +742,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   `team/lib.sh`); belegt ist er nicht. Ebenso wenig belegt ist bisher ein Lauf
   mit einem lokalen Open-Weights-Modell — das ist Ziel, nicht Zustand.
 - **Selbstverifikation**: `bash bash/kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 698 Tests — **zweimal**: einmal mit den
+  Wegwerf-Repo und fährt dort die 735 Tests — **zweimal**: einmal mit den
   Auslieferungswerten, einmal mit angepasster `team.config.sh` (Caps,
   Commit-Präfixe, zwei Domänen). Der zweite Lauf ist die Lehre aus `BL-58`: In
   einer frischen Installation stehen dieselben Werte wie in `team/lib.sh`, ein
@@ -769,7 +775,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
 
 Benutzen, ändern, weitergeben und in eigene Projekte einziehen ist ausdrücklich
 erlaubt, kommerziell wie privat; es bleibt nur die Namensnennung. Das gilt
-**auch für die 146 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
+**auch für die 151 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
 lösen keine Lizenzpflicht für den Code des Zielprojekts aus. Der Code stammt aus
 einem eigenen Projekt des Autors; das Urheberrecht liegt vollständig bei ihm.
 

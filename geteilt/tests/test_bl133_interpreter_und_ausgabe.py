@@ -217,6 +217,59 @@ def test_werkzeug_schreibt_utf8_auch_in_fremder_locale(werkzeug, tmp_path):
             f"sind (BL-133).\nRoh: {rohdaten!r}")
 
 
+# --- BL-158: die ZWEITE Gattung ---------------------------------------------
+#
+# Der Waechter darueber prueft `team/tools/*.py` — die Werkzeuge, die der
+# Installer ins Zielprojekt kopiert. Das Kit hat daneben eine zweite Gattung:
+# `geteilt/kit-*.py`, seine EIGENEN Pruefer, die nicht mitkopiert werden. Beide
+# sind Python-Programme, beide geben Prosa mit Sonderzeichen aus, und die
+# zweite hatte die UTF-8-Umstellung aus BL-133 nie bekommen.
+#
+# Der Fehlermodus wiegt dort sogar schwerer, weil er auf der ERFOLGS-Spur
+# sitzt: Beide Pruefer melden ihr Ergebnis mit einem Haekchen. Unter cp1252
+# stirbt der Aufruf also genau dann mit UnicodeEncodeError und Exit 1, wenn
+# alles in Ordnung ist — und `kit-test.sh` liest das als "Das README steht
+# gegen die frische Installation" bzw. als rotes Regel-Inventar. Eine
+# Kit-Meldung, die etwas voellig anderes behauptet als das, was passiert ist:
+# der teuerste Fehlermodus, den dieses Repo kennt.
+#
+# Geprueft wird wieder die GATTUNG, nicht eine Liste der zwei bekannten Namen.
+def _kit_pruefer():
+    ordner = WURZEL / "geteilt"
+    if not ordner.is_dir():
+        return ()
+    return tuple(sorted(p.name for p in ordner.glob("kit-*.py")))
+
+
+@pytest.mark.parametrize("pruefer", _kit_pruefer() or ("(keiner)",))
+def test_kit_pruefer_ueberlebt_eine_cp1252_ausgabe(pruefer):
+    """Der Nachweis am VERHALTEN: das Programm wirklich starten.
+
+    Die Locale wird gestellt (`PYTHONIOENCODING=cp1252`) — genau der Zustand,
+    den ein deutsches Windows von sich aus herstellt, sobald die Ausgabe in
+    eine Pipe geht statt in eine Konsole. Erwartet wird Exit 0 UND ein
+    UTF-8-Haekchen in den Rohbytes; ein Programm, das seine Erfolgsmeldung
+    nicht loswird, ist nicht erfolgreich.
+    """
+    pfad = WURZEL / "geteilt" / pruefer
+    if not pfad.is_file():
+        pytest.skip("die Kit-Pruefer liegen nur in der Kit-Ablage "
+                    "(ein installiertes Projekt bekommt sie nicht)")
+    ergebnis = subprocess.run([PYTHON_BEFEHL, str(pfad)],
+                              capture_output=True,
+                              env=basis_umgebung(PYTHONIOENCODING="cp1252"))
+    assert ergebnis.returncode == 0, (
+        f"{pruefer} endet unter cp1252 mit {ergebnis.returncode}. Wenn dort "
+        "ein UnicodeEncodeError steht, fehlt die UTF-8-Umstellung von "
+        "stdout/stderr (BL-158) — das Werkzeug stirbt dann ausgerechnet auf "
+        "seiner Erfolgsspur, und kit-test.sh meldet stattdessen einen "
+        "inhaltlichen Fehler, den es gar nicht gibt.\n"
+        + ergebnis.stderr.decode("utf-8", "replace"))
+    assert "✓".encode("utf-8") in ergebnis.stdout, (
+        f"{pruefer} schreibt seine Erfolgsmeldung nicht in UTF-8 "
+        f"(BL-158).\nRoh: {ergebnis.stdout!r}")
+
+
 def test_beutebuch_liefert_den_statuswert_unversehrt(tmp_path):
     """Der Feldfall selbst, end-to-end ueber die Prozessgrenze.
 

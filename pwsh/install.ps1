@@ -3,7 +3,11 @@
   install.ps1 — installiert das T.E.A.M. in ein Zielprojekt (Windows, nativ).
 
   Aufruf:  pwsh -File install.ps1 <zielpfad> [-NichtInteraktiv] [-Force|-Update]
+                                             [-NurBash|-NurPwsh|-BeideBahnen]
+           pwsh -File install.ps1 -Hilfe
 
+    <zielpfad>        Das Projekt, in das das Team einziehen soll. Muss ein
+                      Git-Repository sein. Pflichtangabe (ausser bei -Hilfe).
     -NichtInteraktiv  Keine Rueckfragen; Werte aus den TEAM_INIT_*-Umgebungs-
                       variablen oder den Defaults. Fuer Skripte und Tests.
     -Update           Nur die Team-INFRASTRUKTUR aktualisieren. Ruehrt KEINE
@@ -17,6 +21,17 @@
              das Beutebuch (alle Funde weg), CHANGELOG.md, plans\*.md und die
              Konfiguration (Smoke-Test weg). Empirisch nachgestellt, BL-8.
              Fuer Updates: -Update.
+
+    -NurBash          Nur die bash-Bahn ablegen (Entrypoints *.sh,
+                      team/lib.sh, team.config.sh).
+    -NurPwsh          Nur die pwsh-Bahn ablegen (Entrypoints *.cmd/*.ps1,
+                      team/lib.psm1, team.config.ps1).
+                      Ohne beide Schalter kommen BEIDE Bahnen — die Abwahl
+                      ist ausdruecklich und kommt vom Anwender (BL-119).
+    -BeideBahnen      Nur mit -Update: eine frueher abgewaehlte Bahn wieder
+                      zurueckholen. Schliesst -NurBash/-NurPwsh aus (BL-147).
+    -Hilfe            Diesen Kopf ausgeben und sonst nichts tun.
+                      Auch als -Help und -h.
 
   Umgebungsvariablen fuer den nicht-interaktiven Betrieb:
     TEAM_INIT_PROJEKT TEAM_INIT_PRODUKTIVCODE TEAM_INIT_TEST_ORDNER
@@ -54,7 +69,12 @@ param(
     # Automatismus — ein Update ohne Schalter legte die zweite Bahn dazu, auch
     # in ein Projekt, das nie eine wollte. Jetzt ist er ein Schalter.
     # Begruendung am Erkennungsblock im Update-Pfad.
-    [switch]$BeideBahnen
+    [switch]$BeideBahnen,
+    # BL-156: Das Gegenstueck zu --hilfe in install.sh. Die Aliasse bilden die
+    # drei Schreibweisen der bash-Fassung (-h/--hilfe/--help) nach, damit ein
+    # Wechsel der Bahn nicht auch ein Wechsel der Gewohnheit ist.
+    [Alias('Help', 'h')]
+    [switch]$Hilfe
 )
 
 $ErrorActionPreference = 'Stop'
@@ -74,6 +94,39 @@ $PSNativeCommandUseErrorActionPreference = $false
 # Ohne BOM: Das ist eine Kodierung fuer einen STROM, nicht fuer eine Datei.
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+
+# BL-156: Der Hilfetext IST der Dateikopf, keine zweite Fassung daneben —
+# dieselbe Bauart wie --hilfe in install.sh und dieselbe Lehre wie BL-154: Eine
+# Abschrift laeuft auseinander, und dann sagt -Hilfe etwas anderes als die
+# Datei. Waechst der Kopf, waechst die Hilfe mit.
+#
+# WARUM NICHT comment-based help. Das waere der pwsh-uebliche Weg und braechte
+# -? geschenkt. Auf dieser Maschine gemessen (pwsh 7.6.5): Get-Help findet den
+# <# … #>-Block NICHT, wenn die Zeile `# Bahn: pwsh | Gegenstueck: install.sh`
+# davorsteht — die Ausgabe schrumpft auf die blosse Syntaxzeile. Ohne die
+# Bahn-Zeile funktioniert es. Die Bahn-Zeile ist aber nicht verhandelbar: Sie
+# muss laut test_bahn_kopfzeile.py in den ersten drei Zeilen stehen, und sie
+# ist die einzige Stelle, an der eine Datei ihre Bahn selbst nennt. Also liest
+# die Hilfe die eigene Datei, statt den Kopf fuer ein Werkzeug umzubauen.
+#
+# Gelesen wird ab Zeile 2 — Zeile 1 ist die Bahn-Kopfzeile, Maschinensache —
+# vom oeffnenden <# bis zum schliessenden #>. Die zwei fuehrenden Leerzeichen
+# des Blocks fallen weg, damit die Einrueckung dieselbe ist wie in der
+# bash-Fassung (dort faellt das "# " weg).
+function Zeige-Hilfe {
+    $zeilen = [System.IO.File]::ReadAllLines($PSCommandPath)
+    $drin = $false
+    foreach ($z in $zeilen[1..($zeilen.Count - 1)]) {
+        if (-not $drin) {
+            if ($z.TrimStart() -eq '<#') { $drin = $true }
+            continue
+        }
+        if ($z.TrimStart() -eq '#>') { break }
+        Write-Host ($z -replace '^  ', '')
+    }
+}
+
+if ($Hilfe) { Zeige-Hilfe; exit 0 }
 
 if ($NurBash -and $NurPwsh) {
     Write-Host "FEHLER: -NurBash und -NurPwsh schliessen einander aus." -ForegroundColor Red
@@ -164,6 +217,7 @@ function Kopf($t)  { Write-Host ""; Write-Host $t -ForegroundColor White }
 if (-not $Ziel) {
     Rot "FEHLER: Kein Zielpfad angegeben."
     Write-Host "Aufruf: pwsh -File install.ps1 <zielpfad>"
+    Write-Host "Alle Optionen: pwsh -File install.ps1 -Hilfe"
     exit 2
 }
 try { $Ziel = (Resolve-Path $Ziel -ErrorAction Stop).Path }
@@ -285,7 +339,21 @@ function Setze-Werte {
         # ~/Source/team-kit in der Prosa und zeigte damit ueberall dorthin, wo
         # der Autor geklont hatte. Steht nur in team.config.*; das Werkzeug
         # kit_meldung.py kann ohne ihn arbeiten, aber nicht ohne Suchen.
-        '{{KIT_PFAD}}'         = $KIT
+        #
+        # BL-163: Schraegstriche statt Rueckstriche — und zwar in BEIDE
+        # Konfigurationen, denn dieser Installer schreibt team.config.sh mit.
+        # Bis 2026-08-25 setzte die pwsh-Bahn hier `C:\Users\...`, die
+        # bash-Bahn `C:/Users/...`; Stufe 11 des Selbsttests ("beide Installer
+        # erzeugen denselben Baum") war damit auf Windows dauerhaft rot.
+        #
+        # Nachgemessen sind BEIDE Formen funktionsfaehig — in bash (auch nach
+        # dem Sourcen), in Python und in PowerShell. Der Fix ist deshalb keine
+        # Fehlerbehebung, sondern eine Vereinheitlichung: Eine Pruefung, die
+        # immer rot steht, wird nicht gelesen (BL-14) — und sie ist die
+        # einzige, die einen ECHTEN Auseinanderlauf der beiden Installer
+        # faende. Genommen wird die Schraegstrich-Form, weil sie in allen drei
+        # Sprachen ohne Maskierung durch jeden Kontext geht.
+        '{{KIT_PFAD}}'         = $KIT.Replace('\', '/')
     }
     # BL-139: die bahnabhaengigen Pfade. Nannten die Regeltexte frueher fest,
     # und in einer einbahnigen Ablage schickten sie damit jede Rolle an Dateien,
@@ -814,6 +882,61 @@ if ($Update) {
         Gelb "  auf der Guard-Whitelist — die Read-Only-Rollen duerfen sie"
         Gelb "  aendern und loeschen. Die Rollen-Prompts nennen sie als fremdes"
         Gelb "  Eigentum; erzwingen kann der Guard es nicht."
+    }
+
+    # BL-52: Ein Projekt von vor 2.6.0 kennt TEAM_WEITERER_CODE nicht, und
+    # -Update fasst die Konfiguration bewusst nicht an. Der Hinweis kommt nur,
+    # wenn in der Projektwurzel ueberhaupt fremder Code liegt — sonst waere er
+    # in jedem gruenen Projekt Rauschen (BL-14).
+    #
+    # BL-155: Diese Haelfte fehlte auf der pwsh-Bahn GANZ — nicht ungeprueft,
+    # sondern ungebaut. Ein einbahnig-pwsh installiertes Bestandsprojekt erfuhr
+    # damit nie, dass sein Einstiegspunkt in der Wurzel ausserhalb des
+    # Pruefumfangs liegt, und genau so wird unter Windows installiert.
+    if (-not (Konf 'TEAM_WEITERER_CODE' '')) {
+        # BL-154: Gefragt wird das KIT, nicht eine abgeschriebene Namensliste.
+        # Was in bash\entry\ oder pwsh\entry\ liegt, ist ein Entrypoint des
+        # Kits und damit kein Projektcode. Eine eigene Liste an dieser Stelle
+        # waere die Abschrift, die auf der bash-Bahn gerade abgeschafft wurde —
+        # nur umgezogen, und ab dem naechsten neuen Entrypoint wieder falsch.
+        $wurzelCode = @()
+        foreach ($f in (Get-ChildItem -LiteralPath $Ziel -File)) {
+            # Punktdateien fallen raus — .ralph-state, .budget-ledger,
+            # .gitignore, .gitattributes sind der Zustand des Teams und nicht
+            # der Code des Projekts. In der bash-Fassung erledigt das die
+            # Shell nebenbei (`"$ZIEL"/*` fasst keine Punktdatei an); hier
+            # muss es DASTEHEN, denn eine Punktdatei traegt unter Windows kein
+            # Hidden-Attribut und Get-ChildItem liefert sie ganz normal mit.
+            # Ohne diese Zeile meldete das Update den eigenen Zustand des
+            # Teams als ungepruefen Projektcode — eine Warnung in jedem
+            # gruenen Projekt, also genau der Fehler aus BL-154/BL-14.
+            if ($f.Name.StartsWith('.')) { continue }
+            if ((Test-Path (Join-Path $KIT "bash\entry\$($f.Name)")) -or
+                (Test-Path (Join-Path $KIT "pwsh\entry\$($f.Name)"))) { continue }
+            # Doku und Konfigdateien greift kein Red Team an. Alles andere MIT
+            # Endung ist Code, der heute ausserhalb des Pruefumfangs liegt.
+            if ($f.Name -like 'LICENSE*' -or $f.Name -eq 'Makefile') { continue }
+            if ($f.Name -match '(?i)\.(md|toml|cfg|ini|txt|json|ya?ml)$') { continue }
+            if ($f.Name -notmatch '\.') { continue }
+            $wurzelCode += $f.Name
+        }
+        if ($wurzelCode) {
+            Kopf "Pruefumfang endet an ${Produktivcode} (BL-52)"
+            Write-Host "  Ungeprueft in der Wurzel: $($wurzelCode -join ' ')"
+            Gelb "  Das Red Team prueft ausschliesslich ${Produktivcode} — Einstiegs-"
+            Gelb "  punkte und Build-Skripte daneben sieht es nie, und ein sauberer"
+            Gelb "  Sweep liest sich trotzdem wie ein sauberes Projekt."
+            # Die Abhilfe nennt die Datei, die dieses Projekt WIRKLICH hat, und
+            # die Schreibweise, die dort gilt. Die bash-Fassung sagt fest
+            # team.config.sh — in einer einbahnig-pwsh-Ablage waere das ein
+            # Verweis auf eine Datei, die es nicht gibt.
+            Gelb "  Abhilfe ($konfQuelle, -Update fasst sie nicht an):"
+            if ($konfQuelle -eq 'team.config.ps1') {
+                Gelb "    `$TEAM_WEITERER_CODE = Team-Wert 'TEAM_WEITERER_CODE' '<pfade>'"
+            } else {
+                Gelb "    TEAM_WEITERER_CODE=`"`${TEAM_WEITERER_CODE:-<pfade>}`""
+            }
+        }
     }
 
     # Der Commit-Entscheid steht NUR im Architekten-Briefing, nicht in der

@@ -100,6 +100,30 @@ if [ -n "${WSL_DISTRO_NAME:-}" ] || { [ -r /proc/version ] && grep -qi microsoft
     UNTER_WSL=1
 fi
 
+# BL-159: Auf welchem WIRT laeuft die bash-Bahn hier? Die Frage entscheidet
+# ueber den SCHWEREGRAD zweier Befunde, nicht ueber ihren Inhalt.
+#
+# Die Zwei-Bahnen-Tabelle im README sagt es klar: "Bash-Bahn (Linux · WSL)"
+# gegen "pwsh-Bahn (Windows ohne WSL)". Auf nativem Windows unter Git-Bash ist
+# die bash-Bahn also die ZWEITE Wahl — und genau dort fehlt flock (Git for
+# Windows liefert keines) und das Exec-Bit haelt auf NTFS nicht.
+#
+# Beides als FEHLER zu melden hiess: Das Kit erklaert eine Maschine fuer
+# unbereit, auf der seine NATIVE Bahn tadellos laeuft, und schickt den
+# Anwender an ein Paket (util-linux), das es fuer Git-Bash nicht gibt. Eine
+# Abhilfe, die auf dieser Maschine nicht ausfuehrbar ist, ist keine — dieselbe
+# Erwaegung wie bei BL-144, wo `Set-ExecutionPolicy -Scope CurrentUser` gegen
+# eine Gruppenrichtlinie empfohlen wurde.
+#
+# Was NICHT passiert: Die Befunde verschwinden. Sie bleiben sichtbar, sie
+# nennen ihre Folge, und sie nennen die Bahn, auf der es die Folge nicht gibt.
+# Ein Befund, der zur Warnung wird, muss mehr erklaeren als einer, der ein
+# Fehler bleibt — nicht weniger.
+WIRT="posix"
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) WIRT="windows" ;;
+esac
+
 case "$(uname -s)" in
     Linux)
         if [ "$UNTER_WSL" -eq 1 ]; then
@@ -126,6 +150,21 @@ case "$(uname -s)" in
         warnung "macOS erkannt. Nicht belegt: Das Kit ist auf Linux (und abgeleitet WSL2)" \
                 "erprobt. Bordmittel-bash ist dort 3.2 und flock fehlt —" \
                 "beides prüft der nächste Abschnitt einzeln."
+        ;;
+    MINGW*|MSYS*|CYGWIN*)
+        # BL-159: Hier stand "Unbekanntes System" — und das war es nie. Git
+        # for Windows ist der dokumentierte Weg, die bash-Bahn unter Windows
+        # zu fahren; das Kit prüft mit genau dieser bash seinen eigenen
+        # Selbsttest. Ein "unbekannt" an dieser Stelle liest sich wie
+        # "ungetestetes Gelände", und die zwei Fehler darunter bestätigten
+        # den Eindruck.
+        warnung "Windows nativ, bash über Git for Windows ($(uname -s))." \
+                "Die bash-Bahn ist hier die ZWEITE Wahl: Nativ unter Windows" \
+                "ist die pwsh-Bahn zuständig (README, Zwei-Bahnen-Tabelle)." \
+                "Zwei Befunde folgen daraus und stehen unten einzeln —" \
+                "fehlendes flock und ein Exec-Bit, das NTFS nicht trägt." \
+                "Beide sind Warnungen und keine Fehler: Sie beschreiben die" \
+                "Lage dieser Bahn auf dieser Maschine, nicht einen Defekt."
         ;;
     *)
         warnung "Unbekanntes System: $(uname -s). Die Prüfungen laufen trotzdem."
@@ -211,6 +250,19 @@ fi
 
 if command -v flock >/dev/null 2>&1; then
     ok "flock $(flock --version 2>&1 | awk '{print $NF}')"
+elif [ "$WIRT" = "windows" ]; then
+    # BL-159: Hier stand ein Fehler samt "sudo apt install util-linux" — auf
+    # einer Windows-Maschine ein Rat ins Leere. Git for Windows liefert kein
+    # flock, und es gibt kein Paket, das eines nachliefert.
+    warnung "flock fehlt — Git for Windows liefert keines." \
+            "Folge: Zwei Rollen koennen gleichzeitig auf Ledger und" \
+            "Kaskadenstand schreiben, ohne dass es jemand merkt." \
+            "Kein Fehler, sondern die Lage dieser Bahn auf dieser Maschine:" \
+            "Nativ unter Windows ist die pwsh-Bahn zustaendig (README," \
+            "Zwei-Bahnen-Tabelle). Sie sperrt ueber echte Dateisperren des" \
+            "Betriebssystems und braucht kein flock." \
+            "Wer die bash-Bahn hier trotzdem faehrt: keine zwei Rollen" \
+            "gleichzeitig starten — die Serialisierung fehlt."
 else
     fehler "flock fehlt (Paket util-linux)." \
            "Ohne Dateisperre laufen zwei Rollen unbemerkt gleichzeitig auf" \
@@ -311,6 +363,16 @@ PROBE="$(mktemp "$KIT/.einrichten-probe.XXXXXX")"
 chmod +x "$PROBE" 2>/dev/null || true
 if [ -x "$PROBE" ]; then
     ok "Ausführbar-Rechte greifen (chmod +x wirkt)"
+elif [ "$WIRT" = "windows" ]; then
+    # BL-159: Unter Git-Bash trägt NTFS kein Exec-Bit. Das ist keine kaputte
+    # Maschine, sondern das Dateisystem — und es hat eine Abhilfe, die auf
+    # dieser Maschine wirklich ausführbar ist.
+    warnung "chmod +x wirkt hier nicht — NTFS trägt unter Git-Bash kein Exec-Bit." \
+            "Folge: './ralph.sh' endet mit 'Permission denied'." \
+            "Abhilfe, eine von zweien:" \
+            "  bash ./ralph.sh   (statt ./ralph.sh — der Aufruf über den" \
+            "                     Interpreter braucht das Exec-Bit nicht)" \
+            "  oder unter Windows die pwsh-Bahn fahren: .\\ralph.cmd"
 else
     fehler "chmod +x wirkt in diesem Ordner nicht." \
            "Der Installer setzt die Entrypoints ausführbar; hier bliebe das folgenlos" \
@@ -319,7 +381,15 @@ fi
 
 # d) Und hält eine Dateisperre? Danach hängt die Serialisierung von Ledger und
 #    Kaskadenstand.
-if flock -n "$PROBE" true 2>/dev/null; then
+#
+# BL-159: Fehlt flock als WERKZEUG, ist das schon in 2/5 gemeldet — die Probe
+# hier würde denselben Befund ein zweites Mal ausgeben, und zwei Meldungen für
+# EINE Ursache lesen sich wie zwei Probleme. Geprüft wird hier, ob eine
+# vorhandene Sperre in DIESEM Ordner greift; ohne Werkzeug gibt es dazu nichts
+# zu sagen.
+if ! command -v flock >/dev/null 2>&1; then
+    :
+elif flock -n "$PROBE" true 2>/dev/null; then
     ok "Dateisperren (flock) funktionieren hier"
 else
     fehler "flock greift in diesem Ordner nicht." \
@@ -366,6 +436,48 @@ fi
 # ---------------------------------------------------------------- 5/5 Verknüpfung
 kopf "5/5 — Kurzbefehl von überall (optional)"
 
+# BL-160: Hat das `ln` wirklich eine Verknuepfung ergeben? PROBIERT, nicht
+# vorausgesetzt — genau wie dieses Skript es zwei Abschnitte weiter oben mit
+# chmod und flock haelt.
+#
+# Der Anlass ist gemessen: Unter MSYS/Git-Bash legt `ln -s` ohne Symlink-Recht
+# eine KOPIE an und meldet Erfolg. Dieser Schritt sagte dann "Verknuepft: …→…"
+# — mit Pfeil — und hatte eine regulaere Datei hingelegt. Das ist die
+# unangenehmste Form des Fehlers: Ausgerechnet die REPARATUR erzeugt dann
+# genau die veraltete Launcher-Kopie, gegen die sie gebaut ist, und der
+# nebenstehende Satz "Eine Verknuepfung kann nicht veralten" wird zur
+# Falschaussage.
+#
+# Warum Warnung und nicht Fehler: Der Kurzbefehl ist ausdruecklich optional
+# (5/5), und der Weg ueber den vollen Pfad funktioniert weiter. Was nicht
+# weiter geht, ist das stille Behaupten.
+# Die Begründung steht EINMAL. Beide Launcher fallen auf derselben Maschine
+# aus demselben Grund um; dieselben dreizehn Zeilen zweimal hintereinander
+# erziehen zum Überblättern (BL-14), und dann geht die zweite Meldung im
+# Wortlaut der ersten unter.
+VERKNUEPFUNG_ERKLAERT=0
+verknuepfung_bestaetigen() {  # verknuepfung_bestaetigen <ziel> <quelle> <erfolgstext>
+    if [ -L "$1" ]; then ok "$3"; return 0; fi
+    if [ "$VERKNUEPFUNG_ERKLAERT" -eq 1 ]; then
+        warnung "Kopie statt Verknüpfung: $1 (gleiche Ursache wie oben)"
+        return 1
+    fi
+    VERKNUEPFUNG_ERKLAERT=1
+    warnung "Kopie statt Verknüpfung: $1" \
+            "'ln -s' hat hier nicht verknüpft, sondern kopiert. Typische" \
+            "Ursache: Git-Bash/MSYS ohne Symlink-Recht." \
+            "Folge: Die Kopie veraltet, sobald sich das Kit ändert — der" \
+            "Installer meldet sie dann bei jedem Lauf. Genau davor soll" \
+            "dieser Schritt schützen." \
+            "Abhilfe, eine von dreien:" \
+            "  Entwicklermodus einschalten, dann erneut:" \
+            "    MSYS=winsymlinks:nativestrict bash kit-einrichten.sh --verknuepfen" \
+            "  oder den Launcher mit vollem Pfad aufrufen:" \
+            "    bash $2 <zielpfad>" \
+            "  oder unter Windows die pwsh-Bahn fahren (kit-einrichten.ps1)."
+    return 1
+}
+
 verknuepfe() {  # verknuepfe <quelle> <zielname>
     local quelle="$1" ziel="$HOME/.claude/scripts/$2"
     if [ -L "$ziel" ]; then
@@ -400,9 +512,12 @@ verknuepfe() {  # verknuepfe <quelle> <zielname>
             local sicherung="$ziel.vor-verknuepfung"
             cp "$ziel" "$sicherung"
             ln -sfn "$quelle" "$ziel"
-            ok "Ersetzt: $ziel war eine Kopie des Kits → jetzt Verknüpfung"
-            echo "      Die alte Fassung liegt als $(basename "$sicherung") daneben."
-            echo "      Eine Verknüpfung kann nicht veralten — die Kopie konnte es."
+            if verknuepfung_bestaetigen "$ziel" "$quelle"                    "Ersetzt: $ziel war eine Kopie des Kits → jetzt Verknüpfung"; then
+                echo "      Die alte Fassung liegt als $(basename "$sicherung") daneben."
+                echo "      Eine Verknüpfung kann nicht veralten — die Kopie konnte es."
+            else
+                echo "      Die alte Fassung liegt als $(basename "$sicherung") daneben."
+            fi
         else
             warnung "$ziel ist eine echte Datei und stammt nicht erkennbar vom Kit." \
                     "Nicht angefasst — sie könnte deine eigene sein." \
@@ -411,7 +526,7 @@ verknuepfe() {  # verknuepfe <quelle> <zielname>
     else
         mkdir -p "$HOME/.claude/scripts"
         ln -s "$quelle" "$ziel"
-        ok "Verknüpft: $ziel → $quelle"
+        verknuepfung_bestaetigen "$ziel" "$quelle" "Verknüpft: $ziel → $quelle" || true
     fi
 }
 
