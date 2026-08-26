@@ -993,7 +993,14 @@ PREIS_INPUT_USD_PRO_MTOK = {
     "claude-opus-4-7":   5.00,
     "claude-opus-4-6":   5.00,
     "claude-opus-4-5":   5.00,
-    "claude-sonnet-5":   3.00,
+    # BL-166: stand bis 2026-08-26 auf 3.00 — dem Satz der Vorgaenger-
+    # Generation. Weil `sonnet` der Default aller Loop-Rollen ist
+    # (TEAM_MODEL_LOOP), betraf der falsche Satz die MEHRHEIT aller gemessenen
+    # Token jeder Installation: Im meldenden Projekt schlug die Selbsteichung
+    # in 9 von 9 abgerechneten Laeufen fehl, 25–33 % daneben, und das Werkzeug
+    # verweigerte regelkonform jede Buchung. Kein stiller Fehler — die Eichung
+    # tat genau, was sie soll; der Schaden war die Blockade.
+    "claude-sonnet-5":   2.00,
     "claude-sonnet-4-6": 3.00,
     "claude-sonnet-4-5": 3.00,
     "claude-haiku-4-5":  1.00,
@@ -1297,6 +1304,58 @@ def preise_nachrechnen(logs):
         rel, gerechnet = min(abweichungen)
         befunde.append((pfad, gemeldet, gerechnet, rel))
     return befunde
+
+
+def preis_diagnose(logs):
+    """WELCHER Basispreis liegt wie weit daneben? — aus EINMODELL-Laeufen.
+
+    BL-166, der wichtigere Teil. Die Eichung wusste bereits, dass etwas nicht
+    stimmt, und verweigerte regelkonform die Buchung. Sie sagte aber nicht,
+    WAS nicht stimmt — und liess den Betreiber damit vor einer Tabelle stehen,
+    die er von Hand gegen die Preisseite des Anbieters abgleichen musste, ohne
+    zu wissen, welche Zeile. Ein Werkzeug, das einen Fehler erkennt und ihn
+    nicht benennen kann, verschiebt die Arbeit nur.
+
+    DIE RECHNUNG IST EXAKT, NICHT GESCHAETZT: Die Gesamtkosten sind in `preis`
+    LINEAR (jeder Kuebel wird mit `preis * faktor` multipliziert). Der
+    implizite Satz ist also `gemeldet / kosten_aus_tokens(kuebel, 1.0)` — die
+    Rechnung mit Basispreis 1.0 liefert genau die Summe der Faktoren.
+
+    NUR EINMODELL-LAEUFE: Trägt ein Log zwei Modelle, ist die Aufteilung des
+    abgerechneten Betrags auf die beiden Saetze unterbestimmt — jede Zuweisung
+    waere geraten. Eine geratene Zahl ist hier genau der Fehler, den BL-141
+    abtraegt: Sie sieht aus wie eine Messung.
+
+    Rueckgabe: {modell: (implizit_min, implizit_max, tabelle, anzahl)}. Zwei
+    Werte, weil `modelUsage` die Cache-Erstellung als EINE Summe fuehrt und
+    die 5m/1h-Annahme offenbleibt (siehe `preise_nachrechnen`) — die Spanne
+    sagt ehrlich, wie genau die Aussage ist.
+    """
+    je_modell = {}
+    for pfad in logs:
+        try:
+            with open(pfad, encoding="utf-8") as f:
+                d = json.load(f)
+        except (ValueError, OSError):
+            continue
+        gemeldet = d.get("total_cost_usd")
+        nutzung = d.get("modelUsage")
+        if not gemeldet or not isinstance(nutzung, dict) or len(nutzung) != 1:
+            continue
+        modell, u = next(iter(nutzung.items()))
+        saetze = []
+        for art in ("cache_write_1h", "cache_write_5m"):
+            einheiten = kosten_aus_tokens(_modelusage_kuebel(u, art), 1.0)
+            if einheiten > 0:
+                saetze.append(gemeldet / einheiten)
+        if saetze:
+            je_modell.setdefault(modell, []).extend(saetze)
+
+    ergebnis = {}
+    for modell, saetze in je_modell.items():
+        ergebnis[modell] = (min(saetze), max(saetze),
+                            modell_basispreis(modell), len(saetze) // 2)
+    return ergebnis
 
 
 # Wieviel Abweichung noch Rundung ist. Die acht Feld-Laeufe reproduzierten auf
@@ -2028,6 +2087,24 @@ def _main(argv):
                     print(f"      {os.path.basename(pfad)}: abgerechnet "
                           f"{gemeldet:.4f}, gerechnet {gerechnet:.4f} "
                           f"({rel * 100:.1f} % daneben)", file=sys.stderr)
+                # BL-166: sagen, WELCHER Satz danebenliegt. Ohne diese Zeilen
+                # steht der Betreiber vor einer Tabelle mit elf Saetzen und
+                # weiss nur, dass einer davon falsch ist.
+                for modell, (lo, hi, tabelle, n) in sorted(
+                        preis_diagnose(logs_einsammeln(".")).items()):
+                    if tabelle is None:
+                        continue
+                    if lo <= tabelle <= hi:
+                        continue            # dieser Satz traegt
+                    naeher = lo if abs(lo - tabelle) < abs(hi - tabelle) else hi
+                    weite = (naeher - tabelle) / tabelle * 100
+                    spanne = (f"{lo:.2f}" if abs(hi - lo) < 0.005
+                              else f"{lo:.2f}–{hi:.2f}")
+                    belege = f"{n} Einmodell-Lauf" if n == 1 else \
+                             f"{n} Einmodell-Laeufen"
+                    print(f"      {modell}: Tabelle {tabelle:.2f}, "
+                          f"abgerechnet entspricht {spanne} USD/Mio Input "
+                          f"({weite:+.0f} %, aus {belege})", file=sys.stderr)
                 print("    Die Zahl unten ist damit UNGEEICHT. Preistabelle in "
                       "kosten.py nachziehen, bevor du sie buchst.",
                       file=sys.stderr)

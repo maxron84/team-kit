@@ -131,12 +131,15 @@ def test_altes_transkript_ohne_aufschluesselung_zaehlt_konservativ(tmp_path):
 
 def test_basispreis_haengt_am_modell_und_toleriert_varianten():
     assert kosten.modell_basispreis("claude-opus-5") == 5.00
-    assert kosten.modell_basispreis("claude-sonnet-5") == 3.00
+    # BL-166: 2.00, nicht 3.00 — 3.00 war der Satz der Vorgaenger-Generation
+    # und blockierte im Feld jede Buchung, weil die Selbsteichung ihn
+    # regelkonform als veraltet meldete.
+    assert kosten.modell_basispreis("claude-sonnet-5") == 2.00
     assert kosten.modell_basispreis("claude-haiku-4-5") == 1.00
     # Datierte Variante und Plattform-Praefix duerfen die Tabelle nicht
     # verdoppeln muessen.
     assert kosten.modell_basispreis("claude-opus-4-8-20260101") == 5.00
-    assert kosten.modell_basispreis("anthropic.claude-sonnet-5") == 3.00
+    assert kosten.modell_basispreis("anthropic.claude-sonnet-5") == 2.00
     # Laengster Praefix gewinnt — sonst faenge "claude-opus-4-5" auch
     # "claude-opus-4-8" ab, je nach Reihenfolge im dict.
     assert kosten.modell_basispreis("claude-opus-4-6") == 5.00

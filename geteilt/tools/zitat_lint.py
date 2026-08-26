@@ -100,6 +100,66 @@ ZUKUNFT = (
 ZUKUNFT_RE = re.compile(
     "|".join(r"\b" + re.escape(w) + r"\b" for w in ZUKUNFT), re.I)
 
+# BL-184: Die VORBEDINGUNGS-Bauform — als eigenes, engeres Muster neben der
+# Wortliste, ausdruecklich NICHT als weiterer Eintrag darin.
+#
+# Der Fund: Die Zeile "**Vorbedingung fuer den ersten Bump:** `BL-6` muss
+# vorher erledigt sein" wurde nach dem Abtragen von `BL-6` NICHT gemeldet —
+# Exit 0, gezielt auf die Datei angesetzt, nachgemessen statt vermutet. Das ist
+# die natuerlichste deutsche Bauform fuer eine offene Abhaengigkeit, und sie
+# stand in einem Abschluss-Protokoll, also genau in dem Dokument, das beim
+# Vorbereiten der Auslieferung gelesen wird.
+#
+# WARUM NICHT EINFACH DIE WORTLISTE ERWEITERN: Das war laut Werkzeugkopf schon
+# einmal die falsche Antwort — das blosse Wort "offen" brachte drei
+# Fehltreffer im eigenen Roadmap-Dokument. Diese Wendungen sind dagegen
+# spezifisch: Sie benennen eine Abhaengigkeit, und in einem RUECKBLICK kommen
+# sie kaum vor. Als Regex und nicht als Wortliste, weil zwischen "muss" und
+# "erledigt sein" der Bezug steht, der die Wendung ueberhaupt ausmacht.
+# AUSDRUECKLICH NICHT das blosse Wort "Vorbedingung": Der erste Entwurf hatte
+# es, und der eigene Gegenprobe-Fall dieses Tests fiel sofort darueber — "Die
+# Vorbedingung WAR `BL-6`, und sie ist mit Stufe 5 erfuellt" ist ein
+# Rueckblick und wurde als offenes Zitat gemeldet. Dieselbe Falle wie damals
+# beim blossen "offen", nur eine Runde spaeter. Gemeldet wird deshalb nur die
+# KONSTRUKTION, in der die Abhaengigkeit noch aussteht; der Feldfall
+# ("Vorbedingung fuer den ersten Bump: `BL-6` muss vorher erledigt sein")
+# traegt sie ohnehin mit "muss … erledigt sein".
+VORBEDINGUNG_RE = re.compile(
+    r"\bmuss\b[^.!?]{0,80}?"
+    r"\b(?:erledigt|abgetragen|behoben|fertig)\s+(?:sein|ist)\b"
+    r"|\bsetzt\b[^.!?]{0,80}?\bvoraus\b"
+    r"|\bsolange\b[^.!?]{0,80}?\bnicht\b"
+    r"|\bh(?:ae|ä)ngt\s+(?:an|von)\b",
+    re.I)
+
+# Abkuerzungen, deren Punkt KEIN Satzende ist. Ohne sie zerschneidet der
+# Satzsplitter "z. B." und "d. h." mitten im Bezug — und ein zu frueh
+# abgeschnittener Satz verliert genau den Treffer, den BL-184 einklagt.
+_ABK = r"(?<!\bz)(?<!\bB)(?<!\bd)(?<!\bh)(?<!\bu)(?<!\ba)(?<!\bs)(?<!\bggf)" \
+       r"(?<!\bbzw)(?<!\bca)(?<!\bvgl)(?<!\bNr)(?<!\bAbs)(?<!\bevtl)"
+
+# Satzgrenze: Punkt/Ruf/Frage + Leerraum, ODER ein neuer Listenpunkt.
+# Listenpunkte zaehlen mit, weil eine Aufzaehlung in Markdown genau die
+# Einheit ist, in der eine Aussage steht — ein Absatz kann zehn davon tragen.
+SATZ_RE = re.compile(_ABK + r"[.!?]\s+|\n(?=\s*(?:[-*+]|\d+\.)\s)|\n(?=#)")
+
+
+def saetze(absatz):
+    """Der Absatz, zerlegt in Saetze — die Einheit, in der der BEZUG gilt.
+
+    BL-184, der ergiebigste Einzelschritt: Bewertet wurde bis hierher der
+    ABSATZ. Ein Zukunftswort irgendwo darin liess jede Nummer im selben Absatz
+    als offenes Zitat gelten — im meldenden Projekt fuenf Fehltreffer in einer
+    Sitzung. Umgekehrt half der weite Radius dem echten Fall nicht: Der stand
+    allein in seinem Satz und hatte kein Wort aus der Liste bei sich.
+
+    Das Werkzeug beurteilte damit Absaetze nach Stichwoertern statt Saetze
+    nach Bezug. Beide Fehlerrichtungen haben dieselbe Wurzel, und dieser
+    Schnitt behebt beide.
+    """
+    teile = [t.strip() for t in SATZ_RE.split(absatz)]
+    return [t for t in teile if t]
+
 
 def _felder(zeile):
     """Tabellenfelder einer Backlog-Zeile, mit maskierten Codespan-Pipes."""
@@ -141,18 +201,59 @@ def absaetze(text):
         yield start, "\n".join(puffer)
 
 
-def pruefe_datei(pfad, stand):
-    """Liste (zeilennr, nummer, status, absatzauszug) der veralteten Zitate."""
+def _offene_erwartung(satz):
+    """Sagt dieser Satz eine noch offene Erwartung aus?"""
+    return bool(ZUKUNFT_RE.search(satz) or VORBEDINGUNG_RE.search(satz))
+
+
+def _befunde_im_text(text, stand, zeilennr_start=1, ausser=None):
+    """Veraltete Zitate in einem Textstueck — SATZWEISE (BL-184)."""
     befunde = []
-    text = Path(pfad).read_text(encoding="utf-8")
     for zeilennr, absatz in absaetze(text):
-        if not ZUKUNFT_RE.search(absatz):
+        for satz in saetze(absatz):
+            if not _offene_erwartung(satz):
+                continue
+            for nummer in sorted(set(REFERENZ_RE.findall(satz))):
+                if ausser and nummer == ausser:
+                    continue        # eine Zeile zitiert sich nicht selbst
+                status = stand.get(nummer)
+                if status and ERLEDIGT_RE.search(status):
+                    befunde.append((zeilennr + zeilennr_start - 1, nummer,
+                                    status[:60], satz.strip()[:120]))
+    return befunde
+
+
+def pruefe_datei(pfad, stand):
+    """Liste (zeilennr, nummer, status, satzauszug) der veralteten Zitate."""
+    return _befunde_im_text(Path(pfad).read_text(encoding="utf-8"), stand)
+
+
+def pruefe_backlog(pfad, stand):
+    """Die STATUSFELDER des Backlogs — sie sind Zitate wie jedes andere.
+
+    BL-184, zweiter Teil. Der Backlog war vom Lint ausgenommen, und das aus
+    gutem Grund: Eine Tabellenzeile ist EIN Absatz, sie traegt ein Dutzend
+    Nummern und fast immer ein Zukunftswort. Absatzweise gelesen meldete er
+    hier 29 Zeilen — reines Rauschen.
+
+    Ein Statusfeld, das einen Ausloeser nennt („nach K2 entscheiden", „faellig
+    vor X"), ist maschinell aber dieselbe Aussage wie ein Plan-Zitat, und es
+    veraltet genauso still. Gelesen wird deshalb **nur das Statusfeld** und
+    darin **nur der Satz**, und die eigene Nummer der Zeile zaehlt nicht mit.
+    """
+    befunde = []
+    if not pfad or not os.path.isfile(pfad):
+        return befunde
+    for nr, zeile in enumerate(open(pfad, encoding="utf-8"), 1):
+        treffer = ZEILE_RE.match(zeile)
+        if not treffer:
             continue
-        for nummer in sorted(set(REFERENZ_RE.findall(absatz))):
-            status = stand.get(nummer)
-            if status and ERLEDIGT_RE.search(status):
-                befunde.append((zeilennr, nummer, status[:60],
-                                absatz.strip()[:120]))
+        felder = _felder(zeile)
+        if not felder:
+            continue
+        for zeilennr, nummer, status, auszug in _befunde_im_text(
+                felder[-1], stand, nr, ausser=treffer.group(1)):
+            befunde.append((nr, nummer, status, auszug))
     return befunde
 
 
@@ -188,11 +289,26 @@ def main(argv):
             print(f"{datei}:{zeilennr}: zitiert BL-{nummer} als offene Frage, "
                   f"Status ist aber '{status}'", file=sys.stderr)
             print(f"    … {auszug} …", file=sys.stderr)
+    # BL-184: Der Backlog prueft jetzt seine EIGENEN Statusfelder mit — sie
+    # veralten genauso still wie ein Plan-Zitat.
+    for zeilennr, nummer, status, auszug in pruefe_backlog(backlog, stand):
+        gesamt += 1
+        print(f"{backlog}:{zeilennr}: das Statusfeld nennt BL-{nummer} als "
+              f"offenen Punkt, Status ist aber '{status}'", file=sys.stderr)
+        print(f"    … {auszug} …", file=sys.stderr)
     if gesamt:
         print(f"-- {gesamt} veraltete(s) Zitat(e). Der Lint urteilt ueber "
               f"Prosa: Ein bewusster Rueckblick ist kein Befund, dann die "
               f"Zukunftsform aus dem Satz nehmen.", file=sys.stderr)
         return 3
+    # BL-184: Die Reihenfolge gehoert in die Ausgabe, nicht nur in den Kopf.
+    # Der Lint liest die STATUSFELDER des Backlogs — vor dem Abtragen
+    # aufgerufen, stehen die erledigten Eintraege dort noch als offen, und er
+    # meldet folgerichtig nichts. Genau so ist der Fund entstanden: erster
+    # Lauf Exit 0, und das sah aus wie „geprueft".
+    print("✓ Keine veralteten Zitate. (Abtragen zuerst, linten danach — vor "
+          "dem Abtragen steht der Eintrag noch als offen im Backlog, und "
+          "dieser Lauf sagt dann nichts aus.)")
     return 0
 
 

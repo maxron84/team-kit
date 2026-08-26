@@ -80,6 +80,34 @@ def _kosten_modul():
 kosten = _kosten_modul()
 
 
+# --- Die Saetze, unter denen DIESE Laeufe abgerechnet wurden -----------------
+# BL-166 hat hier eine Kopplung sichtbar gemacht, die vorher niemand sah:
+# Dieser Test prueft, ob die Eichung das LOG-FORMAT richtig liest — und hing
+# trotzdem an der aktuellen Preistabelle. Als `claude-sonnet-5` von 3.00 auf
+# 2.00 gesenkt wurde (real, zwischen der Messung dieser Laeufe und dem
+# 2026-08-24), fielen vier Faelle dieser Datei. Sie zeigten damit auf den
+# Log-Leser, wo der Preis stand: genau die Bauart, vor der `BL-152` selbst
+# warnt ("die Warnung zeigte dorthin, wo der Fehler nicht war").
+#
+# Die Zahlen im Fixture sind GEMESSEN und werden nicht angefasst — sie
+# umzurechnen waere Erfindung, und ihr ganzer Wert liegt darin, dass sie es
+# nicht sind. Stattdessen gilt fuer diese Datei der Satz, der zur Messzeit
+# GALT. Der Test prueft damit wieder genau das, was sein Name sagt.
+#
+# Wer hier einen Satz eintraegt, sagt damit: "So wurde damals abgerechnet."
+# Die AKTUELLE Tabelle steht in kosten.py und wird von
+# test_bl166_preistabelle_nennt_den_satz.py geprueft.
+SAETZE_ZUR_MESSZEIT = {
+    "claude-sonnet-5": 3.00,
+}
+
+
+@pytest.fixture(autouse=True)
+def _preise_zur_messzeit(monkeypatch):
+    for modell, satz in SAETZE_ZUR_MESSZEIT.items():
+        monkeypatch.setitem(kosten.PREIS_INPUT_USD_PRO_MTOK, modell, satz)
+
+
 # --- Das Fixture: echte abgerechnete Laeufe ----------------------------------
 # Aus vier Feldprojekten, ohne Text und ohne Pfade — nur `total_cost_usd` und
 # die vier Token-Zaehler je Modell. Ausgewaehlt nach Vielfalt, nicht nach

@@ -62,6 +62,66 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- ⚠️ **`kosten.py` rechnete `claude-sonnet-5` mit 3.00 statt 2.00 USD/Mio
+  Input** (`BL-166`, gemeldet von `Feld E`). Weil `sonnet` der Default aller
+  Loop-Rollen ist (`TEAM_MODEL_LOOP`), betraf der falsche Satz die **Mehrheit
+  aller gemessenen Token** jeder Installation: Die Selbsteichung schlug in
+  9 von 9 abgerechneten Läufen an, 25–33 % daneben, und das Werkzeug
+  verweigerte mit Exit 2 regelkonform jede Buchung. **Kein stiller Fehler** —
+  die Eichung tat genau, was sie soll; der Schaden war die Blockade.
+
+  Der Satz ist gegen die Preistabelle des Anbieters nachgeschlagen, nicht aus
+  dem Gedächtnis gesetzt; sie bestätigt zugleich, dass die **übrigen zehn
+  Sätze stimmen**.
+
+  **Wichtiger als der Wert: Die Eichung benennt den Fund jetzt.** Sie wusste
+  bereits, dass etwas nicht stimmt, sagte aber nicht, *was* — und ließ den
+  Betreiber vor einer Tabelle mit elf Sätzen stehen. Neben der Verweigerung
+  steht jetzt: `claude-sonnet-5: Tabelle 2.00, abgerechnet entspricht 3.00
+  USD/Mio Input (+50 %)`. Die Rechnung ist exakt (die Kosten sind im
+  Basispreis linear); gelesen werden nur **Einmodell-Läufe**, weil bei zwei
+  Modellen in einem Log die Aufteilung unterbestimmt wäre und jede Zuweisung
+  geraten — eine geratene Zahl sieht hier aus wie eine Messung (`BL-141`).
+
+  **Ein Fund unter dem Fund:** `test_bl152_…` prüft, ob die Eichung das
+  **Log-Format** liest — und hing trotzdem an der **aktuellen** Preistabelle.
+  Vier Fälle fielen beim Satzwechsel und zeigten auf den Log-Leser, wo der
+  Preis stand. Die gemessenen Fixture-Zahlen bleiben unangetastet; für die
+  Datei gilt jetzt der Satz, der **zur Messzeit galt**, ausdrücklich als
+  solcher benannt. Damit ist auch belegt, dass beide Messungen recht hatten —
+  der Satz wurde zwischenzeitlich real gesenkt.
+
+- **`zitat_lint.py` übersah die natürlichste deutsche Vorbedingungs-Bauform**
+  (`BL-184`, gemeldet von `Feld B`) — also genau den Fall, als dessen
+  Gegenprobe es gedacht ist. *„**Vorbedingung für den ersten Bump:** `BL-6`
+  muss vorher erledigt sein"* wurde nach dem Abtragen von `BL-6` **nicht**
+  gemeldet, während es in derselben Sitzung fünfmal anschlug, wo nichts war.
+
+  Beide Fehlerrichtungen hatten dieselbe Wurzel: Das Werkzeug beurteilte
+  **Absätze nach Stichwörtern** statt **Sätze nach Bezug**. Der Schnitt liegt
+  jetzt auf dem Satz (Abkürzungen wie `z. B.` zerschneiden ihn nicht), die
+  Vorbedingungs-Bauform steht als eigenes, engeres Muster daneben — nicht als
+  weiterer Eintrag in der Wortliste, denn die aufzublähen war schon einmal die
+  falsche Antwort. Der Backlog prüft jetzt seine **eigenen Statusfelder** mit:
+  absatzweise meldete er dort **29** Zeilen reines Rauschen, feldweise und
+  satzweise sind es **0**. Und der grüne Lauf sagt, wann er etwas aussagt —
+  *Abtragen zuerst, linten danach*.
+
+- **Der README-Zahlenwächter konnte Kit-Zahlen nicht von Feldzahlen
+  unterscheiden** (`BL-180`). Die Herkunftstabelle beschreibt fremde Projekte,
+  deren Zahlen legitime andere Zahlen sind; der Wächter las „86 Tests" als
+  Behauptung über das Kit. `kit-test.sh` Stufe 3 brach daran ab — nach rund
+  45 Minuten. **Ein Selbsttest, der an einer richtigen Angabe stirbt, ist
+  teurer als einer, der gar nicht prüft.**
+
+  Gelöst nicht durch Ausblenden der Tabelle (das hielte bis zur nächsten
+  fremden Zahl daneben), sondern durch Schärfen: Eine Zahl über ein fremdes
+  Projekt nennt ihren **Träger** (`86 Tests in Feld E`, `86 Projekt-Tests`);
+  jede unqualifizierte Zahl **ist** eine Aussage über das Kit und wird weiter
+  geprüft. `des Kits` zählt nicht als fremder Träger. Der Befund nennt den
+  Ausweg, und die Regel steht als Merksatz über der Tabelle selbst.
+
+
 - ⚠️ **`kit-melden` war auf der pwsh-Bahn komplett funktionsunfähig — der
   Rückkanal Feld → Kit ist dort seit dem ersten Tag tot gewesen** (`BL-182`,
   gemeldet von `Feld B`). `kit-melden.ps1` rief `& $TEAM_PYTHON
@@ -252,10 +312,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Anzeige bleibt der volle Pfad, das Ziel ist jetzt relativ, wie bei den zwei
   älteren Zeilen.
 
-_Sonst nichts Offenes aus dieser Version. Die 17 offenen Backlog-Einträge sind_
-_zehn Meldungen aus `Feld E` (`BL-164`…`BL-167`, `BL-169`…`BL-174`), drei_
-_aus `Feld B` (`BL-183`…`BL-185`) und vier eigene Vorhaben am Kit_
-_(`BL-117`, `BL-145`, `BL-180`, `BL-189`) — siehe_
+_Sonst nichts Offenes aus dieser Version. Die 14 offenen Backlog-Einträge sind_
+_neun Meldungen aus `Feld E` (`BL-164`, `BL-165`, `BL-167`, `BL-169`…`BL-174`),_
+_zwei aus `Feld B` (`BL-183`, `BL-185`) und drei eigene Vorhaben am Kit_
+_(`BL-117`, `BL-145`, `BL-189`) — siehe_
 _[plans/backlog.md](plans/backlog.md)._
 
 ## [2.13.1] — 2026-08-25

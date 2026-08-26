@@ -65,10 +65,41 @@ for _strom in (sys.stdout, sys.stderr):
 KIT = Path(__file__).resolve().parents[1]
 
 # --- Zahlen -----------------------------------------------------------------
+# BL-180: Eine UNQUALIFIZIERTE Zahl ist eine Aussage ueber das KIT.
+#
+# Der Waechter prueft absichtlich die GATTUNG statt einer Liste von Stellen —
+# ein drittes "369 Regressionstests" in freier Prosa war wochenlang unbemerkt
+# veraltet. Diese Strenge hat aber eine blinde Stelle gehabt: Die
+# Herkunftstabelle des README beschreibt FREMDE Projekte, und deren Zahlen
+# sind voellig legitime ANDERE Zahlen. Der Eintrag zu einem Feldprojekt nannte
+# "86 Tests" — die Tests jenes Projekts —, der Waechter las sie als Behauptung
+# ueber das Kit und schlug rot an. `kit-test.sh` Stufe 3 brach daran ab, nach
+# rund 45 Minuten Laufzeit: Ein Selbsttest, der an einer RICHTIGEN Angabe
+# stirbt, ist teurer als einer, der gar nicht prueft.
+#
+# Die naheliegende Loesung waere gewesen, die Tabelle als Region auszunehmen.
+# Sie ist die schlechtere: Sie blendet aus, statt zu schaerfen, und die
+# naechste fremde Zahl ausserhalb der Tabelle faellt wieder durch. Stattdessen
+# muss eine Zahl ueber ein fremdes Projekt ihren TRAEGER nennen — und der
+# Waechter prueft weiter JEDE unqualifizierte Zahl.
+#
+# Zwei Schreibweisen gelten als qualifiziert:
+#
+#     86 Projekt-Tests          Traeger als Praefix am Nomen
+#     86 Tests in Feld E        Traeger direkt dahinter
+#
+# Das Praefix faellt schon durch `\d+\s+Tests` heraus (zwischen Zahl und Nomen
+# steht ein Wort); der Nachsatz braucht den Ausschluss unten. "des Kits" zaehlt
+# ausdruecklich NICHT als fremder Traeger — sonst liesse sich der Waechter mit
+# drei Woertern abschalten.
+TRAEGER = (r"(?:\s+(?:in|aus|von|im|des|der|jenes|dieses|eines)\s+"
+           r"(?!Kits?\b)[`\w.\-ÄÖÜäöüß]+)")
+
 # Reihenfolge in der Alternative zaehlt: "Regressionstests" vor "Tests", sonst
 # bliebe der laengere Begriff ungeprueft.
 FAELLE = [
-    re.compile(r"(\d+)\s+(?:Regressionstests|Testfälle|Tests|Fälle)\b"),
+    re.compile(r"(\d+)\s+(?:Regressionstests|Testfälle|Tests|Fälle)\b"
+               r"(?!" + TRAEGER + r")"),
     re.compile(r"badge/Regressionstests-(\d+)-"),
 ]
 TESTDATEIEN = [re.compile(r"(\d+)\s+Testdateien\b")]
@@ -127,7 +158,11 @@ def pruefe_zahlen(text, soll, muster, was):
             if int(m.group(1)) != soll:
                 fehler.append(
                     f"README behauptet {m.group(1)} {was}, gemessen sind {soll} "
-                    f"(»{m.group(0).strip()}«).")
+                    f"(»{m.group(0).strip()}«).\n"
+                    f"    Gemeint war die Zahl eines FREMDEN Projekts? Dann "
+                    f"muss sie ihren Träger nennen — »86 Projekt-{was}« oder "
+                    f"»86 {was} in Feld E« (BL-180). Eine unqualifizierte Zahl "
+                    f"ist eine Aussage über das Kit.")
     if gesehen == 0:
         fehler.append(f"README nennt die {was} ueberhaupt nicht mehr — "
                       f"eine Zusicherung, die verschwindet, faellt nicht auf.")
