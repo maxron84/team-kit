@@ -9,9 +9,59 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
-_Nichts Offenes aus dieser Version. Die 15 offenen Backlog-Einträge sind_
-_eigene Vorhaben: vier am Kit selbst (`BL-117`, `BL-144`, `BL-145`, `BL-178`)_
-_und elf Meldungen aus `Feld E` (`BL-164`…`BL-174`) — siehe_
+### Fixed
+
+- ⚠️ **`kit-melden` war auf der pwsh-Bahn komplett funktionsunfähig — der
+  Rückkanal Feld → Kit ist dort seit dem ersten Tag tot gewesen** (`BL-182`,
+  gemeldet von `Feld B`). `kit-melden.ps1` rief `& $TEAM_PYTHON
+  team/tools/kit_meldung.py` auf. Diese Variable gibt es **nur auf der
+  bash-Bahn**; hier war sie leer, und `&` auf eine leere Zeichenkette bricht
+  ab („must result in a command name"), Exit 1 — für **jedes** der fünf
+  Verben, weil alle durch dieselbe Zeile laufen.
+
+  **In einer nie gelaufenen Datei sammeln sich Fehler an, und der erste
+  verdeckt die übrigen.** Beim Belegen des Fixes kamen zwei weitere heraus:
+
+  1. **`TEAM_KIT_PFAD` kam nie an**, obwohl er in `team.config.ps1` stand. Die
+     Konfiguration wird ins **Modul** dot-gesourct, und was nicht in
+     `Export-ModuleMember -Variable` steht, sieht ein Entrypoint nicht.
+     `kit-pfad` meldete „Kein Kit gefunden — weder TEAM_KIT_PFAD noch die
+     üblichen Ablagen" **genau dann, wenn der Wert eingetragen war.** Das ist
+     der Fund, den `BL-153` abstellen wollte, einmal um die Modulgrenze herum
+     wiedergekehrt — und auf der bash-Bahn strukturell unsichtbar, weil
+     `source` keine solche Grenze kennt.
+  2. **`kit-melden.ps1` war der einzige der zehn Entrypoints ohne
+     `-DisableNameChecking`.** Die `Import-Module`-Warnung über „unapproved
+     verbs" landet auf **stdout**, mit ANSI-Farbe, **vor** der Nutzausgabe —
+     und `neu` gibt auf stdout einen Pfad aus, den der Aufrufer weiterverwendet.
+
+  Der Fix folgt der Bauform der Bahn statt sie neu zu erfinden:
+  `TEAM_MELDUNG_TOOL` in `team.config.ps1` (mit `{{PYTHON}}`-Platzhalter, den
+  beide Installer über dieselbe Ersetzungstabelle ohnehin füllen), zerlegt von
+  `Team-Werkzeug` — wie `TEAM_KOSTEN_TOOL` und `TEAM_BEUTEBUCH_TOOL`.
+
+  **Zwei Wächter prüfen die Gattung statt der Stelle** (`BL-154`): Jeder Wert,
+  den `team.config.ps1` setzt, muss die Modulgrenze überleben (einmal am Text,
+  einmal am **laufenden** Modul — heute 27 von 27, fehlalarmfrei), und jeder
+  Entrypoint importiert `lib.psm1` ohne Namensprüfung (vorher stand es 9 zu 1).
+
+  **Nachweis:** 10 Fälle in `test_bl182_rueckkanal_auf_der_pwsh_bahn.py`,
+  darunter alle fünf Verben end-to-end gegen ein Fixture-Projekt unter echtem
+  `pwsh`. **Gegenprobe:** jede der drei Hälften einzeln zurückgedreht → 6, 8
+  und 8 der 10 Fälle fallen; wieder eingesetzt → 10 grün.
+
+### Fixed (Doku)
+
+- **Sechs Backlog-Zeilen verlinkten ihre Meldungsdatei ins Leere.** Die am
+  2026-08-26 eingetragenen Zeilen schrieben `](plans/meldungen/…)` — aus
+  `plans/backlog.md` heraus zeigt das auf `plans/plans/meldungen/…`. Die
+  Anzeige bleibt der volle Pfad, das Ziel ist jetzt relativ, wie bei den zwei
+  älteren Zeilen.
+
+_Sonst nichts Offenes aus dieser Version. Die 23 offenen Backlog-Einträge sind_
+_elf Meldungen aus `Feld E` (`BL-164`…`BL-174`), fünf aus `Feld B` (`BL-181`,_
+_`BL-183`…`BL-186`) und sieben eigene Vorhaben am Kit (`BL-117`, `BL-144`,_
+_`BL-145`, `BL-178`, `BL-180`, `BL-187`, `BL-188`) — siehe_
 _[plans/backlog.md](plans/backlog.md)._
 
 ## [2.13.1] — 2026-08-25

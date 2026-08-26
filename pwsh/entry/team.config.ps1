@@ -135,6 +135,11 @@ $TEAM_FEAT_PRAEFIX = Team-Wert 'TEAM_FEAT_PRAEFIX' 'feat'
 # der Installer traegt ein, was er gefunden hat.
 $TEAM_BEUTEBUCH_TOOL = Team-Wert 'TEAM_BEUTEBUCH_TOOL' '{{PYTHON}} team/tools/beutebuch.py'
 $TEAM_KOSTEN_TOOL    = Team-Wert 'TEAM_KOSTEN_TOOL'    '{{PYTHON}} team/tools/kosten.py'
+# BL-182: Der Rueckkanal braucht dieselbe Zeile wie die anderen beiden. Sie hat
+# hier lange gefehlt, und kit-melden.ps1 half sich mit `$TEAM_PYTHON` — einer
+# Variablen, die es NUR auf der bash-Bahn gibt. Auf dieser Bahn war sie leer,
+# und damit war jedes Verb des Rueckkanals unerreichbar.
+$TEAM_MELDUNG_TOOL   = Team-Wert 'TEAM_MELDUNG_TOOL'   '{{PYTHON}} team/tools/kit_meldung.py'
 
 # --- Angriffsflaeche des Red Teams (BL-20) ------------------------------------
 # Der ausgelieferte Grundauftrag von Harry und Marv beschreibt die METHODE, nicht

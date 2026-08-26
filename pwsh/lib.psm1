@@ -1493,7 +1493,17 @@ Export-ModuleMember -Function * -Variable @(
     'TEAM_WEITERER_CODE', 'TEAM_TEST_ORDNER_BESTAND', 'TEAM_PLAN_ORDNER_BESTAND',
     'TEAM_BEUTEBUCH', 'TEAM_ERMITTLUNGSAKTEN', 'TEAM_ROADMAP', 'TEAM_BACKLOG',
     'TEAM_CHANGELOG', 'TEAM_SMOKE_TEST', 'TEAM_FIX_PRAEFIX', 'TEAM_FEAT_PRAEFIX',
-    'TEAM_BEUTEBUCH_TOOL', 'TEAM_KOSTEN_TOOL', 'TEAM_DOMAENEN', 'TEAM_LEDGER',
+    'TEAM_BEUTEBUCH_TOOL', 'TEAM_KOSTEN_TOOL', 'TEAM_MELDUNG_TOOL',
+    # BL-182, zweite Haelfte: TEAM_KIT_PFAD stand in team.config.ps1 und kam
+    # trotzdem nie an — die Konfiguration wird ins MODUL geladen, und was hier
+    # nicht steht, sieht ein Entrypoint nicht. Auf der bash-Bahn gibt es diese
+    # Grenze nicht (`source` legt alles in dieselbe Shell), also war der Fund
+    # dort strukturell unsichtbar. Wirkung: `kit-melden kit-pfad` meldete "Kein
+    # Kit gefunden — weder TEAM_KIT_PFAD noch die ueblichen Ablagen" GENAU
+    # dann, wenn der Wert eingetragen war. Das ist der Fund, den BL-153
+    # abstellen wollte, einmal um die Modulgrenze herum wiedergekehrt.
+    'TEAM_KIT_PFAD',
+    'TEAM_DOMAENEN', 'TEAM_LEDGER',
     'TEAM_REDTEAM_AUFTRAG_HARRY', 'TEAM_REDTEAM_AUFTRAG_MARV',
     'TEAM_WHITELIST_REDTEAM', 'TEAM_WHITELIST_AXEL'
 )

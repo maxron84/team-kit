@@ -27,17 +27,36 @@ $ErrorActionPreference = 'Stop'
 # unerreichbar. Ausfuehrliche Begruendung in team-test.ps1.
 $PSNativeCommandUseErrorActionPreference = $false
 Set-Location $PSScriptRoot
-Import-Module (Join-Path $PSScriptRoot 'team/lib.psm1') -Force
+# BL-182, dritte Haelfte: `-DisableNameChecking` tragen die neun anderen
+# Entrypoints seit jeher, diese eine Datei nicht. Ohne den Schalter schreibt
+# Import-Module eine WARNING ueber "unapproved verbs" (Team-Werkzeug, Team-Pfad
+# — "Team" ist kein genehmigtes Verb) — und zwar nach STDOUT, mit ANSI-Farbe,
+# VOR der eigentlichen Ausgabe. `neu` gibt den PFAD der angelegten Meldung auf
+# stdout aus; wer ihn wegliest, bekam die Warnzeile mit. Gesehen hat das nie
+# jemand, weil der Aufruf eine Zeile spaeter ohnehin abbrach.
+Import-Module (Join-Path $PSScriptRoot 'team/lib.psm1') -Force -DisableNameChecking
 
 # Die Werte werden AUSDRUECKLICH durchgereicht statt exportiert: Ein Werkzeug,
 # das seine Eingaben aus der Umgebung erraet, verhaelt sich je nach Aufrufer
 # anders — und der Aufrufer ist hier mal ein Mensch, mal eine Rolle, mal ein
 # Test. Dieselbe Bauart wie bei beutebuch.py (--pfad).
 $meldungen = (Join-Path ($TEAM_PLAN_ORDNER.TrimEnd('/')) 'kit-meldungen')
-& $TEAM_PYTHON team/tools/kit_meldung.py `
-    --projektwurzel . `
-    --meldungen $meldungen `
-    --kit "$(if ($TEAM_KIT_PFAD) { $TEAM_KIT_PFAD } else { '' })" `
-    --projekt "$(if ($TEAM_PROJEKT) { $TEAM_PROJEKT } else { '' })" `
-    @args
+
+# BL-182: Die Werkzeugzeile kommt aus der Konfiguration und wird von
+# Team-Werkzeug zerlegt — dieselbe Bauart wie bei beutebuch.py und kosten.py.
+# Die Fassung davor rief `& $TEAM_PYTHON team/tools/kit_meldung.py` auf. Diese
+# Variable gibt es NUR auf der bash-Bahn (team.config.sh, lib.sh); hier war sie
+# leer, und `&` auf eine leere Zeichenkette bricht ab ("The expression after '&'
+# … must result in a command name"), Exit 1. Betroffen war JEDES Verb, weil
+# alle durch diese eine Zeile laufen — der Rueckkanal Feld -> Kit war auf
+# dieser Bahn seit dem ersten Tag tot, ohne dass es je jemand gesehen hat.
+#
+# Die Schalter stehen VOR dem Verb: kit_meldung.py liest sie am Hauptparser,
+# der Unterbefehl kommt danach. Deshalb `$args` ans ENDE, nicht an den Anfang.
+Team-Werkzeug $TEAM_MELDUNG_TOOL (@(
+    '--projektwurzel', '.',
+    '--meldungen', $meldungen,
+    '--kit', "$(if ($TEAM_KIT_PFAD) { $TEAM_KIT_PFAD } else { '' })",
+    '--projekt', "$(if ($TEAM_PROJEKT) { $TEAM_PROJEKT } else { '' })"
+) + $args)
 exit $LASTEXITCODE
