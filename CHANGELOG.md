@@ -143,6 +143,59 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Der Prompt-Gleichstand ist jetzt am LAUF bewiesen, nicht nur am Quelltext**
+  (`BL-117`). [`test_bl112`](geteilt/tests/test_bl112_prompt_gleichstand.py)
+  vergleicht die **Prosa** beider Bahnen, nachdem jede Variableneinsetzung ein
+  Platzhalter geworden ist. Der Eintrag benannte die Lücke wörtlich: *„Setzen
+  die beiden Bahnen in denselben Platzhalter VERSCHIEDENE WERTE ein … sind die
+  Prompts verschieden und der Test bleibt grün."*
+
+  Ein Stub tritt jetzt an die Stelle der CLI und schreibt sein `-p`-Argument in
+  eine Datei; **jede Rolle läuft einmal je Bahn** im selben Wegwerf-Projekt,
+  und die zwei Prompts werden zeichenweise verglichen. Eingehängt wird der
+  Stub über `TEAM_CLAUDE_BIN` — der Weg, den `BL-173` am selben Tag geschaffen
+  hat. **Die Ausnahmeliste aus `BL-112` wird mitbenutzt, nicht nachgebaut:**
+  zwei Listen wären zwei Orte, an denen Drift verschwinden kann.
+
+  **Ergebnis der ersten Messung:** alle vier Rollen zeichengleich — es lag
+  keine Drift vor. Die Gegenprobe ist gefahren und fällt in beide Richtungen:
+  ein abweichend vorbelegter Wert in **einer** Konfiguration (4 von 5 Fällen),
+  ein Prosa-Wort nur in der pwsh-Fassung (2 Fälle), und ein Stub, der nichts
+  mehr fängt (**alle 5** — ein Vergleich zweier leerer Zeichenketten wäre
+  grün und damit die teuerste Bauform eines Tests).
+
+- ⚠️ **Die einzige Abhilfe, die das Kit für die Ausführungsrichtlinie nannte,
+  ist die eine, die gegen eine Gruppenrichtlinie nicht gewinnen kann**
+  (`BL-189`, aus dem Feld). Die Rangfolge der Bereiche lautet `MachinePolicy >
+  UserPolicy > Process > CurrentUser > LocalMachine` — **`CurrentUser` ist der
+  zweitniedrigste.** Auf einer domänenverwalteten Maschine setzt
+  `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` seinen Bereich zwar,
+  ändert am effektiven Wert **nichts** und quittiert mit `PermissionDenied` /
+  `ExecutionPolicyOverride`.
+
+  **Der Schaden war eine Schleife:** Das Werkzeug sagt „tu X", X meldet rot,
+  das Werkzeug sagt wieder „tu X". Ausgerechnet die Diagnose-Sorgfalt, die das
+  Kit im `:keinpwsh`-Zweig jedes `.cmd`-Aufrufers betreibt („Das ist KEIN
+  Fehler des Kits"), fehlte hier.
+
+  `kit-einrichten.ps1` gibt jetzt `Get-ExecutionPolicy -List` mit aus und
+  unterscheidet die beiden Lagen — bei einem harten Wert aus der
+  Gruppenrichtlinie lautet die Abhilfe **„das entscheidet die IT"**, samt dem
+  Bereich, aus dem er kommt. Ohne Gruppenrichtlinie bleibt die alte Auskunft
+  unverändert: Dort **ist** sie ausführbar.
+
+  Dasselbe in `doku/einrichtung.md`, und dort steht `Get-ExecutionPolicy
+  -List` jetzt **vor** dem Setz-Befehl. Grund ist die harmlose Gegenrichtung:
+  Steht die Richtlinie per GPO auf `Unrestricted`, läuft alles — aber der
+  Setz-Befehl wirft trotzdem eine rote Wand. Wer der Doku folgte, bekam einen
+  Fehler beim Befolgen einer Anweisung, die er gar nicht gebraucht hätte.
+
+  **Ausdrücklich nicht aufgenommen:** ein Umgehungsweg. Auf einer verwalteten
+  Maschine ist die Richtlinie eine **Vorgabe**, kein Hindernis; ein Kit, das
+  sie umgeht, macht seinen Anwender zum Regelbrecher. Ein Testfall hält das
+  fest — er erlaubt die Nennung, die den Weg ausschließt, und verbietet die
+  Empfehlung.
+
 - **Zwei Regressionen aus `BL-172`, vom Selbsttest gefunden.** `redteam.ps1`
   hatte beim Schreiben sein **BOM** verloren (`BL-113`) — die einzige der
   achtzehn pwsh-Dateien; nachgemessen war es im Commit davor noch da. Und

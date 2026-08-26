@@ -274,6 +274,18 @@ def main(argv):
 
     stand = status_je_nummer(backlog, archiv)
     if not stand:
+        # Die Meldung nennt den GRUND, nicht nur das Symptom. Sie lautete bis
+        # 2026-08-26 pauschal "nicht lesbar" — und schickte damit jemanden auf
+        # die Suche nach Rechten und Pfaden, waehrend die Datei in Wahrheit
+        # dalag und bloss noch keine BL-Zeile trug (der Normalfall in einem
+        # frisch installierten Projekt). Dieselbe Erwaegung wie bei BL-173:
+        # Ein fehlendes Mittel gehoert nicht in eine bestehende Fehlerklasse
+        # gepresst, sondern benannt.
+        if os.path.isfile(backlog):
+            print(f"FEHLER: '{backlog}' enthaelt keine BL-Zeile — "
+                  "dieser Lint braucht einen Backlog mit Nummern.",
+                  file=sys.stderr)
+            return 1
         print(f"FEHLER: kein Backlog unter '{backlog}' lesbar.", file=sys.stderr)
         return 1
 

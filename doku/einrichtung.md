@@ -438,6 +438,20 @@ anschließend Python — und `json.load` bricht an einem BOM ab, während
 Das Gegenstück zum fehlenden Exec-Bit unter Linux. Steht sie auf `Restricted`
 oder `AllSigned`, startet **keine** `.ps1`-Datei.
 
+**Zuerst nachsehen, nicht setzen** (`BL-189`):
+
+```powershell
+Get-ExecutionPolicy -List
+```
+
+Steht bei `MachinePolicy` oder `UserPolicy` schon `RemoteSigned`,
+`Unrestricted` oder `Bypass`, **bist du fertig** — überspring den Rest dieses
+Abschnitts. Der Setz-Befehl würde hier eine rote Wand werfen, ohne dass
+irgendetwas kaputt ist.
+
+Ist der Wert weich (`Undefined` überall außer ganz unten), lockerst du ihn für
+deinen Benutzer:
+
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
@@ -445,6 +459,22 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 `RemoteSigned` lässt lokale Skripte zu und verlangt für heruntergeladene eine
 Signatur. Das Kit klonst du selbst — es zählt als lokal. Administratorrechte
 braucht es dafür nicht (`-Scope CurrentUser`).
+
+> **Steht `Restricted` oder `AllSigned` in `MachinePolicy`/`UserPolicy`, hilft
+> dieser Befehl nicht** — und zwar grundsätzlich nicht. Die Rangfolge der
+> Bereiche lautet
+>
+>     MachinePolicy > UserPolicy > Process > CurrentUser > LocalMachine
+>
+> und `CurrentUser` ist der **zweitniedrigste**. Der Befehl setzt seinen
+> Bereich zwar, ändert am effektiven Wert nichts und quittiert mit
+> `PermissionDenied` / `ExecutionPolicyOverride`. `-ExecutionPolicy Bypass` am
+> Aufruf verliert genauso — das ist Bereich `Process`.
+>
+> **Das entscheidet die IT, nicht du.** Auf einer verwalteten Maschine ist die
+> Richtlinie eine **Vorgabe**, kein Hindernis; deshalb nennt das Kit hier
+> absichtlich keinen Umgehungsweg. `kit-einrichten.ps1` unterscheidet die
+> beiden Fälle inzwischen selbst und gibt die Bereichsliste mit aus.
 
 ### 3. Die eine Regel: lokales Laufwerk
 
@@ -690,7 +720,9 @@ installiert, wie komme ich dazu?"* — steht in der [FAQ](faq.md).
 | Symptom | Ursache | Abhilfe |
 |---|---|---|
 | Wand aus `Unexpected token '…'` / `Missing argument in parameter list`, die auf deutsche Prosa zeigt | Kein Syntaxfehler: Windows PowerShell **5.1** liest eine `.ps1` ohne BOM in der ANSI-Codepage, `—` endet auf U+201D und schließt die Zeichenkette (BL-113) | Mit `pwsh` starten, nicht mit `powershell`. Zeigt der Klon die Fehler trotzdem, ist er älter als die BOM-Regel: `git pull` |
-| `… cannot be loaded because running scripts is disabled` | Ausführungsrichtlinie `Restricted`/`AllSigned` | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` — kein Administrator nötig |
+| `… cannot be loaded because running scripts is disabled` | Ausführungsrichtlinie `Restricted`/`AllSigned`, Wert **nicht** aus einer Gruppenrichtlinie | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` — kein Administrator nötig |
+| Derselbe Text, und `Set-ExecutionPolicy` quittiert mit `PermissionDenied` / `ExecutionPolicyOverride` | Der harte Wert steht in `MachinePolicy`/`UserPolicy` — `CurrentUser` ist der zweitniedrigste Bereich und verliert dagegen; `-ExecutionPolicy Bypass` (Bereich `Process`) ebenfalls (**BL-189**) | `Get-ExecutionPolicy -List` zeigt den Bereich. **Das kann kein Benutzerbefehl ändern — an die IT wenden.** Einen Umgehungsweg nennt das Kit absichtlich nicht |
+| `Set-ExecutionPolicy` wirft eine rote Wand, obwohl **alles läuft** | Die Gruppenrichtlinie steht bereits auf `RemoteSigned`/`Unrestricted`/`Bypass` — der Befehl aus Abschnitt 2 wird gar nicht gebraucht (**BL-189**) | Zeile überspringen. Deshalb steht `Get-ExecutionPolicy -List` dort jetzt **vor** dem Setz-Befehl |
 | `The term 'claude' is not recognized` | `claude` ist ein `.cmd`-Shim; PATH-Änderung hat die laufende Shell nicht erreicht | **Neue** pwsh-Sitzung öffnen. **Das ist KEIN Auth-Fehler** — nicht verwechseln. Bleibt es dabei: [FAQ](faq.md#sie-ist-installiert-der-lauf-findet-sie-trotzdem-nicht) |
 | `python` öffnet den Microsoft Store | Store-Platzhalter statt Interpreter | Echtes Python installieren; Gegenprobe `python -c "print(1)"` |
 | `ModuleNotFoundError: No module named 'fcntl'` — bei `team-test.cmd` als Wand von Sammelfehlern, sonst bei jedem Kostenbefehl | `fcntl` ist ein POSIX-Modul; `kosten.py` importierte es ungeschützt und war unter Windows deshalb gar nicht ladbar (**BL-125**) | Im Kit behoben. Klon aktualisieren, dann `install.ps1 <ziel> --update` — die Datei liegt im Projekt unter `team/tools/` |

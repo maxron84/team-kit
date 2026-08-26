@@ -124,5 +124,39 @@ def test_der_wert_traegt_keine_rueckstriche_mehr():
         "Der Kit-Pfad wird wieder roh eingesetzt (BL-163).")
 
 
+def test_keine_testdatei_schreibt_eine_marke_aus():
+    """Der Riegel für die **Gattung**, nicht für diese Stelle (`BL-154`).
+
+    Schritt 3 von `kit-test.sh` durchsucht die **installierte** Ablage nach
+    ungefüllten Platzhaltern und meldet jede Datei, in der einer steht — auch
+    eine Testdatei, die ihn nur **zitiert**. Die Tests werden mitinstalliert
+    (`team/tests/`), also gilt das für sie.
+
+    Der Kopf dieser Datei nennt die Lösung seit `BL-163`: Marke
+    **zusammensetzen**. Sie stand dort als Kommentar, und ein Kommentar hält
+    niemanden auf — am 2026-08-26 ist die Falle **zweimal** zugeschnappt, in
+    `test_bl131` (dort schon vorher) und in `test_bl165`. Beide Male wäre der
+    Selbsttest an Schritt 3 gestorben, nicht an der Sache.
+
+    `__pycache__` ist ausgenommen — aus demselben Grund wie in `kit-test.sh`:
+    Der Compiler faltet benachbarte Literale zusammen, so dass die zerlegte
+    Schreibweise im `.pyc` wieder als Fund erscheint.
+    """
+    tests = Path(__file__).resolve().parent
+    muster = re.compile(r"\{\{[A-Z_]+\}\}")
+    funde = []
+    for datei in sorted(tests.glob("test_*.py")):
+        text = datei.read_text(encoding="utf-8")
+        for treffer in muster.finditer(text):
+            nummer = text.count("\n", 0, treffer.start()) + 1
+            funde.append(f"{datei.name}:{nummer} — {treffer.group(0)}")
+    assert not funde, (
+        "Diese Stellen schreiben eine Platzhalter-Marke aus. Schritt 3 von "
+        "kit-test.sh meldet die Datei dann als 'ungefuellter Platzhalter', "
+        "und der Selbsttest stirbt an der Testdatei statt an der Sache. "
+        "Zusammensetzen: MARKE = ''.join(('{{', 'NAME', '}}')).\n  "
+        + "\n  ".join(funde))
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-q"]))

@@ -135,17 +135,81 @@ if ($psv.Major -ge 7) {
     )
 }
 
-# Die Ausfuehrungsrichtlinie ist unter Windows das, was ein Skript am Starten
-# hindert — das Gegenstueck zum fehlenden Exec-Bit unter Linux. Geprueft wird
-# der EFFEKTIVE Wert, nicht der eines einzelnen Bereichs.
-$policy = Get-ExecutionPolicy
-if ($policy -in @('Restricted', 'AllSigned')) {
-    Fehler "Ausfuehrungsrichtlinie ist '$policy' — .ps1-Dateien starten so nicht." @(
+function Richtlinien-Abhilfe {
+    <#
+      BL-189: Welche Abhilfe zu einer harten Ausfuehrungsrichtlinie GEHOERT —
+      und ob es ueberhaupt eine gibt, die der Anwender ausfuehren kann.
+
+      Die Rangfolge der Bereiche lautet
+          MachinePolicy > UserPolicy > Process > CurrentUser > LocalMachine
+      und `CurrentUser` ist damit der ZWEITNIEDRIGSTE. Auf einer
+      domaenenverwalteten Maschine setzt `Set-ExecutionPolicy -Scope
+      CurrentUser` seinen Bereich zwar, aendert am effektiven Wert aber NICHTS
+      und quittiert mit PermissionDenied/ExecutionPolicyOverride. Der naechste
+      Lauf dieses Skripts meldete daraufhin exakt denselben Fehler: Das
+      Werkzeug sagt "tu X", X meldet rot, das Werkzeug sagt wieder "tu X".
+
+      Auch `-ExecutionPolicy Bypass` am Aufruf hilft nicht — das ist Bereich
+      `Process` und verliert ebenfalls gegen die Richtlinie.
+
+      AUSDRUECKLICH NICHT vorgesehen ist ein Umgehungsweg. Auf einer
+      verwalteten Maschine ist die Richtlinie eine VORGABE, kein Hindernis;
+      ein Kit, das sie umgeht, macht seinen Anwender zum Regelbrecher.
+
+      Die Funktion MISST NICHT SELBST, sondern nimmt die Bereichsliste
+      entgegen — so sind beide Zweige nachweisbar, ohne dass ein Test eine
+      echte Gruppenrichtlinie braucht (das ist die Gegenprobe, die BL-189
+      verlangt).
+    #>
+    param(
+        [string]$Effektiv,
+        # Wie `Get-ExecutionPolicy -List` sie liefert: Objekte mit Scope und
+        # ExecutionPolicy.
+        $Bereiche
+    )
+    $hart = @('Restricted', 'AllSigned')
+    $vorgabe = @($Bereiche | Where-Object {
+        $_.Scope -in @('MachinePolicy', 'UserPolicy') -and
+        $_.ExecutionPolicy -in $hart
+    })
+    if ($vorgabe.Count -gt 0) {
+        $wo = ($vorgabe | ForEach-Object { "$($_.Scope)=$($_.ExecutionPolicy)" }) -join ', '
+        return @(
+            "Der harte Wert kommt aus einer GRUPPENRICHTLINIE ($wo).",
+            "Das kann KEIN Benutzerbefehl aendern — das entscheidet die IT.",
+            "Set-ExecutionPolicy -Scope CurrentUser wuerde hier mit",
+            "PermissionDenied/ExecutionPolicyOverride quittieren, und",
+            "-ExecutionPolicy Bypass am Aufruf verliert genauso (Bereich",
+            "Process). Bitte an die IT wenden; einen Umgehungsweg nennt das",
+            "Kit absichtlich nicht."
+        )
+    }
+    return @(
         "Fuer den eigenen Benutzer lockern (kein Administrator noetig):",
         "  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned",
         "RemoteSigned laesst lokale Skripte zu und verlangt fuer",
         "heruntergeladene eine Signatur. Das Kit klonst du selbst."
     )
+}
+
+# Die Ausfuehrungsrichtlinie ist unter Windows das, was ein Skript am Starten
+# hindert — das Gegenstueck zum fehlenden Exec-Bit unter Linux. Geprueft wird
+# der EFFEKTIVE Wert, nicht der eines einzelnen Bereichs.
+$policy = Get-ExecutionPolicy
+if ($policy -in @('Restricted', 'AllSigned')) {
+    # BL-189: Die Bereichsliste GEHOERT in die Meldung. Ohne sie steht der
+    # Anwender vor einem Befehl, der auf seiner Maschine nicht wirken kann,
+    # und sieht nicht warum.
+    $liste = @()
+    try { $liste = @(Get-ExecutionPolicy -List) } catch { }
+    $abhilfe = Richtlinien-Abhilfe -Effektiv $policy -Bereiche $liste
+    if ($liste.Count -gt 0) {
+        $abhilfe += ""
+        $abhilfe += "Get-ExecutionPolicy -List sagt hier:"
+        $abhilfe += ($liste | ForEach-Object {
+            "  {0,-14} {1}" -f $_.Scope, $_.ExecutionPolicy })
+    }
+    Fehler "Ausfuehrungsrichtlinie ist '$policy' — .ps1-Dateien starten so nicht." $abhilfe
 } else {
     Ok "Ausfuehrungsrichtlinie: $policy"
 }

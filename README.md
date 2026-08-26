@@ -108,10 +108,10 @@ und ein Gleichstands-Prüfer, der **an seinem eigenen Befund starb**, weil `diff
 mit 1 endet, wenn es etwas findet. Keiner der fallenden Fälle wurde grün
 gedreht.
 
-**Offen sind 5 Einträge** — keine Reste dieser Version, sondern drei
+**Offen sind 4 Einträge** — keine Reste dieser Version, sondern zwei
 Meldungen aus dem Feld und zwei eigene Bauvorhaben:
 [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (134 Einträge).
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (136 Einträge).
 
 ---
 

@@ -44,9 +44,15 @@ Mensch im Zielprojekt nicht liest.
     Sie meldet trotzdem grün.
 
 `BL-170` — DER PLATZHALTER IN RALPHS EISERNEN GRENZEN
-    `{{SMOKE_TEST}}` stand auch in `rolle-ralph.md`, **in Backticks** und
+    Die Smoke-Test-Marke stand auch in `rolle-ralph.md`, **in Backticks** und
     **unter den eisernen Grenzen** — in der Auszeichnung und an der Position,
     an der sonst ein ausführbarer Befehl steht.
+
+    Ihr Name steht hier bewusst NICHT ausgeschrieben: Schritt 3 von
+    `kit-test.sh` durchsucht die installierte Ablage nach ungefüllten
+    Platzhaltern und meldet jede Datei, in der einer steht — auch eine, die
+    ihn nur **zitiert**. Diese Datei hat den Schritt beim ersten Entwurf rot
+    gemacht. Wo die Marke gebraucht wird, steht sie zusammengesetzt.
 """
 import re
 import sys

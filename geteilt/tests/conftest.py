@@ -83,6 +83,7 @@ import os
 import shutil
 import stat
 import subprocess
+import re
 import sys
 from pathlib import Path
 
@@ -198,6 +199,29 @@ def _finde_python_befehl():
 
 
 PYTHON_BEFEHL = _finde_python_befehl()
+
+
+def nur_code(text):
+    """Kommentare raus, bevor eine Zusicherung im Quelltext geprueft wird.
+
+    GRUND, ZWEIMAL GEMESSEN (2026-08-26, beim Bauen von BL-173 und BL-189):
+    Ein Test, der die GANZE Datei durchsucht, bleibt gruen, wenn die gesuchte
+    Marke nur im KOMMENTAR danebensteht. Beide Male hielt die Begruendung den
+    Test gruen, waehrend der Code fehlte — einmal in die eine Richtung (der
+    Platzhalter stand im Kommentar, die Zuweisung war weg), einmal in die
+    andere (ein Verbot schlug an, weil der Kommentar den verbotenen Befehl
+    ERKLAERTE).
+
+    Gefunden hat das beide Male die Gegenprobe, nicht der Test. Deshalb steht
+    der Handgriff hier und nicht in einer der beiden Dateien: Er gehoert zur
+    GATTUNG "Zusicherung am Quelltext", nicht zu einer Stelle (BL-154).
+
+    Erkannt werden PowerShell-Blockkommentare (<# ... #>) und Zeilen, die mit
+    # beginnen — das deckt .ps1/.psm1, .sh und .py ab.
+    """
+    ohne_block = re.sub(r"<#.*?#>", "", text, flags=re.S)
+    return "\n".join(z for z in ohne_block.splitlines()
+                     if not z.lstrip().startswith("#"))
 
 
 def werkzeug_wert(relativer_pfad):

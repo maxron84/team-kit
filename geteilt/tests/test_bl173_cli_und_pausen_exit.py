@@ -54,8 +54,8 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from conftest import (BASH, kit_pfad, ueberspringe_ohne_bahn,  # noqa: E402
-                      verlange_pwsh)
+from conftest import (BASH, kit_pfad, nur_code,  # noqa: E402
+                      ueberspringe_ohne_bahn, verlange_pwsh)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -109,17 +109,13 @@ def test_keine_bahn_ruft_die_cli_mehr_blank_auf(datei):
 MARKE = "".join(("{{", "CLAUDE_BIN", "}}"))
 
 
-def _nur_code(text):
-    """Kommentare raus, bevor geprüft wird.
-
-    Sonst hält die **Begründung** den Test grün, während der Code fehlt — beim
-    ersten Entwurf dieser Datei genau so passiert: Der Satz „Was als
-    dem Platzhalter in beide Konfigurationen landet" stand im Kommentar, und
-    die Gegenprobe (Zuweisung entfernen) blieb grün.
-    """
-    ohne_block = re.sub(r"<#.*?#>", "", text, flags=re.S)
-    return "\n".join(z for z in ohne_block.splitlines()
-                     if not z.lstrip().startswith("#"))
+# Kommentare raus, bevor geprüft wird — sonst hält die **Begründung** den Test
+# grün, während der Code fehlt. Beim ersten Entwurf dieser Datei genau so
+# passiert: Der Platzhalter stand noch im Kommentar, die Zuweisung war weg, und
+# die Gegenprobe blieb grün. Der Handgriff steht in `conftest.py`, weil er zur
+# Gattung gehört und nicht zu dieser Stelle (`BL-154`) — beim Bauen von
+# `BL-189` ist dieselbe Falle ein zweites Mal zugeschnappt, in die andere
+# Richtung.
 
 
 @pytest.mark.parametrize("datei", ["bash/entry/team.config.sh",
@@ -144,7 +140,7 @@ def test_beide_installer_fuellen_den_platzhalter(datei):
     """Beide Installer schreiben **beide** Konfigurationen. Füllt einer den
     Platzhalter nicht, bleibt er in der Datei stehen — und `TEAM_CLAUDE_BIN`
     ist dann buchstäblich die Marke selbst."""
-    assert MARKE in _nur_code(_lies(*datei.split("/"))), (
+    assert MARKE in nur_code(_lies(*datei.split("/"))), (
         f"BL-173: {datei} fuellt {MARKE} nicht (im CODE, nicht im Kommentar). "
         "Der von diesem Installer geschriebene Baum traegt dann einen "
         "ungefuellten Platzhalter.")
@@ -155,7 +151,7 @@ def test_beide_installer_suchen_auch_den_ide_ort(datei):
     """Der Kern des Feldfalls: Die CLI **war** da, angemeldet, lauffähig — nur
     nicht im `PATH`. Ein Installer, der ausschließlich den `PATH` befragt,
     trägt auf genau dieser Maschine `claude` ein und ändert nichts."""
-    text = _nur_code(_lies(*datei.split("/")))
+    text = nur_code(_lies(*datei.split("/")))
     assert "native-binary" in text, (
         f"BL-173: {datei} sucht die CLI nicht am IDE-Ort "
         "(<erweiterung>/resources/native-binary/). Damit findet er sie genau "

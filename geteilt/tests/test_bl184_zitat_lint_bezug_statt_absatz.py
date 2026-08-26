@@ -181,8 +181,18 @@ def test_der_backlog_des_kits_bleibt_ruhig():
     """
     wurzel = Path(__file__).resolve().parents[2]
     backlog = wurzel / "plans" / "backlog.md"
-    if not backlog.is_file():
-        pytest.skip("kein Kit-Backlog in dieser Ablage")
+    # Der Uebersprung muss am KIT haengen, nicht am Dateinamen. In einer
+    # INSTALLIERTEN Ablage liegt an derselben Stelle der Backlog des
+    # PROJEKTS — eine frische Vorlage ohne eine einzige BL-Zeile. Der Lint
+    # meldet darueber folgerichtig einen Fehler, und dieser Fall wurde dann
+    # ROT statt uebersprungen: Er prueft eine Zusicherung ueber den Backlog
+    # des Kits an einer Datei, die gar nicht dessen Backlog ist.
+    #
+    # Gefunden hat das der erste vollstaendige Lauf von kit-test.ps1 nach
+    # BL-145 — er starb an dieser einen Zeile, und zwar in Schritt 4, nach
+    # 19 Minuten Suite.
+    if not backlog.is_file() or not (wurzel / "bootstrap").is_dir():
+        pytest.skip("kein Kit-Backlog in dieser Ablage (nur im Kit)")
     r = subprocess.run(
         [sys.executable, str(WERKZEUG)],
         capture_output=True, text=True, encoding="utf-8", errors="replace",
