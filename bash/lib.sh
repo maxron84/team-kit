@@ -192,6 +192,66 @@ team_warnung_abo_key() {
     fi
 }
 
+# team_api_weg_vorhanden: Gibt es ueberhaupt einen API-Schluessel? (0 = ja)
+#
+# BL-174: Reine ABFRAGE, ohne etwas zu setzen und ohne zu meckern. Sie
+# beantwortet die Frage, die team_claude vor dem Fallback stellen muss —
+# `team_resolve_auth_mode` kann das nicht, weil sie im Fehlerfall MELDET und
+# der Aufrufer ihren Rueckgabewert bisher als Abbruch gelesen hat.
+#
+# In einer reinen Abo-Installation ist ein fehlender Schluessel kein Fehler,
+# sondern der ERWARTETE Zustand — seit dem Entscheid "keine Rolle ist fest
+# api" ist das der empfohlene Normalfall.
+# BL-173: WIE die Agenten-CLI heisst, entscheidet die Maschine — nicht diese
+# Datei. Dieselbe Lehre wie TEAM_PYTHON (BL-131), und sie wiegt hier schwerer:
+# Claude Code wird legitim IDE-GEBUENDELT ausgeliefert (VS Code / VSCodium,
+# Binary unter resources/native-binary/claude). Eine Maschine kann eine
+# vollstaendig eingerichtete, angemeldete Installation haben, ohne dass
+# `claude` in irgendeinem PATH aufloesbar ist — genau die Lage lag im Feld vor:
+# ~/.claude/.credentials.json vorhanden, Abo aktiv, Erweiterung lief, und
+# `command -v claude` leer.
+TEAM_CLAUDE_BIN="${TEAM_CLAUDE_BIN:-claude}"
+
+# team_cli_vorhanden: Ist die Agenten-CLI ueberhaupt aufloesbar? (0 = ja)
+#
+# BL-173, die WICHTIGERE Haelfte. Ohne diese Pruefung war der Ablauf:
+# `claude: command not found` (eine Zeile, scrollt vorbei) -> ein 0-Byte-Log
+# -> team_bewerte_ergebnis schreibt einen ERSATZZETTEL fuer einen Aufruf, der
+# nie stattgefunden hat -> der Abo-Fehler loest planmaessig den API-Fallback
+# aus -> und der bricht mit der Meldung ab, die stehen bleibt und die der
+# Mensch liest: "FEHLER: AUTH_MODE=api, aber weder ANTHROPIC_API_KEY gesetzt
+# noch …/api-key lesbar."
+#
+# Diagnostiziert wird ein Auth-Problem; vorliegt ein PATH-Problem. Wer dieser
+# Meldung folgt, besorgt einen API-Schluessel — und scheitert ein zweites Mal
+# an derselben Stelle, weil auch der API-Weg dasselbe `claude` aufruft.
+#
+# Eine fehlende Programmdatei ist KEINE Fehlerklasse, die ein Auth-Fallback
+# heilen kann. Dieselbe Erwaegung wie bei Exit 42/43: eine eigene Klasse, die
+# man BENENNT, statt sie in eine bestehende zu pressen.
+team_cli_vorhanden() {
+    case "$TEAM_CLAUDE_BIN" in
+        */*) [ -x "$TEAM_CLAUDE_BIN" ] && return 0 ;;
+        *)   command -v "$TEAM_CLAUDE_BIN" >/dev/null 2>&1 && return 0 ;;
+    esac
+    return 1
+}
+
+team_cli_fehlt_melden() {
+    local rolle="${1:-team}"
+    echo "[$rolle] FEHLER: Die Agenten-CLI ist nicht auffindbar (gesucht: '$TEAM_CLAUDE_BIN')." >&2
+    echo "  Das ist KEIN Auth-Problem — ein API-Schluessel hilft hier nicht." >&2
+    echo "  Ist Claude Code als IDE-Erweiterung installiert, liegt die Binaerdatei" >&2
+    echo "  meist unter <erweiterung>/resources/native-binary/claude und nicht im PATH." >&2
+    echo "  Trag den vollen Pfad als TEAM_CLAUDE_BIN in team.config.sh ein." >&2
+}
+
+team_api_weg_vorhanden() {
+    [ -n "${ANTHROPIC_API_KEY:-}" ] && return 0
+    [ -r "$HOME/.config/claude-team/api-key" ] && return 0
+    return 1
+}
+
 team_resolve_auth_mode() {
     local rollen_default="${1:-api}"
     local keyfile="$HOME/.config/claude-team/api-key"
@@ -370,6 +430,14 @@ PY
         return 0
     fi
 
+    # BL-173: VOR dem ersten Aufruf pruefen, ob es die CLI ueberhaupt gibt.
+    # Kein API-Fallback, kein Ersatzzettel, kein Fehlversuchs-Zaehler —
+    # nichts davon passt auf "das Programm gibt es nicht".
+    if ! team_cli_vorhanden; then
+        team_cli_fehlt_melden "$rolle"
+        return 1
+    fi
+
     AUTH_MODE="$TEAM_AUTH_USER"
     team_resolve_auth_mode abo || return 1
 
@@ -378,7 +446,7 @@ PY
     # ist die Summe darueber, nicht nur der letzte Versuch (BL-55).
     local -a versuch_logs=()
     t0="$(date +%s)"
-    claude -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
+    "$TEAM_CLAUDE_BIN" -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
     team_versuch_melden "$rolle" "$out" "$t0"
     versuch_logs+=("$out")
     if team_bewerte_ergebnis "$rolle" "$out" "$cli_exit"; then fehler=0; else fehler=1; fi
@@ -397,14 +465,34 @@ PY
     # die CLI bevorzugte im selben Prozess weiterhin die (limitierte) Abo-Session
     # und ignorierte den frisch exportierten Key — der Fallback lief real erneut
     # ins Abo-429. Mit dem vorangestellten Key greift der API-Weg zuverlässig.
-    if [ "$fehler" -eq 1 ] && [ "$AUTH_MODE" = "abo" ]; then
+    # BL-174: ZUERST fragen, ob es ueberhaupt einen API-Weg gibt.
+    #
+    # Vorher stand hier `team_resolve_auth_mode || return 1`. In einer reinen
+    # Abo-Installation gibt die Funktion fuer AUTH_MODE=api eine 1 zurueck —
+    # das `|| return 1` verliess team_claude also SOFORT, und die gesamte
+    # 429-Sonderbehandlung darunter wurde nie erreicht. Ein Session-Limit,
+    # also genau die Klasse, fuer die BL-20/BL-25 den Exit 42 eingefuehrt
+    # haben ("weder ein sauberer Erfolg noch ein echter Fehler, sondern eine
+    # eigene, klar benannte Klasse"), kam als Exit 1 heraus: "ECHTER Fehler,
+    # Mensch gefragt". Kein Warten bis zum Reset, kein Pausen-Signal, keine
+    # der drei dokumentierten Zusicherungen.
+    #
+    # Der Airbag war damit ausgerechnet im empfohlenen Normalfall ausgebaut,
+    # und zwar unsichtbar: Der Fehler zeigt sich erst, wenn das Kontingent
+    # voll ist — nach Stunden Laufzeit, an der teuersten Stelle.
+    #
+    # Ein fehlender Schluessel ist hier kein Fehler, sondern der erwartete
+    # Zustand. Er darf den Ablauf nicht abschneiden.
+    if [ "$fehler" -eq 1 ] && [ "$AUTH_MODE" = "abo" ] && ! team_api_weg_vorhanden; then
+        echo "[$rolle] Abo-Aufruf fehlgeschlagen — kein API-Schluessel hinterlegt, also kein Fallback. Weiter mit der regulaeren Limit-Behandlung." >&2
+    elif [ "$fehler" -eq 1 ] && [ "$AUTH_MODE" = "abo" ]; then
         echo "[$rolle] Abo-Aufruf fehlgeschlagen (Timeout/Limit/429?) — einmaliger API-Fallback. Log: $out"
         AUTH_MODE=api
         team_resolve_auth_mode || return 1
         out="${out%.json}-api-fallback.json"
         cli_exit=0
         t0="$(date +%s)"
-        ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" claude -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
+        ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$TEAM_CLAUDE_BIN" -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
         team_versuch_melden "$rolle" "$out" "$t0"
         versuch_logs+=("$out")
         if team_bewerte_ergebnis "$rolle" "$out" "$cli_exit"; then fehler=0; else fehler=1; fi
@@ -437,9 +525,9 @@ PY
             # Wie beim API-Fallback oben: Key explizit voranstellen, falls der
             # aktuelle AUTH_MODE api ist (sonst greift die CLI ggf. die Abo-Session).
             if [ "$AUTH_MODE" = "api" ]; then
-                ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" claude -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
+                ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$TEAM_CLAUDE_BIN" -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
             else
-                claude -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
+                "$TEAM_CLAUDE_BIN" -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
             fi
             team_versuch_melden "$rolle" "$out" "$t0"
             versuch_logs+=("$out")

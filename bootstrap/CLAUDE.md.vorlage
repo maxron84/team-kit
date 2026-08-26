@@ -435,6 +435,26 @@ Abo. **Auch Axel und Der Architekt laufen Abo-first** — das starke Modell im A
 ist schlicht günstiger, die Budget-Caps bleiben als Airbag. **Keine** Rolle ist
 fest `api`. Modell und Auth sind zwei getrennte Achsen.
 
+> **Der API-Retry setzt einen Schlüssel voraus — und nicht jede Installation
+> hat einen** (`Kit-BL-174`). Ohne hinterlegten `ANTHROPIC_API_KEY` entfällt
+> der Retry schlicht; das ist **kein** Fehler, sondern seit dem Entscheid
+> „keine Rolle ist fest `api`" der voll unterstützte Normalfall. Was dabei
+> **nicht** entfällt, ist die 429-Behandlung: Sie hat mit Auth nichts zu tun
+> und läuft weiter, bis hin zum Pausen-Exit `42`. Bis 2026-08-26 schnitt der
+> fehlende Schlüssel sie ab — ein Session-Limit kam dann als Exit `1` heraus
+> („echter Fehler, Mensch gefragt"), und der Airbag war ausgerechnet im
+> empfohlenen Normalfall ausgebaut.
+
+> **Wie die Agenten-CLI heißt, entscheidet die Maschine** (`Kit-BL-174`,
+> `Kit-BL-173`): `TEAM_CLAUDE_BIN` in `{{KONFIG}}` — eingetragen hat ihn der
+> Installer mit dem, was er auf **dieser** Maschine gefunden hat. Claude
+> Code wird legitim **IDE-gebündelt** ausgeliefert; eine Maschine kann eine
+> vollständig eingerichtete, **angemeldete** Installation haben, ohne dass
+> `claude` in irgendeinem `PATH` auflösbar ist. **Fehlt die Programmdatei, ist
+> das eine eigene Fehlerklasse** — kein Auth-Problem, und kein API-Schlüssel
+> heilt sie. Das Team sagt das jetzt so, statt in den Auth-Fallback zu laufen
+> und einen fehlenden Schlüssel zu melden.
+
 **Session-Limit (429) — die dritte Fehlerklasse  ✅ erprobt (`Kit-BL-20`/`Kit-BL-25`):**
 Ein Session-Limit ist **weder** ein sauberer Erfolg **noch** ein „echter"
 Fehler, sondern eine eigene, klar benannte Klasse — sie weicht

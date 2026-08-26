@@ -148,6 +148,22 @@ $TEAM_FEAT_PRAEFIX = Team-Wert 'TEAM_FEAT_PRAEFIX' 'feat'
 # der Installer traegt ein, was er gefunden hat.
 $TEAM_BEUTEBUCH_TOOL = Team-Wert 'TEAM_BEUTEBUCH_TOOL' '{{PYTHON}} team/tools/beutebuch.py'
 $TEAM_KOSTEN_TOOL    = Team-Wert 'TEAM_KOSTEN_TOOL'    '{{PYTHON}} team/tools/kosten.py'
+
+# Die Agenten-CLI. Wie sie HEISST und wo sie liegt, entscheidet die Maschine —
+# dieselbe Erwaegung wie bei TEAM_PYTHON (BL-131), und sie wiegt hier schwerer.
+#
+# BL-173: Claude Code wird legitim IDE-GEBUENDELT ausgeliefert (VS Code /
+# VSCodium-Erweiterung, Binaerdatei unter resources/native-binary/claude). Eine
+# Maschine kann eine vollstaendig eingerichtete, ANGEMELDETE Installation
+# haben, ohne dass `claude` in irgendeinem PATH aufloesbar ist — genau diese
+# Lage lag im Feld vor: .credentials.json vorhanden, Abo aktiv, Erweiterung
+# lief, und die Aufloesung ueber den PATH leer.
+#
+# Der Installer traegt hier ein, was er auf DIESER Maschine gefunden hat:
+# den blossen Namen, wenn die CLI im PATH steht, sonst den vollen Pfad zur
+# IDE-gebuendelten Binaerdatei. Ein Wert MIT Pfadtrenner wird direkt genommen,
+# ohne PATH-Suche.
+$TEAM_CLAUDE_BIN = Team-Wert 'TEAM_CLAUDE_BIN' '{{CLAUDE_BIN}}'
 # BL-182: Der Rueckkanal braucht dieselbe Zeile wie die anderen beiden. Sie hat
 # hier lange gefehlt, und kit-melden.ps1 half sich mit `$TEAM_PYTHON` — einer
 # Variablen, die es NUR auf der bash-Bahn gibt. Auf dieser Bahn war sie leer,

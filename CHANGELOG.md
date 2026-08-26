@@ -143,6 +143,69 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Zwei Regressionen aus `BL-172`, vom Selbsttest gefunden.** `redteam.ps1`
+  hatte beim Schreiben sein **BOM** verloren (`BL-113`) — die einzige der
+  achtzehn pwsh-Dateien; nachgemessen war es im Commit davor noch da. Und
+  `test_bl20::test_kaskadenfokus_schlaegt_beide` prüfte weiter die Rangfolge,
+  die `BL-172` **gerade abgeschafft hatte**: Der Fix hat das Verhalten
+  umgedreht und den Test stehen lassen. Er fiel deshalb mit einem `ValueError`
+  statt mit einer Aussage — die Zeile, auf die er zielte, gab es nicht mehr.
+
+  Der Fall ist umgedreht statt gestrichen: Er ist jetzt der **Riegel gegen den
+  Rückbau** und nennt in seinem Text, warum die Zusicherung sich umgekehrt hat.
+  Ein Test, den ein Fix inhaltlich überholt, gehört mitgeführt — sonst bewacht
+  er eine Regel, die nicht mehr gilt.
+
+  **Warum es durchrutschte:** Der Fix war mit den betroffenen Testdateien
+  nachgewiesen, nicht mit der vollen Suite. Genau davor warnt `BL-145`: *„Ein
+  Fix an gemeinsamem Code ist erst nachgewiesen, wenn `kit-test.sh` gelaufen
+  ist."*
+
+- ⚠️ **In einer reinen Abo-Installation war der Pausen-Exit `42` unerreichbar**
+  (`BL-174`, gemeldet von `Feld E`). Der API-Fallback in `team_claude()` rief
+  `team_resolve_auth_mode` und las deren Rückgabewert als Abbruch. Ohne
+  hinterlegten Schlüssel verließ die Funktion damit **sofort** — und die
+  gesamte 429-Sonderbehandlung steht im Quelltext **darunter**.
+
+  **Ein Session-Limit kam so als Exit `1` heraus**: „echter Fehler, Mensch
+  gefragt". Kein Warten bis zum Reset, kein Pausen-Signal, keine der drei
+  dokumentierten Zusicherungen — und das ausgerechnet im **empfohlenen
+  Normalfall**, seit „keine Rolle ist fest `api`" gilt. Unsichtbar bis zu dem
+  Moment, in dem das Kontingent voll ist, also an der teuersten Stelle.
+
+  Die Reihenfolge ist umgedreht, nicht der Fallback erzwungen: Schlägt der
+  Abo-Aufruf fehl, fragt das Team **zuerst**, ob überhaupt ein API-Weg
+  vorhanden ist. Steht keiner, wird der Fallback übersprungen — sichtbar, mit
+  einer Zeile — und **regulär in die 429-Behandlung** gelaufen. Ein fehlender
+  Schlüssel ist in einer Abo-Installation kein Fehler, sondern der erwartete
+  Zustand. Der Umstand steht jetzt auch in der Regeldatei, samt dem, was dabei
+  **nicht** entfällt.
+
+- ⚠️ **Fehlte die Agenten-CLI, meldete das Kit einen Auth-Fehler statt des
+  wahren Grundes — und es gab keinen Weg, ihren Ort zu nennen** (`BL-173`,
+  gemeldet von `Feld E`). Der Ablauf beim allerersten Lauf: `command not found`
+  (eine Zeile, scrollt vorbei) → 0-Byte-Log → Ersatzzettel für einen Aufruf,
+  der nie stattfand → planmäßiger API-Fallback → und der bricht mit der
+  Meldung ab, die stehen bleibt: *„weder `ANTHROPIC_API_KEY` gesetzt noch
+  …/api-key lesbar."* **Diagnostiziert wurde ein Auth-Problem; vorlag ein
+  PATH-Problem.** Wer der Meldung folgt, besorgt einen Schlüssel — und
+  scheitert ein zweites Mal an derselben Stelle.
+
+  **`TEAM_CLAUDE_BIN` in beiden `team.config.*`**, nach dem Muster von
+  `TEAM_PYTHON` (`BL-131`): *Wie das Programm heißt, entscheidet die Maschine.*
+  Beide Installer tragen ein, was sie auf **dieser** Maschine gefunden haben —
+  den blanken Namen, wenn die CLI im `PATH` steht, sonst den vollen Pfad. Und
+  die Suche kennt den **IDE-Ort**: Claude Code wird legitim als
+  VS-Code-/VSCodium-Erweiterung ausgeliefert, mit der Binärdatei unter
+  `resources/native-binary/`. Genau diese Lage lag im Feld vor — angemeldet,
+  lauffähig, und in keinem `PATH` auflösbar.
+
+  **Die Fehlerklasse ist getrennt:** Beide Bahnen prüfen **vor** dem ersten
+  Aufruf, ob die CLI auflösbar ist, und melden den wahren Grund samt Fundort —
+  kein Fallback, kein Ersatzzettel, kein Fehlversuchs-Zähler. Nichts davon
+  passt auf „das Programm gibt es nicht"; das ist dieselbe Erwägung wie bei
+  Exit `42`/`43`.
+
 - ⚠️ **`kosten.py` rechnete `claude-sonnet-5` mit 3.00 statt 2.00 USD/Mio
   Input** (`BL-166`, gemeldet von `Feld E`). Weil `sonnet` der Default aller
   Loop-Rollen ist (`TEAM_MODEL_LOOP`), betraf der falsche Satz die **Mehrheit

@@ -143,6 +143,22 @@ TEAM_FEAT_PRAEFIX="${TEAM_FEAT_PRAEFIX:-feat}"
 # Microsoft Store — er startet den Store und meldet "Python was not found".
 # Der Installer trägt hier ein, was er auf DIESER Maschine gefunden hat.
 TEAM_PYTHON="${TEAM_PYTHON:-{{PYTHON}}}"
+
+# Die Agenten-CLI. Wie sie HEISST und wo sie liegt, entscheidet die Maschine —
+# dieselbe Erwaegung wie bei TEAM_PYTHON (BL-131), und sie wiegt hier schwerer.
+#
+# BL-173: Claude Code wird legitim IDE-GEBUENDELT ausgeliefert (VS Code /
+# VSCodium-Erweiterung, Binaerdatei unter resources/native-binary/claude). Eine
+# Maschine kann eine vollstaendig eingerichtete, ANGEMELDETE Installation
+# haben, ohne dass `claude` in irgendeinem PATH aufloesbar ist — genau diese
+# Lage lag im Feld vor: .credentials.json vorhanden, Abo aktiv, Erweiterung
+# lief, und die Aufloesung ueber den PATH leer.
+#
+# Der Installer traegt hier ein, was er auf DIESER Maschine gefunden hat:
+# den blossen Namen, wenn die CLI im PATH steht, sonst den vollen Pfad zur
+# IDE-gebuendelten Binaerdatei. Ein Wert MIT Pfadtrenner wird direkt genommen,
+# ohne PATH-Suche.
+TEAM_CLAUDE_BIN="${TEAM_CLAUDE_BIN:-{{CLAUDE_BIN}}}"
 TEAM_BEUTEBUCH_TOOL="${TEAM_BEUTEBUCH_TOOL:-$TEAM_PYTHON team/tools/beutebuch.py}"
 TEAM_KOSTEN_TOOL="${TEAM_KOSTEN_TOOL:-$TEAM_PYTHON team/tools/kosten.py}"
 

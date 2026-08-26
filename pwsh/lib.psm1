@@ -309,6 +309,21 @@ function team_warnung_abo_key {
     return $true
 }
 
+function team_api_weg_vorhanden {
+    <#
+      BL-174: Gibt es ueberhaupt einen API-Schluessel? Reine ABFRAGE, ohne
+      etwas zu setzen und ohne zu meckern.
+
+      `team_resolve_auth_mode` kann das nicht beantworten: Sie MELDET im
+      Fehlerfall, und der Aufrufer hat ihren Rueckgabewert bisher als Abbruch
+      gelesen. In einer reinen Abo-Installation ist ein fehlender Schluessel
+      aber kein Fehler, sondern der ERWARTETE Zustand — seit dem Entscheid
+      "keine Rolle ist fest api" ist das der empfohlene Normalfall.
+    #>
+    if ($env:ANTHROPIC_API_KEY) { return $true }
+    return (Test-Path (Join-Path (Team-CfgDir) 'api-key'))
+}
+
 function team_resolve_auth_mode {
     param([string]$RollenDefault = 'api')
     $env:AUTH_MODE = (team_auth_mode_effektiv $RollenDefault)
@@ -350,12 +365,34 @@ function Team-ClaudeBefehl {
 
       Faellt die Aufloesung aus, SIEHT DAS ERGEBNIS AUS WIE EIN AUTH-FEHLER und
       ist keiner — deshalb hier eine eigene, benannte Meldung.
+
+      BL-173: WIE die CLI heisst, entscheidet die MASCHINE — dieselbe Lehre wie
+      TEAM_PYTHON (BL-131), und sie wiegt hier schwerer: Claude Code wird
+      legitim IDE-GEBUENDELT ausgeliefert (VS Code / VSCodium, Binary unter
+      resources/native-binary/claude). Eine Maschine kann eine vollstaendig
+      eingerichtete, angemeldete Installation haben, ohne dass `claude` in
+      irgendeinem PATH aufloesbar ist. Ein voller Pfad in TEAM_CLAUDE_BIN wird
+      deshalb DIREKT genommen, ohne Get-Command.
     #>
-    $cmd = Get-Command claude -ErrorAction SilentlyContinue
+    if ($TEAM_CLAUDE_BIN -and ($TEAM_CLAUDE_BIN -match '[\\/]')) {
+        if (Test-Path -LiteralPath $TEAM_CLAUDE_BIN -PathType Leaf) {
+            return $TEAM_CLAUDE_BIN
+        }
+        Team-Fehler "FEHLER: TEAM_CLAUDE_BIN zeigt auf '$TEAM_CLAUDE_BIN' — die Datei gibt es nicht."
+        Team-Fehler "  Das ist KEIN Auth-Fehler. Pfad in team.config.ps1 pruefen."
+        return $null
+    }
+    $name = if ($TEAM_CLAUDE_BIN) { $TEAM_CLAUDE_BIN } else { 'claude' }
+    $cmd = Get-Command $name -ErrorAction SilentlyContinue
     if (-not $cmd) {
-        Team-Fehler "FEHLER: 'claude' ist ueber PATH nicht auffindbar."
-        Team-Fehler "  Das ist KEIN Auth-Fehler. Unter Windows ist claude ein .cmd-Shim;"
-        Team-Fehler "  nach der Installation braucht es eine NEUE Sitzung, damit PATH greift."
+        Team-Fehler "FEHLER: '$name' ist ueber PATH nicht auffindbar."
+        Team-Fehler "  Das ist KEIN Auth-Fehler — ein API-Schluessel hilft hier nicht."
+        Team-Fehler "  Unter Windows ist claude ein .cmd-Shim; nach der Installation"
+        Team-Fehler "  braucht es eine NEUE Sitzung, damit PATH greift."
+        Team-Fehler "  Ist Claude Code als IDE-Erweiterung installiert, liegt die"
+        Team-Fehler "  Binaerdatei unter <erweiterung>/resources/native-binary/ und nicht"
+        Team-Fehler "  im PATH — dann den vollen Pfad als TEAM_CLAUDE_BIN in"
+        Team-Fehler "  team.config.ps1 eintragen."
         return $null
     }
     return $cmd.Source
@@ -1462,7 +1499,22 @@ function team_claude {
     # Bei JEDEM Abo-Fehler — Timeout, normaler Fehler ODER 429 — SOFORT den
     # API-Fallback versuchen: Der Key hat ein eigenes, separates Kontingent
     # (bewiesen 2026-07-11), hilft also auch bei einem Abo-429.
-    if ($fehler -and $env:AUTH_MODE -eq 'abo') {
+    # BL-174: ZUERST fragen, ob es ueberhaupt einen API-Weg gibt.
+    #
+    # Vorher stand im Fallback `if (-not (team_resolve_auth_mode)) { return 1 }`.
+    # In einer reinen Abo-Installation gibt die Funktion fuer AUTH_MODE=api
+    # $false zurueck — team_claude verliess sich also SOFORT, und die gesamte
+    # 429-Sonderbehandlung darunter wurde nie erreicht. Ein Session-Limit,
+    # genau die Klasse, fuer die BL-20/BL-25 den Exit 42 eingefuehrt haben,
+    # kam als Exit 1 heraus: "ECHTER Fehler, Mensch gefragt". Kein Warten bis
+    # zum Reset, kein Pausen-Signal, keine der drei Zusicherungen.
+    #
+    # Der Airbag war damit ausgerechnet im empfohlenen Normalfall ausgebaut,
+    # und unsichtbar: Der Fehler zeigt sich erst, wenn das Kontingent voll ist.
+    if ($fehler -and $env:AUTH_MODE -eq 'abo' -and -not (team_api_weg_vorhanden)) {
+        Team-Fehler "[$Rolle] Abo-Aufruf fehlgeschlagen — kein API-Schluessel hinterlegt, also kein Fallback. Weiter mit der regulaeren Limit-Behandlung."
+    }
+    elseif ($fehler -and $env:AUTH_MODE -eq 'abo') {
         [Console]::Out.WriteLine("[$Rolle] Abo-Aufruf fehlgeschlagen (Timeout/Limit/429?) — einmaliger API-Fallback. Log: $Out")
         $env:AUTH_MODE = 'api'
         if (-not (team_resolve_auth_mode)) { return 1 }
@@ -1554,6 +1606,7 @@ Export-ModuleMember -Function * -Variable @(
     'TEAM_BEUTEBUCH', 'TEAM_ERMITTLUNGSAKTEN', 'TEAM_ROADMAP', 'TEAM_BACKLOG',
     'TEAM_CHANGELOG', 'TEAM_SMOKE_TEST', 'TEAM_FIX_PRAEFIX', 'TEAM_FEAT_PRAEFIX',
     'TEAM_BEUTEBUCH_TOOL', 'TEAM_KOSTEN_TOOL', 'TEAM_MELDUNG_TOOL',
+    'TEAM_CLAUDE_BIN',
     # BL-182, zweite Haelfte: TEAM_KIT_PFAD stand in team.config.ps1 und kam
     # trotzdem nie an — die Konfiguration wird ins MODUL geladen, und was hier
     # nicht steht, sieht ein Entrypoint nicht. Auf der bash-Bahn gibt es diese

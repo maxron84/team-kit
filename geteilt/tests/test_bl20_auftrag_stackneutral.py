@@ -90,12 +90,30 @@ def test_projekt_uebersteuerung_ist_vorgesehen(rolle):
     assert f"TEAM_REDTEAM_AUFTRAG_{rolle.upper()}" in config
 
 
-def test_kaskadenfokus_schlaegt_beide(monkeypatch):
-    """Rangfolge: TEAM_REDTEAM_FOCUS (dieser Lauf) > Projektauftrag > Default."""
+def test_der_fokus_verdraengt_den_grundauftrag_nicht_mehr():
+    """Diese Zusicherung ist mit `BL-172` **umgekehrt** worden.
+
+    Bis dahin lautete sie „Rangfolge: `TEAM_REDTEAM_FOCUS` > Projektauftrag >
+    Default" — der Fokus **ersetzte** den Grundauftrag. Das kollidierte mit
+    einer normativen Aussage der Regeldatei: Der Fokus wird bei **jeder**
+    Kaskade gesetzt. Wird er pflichtgemäß immer gesetzt, greift der
+    Grundauftrag **nie**, und `TEAM_REDTEAM_AUFTRAG_*` ist strukturell tot.
+
+    Seit `BL-172` steht in `export AUFTRAG=` nur noch der Grundauftrag; der
+    Fokus tritt in `team_redteam_auftrag` **daneben**. Hier steht deshalb der
+    Riegel gegen den Rückbau: Taucht die Fokus-Variable in dieser Zeile wieder
+    auf, ist die alte Verdrängung zurück. Dass der Fokus **ankommt**, prüft
+    `test_bl172_fokus_ergaenzt_den_grundauftrag.py` — und zwar am Prompt.
+    """
     text = _entrypoint("harry.sh").read_text(encoding="utf-8")
     auftrag = [z for z in text.splitlines() if z.startswith("export AUFTRAG=")][0]
-    assert auftrag.index("TEAM_REDTEAM_FOCUS") < auftrag.index(
-        "TEAM_REDTEAM_AUFTRAG_HARRY")
+    assert "TEAM_REDTEAM_AUFTRAG_HARRY" in auftrag, (
+        "BL-20: Der Projektauftrag steht nicht mehr in der AUFTRAG-Zeile.")
+    assert "TEAM_REDTEAM_FOCUS" not in auftrag, (
+        "BL-172: Der Fokus verdraengt den Grundauftrag wieder. Weil die Regel "
+        "einen Fokus bei JEDER Kaskade verlangt, greift TEAM_REDTEAM_AUFTRAG_* "
+        "dann nie — der Wert wirkt allein in dem Lauf, den es laut Regel nicht "
+        "geben soll.")
 
 
 # --- BL-21: die fehlende Dimension ------------------------------------------

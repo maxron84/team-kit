@@ -338,7 +338,7 @@ function Setze-Werte {
     #>
     param($Projekt, $Produktivcode, $TestOrdner, $PlanOrdner, $SmokeTest,
           $TechStack, $Deploy, $DeployAusnahmen, $Domaenen, $CommitEntscheid,
-          $WeitererCode, $TestBestand, $PlanBestand, $Python)
+          $WeitererCode, $TestBestand, $PlanBestand, $Python, $ClaudeBin)
     $planKurz = $PlanOrdner.TrimEnd('/')
     $script:Werte = [ordered]@{
         '{{PROJEKTNAME}}'      = $Projekt
@@ -383,6 +383,11 @@ function Setze-Werte {
         '{{DOMAENEN}}'         = $Domaenen
         '{{COMMIT_ENTSCHEID}}' = $CommitEntscheid
         '{{PYTHON}}'           = $Python
+        # BL-173: dasselbe fuer die Agenten-CLI. Steht sie im PATH, landet
+        # hier der NAME; ist sie nur IDE-gebuendelt vorhanden, der volle Pfad
+        # — sonst startet das Team auf dieser Maschine gar nicht, und die
+        # Meldung nennt einen Auth-Fehler statt des wahren Grundes.
+        '{{CLAUDE_BIN}}'       = $ClaudeBin
         '{{WEITERER_CODE}}'    = $WeitererCode
         '{{TEST_BESTAND}}'     = $TestBestand
         '{{PLAN_BESTAND}}'     = $PlanBestand
@@ -669,6 +674,59 @@ function Python-Fuer-Config {
     Gelb "      team.config.ps1 bekommt '$vorgabe' — Kosten und Beutebuch laufen"
     Gelb "      erst, wenn ein Interpreter unter diesem Namen im PATH steht."
     return $vorgabe
+}
+
+function Finde-ClaudeCli {
+    <#
+      BL-173: Derselbe Handgriff wie Finde-Python, und der Grund wiegt hier
+      schwerer. Claude Code wird legitim IDE-GEBUENDELT ausgeliefert — als
+      VS-Code-/VSCodium-Erweiterung mit der Binaerdatei unter
+      resources/native-binary/. Eine Maschine kann eine vollstaendig
+      eingerichtete, ANGEMELDETE Installation haben, ohne dass `claude` in
+      irgendeinem PATH aufloesbar ist; genau diese Lage lag im Feld vor, und
+      der allererste Lauf starb daran.
+
+      Steht die CLI im PATH, wird der NAME eingetragen, nicht der Fundort —
+      wie bei TEAM_PYTHON (BL-131). Ein Pfad waere dort nur eine Fessel an das
+      heute installierte Verzeichnis; unter Windows ist `claude` ohnehin ein
+      .cmd-Shim, dessen Ort sich beim naechsten npm-Update verschiebt. Erst
+      wenn der PATH nichts hergibt, wird der volle Pfad eingetragen — dann ist
+      er der einzige Weg, unter dem das Team ueberhaupt laeuft.
+    #>
+    if (Get-Command claude -ErrorAction SilentlyContinue) { return 'claude' }
+    $heim = if ($env:HOME) { $env:HOME } else { $env:USERPROFILE }
+    if (-not $heim) { return $null }
+    foreach ($wurzel in '.vscode', '.vscode-server', '.vscode-insiders',
+                        '.vscodium', '.cursor', '.windsurf') {
+        $ext = Join-Path $heim (Join-Path $wurzel 'extensions')
+        if (-not (Test-Path $ext)) { continue }
+        # Neueste Fassung gewinnt: Die Ordnernamen tragen die Version, und
+        # Sort-Object bringt sie in eine stabile Reihenfolge.
+        $treffer = Get-ChildItem -Path $ext -Filter '*claude-code*' -Directory `
+                       -ErrorAction SilentlyContinue |
+                   Sort-Object Name |
+                   ForEach-Object {
+                       Get-ChildItem -Path (Join-Path $_.FullName 'resources\native-binary') `
+                           -Filter 'claude*' -File -ErrorAction SilentlyContinue
+                   } | Select-Object -Last 1
+        # BL-163: Schraegstriche, nicht Rueckstriche — dieser Installer
+        # schreibt team.config.sh mit, und dort liest eine bash den Wert.
+        if ($treffer) { return ($treffer.FullName -replace '\\', '/') }
+    }
+    return $null
+}
+
+function ClaudeBin-Fuer-Config {
+    # Was als {{CLAUDE_BIN}} in beide Konfigurationen landet. Faellt die Suche
+    # aus, wird der Vorgabename gesetzt — aber die Luecke wird GENANNT statt
+    # verdeckt, denn sie kostet den ersten Lauf.
+    $c = Finde-ClaudeCli
+    if ($c) { return $c }
+    Gelb "  [!] Keine Agenten-CLI gefunden (weder im PATH noch IDE-gebuendelt)."
+    Gelb "      Die Konfigurationen bekommen 'claude'. Laeuft das Team damit"
+    Gelb "      nicht an, den vollen Pfad als TEAM_CLAUDE_BIN nachtragen —"
+    Gelb "      das ist KEIN Auth-Problem, auch wenn die Meldung so klingt."
+    return 'claude'
 }
 
 # --- .gitignore ----------------------------------------------------------------
@@ -1162,7 +1220,7 @@ if ($Update) {
 
     Setze-Werte $Projekt $Produktivcode $TestOrdner $PlanOrdner $SmokeTest `
                 'TODO: in CLAUDE.md nachtragen' 'TODO: in CLAUDE.md nachtragen' 'keine' `
-                $Domaenen $commitEntscheid '' $testBestand $planBestand (Python-Fuer-Config)
+                $Domaenen $commitEntscheid '' $testBestand $planBestand (Python-Fuer-Config) (ClaudeBin-Fuer-Config)
 
     Kopiere-Infrastruktur -Immer -OhneConfig
 
@@ -1734,7 +1792,7 @@ $CommitEntscheid = if ($CommitModus.ToLower() -in @('j', 'ja', 'y', 'yes')) {
 
 Setze-Werte $Projekt $Produktivcode $TestOrdner $PlanOrdner $SmokeTest `
             $TechStack 'TODO: in CLAUDE.md nachtragen' 'keine' `
-            $Domaenen $CommitEntscheid $WeitererCode $TestBestand $PlanBestand (Python-Fuer-Config)
+            $Domaenen $CommitEntscheid $WeitererCode $TestBestand $PlanBestand (Python-Fuer-Config) (ClaudeBin-Fuer-Config)
 
 # ------------------------------------------------------------------ Kopieren
 Kopf "A.2 — Dateien installieren"

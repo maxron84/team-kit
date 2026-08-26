@@ -424,6 +424,45 @@ else
     PYTHON="python3"; PYTHON_GEFUNDEN=0
 fi
 
+# finde_claude_cli: derselbe Handgriff fuer die AGENTEN-CLI.
+#
+# BL-173, und der Grund wiegt hier schwerer als bei Python. Claude Code wird
+# legitim IDE-GEBUENDELT ausgeliefert — als VS-Code-/VSCodium-Erweiterung mit
+# der Binaerdatei unter resources/native-binary/. Eine Maschine kann eine
+# vollstaendig eingerichtete, ANGEMELDETE Installation haben, ohne dass
+# `claude` in irgendeinem PATH aufloesbar ist. Genau diese Lage lag im Feld
+# vor, und der Erstlauf starb daran.
+#
+# Steht die CLI im PATH, wird der NAME eingetragen, nicht der Fundort — wie
+# bei TEAM_PYTHON (BL-131). Ein Pfad waere dort nur eine Fessel an das heute
+# installierte Verzeichnis. Erst wenn der PATH nichts hergibt, wird der volle
+# Pfad eingetragen; das ist dann der einzige Weg, unter dem das Team laeuft.
+finde_claude_cli() {
+    if command -v claude >/dev/null 2>&1; then
+        printf 'claude'; return 0
+    fi
+    local heim="${HOME:-}"
+    [ -n "$heim" ] || return 1
+    local wurzel treffer
+    for wurzel in "$heim/.vscode" "$heim/.vscode-server" "$heim/.vscode-insiders" \
+                  "$heim/.vscodium" "$heim/.cursor" "$heim/.windsurf"; do
+        [ -d "$wurzel/extensions" ] || continue
+        # Neueste Fassung gewinnt: Die Ordnernamen tragen die Version, und
+        # `sort` bringt sie in eine stabile Reihenfolge. Ein Treffer muss
+        # AUSFUEHRBAR sein — ein Ordner mit dem richtigen Namen reicht nicht.
+        treffer="$(ls -d "$wurzel"/extensions/*claude-code*/resources/native-binary/claude* \
+                    2>/dev/null | sort | tail -1)"
+        [ -n "$treffer" ] && [ -x "$treffer" ] && { printf '%s' "$treffer"; return 0; }
+    done
+    return 1
+}
+
+if CLAUDE_BIN="$(finde_claude_cli)"; then
+    CLAUDE_GEFUNDEN=1
+else
+    CLAUDE_BIN="claude"; CLAUDE_GEFUNDEN=0
+fi
+
 team_pytest() {
     local py
     for py in "$PYTHON" python3 python py; do
@@ -795,12 +834,12 @@ if [ "$UPDATE" -eq 1 ]; then
                            "${TEAM_WEITERER_CODE:-}" "${TEAM_TEST_ORDNER_BESTAND:-}" \
                            "${TEAM_PLAN_ORDNER_BESTAND:-}" "$PYTHON" \
                            "$BAHN_RUF" "$BAHN_ENDUNG" "$BAHN_KONFIG" \
-                           "$BAHN_LIB" "$BAHN_REDTEAM" "$KIT" <<'PY'
+                           "$BAHN_LIB" "$BAHN_REDTEAM" "$KIT" "$CLAUDE_BIN" <<'PY'
 import sys, pathlib
 (d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
  domaenen, commit, weiterer, test_bestand, plan_bestand,
  python_name, bahn_ruf, bahn_endung, bahn_konfig,
- bahn_lib, bahn_redteam, kit_pfad) = sys.argv[1:22]
+ bahn_lib, bahn_redteam, kit_pfad, claude_bin) = sys.argv[1:23]
 # BL-113: siehe die Begruendung bei fuelle() weiter unten. Die Regel steht
 # hier ein zweites Mal, weil der Update-Pfad eine eigene Fuell-Routine hat —
 # und ein Update, das die Kodierung verliert, ist genau der Fall, in dem ein
@@ -852,6 +891,11 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              # BL-131: was auf DIESER Maschine wirklich antwortet — nicht
              # der Name, von dem die Bahn annimmt, sie laufe unter Linux.
              ("{{PYTHON}}", python_name),
+             # BL-173: dasselbe fuer die Agenten-CLI. Steht sie im PATH,
+             # landet hier der NAME; ist sie nur IDE-gebuendelt da, der
+             # volle Pfad — sonst startet das Team auf dieser Maschine gar
+             # nicht, und die Meldung nennt einen Auth-Fehler.
+             ("{{CLAUDE_BIN}}", claude_bin),
              ("{{WEITERER_CODE}}", weiterer),
              ("{{TEST_BESTAND}}", test_bestand),
              ("{{PLAN_BESTAND}}", plan_bestand),
@@ -1544,12 +1588,12 @@ fuelle() {
                        "$DOMAENEN" "$COMMIT_ENTSCHEID" "$WEITERER_CODE" \
                        "$TEST_ORDNER_BESTAND" "$PLAN_ORDNER_BESTAND" "$PYTHON" \
                        "$BAHN_RUF" "$BAHN_ENDUNG" "$BAHN_KONFIG" \
-                       "$BAHN_LIB" "$BAHN_REDTEAM" "$KIT" <<'PY'
+                       "$BAHN_LIB" "$BAHN_REDTEAM" "$KIT" "$CLAUDE_BIN" <<'PY'
 import sys, pathlib
 (d, projekt, prod, test, plan, smoke, stack, deploy, ausn,
  domaenen, commit, weiterer, test_bestand, plan_bestand,
  python_name, bahn_ruf, bahn_endung, bahn_konfig,
- bahn_lib, bahn_redteam, kit_pfad) = sys.argv[1:22]
+ bahn_lib, bahn_redteam, kit_pfad, claude_bin) = sys.argv[1:23]
 # BL-113: utf-8-sig liest ein vorhandenes BOM weg, statt es als ﻿ mitten
 # in den Text zu nehmen. Ob beim Schreiben wieder eines hinkommt, entscheidet
 # unten allein die Endung — nicht der Zufall, was in der Vorlage stand.
@@ -1586,6 +1630,11 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              # Interpreter je nach Installation python/py, und seit team.config.sh
              # denselben Platzhalter traegt, gilt das fuer beide Bahnen.
              ("{{PYTHON}}", python_name),
+             # BL-173: dasselbe fuer die Agenten-CLI. Steht sie im PATH,
+             # landet hier der NAME; ist sie nur IDE-gebuendelt da, der
+             # volle Pfad — sonst startet das Team auf dieser Maschine gar
+             # nicht, und die Meldung nennt einen Auth-Fehler.
+             ("{{CLAUDE_BIN}}", claude_bin),
              # BL-52/BL-51: leer ist der Normalfall — die Platzhalter stehen nur
              # in team.config.sh, damit eine leere Ersetzung nirgends Prosa
              # zerreisst.
