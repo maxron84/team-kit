@@ -95,14 +95,42 @@ function Rolle-Starten {
          PowerShell den Stdout dagegen vollstaendig.
     #>
     param([string]$Skript, [string[]]$Argumente = @())
-    $ausgabe = & pwsh -NoProfile -File $Skript @Argumente 2>&1
-    $code = $LASTEXITCODE
-    foreach ($z in $ausgabe) {
-        $text = [string]$z
+    # BL-181: STREAMEN statt SAMMELN — und das ist keine Feinheit.
+    #
+    # Die Fassung davor lautete `$ausgabe = & pwsh … 2>&1` mit einer
+    # foreach-Schleife danach. Die Zuweisung sammelt den KOMPLETTEN
+    # Kindprozess ein, bevor die erste Zeile herauskommt; Konsole UND Lauf-Log
+    # hingen in derselben Schleife und blieben deshalb beide stumm.
+    #
+    # Gemessen im Feld (`Feld B`, 66-Minuten-Lauf, Takt 15 s gegen die Spuren
+    # auf der Platte): Das Lauf-Log stand 26 Minuten lang bei 53 Bytes — der
+    # einen Zeile, die der Orchestrator VOR dem ersten Kindprozess geschrieben
+    # hat — waehrend .ralph-state von 10 auf 16 lief, sieben Stufen gebaut,
+    # verifiziert und committet wurden. Dann sprang es auf 1672 Bytes: 31
+    # Zeilen auf einen Schlag. Jeder Sprung lag exakt auf einem Rollenende.
+    #
+    # Die Puffergrenze ist also der KINDPROZESS. Die Bau-Rolle ist ein Aufruf
+    # fuer alle Stufen und belegte 40 der 66 Laufminuten — 61 % des Laufs in
+    # einem einzigen stummen Block. Ein Lauf ohne Lebenszeichen ist von einem
+    # haengenden nicht zu unterscheiden, und die naheliegende Reaktion darauf
+    # ist die teuerste: Der Abbruch wirft bezahlte Stufen weg. Dieselbe Lehre
+    # wie BL-176/BL-179, hier an der Stelle, die am laengsten schweigt.
+    #
+    # Die zweite Haelfte des Schadens war team-status.ps1: Es zeigt "die
+    # letzten 3 Zeilen" des Lauf-Logs — waehrend des Laufs gab es sie nicht.
+    # Das Monitoring-Werkzeug war genau in dem Zeitraum blind, fuer den man es
+    # aufruft, und zeigte dabei keinen Fehler, sondern eine stundenalte Zeile,
+    # die aussah wie die aktuelle.
+    #
+    # `$LASTEXITCODE` bleibt hinter einer Pipeline gueltig — der Rueckgabewert
+    # dieser Funktion haengt daran, und ein spaeterer Rueckbau wuerde genau
+    # daran scheitern. Deshalb steht es unter Test.
+    & pwsh -NoProfile -File $Skript @Argumente 2>&1 | ForEach-Object {
+        $text = [string]$_
         [Console]::Out.WriteLine($text)
         Add-Content -LiteralPath $laufLog -Value $text -Encoding utf8
     }
-    return $code
+    return $LASTEXITCODE
 }
 
 # --- Zwei bewusst getrennte Kennzahlen (BL-18) --------------------------------

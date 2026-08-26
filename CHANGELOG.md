@@ -50,6 +50,50 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   `pwsh`. **Gegenprobe:** jede der drei Hälften einzeln zurückgedreht → 6, 8
   und 8 der 10 Fälle fallen; wieder eingesetzt → 10 grün.
 
+- ⚠️ **Die pwsh-Bahn sammelte die Ausgabe jeder Rolle ein, statt sie zu
+  streamen — Konsole und Lauf-Log blieben während des Laufs stumm** (`BL-181`,
+  gemeldet von `Feld B` mit vollständiger Messreihe). In `Rolle-Starten` stand
+  `$ausgabe = & pwsh … 2>&1` mit einer `foreach`-Schleife danach. Die
+  Zuweisung sammelt den **kompletten** Kindprozess ein, bevor die erste Zeile
+  herauskommt; weil Konsole und `Add-Content` in derselben Schleife hingen,
+  schwiegen beide Hälften gemeinsam. Auf der bash-Bahn erledigt das eine
+  einzige Zeile ganz oben — `exec > >(tee -a "$LAUF_LOG") 2>&1` —, und jeder
+  Kindprozess erbt den Strom.
+
+  **Gemessen, nicht vermutet** (66-Minuten-Lauf, Takt 15 s gegen die Spuren
+  auf der Platte):
+
+  ```
+  20:18:35  logbytes=53     state=10
+  20:44:46  logbytes=53     state=16   ← SIEBEN Stufen gebaut, Log unverändert
+  20:53:19  logbytes=1672   state=17   ← Bau-Rolle endet: 31 Zeilen auf einen Schlag
+  21:19:19  logbytes=6086              ← Abschlussbericht
+  ```
+
+  Jeder Sprung liegt exakt auf einem Rollenende: **Die Puffergrenze ist der
+  Kindprozess.** Die Bau-Rolle ist ein Aufruf für alle Stufen und belegte 40
+  der 66 Laufminuten — 61 % des Laufs in einem stummen Block. Ein Lauf ohne
+  Lebenszeichen ist von einem hängenden nicht zu unterscheiden, und die
+  naheliegende Reaktion darauf ist die teuerste: Der Abbruch wirft bezahlte
+  Stufen weg. Dieselbe Lehre wie `BL-176`/`BL-179`, hier an der Stelle, die am
+  längsten schweigt.
+
+  **Die zweite Hälfte des Schadens war `team-status`:** Es zeigt „die letzten
+  3 Zeilen" des Lauf-Logs — während des Laufs gab es sie nicht. Das
+  mitgelieferte Monitoring-Werkzeug war genau in dem Zeitraum blind, für den
+  man es aufruft, und zeigte dabei keinen Fehler, sondern eine stundenalte
+  Zeile, die aussah wie die aktuelle.
+
+  **Nachweis:** 5 Fälle in `test_bl181_lauf_log_streamt.py`. Der Test prüft
+  ausdrücklich **nicht**, dass am Ende Zeilen im Log stehen — das taten sie
+  vorher auch, und genau daran ist der Fehler so lange vorbeigelaufen. Er
+  prüft, dass sie **vor** dem frühestmöglichen Ende der Rolle dort stehen.
+  **Gegenprobe, zweifach:** die alte Bauform wörtlich als Sonde (bleibt stumm)
+  und die echte Funktion zurückgedreht → 3 der 5 Fälle fallen.
+
+  **Was offen bleibt:** `team-status --watch` zeichnet den Block periodisch
+  neu, statt anzuhängen — ein eigener Entwurf, der an `BL-183` hängt.
+
 - ⚠️ **`kosten.py sitzung-messen --projekt` fand unter Windows NIE ein
   Transkript — leeres Ergebnis, kein Fehler, Exit 0** (`BL-186`, gemeldet von
   `Feld B`). `transkripte_aus_projekt()` bildete den Ordnernamen mit
@@ -90,9 +134,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Anzeige bleibt der volle Pfad, das Ziel ist jetzt relativ, wie bei den zwei
   älteren Zeilen.
 
-_Sonst nichts Offenes aus dieser Version. Die 22 offenen Backlog-Einträge sind_
-_elf Meldungen aus `Feld E` (`BL-164`…`BL-174`), vier aus `Feld B` (`BL-181`,_
-_`BL-183`…`BL-185`) und sieben eigene Vorhaben am Kit (`BL-117`, `BL-144`,_
+_Sonst nichts Offenes aus dieser Version. Die 21 offenen Backlog-Einträge sind_
+_elf Meldungen aus `Feld E` (`BL-164`…`BL-174`), drei aus `Feld B`_
+_(`BL-183`…`BL-185`) und sieben eigene Vorhaben am Kit (`BL-117`, `BL-144`,_
 _`BL-145`, `BL-178`, `BL-180`, `BL-187`, `BL-188`) — siehe_
 _[plans/backlog.md](plans/backlog.md)._
 
