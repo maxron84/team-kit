@@ -60,6 +60,53 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   `bootstrap/CLAUDE.md.vorlage`, `bootstrap/backlog.md` und
   `plans/meldungen/README.md` — jeweils mit dem Grund daneben.
 
+### Changed
+
+- **Fünf Regeln, die es längst gab — nur nicht dort, wo sie gebraucht werden.**
+  Gemeinsamer Nenner: Jede war im Code, in einem Test, im Archiv oder im
+  Kommentarkopf sauber festgehalten, also ausschließlich an Orten, die der
+  Mensch im Zielprojekt nicht liest.
+
+  - **Die Sitzungs-Invariante hat zwei Hälften, `TEAM.md` nannte keine**
+    (`BL-165`). *Jede interaktive Sitzung bucht genau einmal — zweimal zählt
+    doppelt, keinmal ist unwiederbringlich verloren.* `BL-116` löste die eine
+    Hälfte; die andere war **nirgends** dokumentiert: `sitzung-messen` liest
+    das zuletzt geänderte Transkript, also die *laufende* Sitzung. Eine
+    Sitzung, die nicht bucht, wird deshalb **nie** gemessen — die Kosten sind
+    nicht „später fällig", sie sind weg. **Der Kit-eigene Rat erzeugte die
+    Lücke, die er nicht benannte:** „nach einem gebuchten Closeout eine neue
+    Sitzung für die nächste Kaskade" — wer dem folgt, plant K(N+1) in einer
+    Sitzung, die selbst nichts bucht. Die Invariante steht jetzt im
+    Kosten-Abschnitt, der Messumfang ist offengelegt, und das Briefing nennt
+    den Fall samt Befehl.
+  - **`team-status --watch` stand in keiner Bedienanleitung** (`BL-183`). Der
+    Anlass, wörtlich: *„Ich sehe wieder kein Monitoring, das ist weil ich noch
+    kein Update vom Kit herausgefahren habe, korrekt?"* — die Vermutung war
+    falsch. **Es fehlte nichts, es war nur nicht auffindbar.** Jetzt in der
+    Befehlstabelle, mit dem, was `--watch` **nicht** kann: neu zeichnen statt
+    anhängen.
+  - **`TEAM.md` verwies auf ein Werkzeug, das der Leser nicht hat**
+    (`BL-164`). `team-auth-setup.sh` liegt nur im Kit; wer es nicht findet,
+    greift zu genau dem `export`, vor dem der Absatz zwei Zeilen darüber warnt
+    — der Verweis leitete ins **Gegenteil** seiner Absicht. Jetzt steht der
+    **Handweg zuerst** (drei Zeilen, keine Voraussetzung), das Skript danach
+    mit vollem Fundort. Merksatz: *Ein Dokument, das ein Werkzeug nennt, das
+    der Leser nicht hat, muss den Weg ohne dieses Werkzeug zeigen.*
+  - **Die Gegenprobe für zentrale Werte nannte keinen Zeitpunkt** (`BL-167`)
+    — und prüfte deshalb zuverlässig nichts. In der **einführenden** Stufe ist
+    sie wertlos, solange kein Verbraucher existiert, meldet aber grün. Die
+    Regel nennt jetzt den Zeitpunkt und ein nachprüfbares Kriterium:
+    **weniger oder gleich viele rote Stellen als Textsuch-Fundstellen heißt,
+    dass nichts geprüft wurde.** Gemessen: erst 2 rote Stellen gegen 2
+    grep-Treffer, nachgeholt 11 rote in 7 Dateien, darunter drei, die die
+    Textsuche gar nicht nennt.
+  - **`{{SMOKE_TEST}}` stand auch in Ralphs eisernen Grenzen** (`BL-170`) —
+    **in Backticks**, also in der Auszeichnung, an der eine ausführende
+    Instanz einen Befehl erkennt, und im selben Prompt sagte `SMOKE_ZEILE`
+    daneben das Gegenteil. Neu ist `{{SMOKE_TEST_GRENZE}}`, das den **ganzen
+    Satz** trägt: mit Smoke-Test in Backticks, ohne einen als Prosa. Gefüllt
+    in allen drei Routinen (`install.ps1` und **beide** von `install.sh`).
+
 ### Fixed
 
 - ⚠️ **`kosten.py` rechnete `claude-sonnet-5` mit 3.00 statt 2.00 USD/Mio
@@ -312,10 +359,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Anzeige bleibt der volle Pfad, das Ziel ist jetzt relativ, wie bei den zwei
   älteren Zeilen.
 
-_Sonst nichts Offenes aus dieser Version. Die 14 offenen Backlog-Einträge sind_
-_neun Meldungen aus `Feld E` (`BL-164`, `BL-165`, `BL-167`, `BL-169`…`BL-174`),_
-_zwei aus `Feld B` (`BL-183`, `BL-185`) und drei eigene Vorhaben am Kit_
-_(`BL-117`, `BL-145`, `BL-189`) — siehe_
+_Sonst nichts Offenes aus dieser Version. Die 9 offenen Backlog-Einträge sind_
+_fünf Meldungen aus `Feld E` (`BL-169`, `BL-171`…`BL-174`), eine aus `Feld B`_
+_(`BL-185`) und drei eigene Vorhaben am Kit (`BL-117`, `BL-145`,_
+_`BL-189`) — siehe_
 _[plans/backlog.md](plans/backlog.md)._
 
 ## [2.13.1] — 2026-08-25

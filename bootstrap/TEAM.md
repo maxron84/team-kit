@@ -234,6 +234,34 @@ Kostenlogs. Ohne diesen Schritt bleibt seine Sitzung strukturell unerfasst — i
 Ursprungsprojekt waren das real rund 16 USD pro Session. Der Kostenabschluss
 gehört **nach** den Lauf, niemals in eine Loop-Stufe.
 
+> ### Die Regel für jede interaktive Sitzung
+>
+> **Jede interaktive Sitzung bucht genau einmal — zweimal zählt doppelt,
+> keinmal ist unwiederbringlich verloren** (`Kit-BL-116`, `Kit-BL-165`).
+>
+> Die beiden Hälften zeigen in **entgegengesetzte** Richtungen, und einzeln
+> führt jede in einen Fehler. Wer nur die erste kennt, bucht aus Vorsicht
+> seltener — und verliert Sitzungen.
+>
+> - **Nicht zweimal.** Zwei Closeouts in derselben Sitzung messen **dasselbe**
+>   Transkript ein zweites Mal; der erste Betrag wandert erneut ins Ledger.
+>   Dafür gibt es `--addieren`/`--ersetzen` oben: Der zweite Aufruf bricht ab
+>   und lässt **dich** entscheiden.
+> - **Und nicht keinmal.** `sitzung-messen` liest das **zuletzt geänderte**
+>   Transkript, also die *laufende* Sitzung — nicht das Projekt als Ganzes.
+>   Eine Sitzung, die nicht bucht, wird deshalb **nie** gemessen: Ihr
+>   Transkript ist eine eigene Datei, die keine spätere Messung je anfasst.
+>   Die Kosten sind nicht „später fällig", sie sind **weg**.
+>
+> **Der häufigste Fall, und er entsteht aus einem Rat dieses Kits:** Nach
+> einem gebuchten Closeout beginnst du für die nächste Kaskade eine **neue**
+> Sitzung. Planst du darin K(N+1), bucht diese Sitzung selbst nichts — und
+> beim Closeout von K(N+1) wird nur *dessen* Transkript gemessen. Die gesamte
+> Planungsarbeit fällt aus dem Ledger.
+>
+> **Also:** Eine Planungssitzung ohne Closeout bucht ihre Kosten selbst, mit
+> `--architekt-abschluss <USD> <domaene> "Kaskade N+1 geplant" --kaskade <N+1>`.
+
 **Was `<domaene>` ist:** der Arbeitsstrang, auf den die Kosten gebucht werden —
 bei den meisten Projekten schlicht `produkt`. **Dieses Projekt führt genau eine
 Domäne**, solange du in `{{KONFIG}}` nichts anderes einträgst. Mehrere sind
@@ -295,10 +323,22 @@ Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 | `./vollautomatik.sh` | `.\vollautomatik.cmd` | ganze Kaskade automatisch |
 | `./halbautomatik.sh [rolle]` | `.\halbautomatik.cmd [rolle]` | ein Schritt, Entscheidung bei dir |
 | `./team-status.sh` | `.\team-status.cmd` | Pipeline, Beutebuch, Kaskadenstand |
+| `./team-status.sh --watch` | `.\team-status.cmd --watch` | **dasselbe live**, Refresh alle 5 s · `Strg+C` beendet |
 | `./team-status.sh --budget` | `.\team-status.cmd --budget` | Kontostand, API vs. Abo getrennt |
 | `./team-test.sh` | `.\team-test.cmd` | Regressionstests der **Team-Infrastruktur** |
 | `python3 team/tools/beutebuch.py list` | *(gleich)* | alle Funde mit Status |
 | `{{RUF}}kit-melden{{ENDUNG}} neu --titel "…"` | *(gleich, mit `.cmd`)* | Fund **am T.E.A.M. selbst** melden — siehe unten |
+
+> **Das Monitoring ist schon da.** `--watch` zeichnet denselben Block alle 5 s
+> neu — Pipeline, Beutebuch, Kaskadenstand, laufende Sperre. Es steht hier,
+> weil es zwei Kaskaden lang nur im Kommentarkopf des Skripts stand und ein
+> Stakeholder daraufhin fragte, ob ihm ein Update fehle. **Es fehlte nichts,
+> es war nur nicht auffindbar** (`Kit-BL-183`).
+>
+> Was `--watch` **nicht** kann: eine Zeilenspur mitschreiben. Es zeichnet neu,
+> hängt nicht an — was einmal durchgelaufen ist, ist weg. Wer den Verlauf
+> braucht, liest das Lauf-Log unter `.team-logs/` mit (`tail -f` bzw.
+> `Get-Content -Wait`).
 
 **Welche Spalte für dich gilt:** die linke, wenn du unter Linux oder in einer
 WSL-Distro arbeitest; die rechte, wenn du Windows **ohne** WSL benutzt. Nicht
@@ -525,7 +565,33 @@ tadellos — er wird nur komplett über die API abgerechnet statt übers Abo. Im
 Feld lief so ein **~13,8-USD-Leerlauf-Lauf** vollständig über API, weil ein
 `.bashrc`-Key das Design still aushebelte. Der Key gehört **nie** per `export`
 in `.bashrc` & Co., sondern in `~/.config/claude-team/api-key` (eine Zeile,
-`chmod 600`) — dorthin legt ihn `team-auth-setup.sh`.
+`chmod 600`).
+
+**Wie er dorthin kommt — der Handweg zuerst, weil er immer geht** (drei
+Zeilen, keine Voraussetzung):
+
+```
+install -m 600 -D /dev/null ~/.config/claude-team/api-key
+read -rs -p "API-Key: " k && printf '%s\n' "$k" > ~/.config/claude-team/api-key
+unset k
+```
+
+Auf der pwsh-Bahn liegt die Datei unter `%APPDATA%\claude-team\api-key`;
+`Read-Host -AsSecureString` und `Set-Content` tun dasselbe.
+
+Es gibt dafür auch ein Skript, aber **der Installer legt es nicht ins
+Projekt** — es ist ausdrücklich ein Beispiel und keine Kit-Mechanik. Wer das
+Kit-Repo lokal liegen hat (der Pfad steht in `team.config.*` als
+`TEAM_KIT_PFAD`), findet es unter `<kit>/bash/scripts/team-auth-setup.sh`
+bzw. `<kit>/pwsh/scripts/team-auth-setup.ps1`.
+
+> **Warum das hier so ausführlich steht** (`Kit-BL-164`): Diese Zeile nannte
+> lange nur den Skriptnamen — ein Skript, das es im Projekt nicht gibt und
+> dessen Fundort nirgends stand. Wer den Key hinterlegen will und das Werkzeug
+> nicht findet, greift mit einiger Wahrscheinlichkeit zu genau dem `export`,
+> vor dem der Absatz zwei Zeilen darüber warnt. **Ein Dokument, das ein
+> Werkzeug nennt, das der Leser nicht hat, muss den Weg ohne dieses Werkzeug
+> zeigen.**
 
 Zwei Tücken dabei: Das Team entfernt den Key im Abo-Modus zwar aktiv aus der
 Prozess-Umgebung und warnt einmal pro Lauf auf stderr — aber **bereits offene

@@ -40,6 +40,12 @@ Commit-Text erwähnt. Grund: Eine Kopplung ist per Textsuche **nicht**
 auffindbar, wenn sie arithmetisch ist — im Feld fand `grep` nach Name und
 altem Wert fünf Stellen, das probeweise Verstellen **sieben**.
 
+**Woran ich merke, dass die Probe nichts geprüft hat** (`Kit-BL-167`): Ergibt
+das Verstellen **weniger oder gleich viele** rote Stellen, als die Textsuche
+Fundstellen nennt, hat der Wert noch keinen Verbraucher — das ist **kein**
+bestandenes Ergebnis, sondern der Hinweis, dass die Probe zu früh lief. Ich
+schreibe das dann so in den Fix-Bericht, statt es als grün auszugeben.
+
 **Mein Promise:** `<promise>FRANK_FIX_COMPLETE</promise>` — nur wenn alle drei
 Schritte des Dreisatzes erfüllt sind. Sonst beschreibe ich das Hindernis und
 gebe kein Promise aus.

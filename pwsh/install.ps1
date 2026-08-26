@@ -359,6 +359,23 @@ function Setze-Werte {
         # von der Selbstpruefung woertlich ausgefuehrt (Exit 127). Ausfuehrliche
         # Begruendung in der Fuell-Routine von install.sh.
         '{{SMOKE_TEST}}'       = $(if ($SmokeTest) { $SmokeTest } else { 'TODO: noch keiner — Stufe 1 der ersten Kaskade' })
+        # BL-170: Die VIERTE Einsetzstelle. In Ralphs Briefing steht der Satz
+        # unter den EISERNEN GRENZEN und in Backticks — also in der
+        # Auszeichnung, an der eine ausfuehrende Instanz einen Befehl erkennt.
+        # Ein TODO-Satz dort ist derselbe Fehler wie ein nicht-leerer Default
+        # in team.config.*, nur eine Ebene hoeher: Das Briefing ist eine
+        # statische Datei, die TODO-Weiche der Bibliothek greift dort nicht,
+        # und im Prompt derselben Stufe steht daneben SMOKE_ZEILE mit der
+        # richtigen Aussage ("kein Smoke-Test konfiguriert, Schritt entfaellt").
+        # Zwei einander widersprechende Anweisungen im selben Prompt.
+        #
+        # Deshalb ein eigener Platzhalter fuer den GANZEN Satz: Ohne
+        # Smoke-Test steht dort Prosa ohne Backticks.
+        '{{SMOKE_TEST_GRENZE}}' = $(if ($SmokeTest) {
+            "Der Smoke-Test (``$SmokeTest``) muss gruen sein, bevor die Stufe fertig ist."
+        } else {
+            'Fuer dieses Projekt ist noch KEIN Smoke-Test konfiguriert. Ihn zu bauen ist Aufgabe von Stufe 1 dieser Kaskade; bis dahin entfaellt der Schritt, und ich erfinde keinen Befehl.'
+        })
         '{{SMOKE_TEST_KONFIG}}' = $SmokeTest
         '{{TECH_STACK}}'       = $TechStack
         '{{DEPLOY}}'           = $Deploy

@@ -155,6 +155,16 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    **ungeeicht** und ich buche sie nicht — dann gehört die Preistabelle
    nachgezogen. Exit `2` heißt genau das. Nennt es ein Modell, das es nicht
    kennt, fehlt dessen Anteil in der Summe, und es sagt das.
+   **Eine Sitzung ohne Closeout bucht ihre Kosten selbst** (`Kit-BL-165`).
+   Der Rat am Ende dieses Briefings — nach einem gebuchten Closeout eine
+   **neue** Sitzung für die nächste Kaskade — erzeugt genau diesen Fall: Ich
+   plane K(N+1) in einer Sitzung, die selbst nichts bucht, und beim Closeout
+   von K(N+1) wird nur *dessen* Transkript gemessen. Die Planungsarbeit fällt
+   dann aus dem Ledger, **unwiederbringlich** — `sitzung-messen` liest das
+   zuletzt geänderte Transkript, und das ist beim nächsten Mal ein anderes.
+   Ich buche deshalb am Ende einer reinen Planungssitzung selbst:
+   `--architekt-abschluss <USD> <domaene> "Kaskade N+1 geplant" --kaskade <N+1>`.
+
    **Gemessen wird die letzte Sitzung, nicht die Kaskade** (`Kit-BL-186`):
    Liegen mehrere Transkripte zum Projekt vor, sagt das Werkzeug es und nennt
    `--alle`. Lief meine Planung über mehr als eine Sitzung, nehme ich `--alle`

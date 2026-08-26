@@ -832,6 +832,19 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              # Dieselbe Bauart wie {{WEITERER_CODE}} weiter unten: Ein
              # Platzhalter, der leer werden darf, gehoert in keine Prosa.
              ("{{SMOKE_TEST}}", smoke or "TODO: noch keiner — Stufe 1 der ersten Kaskade"),
+             # BL-170: Die VIERTE Einsetzstelle. In Ralphs Briefing steht der
+             # Satz unter den EISERNEN GRENZEN und in Backticks — also in der
+             # Auszeichnung, an der eine ausfuehrende Instanz einen Befehl
+             # erkennt. Ein TODO-Satz dort ist derselbe Fehler wie ein
+             # nicht-leerer Default in team.config.*, nur eine Ebene hoeher.
+             # Deshalb ein eigener Platzhalter fuer den GANZEN Satz: Ohne
+             # Smoke-Test steht dort Prosa ohne Backticks.
+             ("{{SMOKE_TEST_GRENZE}}",
+              ("Der Smoke-Test (`" + smoke + "`) muss gruen sein, bevor die "
+               "Stufe fertig ist.") if smoke else
+              ("Fuer dieses Projekt ist noch KEIN Smoke-Test konfiguriert. "
+               "Ihn zu bauen ist Aufgabe von Stufe 1 dieser Kaskade; bis "
+               "dahin entfaellt der Schritt, und ich erfinde keinen Befehl.")),
              ("{{SMOKE_TEST_KONFIG}}", smoke),
              ("{{TECH_STACK}}", stack), ("{{DEPLOY}}", deploy),
              ("{{DEPLOY_AUSNAHMEN}}", ausn), ("{{DOMAENEN}}", domaenen),
@@ -1552,6 +1565,19 @@ for a, b in [("{{PROJEKTNAME}}", projekt), ("{{PRODUKTIVCODE}}", prod),
              # team.config.* und muss LEER bleiben, weil die Weichen der
              # Bibliothek an leer/nicht-leer haengen.
              ("{{SMOKE_TEST}}", smoke or "TODO: noch keiner — Stufe 1 der ersten Kaskade"),
+             # BL-170: Die VIERTE Einsetzstelle. In Ralphs Briefing steht der
+             # Satz unter den EISERNEN GRENZEN und in Backticks — also in der
+             # Auszeichnung, an der eine ausfuehrende Instanz einen Befehl
+             # erkennt. Ein TODO-Satz dort ist derselbe Fehler wie ein
+             # nicht-leerer Default in team.config.*, nur eine Ebene hoeher.
+             # Deshalb ein eigener Platzhalter fuer den GANZEN Satz: Ohne
+             # Smoke-Test steht dort Prosa ohne Backticks.
+             ("{{SMOKE_TEST_GRENZE}}",
+              ("Der Smoke-Test (`" + smoke + "`) muss gruen sein, bevor die "
+               "Stufe fertig ist.") if smoke else
+              ("Fuer dieses Projekt ist noch KEIN Smoke-Test konfiguriert. "
+               "Ihn zu bauen ist Aufgabe von Stufe 1 dieser Kaskade; bis "
+               "dahin entfaellt der Schritt, und ich erfinde keinen Befehl.")),
              ("{{SMOKE_TEST_KONFIG}}", smoke),
              ("{{TECH_STACK}}", stack), ("{{DEPLOY}}", deploy),
              ("{{DEPLOY_AUSNAHMEN}}", ausn), ("{{DOMAENEN}}", domaenen),

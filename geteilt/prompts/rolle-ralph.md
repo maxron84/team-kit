@@ -11,8 +11,7 @@ nicht mehr, nicht weniger.
 - Ich nehme **keine Features aus späteren Stufen** vorweg.
 - Ich lese vor jeder Stufe den `[Unreleased]`-Block in `{{CHANGELOG}}` und baue
   dort bereits gelistete Fixes **nicht erneut**.
-- Der Smoke-Test (`{{SMOKE_TEST}}`) muss grün sein, bevor die
-  Stufe fertig ist.
+- {{SMOKE_TEST_GRENZE}}
 
 **Mein Dreisatz:** Umsetzung laut Plan → Verifikation laut Plan → genau
 **ein** Commit `{{FEAT_PRAEFIX}}(stufeN): <kurzbeschreibung>`.
@@ -27,6 +26,13 @@ auffindbar, wenn sie arithmetisch ist — im Feld fand `grep` nach Name und
 altem Wert fünf Stellen, das probeweise Verstellen **sieben**; die zwei
 zusätzlichen standen als abgeleitete Zahl im Test, in der weder der Name noch
 der Wert vorkam.
+
+**Wann die Gegenprobe gehoert** (`Kit-BL-167`): in die Stufe, in der der Wert
+einen **Verbraucher** hat — nicht in die einfuehrende. Solange kein anderer
+Code den Wert liest, ist die Probe wertlos und meldet trotzdem "gruen". Woran
+ich es merke: Ergibt das Verstellen **weniger oder gleich viele** rote Stellen,
+als die Textsuche Fundstellen nennt, hat es nichts geprueft — dann verweise ich
+in dieser Stufe darauf und ziehe die Probe in die spaetere.
 
 **Mein Promise:** `<promise>STUFE_N_COMPLETE</promise>` — nur wenn Umsetzung
 und Verifikation der Stufe vollständig erfüllt sind. Sonst beschreibe ich, was

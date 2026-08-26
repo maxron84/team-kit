@@ -359,6 +359,30 @@ sie verbietet.
 > **fünf** Stellen, das Verstellen **sieben**; die zwei zusätzlichen wären beim
 > nächsten Tweak an unerklärlicher Stelle rot geworden. Die Probe kostet einen
 > Suitenlauf und beweist genau das, was die Umstellung behauptet.
+>
+> **WANN sie gehört dazu — sonst prüft sie zuverlässig nichts**
+> (`Kit-BL-167`). „Ändert eine Stufe einen zentralen Wert" trifft auf die
+> **einführende** Stufe zu; genau dort ist die Probe aber wertlos, solange
+> kein anderer Code den Wert liest. Die Gegenprobe gehört deshalb in die
+> Stufe, in der der Wert einen **Verbraucher** hat. Fallen beide auseinander,
+> wandert sie in die **spätere** Stufe, und die einführende verweist darauf.
+>
+> **Und woran du merkst, dass sie zu früh lief — das ist der maschinelle
+> Teil:** Ergibt die Probe **weniger oder gleich viele** rote Stellen, als die
+> Textsuche Fundstellen nennt, hat sie **nichts** geprüft. Das ist kein
+> bestandenes Ergebnis, sondern der Hinweis, dass der Verbraucher noch fehlt.
+> Im Feld meldete die Probe **2** rote Stellen — deckungsgleich mit dem, was
+> `grep` ohnehin fand —, und der Commit-Text las sich wie eine bestandene
+> Prüfung. Nachgeholt, nachdem der Verbraucher existierte: dieselbe
+> Verstellung macht **11** Tests rot, in **7** Dateien, darunter **drei**, die
+> die Textsuche gar nicht nennt.
+>
+> **Der Fehlermodus ist der, den diese Regel selbst verhindern soll, eine
+> Ebene höher:** eine Verifikation, die zuverlässig grün ist, ohne etwas
+> geprüft zu haben — und die ihre eigene Wirkungslosigkeit als Bestätigung
+> ausgibt. Er trifft ausgerechnet den **sauberen** Stufenschnitt: Wer Logik
+> und Verbraucher trennt, legt die Probe fast zwangsläufig in die falsche
+> Stufe. Je besser geschnitten, desto verlässlicher greift der Fehler.
 
 ---
 
