@@ -106,6 +106,94 @@ erzeugt einen zweiten Lauf neben dem ersten.
 periodisch neu, statt anzuhängen. Wer mitlesen will, bekommt ein flackerndes
 Vollbild statt einer Zeilenspur, und was einmal durchgelaufen ist, ist weg.
 
+## Nachgemessen: Auch das LAUF-LOG bleibt stumm — `team-status` ist dadurch mitblind
+
+Die Erstfassung beschreibt die stumme **Konsole**. Ein zweiter Lauf wurde
+mitgemessen, und der Befund ist schärfer: **Das Lauf-Log wächst ebenfalls nicht**,
+obwohl `Add-Content` sofort schreibt — es steht in derselben `foreach`-Schleife,
+die erst nach dem Ende des Kindprozesses läuft.
+
+Messung im Takt von 15 s gegen die Spuren auf der Platte, während der Lauf lief:
+
+```
+20:19:10  logbytes=53  logzeilen=1  state=10  ralphlogs=0  commits=51
+20:19:27  logbytes=53  logzeilen=1  state=11  ralphlogs=1  commits=52
+```
+
+Zwischen diesen beiden Zeilen hat die Rolle eine komplette Stufe **gebaut,
+verifiziert und committet**: `.ralph-state` springt von 10 auf 11, ein
+`.ralph-logs/*.json` entsteht, die Commit-Zahl steigt um eins. Das Lauf-Log
+steht unverändert bei **53 Bytes** — das ist exakt die eine Zeile, die der
+Orchestrator **vor** dem ersten Kindprozess geschrieben hat.
+
+### Warum das die Auswirkung verdoppelt
+
+`team-status` zeigt als letzten Block „Vollautomatik (letzte 3 Zeilen: …)". Diese
+Zeilen **existieren während des Laufs nicht**. Das mitgelieferte
+Monitoring-Werkzeug ist also genau in dem Zeitraum blind, für den man es
+aufruft — und es zeigt dabei keinen Fehler, sondern eine einzelne, Stunden alte
+Zeile, die aussieht, als sei sie aktuell.
+
+Der Kommentar über der Fundstelle sagt selbst: *„das Lauf-Log hätte dann nur die
+Zeilen des Orchestrators enthalten — und team-status.ps1 zeigt genau dessen
+letzte drei Zeilen an."* Während des Laufs ist es **noch weniger** als das.
+
+**Was in `team-status` trotzdem trägt** — und der Grund, warum der Lauf
+überhaupt als gesund erkennbar war: `.ralph-state`, die Sperrprobe
+(`FileShare::None` auf `.team-loop.lock`) und die Commit-Liste. Diese drei lesen
+den Zustand von der Platte statt aus dem Strom. Wer das Werkzeug als
+Lebenszeichen benutzen will, muss auf sie schauen, nicht auf den Log-Block.
+
+### Die vollständige Messreihe über einen ganzen Lauf — sie bestätigt die Diagnose und beziffert sie
+
+Ein kompletter Lauf (sieben Bau-Stufen, zwei Red-Team-Sweeps, vier
+Fix-Versuche) wurde im Takt von 15 s mitgemessen. Gezeigt sind nur die Zeilen,
+in denen sich etwas ändert:
+
+```
+20:18:35  logbytes=53     state=10   ← Messbeginn (Lauf läuft seit 20:13:16)
+20:44:46  logbytes=53     state=16   ← SIEBEN Stufen gebaut+committet, Log unverändert
+20:53:19  logbytes=1672   state=17   ← Bau-Rolle endet: 31 Zeilen auf EINEN Schlag
+20:59:18  logbytes=2082              ← Red-Team-Rolle 1 endet:  +6 Zeilen
+21:03:49  logbytes=2543              ← Red-Team-Rolle 2 endet
+21:11:14  logbytes=2755              ← Fix-Versuch endet
+21:19:02  logbytes=2967              ← Fix-Versuch endet
+21:19:19  logbytes=6086              ← Abschlussbericht: +43 Zeilen
+```
+
+**Das bestätigt die Diagnose oben und macht sie messbar:** Die Puffergrenze ist
+tatsächlich der **Kindprozess**. Jeder Sprung liegt exakt auf dem Ende einer
+Rolle; dazwischen bewegt sich nichts.
+
+**Die entscheidende Zahl steht in der zweiten Zeile.** Zwischen 20:18 und 20:44
+wurden **sieben Stufen** gebaut, verifiziert und committet — `.ralph-state`
+läuft von 10 auf 16, sieben `.ralph-logs/*.json` entstehen, sieben Commits. Das
+Lauf-Log steht die ganze Zeit bei **53 Bytes**: der einen Zeile, die der
+Orchestrator **vor** dem ersten Kindprozess geschrieben hat.
+
+**Warum der Effekt schlimmer wirkt, als die Tabelle oben vermuten lässt:** Die
+Bau-Rolle ist **ein** Aufruf für **alle** Stufen. Sie belegte hier **40 der 66
+Laufminuten** (20:13:16 → 20:53:19) — 61 % des Laufs in einem einzigen stummen
+Block. Danach folgen die übrigen Phasen in kurzen Schüben. Für den Menschen vor
+der Konsole ist das von „alles kommt erst am Ende" nicht zu unterscheiden, und
+genau so wurde es im Feld auch berichtet. Die Messung zeigt, dass es
+technisch pro Kindprozess bricht — die **gefühlte** Wirkung ist trotzdem die
+eines einzigen Blocks am Schluss, weil der erste Block der mit Abstand längste
+ist.
+
+> **Korrekturhinweis zur Ehrlichkeit dieser Meldung:** Eine frühere Fassung
+> dieses Abschnitts behauptete, auch die Phasen-Zeilen des Orchestrators kämen
+> nicht früher an als der Rest. Das war eine ungeprüft übernommene Beobachtung
+> und ist durch die Messreihe oben **widerlegt** — die Orchestrator-Zeilen
+> erscheinen jeweils zusammen mit dem Block der Rolle, die davor endete. Die
+> Kernaussage der Meldung ändert sich dadurch nicht.
+
+> **Für den Fix bedeutet das:** Der Vorschlag „Streamen statt Sammeln" behebt
+> beide Hälften auf einmal, weil Konsole und `Add-Content` in derselben Schleife
+> hängen. Der vorgeschlagene Regressionstest sollte deshalb **das Log** prüfen
+> und nicht die Konsole — es ist die leichter testbare Hälfte und beweist
+> dieselbe Eigenschaft.
+
 ## Was ich schon versucht habe
 
 Am Kit selbst nichts geändert: Der Lauf war aktiv, und `ralph` committet mit
