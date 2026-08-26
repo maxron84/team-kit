@@ -155,6 +155,10 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    **ungeeicht** und ich buche sie nicht — dann gehört die Preistabelle
    nachgezogen. Exit `2` heißt genau das. Nennt es ein Modell, das es nicht
    kennt, fehlt dessen Anteil in der Summe, und es sagt das.
+   **Gemessen wird die letzte Sitzung, nicht die Kaskade** (`Kit-BL-186`):
+   Liegen mehrere Transkripte zum Projekt vor, sagt das Werkzeug es und nennt
+   `--alle`. Lief meine Planung über mehr als eine Sitzung, nehme ich `--alle`
+   oder benenne die Transkripte einzeln — sonst buche ich zu wenig.
    Ich schätze nur dann, wenn kein Transkript vorliegt. Rechne damit,
    dass der Löwenanteil auf das erneute Vorlegen des Kontexts entfällt, nicht auf
    den erzeugten Text — meine Sitzung ist teurer, als ihr Ergebnis vermuten lässt.

@@ -108,10 +108,10 @@ und ein Gleichstands-Prüfer, der **an seinem eigenen Befund starb**, weil `diff
 mit 1 endet, wenn es etwas findet. Keiner der fallenden Fälle wurde grün
 gedreht.
 
-**Offen sind 23 Einträge** — keine Reste dieser Version, sondern elf Meldungen
-aus `Feld E`, fünf aus `Feld B` und sieben eigene Bauvorhaben:
+**Offen sind 22 Einträge** — keine Reste dieser Version, sondern elf Meldungen
+aus `Feld E`, vier aus `Feld B` und sieben eigene Bauvorhaben:
 [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (116 Einträge).
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (117 Einträge).
 
 ---
 
@@ -335,7 +335,7 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen sechs Quellen
 kommen die Backlog-Einträge `BL-1`…`BL-188`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (116 Einträge), der Rest in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (117 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors

@@ -1130,27 +1130,83 @@ def sitzung_kosten(je_modell):
     return gesamt, zeilen, unbekannt
 
 
+def _slug_locker(name):
+    """Vergleichsform eines Ordnernamens: klein, jede Nicht-Alphanumerik zu "-".
+
+    BL-186: Die Kodierung der CLI ist an den Raendern nicht exakt vorhersagbar.
+    Auf DIESER Maschine liegen nebeneinander `C--Users-…-team-kit` und
+    `c--Users-…-duke-itam-2026` — derselbe Wirt, dasselbe Laufwerk, einmal
+    gross und einmal klein geschrieben. Der Grund ist der Aufrufer: Der
+    Laufwerksbuchstabe kommt aus dem Arbeitsverzeichnis des Prozesses, und
+    das schreibt nicht jeder Starter gleich. Ein Werkzeug, das den Ordnernamen
+    ZEICHENGENAU nachbaut, ist damit vom Zufall abhaengig.
+    """
+    return re.sub(r"[^a-z0-9]+", "-", name.lower())
+
+
+def projekt_ordnername(voll):
+    """Der Ordnername, den die Agenten-CLI aus einem ABSOLUTEN Pfad bildet.
+
+    Eigene Funktion, weil sie sich auf JEDEM Wirt pruefen laesst: Ein Test darf
+    die Windows-Form nicht erst herstellen muessen, um sie zu befragen —
+    genau daran ist der Fund drei Monate lang vorbeigelaufen. Der DOPPELPUNKT
+    des Laufwerks ist der Punkt: Er ist unter Windows Teil jedes absoluten
+    Pfades, blieb aber stehen, und damit zeigte der Name garantiert ins Leere.
+    """
+    return (voll.replace(os.sep, "-").replace("/", "-")
+                .replace(":", "-").replace("_", "-"))
+
+
 def transkripte_aus_projekt(projektpfad):
-    """Das zuletzt geaenderte CLI-Transkript zu einem Projektpfad.
+    """ALLE CLI-Transkripte zu einem Projektpfad, das juengste zuerst.
 
     Die Agenten-CLI legt Transkripte unter ~/.claude/projects/<slug>/<id>.jsonl
     ab, wobei <slug> der Projektpfad mit Bindestrichen statt Trennzeichen ist.
     Die Kodierung ist VERLUSTBEHAFTET: Sowohl "/" als auch "_" werden zu "-",
     zwei verschiedene Projekte koennen also denselben Ordner ergeben. Das ist
     nicht zu reparieren (die Umkehrung ist mehrdeutig) — deshalb gibt diese
-    Funktion den Pfad zurueck, den sie gelesen hat, und der Aufrufer DRUCKT ihn.
-    Wer die Zahl bucht, sieht dann, woher sie stammt.
+    Funktion die Pfade zurueck, die sie gelesen hat, und der Aufrufer DRUCKT
+    sie. Wer die Zahl bucht, sieht dann, woher sie stammt.
+
+    BL-186: Unter Windows fand diese Funktion NIE ein Transkript, und zwar
+    lautlos — leeres Ergebnis, Exit 0, kein Fehler. `voll.replace(os.sep, "-")`
+    ersetzt den Trenner `\\`, laesst aber den DOPPELPUNKT des Laufwerks stehen:
+    Gesucht wurde `C:-Users-…`, der Ordner heisst `C--Users-…`. Das traf den
+    einzigen Befehl, den das Architekten-Briefing fuer die Frage „woher kommt
+    <USD>?" nennt — wer der Meldung „kein Transkript gefunden" glaubt,
+    schliesst daraus, es gebe nichts zu buchen, und die Architektenkosten
+    bleiben strukturell unerfasst.
+
+    Gesucht wird deshalb in zwei Stufen: erst der zeichengenaue Name (schnell,
+    auf POSIX unveraendert), dann ein Vergleich ueber `_slug_locker` gegen die
+    vorhandenen Ordner. Die zweite Stufe ist der Riegel gegen die naechste
+    Abweichung in der Kodierung — sie kostet ein `listdir` und nur dann, wenn
+    die erste nichts gefunden hat.
     """
     wurzel = os.path.join(os.path.expanduser("~"), ".claude", "projects")
     voll = os.path.abspath(os.path.expanduser(projektpfad))
-    ordner = os.path.join(wurzel, voll.replace(os.sep, "-").replace("_", "-"))
+    name = projekt_ordnername(voll)
+    ordner = os.path.join(wurzel, name)
     if not os.path.isdir(ordner):
+        ordner = None
+        if os.path.isdir(wurzel):
+            gesucht = _slug_locker(name)
+            for d in sorted(os.listdir(wurzel)):
+                if (os.path.isdir(os.path.join(wurzel, d))
+                        and _slug_locker(d) == gesucht):
+                    ordner = os.path.join(wurzel, d)
+                    break
+    if not ordner:
         return []
     dateien = [os.path.join(ordner, d) for d in os.listdir(ordner)
                if d.endswith(".jsonl")]
-    if not dateien:
-        return []
-    return [max(dateien, key=os.path.getmtime)]
+    # BL-186, zweiter Teil: Frueher stand hier `max(…, key=getmtime)` — EIN
+    # Transkript, waehrend Docstring und Nutzungszeile im Plural sprachen.
+    # Erstreckt sich eine Kaskade ueber mehrere Sitzungen (der Normalfall,
+    # sobald Planung und Closeout getrennt laufen), mass der Aufruf
+    # stillschweigend nur die letzte. Die Auswahl trifft jetzt der AUFRUFER,
+    # und er sagt, was er weggelassen hat.
+    return sorted(dateien, key=os.path.getmtime, reverse=True)
 
 
 def preise_nachrechnen(logs):
@@ -1917,6 +1973,7 @@ def _main(argv):
         # hierher kein Werkzeug des Kits gehen konnte.
         pfade = []
         projekt = None
+        alle = False
         i = 0
         while i < len(rest):
             if rest[i] == "--projekt":
@@ -1925,6 +1982,9 @@ def _main(argv):
                     return 1
                 projekt = rest[i + 1]
                 i += 2
+            elif rest[i] == "--alle":
+                alle = True
+                i += 1
             else:
                 pfade.append(rest[i])
                 i += 1
@@ -1934,9 +1994,24 @@ def _main(argv):
                 print(f"Fehler: kein Transkript zu {projekt} gefunden",
                       file=sys.stderr)
                 return 1
-            pfade = gefunden
+            # BL-186: `sitzung-messen` misst EINE Sitzung — das bleibt der
+            # Default. Neu ist, dass der Rest nicht mehr verschwiegen wird:
+            # Eine Kaskade laeuft regelmaessig ueber mehrere Sitzungen, und
+            # wer das nicht weiss, bucht zu wenig und merkt es nie.
+            if alle:
+                pfade = gefunden
+            else:
+                pfade = gefunden[:1]
+                if len(gefunden) > 1:
+                    print(f"  ! {len(gefunden)} Transkripte zu diesem Projekt, "
+                          f"gemessen wird das ZULETZT geaenderte. Erstreckt "
+                          f"sich die Kaskade ueber mehrere Sitzungen, fehlen "
+                          f"{len(gefunden) - 1} davon — dann --alle nehmen "
+                          f"oder die Transkripte einzeln benennen.",
+                          file=sys.stderr)
         if not pfade:
-            print("Nutzung: kosten.py sitzung-messen (--projekt PFAD | TRANSKRIPT...)",
+            print("Nutzung: kosten.py sitzung-messen "
+                  "(--projekt PFAD [--alle] | TRANSKRIPT...)",
                   file=sys.stderr)
             return 1
 

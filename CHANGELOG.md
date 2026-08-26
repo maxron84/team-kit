@@ -50,6 +50,38 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   `pwsh`. **Gegenprobe:** jede der drei Hälften einzeln zurückgedreht → 6, 8
   und 8 der 10 Fälle fallen; wieder eingesetzt → 10 grün.
 
+- ⚠️ **`kosten.py sitzung-messen --projekt` fand unter Windows NIE ein
+  Transkript — leeres Ergebnis, kein Fehler, Exit 0** (`BL-186`, gemeldet von
+  `Feld B`). `transkripte_aus_projekt()` bildete den Ordnernamen mit
+  `voll.replace(os.sep, "-")`. Das ersetzt den Trenner `\`, lässt aber den
+  **Doppelpunkt des Laufwerks** stehen: Gesucht wurde `C:-Users-…`, der Ordner
+  heißt `C--Users-…`.
+
+  Das trifft den **einzigen** Befehl, den das Architekten-Briefing für die
+  Frage „woher kommt `<USD>`?" nennt. Wer der Meldung „kein Transkript
+  gefunden" glaubt, schließt daraus, es gebe nichts zu buchen — und die
+  Architektenkosten bleiben strukturell unerfasst.
+
+  Beim Nachmessen kam eine zweite Abweichung heraus: Auf der Fundmaschine
+  liegen `C--Users-…-team-kit` und `c--Users-…-duke-itam-2026`
+  **nebeneinander** — derselbe Wirt, dasselbe Laufwerk, einmal groß und einmal
+  klein. Der Laufwerksbuchstabe kommt aus dem Arbeitsverzeichnis des
+  aufrufenden Prozesses. Gesucht wird deshalb in zwei Stufen: erst der exakte
+  Name (auf POSIX unverändert), dann ein Vergleich über eine lockere Form.
+  **Nachgemessen:** vorher 0 Transkripte, jetzt 9 bzw. 37.
+
+  **Der zweite Teil ist plattformunabhängig und eine Entscheidung, keine
+  Reparatur:** Die Funktion lieferte nur das zuletzt geänderte Transkript,
+  während Docstring und Nutzungszeile im Plural sprachen. `sitzung-messen`
+  misst weiterhin **eine** Sitzung — das ist sein Name. Was aufhört, ist die
+  Stille: Liegen mehrere vor, nennt der Aufruf ihre Zahl und den neuen
+  Schalter `--alle`. Briefing, `bootstrap/TEAM.md` und FAQ sagen es ebenfalls.
+
+  **Nachweis:** 11 Fälle in `test_bl186_transkripte_unter_windows.py` — der
+  Ordnername ist dafür in eine eigene Funktion gezogen, die sich auf **jedem**
+  Wirt befragen lässt. Genau daran ist der Fund drei Monate vorbeigelaufen.
+  **Gegenprobe:** beide Hälften einzeln zurückgedreht → je 3 Fälle fallen.
+
 ### Fixed (Doku)
 
 - **Sechs Backlog-Zeilen verlinkten ihre Meldungsdatei ins Leere.** Die am
@@ -58,9 +90,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Anzeige bleibt der volle Pfad, das Ziel ist jetzt relativ, wie bei den zwei
   älteren Zeilen.
 
-_Sonst nichts Offenes aus dieser Version. Die 23 offenen Backlog-Einträge sind_
-_elf Meldungen aus `Feld E` (`BL-164`…`BL-174`), fünf aus `Feld B` (`BL-181`,_
-_`BL-183`…`BL-186`) und sieben eigene Vorhaben am Kit (`BL-117`, `BL-144`,_
+_Sonst nichts Offenes aus dieser Version. Die 22 offenen Backlog-Einträge sind_
+_elf Meldungen aus `Feld E` (`BL-164`…`BL-174`), vier aus `Feld B` (`BL-181`,_
+_`BL-183`…`BL-185`) und sieben eigene Vorhaben am Kit (`BL-117`, `BL-144`,_
 _`BL-145`, `BL-178`, `BL-180`, `BL-187`, `BL-188`) — siehe_
 _[plans/backlog.md](plans/backlog.md)._
 

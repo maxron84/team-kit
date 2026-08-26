@@ -193,7 +193,8 @@ dem Sitzungstranskript, nicht geschätzt:
 
 Das Werkzeug eicht sich an den abgerechneten Läufen deines Projekts. Sagt es
 „Preistabelle stimmt nicht mehr", ist die Zahl **ungeeicht** — nicht buchen,
-sondern die Tabelle nachziehen (Exit `2`). Die Zeile `Architekt (Churn-Proxy)`
+sondern die Tabelle nachziehen (Exit `2`). Gemessen wird die **letzte**
+Sitzung; liegen mehrere vor, sagt es das und nennt `--alle` (`Kit-BL-186`). Die Zeile `Architekt (Churn-Proxy)`
 im Kontostand ist **keine** Messung: Sie rechnet Zeilen-Churn mal Eichfaktor und
 misst damit die Größe des Diffs, nicht die Arbeit. Im Feld lag sie 35 % zu
 niedrig (`Kit-BL-141`).
