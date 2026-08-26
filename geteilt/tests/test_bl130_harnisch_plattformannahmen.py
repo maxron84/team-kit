@@ -209,7 +209,11 @@ AUSGENOMMEN = {"conftest.py", "test_bl122_native_exitcode.py",
 
 
 def test_keine_testdatei_faellt_in_die_vier_annahmen_zurueck():
-    """Gesucht wird im GANZEN Text, die Zeilennummer wird daraus abgeleitet.
+    # Roher Docstring: Er ZITIERT ein Regex (`\s`), und ein solches Zitat ist
+    # seit Python 3.12 eine SyntaxWarning bei jedem Import. Sie stand in jedem
+    # Feld-Log dieser Suite — eine Warnung, die immer da ist, wird nicht mehr
+    # gelesen, und die naechste echte geht darin unter.
+    r"""Gesucht wird im GANZEN Text, die Zeilennummer wird daraus abgeleitet.
 
     Vorher lief die Suche zeilenweise, und das erzeugte einen FEHLALARM: Der
     Vorausschau-Teil von `text=True(?!\s*,\s*encoding=)` kann eine

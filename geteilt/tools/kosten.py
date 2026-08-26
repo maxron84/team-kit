@@ -1159,8 +1159,19 @@ def projekt_ordnername(voll):
     genau daran ist der Fund drei Monate lang vorbeigelaufen. Der DOPPELPUNKT
     des Laufwerks ist der Punkt: Er ist unter Windows Teil jedes absoluten
     Pfades, blieb aber stehen, und damit zeigte der Name garantiert ins Leere.
+
+    BL-191 (Nachtrag zu BL-186): Hier stand `voll.replace(os.sep, "-")` —
+    und `os.sep` ist der Trenner des WIRTS, nicht der des uebergebenen Pfades.
+    Der Fix zu BL-186 entstand auf einer Windows-Maschine, dort ist `os.sep`
+    der Backslash und die elf Faelle waren gruen. Auf jedem POSIX-Wirt blieb
+    der Backslash eines Windows-Pfades stehen, und drei der Faelle fielen —
+    ausgerechnet die drei, die diese Funktion als „auf JEDEM Wirt pruefbar"
+    ausweisen. Genau die Gattung BL-145, die BL-186 schliessen wollte, hat den
+    Fix seiner eigenen Pruefung erwischt. Beide Trenner stehen deshalb
+    woertlich da: Diese Funktion bildet einen FREMDEN Namen nach, sie darf den
+    eigenen Wirt gar nicht befragen.
     """
-    return (voll.replace(os.sep, "-").replace("/", "-")
+    return (voll.replace("\\", "-").replace("/", "-")
                 .replace(":", "-").replace("_", "-"))
 
 

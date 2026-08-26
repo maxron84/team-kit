@@ -150,9 +150,18 @@ def test_ausgelieferte_zeile_ist_fuer_datei_re_sichtbar(name, pfad):
             f"ausgefuellten Zeile keinen Pfad — der Substanz-Anker wuerde "
             f"Franks Fix zurueckrollen.\n  Zeile: {zeile.strip()}"
         )
-        assert any(t.endswith(".py") and t.startswith(TEST_ORDNER) for t in treffer), (
+        # BL-171: Geprueft wird der ORDNER, nicht die SPRACHE. Hier stand
+        # `t.endswith(".py")`, und damit fiel diese Pruefung in jedem Projekt,
+        # dessen Tests nicht in Python geschrieben sind — im Feld (`Feld E`,
+        # Dart/Flutter) an der voellig regelkonformen Zeile
+        # `test/hm<nr>_<stichwort>_test.dart`. Die Endung traegt fuer den
+        # Substanz-Anker nichts bei: `DATEI_RE` verlangt ohnehin eine, und
+        # `team_reproducer_liegt_vor` fragt das Dateisystem, nicht den
+        # Interpreter. Was der Anker braucht, ist ein extrahierbarer Pfad, der
+        # in den Test-Ordner zeigt — und genau das steht hier.
+        assert any(t.startswith(TEST_ORDNER) for t in treffer), (
             f"{name} ({pfad.relative_to(WURZEL)}): extrahiert wurde {treffer}, "
-            f"erwartet war ein .py-Pfad unter {TEST_ORDNER!r}."
+            f"erwartet war ein Pfad unter {TEST_ORDNER!r}."
         )
 
 

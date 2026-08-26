@@ -34,6 +34,15 @@ UND EINE ZWEITE ABWEICHUNG, DIE ERST DAS FELD ZEIGT
     Nachbau ist damit vom Zufall abhaengig; deshalb sucht die Funktion in zwei
     Stufen — erst exakt, dann ueber eine lockere Vergleichsform.
 
+NACHTRAG BL-191 — DIESE DATEI HAT IHREN EIGENEN FUND GEFANGEN
+    Der Fix oben entstand auf einer Windows-Maschine und ersetzte `os.sep` —
+    den Trenner des WIRTS. Dort war alles gruen. Auf jedem POSIX-Wirt blieb
+    der Backslash stehen, und genau die drei Faelle fielen, die diese Funktion
+    als „auf JEDEM Wirt pruefbar" ausweisen. Die drei Faelle unten sind
+    deshalb bewusst symmetrisch: Die zwei Windows-Pfade fallen, wenn nur `/`
+    ersetzt wird, der POSIX-Pfad faellt, wenn nur `\\` ersetzt wird. Ein Wirt
+    genuegt fuer beide Richtungen — das ist der Sinn der Uebung.
+
 DER ZWEITE, PLATTFORMUNABHAENGIGE TEIL
     Die Funktion lieferte per `max(…, key=getmtime)` nur das ZULETZT
     geaenderte Transkript, waehrend Docstring und Nutzungszeile im Plural

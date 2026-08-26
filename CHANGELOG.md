@@ -143,6 +143,66 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- ⚠️ **Drei rote Fälle in jeder Installation auf einem POSIX-Wirt — der Fix zu
+  `BL-186` war nur auf der Maschine grün, auf der er entstand** (`BL-191`, aus
+  `Feld E`). `projekt_ordnername()` bildete den Ordnernamen der Agenten-CLI mit
+  `voll.replace(os.sep, "-")` — und `os.sep` ist der Trenner des **Wirts**,
+  nicht der des übergebenen Pfades. Unter Windows ist das der Backslash, dort
+  waren alle elf Fälle grün; auf jedem POSIX-Wirt blieb der Backslash eines
+  Windows-Pfades stehen.
+
+  Gefallen sind ausgerechnet die drei Fälle, die die Funktion als *„auf JEDEM
+  Wirt prüfbar"* ausweisen — die Bauart, die `BL-186` überhaupt erst
+  eingeführt hat. **Das ist die Gattung `BL-145` an ihrer eigenen
+  Gegenmaßnahme.** Beide Trenner stehen jetzt wörtlich da: Die Funktion bildet
+  einen **fremden** Namen nach und darf den eigenen Wirt gar nicht befragen.
+
+  **Nicht betroffen war die Messung selbst** — ein Projektpfad auf einem
+  Linux-Wirt trägt keinen Backslash. Der Schaden war die rote Suite, und zwar
+  an der Stelle, an der ein Betreiber entscheidet, ob er dem Kit glaubt.
+
+- ⚠️ **Zwei Prüfungen setzten Python voraus und machten damit jedes Projekt
+  rot, das die Vorlage sauber auf seine Sprache gezogen hat** (`BL-171`, aus
+  `Feld E` — Dart/Flutter, seit dem 2026-08-23 gemeldet und dort als Sockel
+  von sieben roten Fällen bekannt). In der **Kit**-Ablage prüfen beide
+  gegen Vorlagen, die dem Kit gehören; in einer **installierten** Ablage
+  prüfen dieselben Zeilen gegen `CLAUDE.md` und `plans/beutebuch.md` des
+  Projekts.
+
+  `test_bl15` verlangte einen Pfad auf `.py` — die regelkonforme Zeile
+  `` `test/hm<nr>_<stichwort>_test.dart` `` fiel durch. Für die Mechanik trägt
+  die Endung nichts bei: `DATEI_RE` verlangt ohnehin eine, und
+  `team_reproducer_liegt_vor` fragt das Dateisystem, nicht den Interpreter.
+  Geprüft wird jetzt der **Ordner**, nicht die **Sprache**.
+
+  `test_bl28` verlangte das Literal `strict=True` in der Regeldatei des
+  Projekts. Getroffen hat es eine Anpassung, die die Regel **verschärft**:
+  Dart kennt keine strikte Fehlschlag-Erwartung, sein Test-Paket bietet allein
+  `skip:` — genau den in beide Richtungen stummen Marker, den `BL-22`
+  verbietet; die Regel dort verzichtet deshalb auf den roten Reproducer und
+  reserviert nur den Dateinamen. Die Prüfung trennt jetzt: Die **Kit-Fassung**
+  liefert weiterhin die konkrete Schreibweise aus (sie ist ein Beispiel, das
+  jemand abtippt), die **Regeldatei eines Projekts** muss den *Begriff*
+  tragen. Was sie weiterhin fängt, ist der Fund von `BL-22`: die ersatzlos
+  verschwundene Zeile.
+
+  **Warum das die teure Richtung ist:** Wer eine Regel sauber übersetzt und
+  dafür rot wird, übersetzt beim nächsten Mal nicht mehr — er schaltet den
+  Test ab. **Warum der Selbsttest es nicht findet:** `kit-test.sh` fährt zwei
+  Konfigurationen, aber beide bleiben Python; variiert werden Ordner, nicht
+  Sprachen. Das ist als `BL-194` festgehalten.
+
+  **Der geteilte Fix mit `BL-169` war nicht nötig:** Das Namensmuster des
+  Reproducers gehört weiterhin in die Konfiguration (dort offen), die
+  Selbsttests brauchen es aber nicht — sie brauchten nie die Endung, sondern
+  den **Ordner**, und der steht seit jeher in `TEAM_TEST_ORDNER`.
+
+- **Die `SyntaxWarning`, die in jedem Feld-Log dieser Suite stand, ist weg.**
+  `test_bl130_harnisch_plattformannahmen.py` **zitiert** in seinem Docstring
+  ein Regex (`\s`) — seit Python 3.12 ist das eine `SyntaxWarning` bei jedem
+  Import. Der Docstring ist jetzt roh. Eine Warnung, die immer da ist, wird
+  nicht mehr gelesen; die nächste echte geht darin unter.
+
 - **Der Prompt-Gleichstand ist jetzt am LAUF bewiesen, nicht nur am Quelltext**
   (`BL-117`). [`test_bl112`](geteilt/tests/test_bl112_prompt_gleichstand.py)
   vergleicht die **Prosa** beider Bahnen, nachdem jede Variableneinsetzung ein

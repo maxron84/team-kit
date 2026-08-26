@@ -23,6 +23,7 @@ Gemessen im Feld: Fix zurueckgedreht ⇒ Suite byte-identisch gruen.
 Geprueft wird hier die MECHANIK (lint/reproducer/Anker) und die AUSGELIEFERTE
 Regel — beide Haelften, denn eine ohne die andere traegt nicht.
 """
+import re
 import shutil
 import subprocess
 import sys
@@ -198,6 +199,11 @@ def _quelle(*kandidaten):
     raise AssertionError(f"keine der Quellen existiert: {kandidaten}")
 
 
+# BL-171: `strict` als BEGRIFF, `strict=True` als pytest-SCHREIBWEISE. Der
+# Unterschied ist im Kit unsichtbar und im Feld entscheidend — siehe unten.
+STRICT_BEGRIFF = re.compile(r"stri[ck]t", re.IGNORECASE)
+
+
 @pytest.mark.parametrize("traeger", [
     ("bootstrap/CLAUDE.md.vorlage", "CLAUDE.md"),
     ("geteilt/prompts/rolle-harry.md", "team/prompts/rolle-harry.md",),
@@ -205,10 +211,42 @@ def _quelle(*kandidaten):
 ], ids=["Regeldatei", "rolle-harry", "rolle-marv"])
 def test_briefings_verlangen_strict(traeger):
     """Ohne `strict` sind BEIDE Ausgaenge stumm — der Fehlschlag zaehlt als
-    erwartet, der Erfolg als xpass, die Suite bleibt gruen."""
+    erwartet, der Erfolg als xpass, die Suite bleibt gruen.
+
+    BL-171: Verlangt wurde hier ueberall das Literal `strict=True` — und das
+    ist die Schreibweise EINES Test-Frameworks. In der Kit-Ablage faellt das
+    nicht auf, weil dort alle drei Traeger dem Kit gehoeren und Python
+    voraussetzen duerfen. In einer INSTALLIERTEN Ablage ist `CLAUDE.md` die
+    Regeldatei des PROJEKTS; sie in pytest-Schreibweise zu zwingen, macht die
+    Suite jedes nicht-python Projekts rot. Im Feld (`Feld E`, Dart/Flutter)
+    traf es eine Anpassung, die die Regel nicht verduennt, sondern
+    VERSCHAERFT: Dart kennt keine strikte Fehlschlag-Erwartung, das Test-Paket
+    bietet allein `skip:` — genau den in beide Richtungen stummen Marker, den
+    BL-22 verbietet. Die Regel dort sagt deshalb, dass das Red Team den roten
+    Reproducer gar nicht erst ablegt, und begruendet es mit derselben
+    Ueberlegung.
+
+    Geprueft wird darum getrennt: Die Kit-Fassung liefert die konkrete
+    Schreibweise aus (sie ist ein BEISPIEL, das jemand abtippt, und muss
+    lauffaehig bleiben). Die Regeldatei eines Projekts muss den BEGRIFF
+    tragen — dass ein Marker, der in beide Richtungen stumm ist, hier nicht
+    zaehlt. Was sie verliert, wenn die Zeile ersatzlos verschwindet, faengt
+    dieselbe Pruefung weiterhin.
+    """
     quelle = _quelle(*traeger)
     text = quelle.read_text(encoding="utf-8")
-    assert "strict=True" in text, f"{quelle.name} nennt keinen strict-Wert"
+    if quelle == REPO_ROOT / traeger[0]:
+        assert "strict=True" in text, (
+            f"{quelle.name} (Kit-Fassung) nennt keinen strict-Wert — die "
+            "ausgelieferte Regel muss die Schreibweise mitliefern, die sie "
+            "verlangt.")
+    else:
+        assert STRICT_BEGRIFF.search(text), (
+            f"{quelle.name} nennt den strict-Begriff nirgends. Die Regel darf "
+            "in die Schreibweise des eigenen Test-Frameworks uebersetzt "
+            "werden (oder begruenden, dass es dort keinen sicheren roten "
+            "Reproducer gibt) — ersatzlos entfallen darf sie nicht: Ohne sie "
+            "sind BEIDE Ausgaenge des Reproducers stumm.")
 
 
 def test_franks_dreisatz_nennt_die_gegenprobe():
