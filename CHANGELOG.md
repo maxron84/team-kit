@@ -107,6 +107,40 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
     Satz** trägt: mit Smoke-Test in Backticks, ohne einen als Prosa. Gefüllt
     in allen drei Routinen (`install.ps1` und **beide** von `install.sh`).
 
+- **Der Red-Team-Fokus verdrängte den Grundauftrag, statt ihn zu ergänzen**
+  (`BL-172`, gemeldet von `Feld E`). `harry`/`marv` setzten den Auftrag über
+  die Kette `${TEAM_REDTEAM_FOCUS:-${TEAM_REDTEAM_AUFTRAG_*:-…}}` — ein
+  gesetzter Fokus **ersetzte** den Grundauftrag. Weil die Regel einen Fokus
+  bei **jeder** Kaskade verlangt, griff der Grundauftrag **nie**:
+  `TEAM_REDTEAM_AUFTRAG_*` war strukturell tot, obwohl der Kommentar in
+  `team.config.*` das Ausfüllen ausdrücklich empfiehlt und mit einem Feldfall
+  belegt.
+
+  Die beiden tragen verschiedene Zeiträume — der Grundauftrag, was sich
+  *nicht* pro Kaskade ändert, der Fokus, was *diese* Kaskade berührt. Beides
+  zugleich zu brauchen ist der Normalfall.
+
+  **Der Fix sitzt an einer der zwei Stellen, nicht an beiden:** Die
+  Scope-Zeile (*wo* geprüft wird) **ersetzt weiterhin** — ein Fokus schneidet
+  den Umfang bewusst zu. Der Auftrag (*worauf* geachtet wird) verkettet. Beide
+  stehen jetzt nebeneinander in `redteam.sh`/`redteam.ps1`, mit der Begründung
+  dazwischen. **Der Schaden war leise:** Der Sweep läuft, findet etwas, und
+  niemand sieht, dass die dauerhafte Kenntnis der Angriffsfläche in diesem
+  Lauf gar nicht im Prompt stand.
+
+- **Ein übersteuertes `TEAM_BUDGET_USD` verwarf die Plan-Empfehlung still**
+  (`BL-185`, gemeldet von `Feld B`). Gemeldet wurde nur, wenn eine Empfehlung
+  den Deckel **anhebt**. Im Feld empfahl der Plan 34, gefahren wurde mit
+  **26** — dem Wert der Vorkaskade, der in derselben interaktiven Shell
+  weiterlebte. **Die falsche Zahl war nirgends zu sehen.** Folgenlos blieb es
+  nur, weil der Lauf unter beiden Deckeln blieb; ein 8 USD zu tiefer Deckel
+  bricht mitten in der Fixphase ab und rollt bezahlte Arbeit zurück
+  (`BL-32`-Muster).
+
+  Der Mensch behält den Vorrang — er erfährt jetzt nur, dass er ihn ausübt,
+  samt dem Verdacht, der im Feld zutraf: *Die Empfehlung altert mit dem Plan,
+  die Umgebungsvariable nicht.* Still bleibt es, wo nichts abweicht.
+
 ### Fixed
 
 - ⚠️ **`kosten.py` rechnete `claude-sonnet-5` mit 3.00 statt 2.00 USD/Mio
@@ -359,10 +393,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Anzeige bleibt der volle Pfad, das Ziel ist jetzt relativ, wie bei den zwei
   älteren Zeilen.
 
-_Sonst nichts Offenes aus dieser Version. Die 9 offenen Backlog-Einträge sind_
-_fünf Meldungen aus `Feld E` (`BL-169`, `BL-171`…`BL-174`), eine aus `Feld B`_
-_(`BL-185`) und drei eigene Vorhaben am Kit (`BL-117`, `BL-145`,_
-_`BL-189`) — siehe_
+_Sonst nichts Offenes aus dieser Version. Die 7 offenen Backlog-Einträge sind_
+_vier Meldungen aus `Feld E` (`BL-169`, `BL-171`, `BL-173`, `BL-174`) und_
+_drei eigene Vorhaben am Kit (`BL-117`, `BL-145`, `BL-189`) — siehe_
 _[plans/backlog.md](plans/backlog.md)._
 
 ## [2.13.1] — 2026-08-25

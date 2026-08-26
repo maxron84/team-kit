@@ -160,6 +160,14 @@ if ($neuerDeckel -ne $budgetUsd) {
     Log "Deckel-Anhebung: Architekten-Empfehlung $empfehlung USD > bisheriger Deckel $budgetUsd USD — automatisch übernommen. Gesamt-Kontostand $(Kontostand-Gesamt) USD -> neuer Lauf-Deckel $neuerDeckel USD."
     $budgetUsd = $neuerDeckel
 }
+# BL-185: Die Gegenrichtung. Die Entscheidung selbst liegt in
+# team_budget_cap_hinweis (team/lib.psm1) — isoliert testbar, aus demselben
+# Grund wie team_resolve_budget_cap daneben.
+else {
+    foreach ($zeile in @(team_budget_cap_hinweis $budgetUsd $budgetUserGesetzt $empfehlung)) {
+        if ($zeile) { Log $zeile }
+    }
+}
 
 # BL-23: Das KULANZBAND der Fixphase. Der Deckel greift NACH dem bereits
 # bezahlten Aufruf und kennt die Restarbeit nicht — er kann eine Fixphase

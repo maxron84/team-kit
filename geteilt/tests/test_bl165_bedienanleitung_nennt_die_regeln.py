@@ -210,12 +210,40 @@ def test_das_kriterium_ist_maschinell_pruefbar():
         "wieder am Vorsatz des Planenden.")
 
 
-@pytest.mark.parametrize("briefing", ["rolle-ralph.md", "rolle-frank.md"])
-def test_beide_bauenden_rollen_kennen_das_kriterium(briefing):
-    """Ralph baut, Frank fixt — beide ändern zentrale Werte."""
+@pytest.mark.parametrize("briefing", ["rolle-architekt.md", "rolle-ralph.md"])
+def test_die_briefings_kennen_das_kriterium(briefing):
+    """Der Architekt schneidet die Stufen — bei ihm entscheidet sich, in
+    welcher die Probe landet. Ralph baut sie ein und merkt es als Erster.
+
+    **Frank steht bewusst NICHT in dieser Liste.** Sein Briefing lag bereits
+    bei 45 Zeilen, dem harten Limit aus `test_stufe90_briefings.py` — und das
+    Limit ist keine Formsache: Ein Briefing liegt in JEDEM Prompt seiner
+    Rolle, jede Zeile wird bei jedem Aufruf bezahlt. Der Eintrag verlangt
+    ausdrücklich das Architekten-Briefing; Franks Absatz nennt die Zahlen
+    ohnehin. Ein Zusatz, der eine andere Zusicherung bricht, ist keiner.
+    """
     t = _lies("geteilt", "prompts", briefing)
     assert "Kit-BL-167" in t, (
         f"{briefing} nennt den Zeitpunkt der Gegenprobe nicht.")
+
+
+@pytest.mark.parametrize("briefing", ["ralph", "harry", "marv", "frank", "axel"])
+def test_die_loop_briefings_bleiben_unter_dem_limit(briefing):
+    """Dieselbe Zusicherung wie in `test_stufe90_briefings.py`, hier als
+    Frühwarnung an der Stelle, an der Regeln in Briefings wandern.
+
+    Sie ist bei genau diesem Abtrag eingesprungen: Eine Ergänzung an Frank
+    hätte das Limit gerissen, und der Fehlschlag wäre erst im vollen
+    Suitenlauf aufgefallen.
+    """
+    p = REPO_ROOT / "geteilt" / "prompts" / f"rolle-{briefing}.md"
+    if not p.is_file():
+        pytest.skip(f"rolle-{briefing}.md liegt in dieser Ablage nicht")
+    n = len(p.read_text(encoding="utf-8").splitlines())
+    assert n <= 45, (
+        f"rolle-{briefing}.md hat {n} Zeilen (Limit 45). Ein Briefing liegt "
+        "in JEDEM Prompt seiner Rolle — jede Zeile wird bei jedem Aufruf "
+        "bezahlt.")
 
 
 # --- BL-170: kein Platzhalter in den eisernen Grenzen ------------------------

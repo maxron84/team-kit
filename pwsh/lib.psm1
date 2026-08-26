@@ -768,6 +768,65 @@ function team_logs_archivieren {
 }
 
 # --- Budget -------------------------------------------------------------------
+function team_redteam_auftrag {
+    <#
+      BL-172: Fokus und Grundauftrag VERKETTEN statt gegeneinander ausspielen.
+
+      Bis hierher gewann ein gesetzter TEAM_REDTEAM_FOCUS und ERSETZTE den
+      Grundauftrag. Das kollidiert mit einer normativen Aussage der
+      Regeldatei: Der Fokus wird bei JEDER Kaskade gesetzt und hat kein
+      Verfallsdatum. Wird er pflichtgemaess immer gesetzt, greift der
+      Grundauftrag NIE — `TEAM_REDTEAM_AUFTRAG_*` war strukturell tot.
+
+      Die beiden tragen verschiedene Zeitraeume: Der Grundauftrag traegt, was
+      sich NICHT pro Kaskade aendert, der Fokus das, was DIESE Kaskade
+      beruehrt. Beides zugleich zu brauchen ist der Normalfall.
+
+      NUR HIER, NICHT BEI DER SCOPE-ZEILE: Der Fokus steuert zwei Dinge, die
+      auseinanderfallen — WO geprueft wird (dort ist Ersetzen richtig, ein
+      Fokus schneidet den Umfang bewusst zu) und WORAUF geachtet wird (hier;
+      dort ist Ersetzen falsch).
+    #>
+    param([string]$Grundauftrag, [string]$Standard)
+    $basis = if ($Grundauftrag) { $Grundauftrag } else { $Standard }
+    $fokus = [Environment]::GetEnvironmentVariable('TEAM_REDTEAM_FOCUS')
+    if ($fokus) {
+        return ($basis + "`n`nSCHWERPUNKT DIESER KASKADE (zusaetzlich, nicht " +
+                "statt des Obigen): " + $fokus)
+    }
+    return $basis
+}
+
+function team_budget_cap_hinweis {
+    <#
+      BL-185: Die GEGENRICHTUNG war stumm. Gemeldet wurde nur, wenn eine
+      Empfehlung den Deckel ANHEBT — wird sie verworfen, stand die falsche
+      Zahl nirgends.
+
+      Im Feld: Der Plan empfahl 34, gefahren wurde mit 26 — dem Wert der
+      VORKASKADE, der in derselben interaktiven Sitzung weiterlebte. Folgenlos
+      blieb das nur, weil der Lauf unter beiden Deckeln blieb; ein 8 USD zu
+      tiefer Deckel bricht mitten in der Fixphase ab und rollt bezahlte Arbeit
+      zurueck (BL-32-Muster).
+
+      Der Mensch behaelt den Vorrang — er erfaehrt jetzt nur, dass er ihn
+      ausuebt. Der Unterschied der beiden Werte ist ihre LEBENSDAUER:
+      BUDGET_EMPFEHLUNG_USD haengt am Plan und altert mit ihm, TEAM_BUDGET_USD
+      ist eine Umgebungsvariable ohne Verfallsdatum.
+
+      Leere Ausgabe = nichts zu melden.
+    #>
+    param([string]$Gefahren, [string]$UserGesetzt, [string]$Empfehlung)
+    if (-not $Empfehlung) { return }
+    if ($Empfehlung -eq $Gefahren) { return }
+    Write-Output "Deckel: Der Plan empfiehlt $Empfehlung USD, gefahren wird mit $Gefahren USD."
+    if ($UserGesetzt -eq '1') {
+        Write-Output "  Grund: TEAM_BUDGET_USD ist gesetzt und hat Vorrang. Stammt der Wert noch aus einer frueheren Kaskade dieser Sitzung, jetzt korrigieren — die Empfehlung altert mit dem Plan, die Variable nicht."
+    } else {
+        Write-Output "  Grund: Eine Empfehlung senkt den Deckel nie, sie hebt ihn nur an."
+    }
+}
+
 function team_resolve_budget_cap {
     # "Nur anheben, nie senken": Hat der Mensch TEAM_BUDGET_USD explizit
     # gesetzt, gewinnt IMMER der aktuelle Wert; sonst gewinnt die Empfehlung,

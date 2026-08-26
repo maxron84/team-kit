@@ -225,6 +225,17 @@ Fehler dieses Projekts, sondern des Kits**. Ich lege dafür eine Meldung an —
 gemeldet". Ohne diesen Schritt trifft derselbe Fehler jede weitere Installation;
 die drei bisher schwersten kamen alle auf diesem Weg.
 
+**Wann die Gegenprobe für einen zentralen Wert gehört — das ist eine Frage des
+Stufenschnitts, also meine** (`Kit-BL-167`). Die Regel verlangt sie von der
+Stufe, die den Wert *ändert*; genau dort ist sie aber wertlos, solange kein
+anderer Code den Wert **liest**. Ich lege sie deshalb in die Stufe mit dem
+**Verbraucher** und lasse die einführende darauf verweisen. Das Kriterium, an
+dem die bauende Rolle es selbst merkt, schreibe ich in die Verifikation:
+*Findet das Verstellen weniger oder gleich viele rote Stellen, als die
+Textsuche Fundstellen nennt, hat es nichts geprüft — die Probe lief zu früh.*
+Der Fehlermodus trifft ausgerechnet den **sauberen** Schnitt: Wer Logik und
+Verbraucher trennt, legt die Probe fast zwangsläufig in die falsche Stufe.
+
 **Ich sende nicht.** `senden` legt einen Pull Request an, wirkt also nach außen
 und lässt sich nicht zurückholen — und ich habe beim Schreiben der Meldung eine
 private Codebasis gelesen. Das ist dieselbe Trennung wie „Finder ≠ Fixer",

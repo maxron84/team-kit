@@ -28,8 +28,11 @@ $PSNativeCommandUseErrorActionPreference = $false
 Set-Location $PSScriptRoot
 Import-Module ./team/lib.psm1 -Force -DisableNameChecking
 
-$auftrag = $env:TEAM_REDTEAM_FOCUS
-if (-not $auftrag) { $auftrag = $TEAM_REDTEAM_AUFTRAG_HARRY }
+# BL-172: Hier steht nur noch der GRUNDAUFTRAG (oder der stackneutrale
+# Default). Den Fokus haengt team/redteam.ps1 an — dort liegt die
+# Bibliothek, und dort steht auch die Scope-Zeile, bei der Ersetzen
+# richtig ist. Die beiden Faelle sollen nebeneinander sichtbar sein.
+$auftrag = $TEAM_REDTEAM_AUFTRAG_HARRY
 if (-not $auftrag) {
     $auftrag = 'Security/Angriffsflaeche — versuche das Programm auszuhebeln. Frage dich: Was gelangt von AUSSEN in diesen Prozess (Eingaben, Dateien, Argumente, Umgebung, Netz, Zwischenablage), und was passiert bei Werten, mit denen niemand gerechnet hat — zu gross, leer, fremdes Encoding, boesartig geformte Pfade? Wo verlaesst sich Code auf eine Zusicherung, die der Aufrufer gar nicht geben muss? Wo werden Rechte, Geheimnisse oder Ressourcen weitergereicht, ohne dass jemand sie prueft? Belege jeden Fund an der Fundstelle im Code.'
 }

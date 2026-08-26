@@ -1,4 +1,4 @@
-﻿# Bahn: pwsh | Gegenstueck: redteam.sh
+# Bahn: pwsh | Gegenstueck: redteam.sh
 <#
   redteam.ps1 — gemeinsame Sweep-Logik fuer Harry & Marv (Read-Only Red Team).
   Gegenstueck zu team/redteam.sh. Wird NICHT direkt aufgerufen, sondern von
@@ -95,11 +95,24 @@ if ($fokus) {
     }
 }
 
+# BL-172: Der Fokus steuert ZWEI Dinge, und sie fallen auseinander.
+#
+#   $scopeLine — WO geprueft wird. Hier ist ERSETZEN richtig: Ein Fokus
+#                schneidet den Umfang bewusst zu, das ist seine Aufgabe.
+#   $Auftrag   — WORAUF geachtet wird. Hier war Ersetzen falsch. Der
+#                Grundauftrag traegt, was sich NICHT pro Kaskade aendert; der
+#                Fokus das, was DIESE Kaskade beruehrt. Weil die Regel einen
+#                Fokus bei JEDER Kaskade verlangt, griff der Grundauftrag
+#                sonst nie — er war strukturell tot.
+#
+# Die beiden stehen absichtlich nebeneinander: Wer die eine Stelle aendert,
+# sieht die andere und ihre Begruendung.
 if ($fokus) {
     $scopeLine = "Prüfe den STABILEN Code im folgenden Fokus-Bereich ($rangeDesc): $fokus"
 } else {
     $scopeLine = "Prüfe den STABILEN Code der App unter $pruefumfang ($rangeDesc)."
 }
+$Auftrag = team_redteam_auftrag $Auftrag ''
 
 # BL-39: Zwei Fragen, die im Feld getragen haetten und in keinem Auftrag standen.
 $kontrollflussZeile = @"

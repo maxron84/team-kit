@@ -100,6 +100,15 @@ NEUER_DECKEL="$(team_resolve_budget_cap "$TEAM_BUDGET_USD" "$TEAM_BUDGET_USD_USE
 if [ "$NEUER_DECKEL" != "$TEAM_BUDGET_USD" ]; then
     log "Deckel-Anhebung: Architekten-Empfehlung $BUDGET_EMPFEHLUNG USD > bisheriger Deckel $TEAM_BUDGET_USD USD — automatisch übernommen. Gesamt-Kontostand $(kontostand_gesamt) USD -> neuer Lauf-Deckel $NEUER_DECKEL USD."
     TEAM_BUDGET_USD="$NEUER_DECKEL"
+# BL-185: Die Gegenrichtung. Die Entscheidung selbst liegt in
+# team_budget_cap_hinweis (team/lib.sh) — isoliert testbar, aus demselben
+# Grund wie team_resolve_budget_cap daneben.
+else
+    while IFS= read -r zeile; do
+        [ -n "$zeile" ] && log "$zeile"
+    done <<EOF
+$(team_budget_cap_hinweis "$TEAM_BUDGET_USD" "$TEAM_BUDGET_USD_USER_GESETZT" "$BUDGET_EMPFEHLUNG")
+EOF
 fi
 
 # BL-23: Das KULANZBAND der Fixphase. Der Deckel greift nach dem bereits

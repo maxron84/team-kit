@@ -1495,6 +1495,42 @@ team_logs_archivieren() {
     return 0
 }
 
+# team_redteam_auftrag <grundauftrag> <stackneutraler-default>
+#
+# BL-172: Fokus und Grundauftrag VERKETTEN statt gegeneinander ausspielen.
+#
+# Bis hierher lautete die Kette `${TEAM_REDTEAM_FOCUS:-${GRUNDAUFTRAG:-...}}`
+# — ein gesetzter Fokus ERSETZTE den Grundauftrag. Das kollidiert mit einer
+# normativen Aussage der Regeldatei: Der Fokus wird bei JEDER Kaskade gesetzt
+# und hat kein Verfallsdatum. Wird er pflichtgemaess immer gesetzt, greift der
+# Grundauftrag NIE — er wirkte allein in dem Lauf, den es laut Regel nicht
+# geben soll. `TEAM_REDTEAM_AUFTRAG_*` war damit strukturell tot.
+#
+# Die beiden tragen verschiedene Zeitraeume, und genau darum brauchen beide
+# Platz: Der Grundauftrag traegt, was sich NICHT pro Kaskade aendert (etwa,
+# dass in diesem Projekt personenbezogene Daten Minderjaehriger in einer
+# lokalen Datenbank liegen), der Fokus das, was DIESE Kaskade beruehrt. Beides
+# zugleich zu brauchen ist der Normalfall, nicht die Ausnahme.
+#
+# NUR HIER, NICHT BEI SCOPE_LINE: `TEAM_REDTEAM_FOCUS` steuert zwei Dinge, die
+# auseinanderfallen — WO geprueft wird (SCOPE_LINE; dort ist Ersetzen richtig,
+# ein Fokus schneidet den Umfang bewusst zu) und WORAUF geachtet wird (hier;
+# dort ist Ersetzen falsch). Der Fix gehoert an die zweite Stelle.
+#
+# Der Schaden war leise: Der Sweep laeuft, findet etwas, und niemand sieht,
+# dass die dauerhafte Kenntnis der Angriffsflaeche in diesem Lauf gar nicht im
+# Prompt stand.
+team_redteam_auftrag() {
+    local grund="${1:-}" standard="${2:-}" fokus="${TEAM_REDTEAM_FOCUS:-}"
+    local basis="${grund:-$standard}"
+    if [ -n "$fokus" ]; then
+        printf '%s\n\nSCHWERPUNKT DIESER KASKADE (zusaetzlich, nicht statt des Obigen): %s\n' \
+               "$basis" "$fokus"
+    else
+        printf '%s\n' "$basis"
+    fi
+}
+
 # team_resolve_budget_cap <aktueller-deckel> <user-hat-gesetzt:0|1> <empfehlung>
 # Reine Rechenlogik der "nur anheben, nie senken"-Regel (Stakeholder-
 # Entscheid 2, Stufe 19) — isoliert testbar ohne echten vollautomatik.sh-Lauf:
@@ -1502,6 +1538,37 @@ team_logs_archivieren() {
 #     aktuelle Wert (auch wenn die Empfehlung höher läge);
 #   - sonst gewinnt die Empfehlung, aber nur wenn sie größer als der aktuelle
 #     (Default-)Deckel ist — eine niedrigere Empfehlung senkt nie.
+# team_budget_cap_hinweis <gefahrener-deckel> <user-hat-gesetzt:0|1> <empfehlung>
+#
+# BL-185: Die GEGENRICHTUNG war stumm. Gemeldet wurde nur, wenn eine Empfehlung
+# den Deckel ANHEBT — wird sie verworfen, stand die falsche Zahl nirgends.
+#
+# Im Feld: Der Plan empfahl 34, gefahren wurde mit 26 — dem Wert der
+# VORKASKADE, der in derselben interaktiven Shell weiterlebte. Folgenlos blieb
+# das nur, weil der Lauf mit 18,20 unter beiden Deckeln blieb; ein 8 USD zu
+# tiefer Deckel bricht mitten in der Fixphase ab und rollt bezahlte Arbeit
+# zurueck (BL-32-Muster).
+#
+# Der Mensch behaelt den Vorrang — er erfaehrt jetzt nur, dass er ihn ausuebt.
+# Der Unterschied zwischen den beiden Werten ist ihre LEBENSDAUER:
+# BUDGET_EMPFEHLUNG_USD haengt am Plan und altert mit ihm, TEAM_BUDGET_USD ist
+# eine Umgebungsvariable ohne Verfallsdatum.
+#
+# Isoliert testbar, aus demselben Grund wie team_resolve_budget_cap: Ein
+# Nachweis, der einen echten vollautomatik-Lauf braucht, wird nicht gefahren.
+# Leere Ausgabe = nichts zu melden.
+team_budget_cap_hinweis() {
+    local gefahren="$1" user_gesetzt="$2" empfehlung="$3"
+    [ -n "$empfehlung" ] || return 0
+    [ "$empfehlung" != "$gefahren" ] || return 0
+    echo "Deckel: Der Plan empfiehlt $empfehlung USD, gefahren wird mit $gefahren USD."
+    if [ "$user_gesetzt" = "1" ]; then
+        echo "  Grund: TEAM_BUDGET_USD ist gesetzt und hat Vorrang. Stammt der Wert noch aus einer frueheren Kaskade dieser Shell, jetzt korrigieren — die Empfehlung altert mit dem Plan, die Variable nicht."
+    else
+        echo "  Grund: Eine Empfehlung senkt den Deckel nie, sie hebt ihn nur an."
+    fi
+}
+
 team_resolve_budget_cap() {
     local aktuell="$1" user_gesetzt="$2" empfehlung="$3"
     if [ "$user_gesetzt" = "1" ]; then

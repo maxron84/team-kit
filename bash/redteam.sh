@@ -77,11 +77,24 @@ elif [ -f "$FOCUS_STATE" ]; then
     fi
 fi
 
+# BL-172: Der Fokus steuert ZWEI Dinge, und sie fallen auseinander.
+#
+#   SCOPE_LINE  — WO geprueft wird. Hier ist ERSETZEN richtig: Ein Fokus
+#                 schneidet den Umfang bewusst zu, das ist seine Aufgabe.
+#   AUFTRAG     — WORAUF geachtet wird. Hier war Ersetzen falsch. Der
+#                 Grundauftrag traegt, was sich NICHT pro Kaskade aendert;
+#                 der Fokus das, was DIESE Kaskade beruehrt. Weil die Regel
+#                 einen Fokus bei JEDER Kaskade verlangt, griff der
+#                 Grundauftrag sonst nie — er war strukturell tot.
+#
+# Die beiden stehen absichtlich nebeneinander: Wer die eine Stelle aendert,
+# sieht die andere und ihre Begruendung.
 if [ -n "${TEAM_REDTEAM_FOCUS:-}" ]; then
     SCOPE_LINE="Prüfe den STABILEN Code im folgenden Fokus-Bereich ($RANGE_DESC): $TEAM_REDTEAM_FOCUS"
 else
     SCOPE_LINE="Prüfe den STABILEN Code der App unter ${PRUEFUMFANG} ($RANGE_DESC)."
 fi
+AUFTRAG="$(team_redteam_auftrag "$AUFTRAG" "")"
 
 # BL-39: Zwei Fragen, die im Feld getragen hätten und in keinem Auftrag standen.
 # (a) Ein Sweep, der "macht die neue Methode dasselbe?" fragt, vergleicht Rumpf

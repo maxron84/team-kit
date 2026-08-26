@@ -20,6 +20,10 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 export ROLLE="harry"
-export AUFTRAG="${TEAM_REDTEAM_FOCUS:-${TEAM_REDTEAM_AUFTRAG_HARRY:-Security/Angriffsflaeche — versuche das Programm auszuhebeln. Frage dich: Was gelangt von AUSSEN in diesen Prozess (Eingaben, Dateien, Argumente, Umgebung, Netz, Zwischenablage), und was passiert bei Werten, mit denen niemand gerechnet hat — zu gross, leer, fremdes Encoding, boesartig geformte Pfade? Wo verlaesst sich Code auf eine Zusicherung, die der Aufrufer gar nicht geben muss? Wo werden Rechte, Geheimnisse oder Ressourcen weitergereicht, ohne dass jemand sie prueft? Belege jeden Fund an der Fundstelle im Code.}}"
+# BL-172: Hier steht nur noch der GRUNDAUFTRAG (oder der stackneutrale
+# Default). Den Fokus haengt team/redteam.sh an — dort liegt die
+# Bibliothek, und dort steht auch die Scope-Zeile, bei der Ersetzen
+# richtig ist. Die beiden Faelle sollen nebeneinander sichtbar sein.
+export AUFTRAG="${TEAM_REDTEAM_AUFTRAG_HARRY:-Security/Angriffsflaeche — versuche das Programm auszuhebeln. Frage dich: Was gelangt von AUSSEN in diesen Prozess (Eingaben, Dateien, Argumente, Umgebung, Netz, Zwischenablage), und was passiert bei Werten, mit denen niemand gerechnet hat — zu gross, leer, fremdes Encoding, boesartig geformte Pfade? Wo verlaesst sich Code auf eine Zusicherung, die der Aufrufer gar nicht geben muss? Wo werden Rechte, Geheimnisse oder Ressourcen weitergereicht, ohne dass jemand sie prueft? Belege jeden Fund an der Fundstelle im Code.}"
 # shellcheck source=redteam.sh
 source ./team/redteam.sh

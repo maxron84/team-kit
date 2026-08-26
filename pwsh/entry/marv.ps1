@@ -27,8 +27,11 @@ $PSNativeCommandUseErrorActionPreference = $false
 Set-Location $PSScriptRoot
 Import-Module ./team/lib.psm1 -Force -DisableNameChecking
 
-$auftrag = $env:TEAM_REDTEAM_FOCUS
-if (-not $auftrag) { $auftrag = $TEAM_REDTEAM_AUFTRAG_MARV }
+# BL-172: Hier steht nur noch der GRUNDAUFTRAG (oder der stackneutrale
+# Default). Den Fokus haengt team/redteam.ps1 an — dort liegt die
+# Bibliothek, und dort steht auch die Scope-Zeile, bei der Ersetzen
+# richtig ist. Die beiden Faelle sollen nebeneinander sichtbar sein.
+$auftrag = $TEAM_REDTEAM_AUFTRAG_MARV
 if (-not $auftrag) {
     $auftrag = 'Chaos/Regression — wirf dem Programm Steine in den Weg: kaputte, leere, riesige oder widerspruechliche Daten; Sonderzeichen und Encoding-Fallen; Zustaende in falscher Reihenfolge; abgebrochene Vorgaenge; alles, was ein ungeduldiger Anwender dreimal hintereinander tut. Pruefe ausserdem, was der GEWOEHNLICHE Pfad kostet: Wird Invariantes bei jedem Aufruf neu berechnet, waechst Arbeit mit einer Groesse, die nicht wachsen muesste? Melde das NUR, wenn der normale Betrieb asymptotisch mehr kostet als noetig — kein Feintuning. Diese Luecke liegt zwischen Korrektheit und Kosten und ist bei gruener Suite unsichtbar.'
 }
