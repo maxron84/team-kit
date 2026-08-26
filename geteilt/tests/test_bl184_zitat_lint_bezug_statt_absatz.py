@@ -171,6 +171,62 @@ def test_eine_zeile_zitiert_sich_nicht_selbst(tmp_path):
         f"Die Zeile meldet ihre eigene Nummer:\n{r.stdout}{r.stderr}")
 
 
+FELDFALL_BEUTEBUCH = """# Beutebuch
+
+### HM-11 — Auf dem Leitformat Handy ist „Senden" nicht antippbar
+- **Angreifer**: Harry
+- **Schweregrad**: gross
+- **Status**: an Frank übergeben
+- **Reproschritte**: 1. Pult auf 360 px öffnen
+- **Erwartung**: Der Knopf liegt im Daumenbereich.
+- **Realität**: Er liegt unter der Tastatur. Auf dem Leitformat ist das
+  kaputt, nicht „noch nicht" optimiert.
+- **Abgrenzung**: Der Zwei-Spalten-Entwurf des Lehrerpults als Ganzes war eine
+  **Kaskaden**-Aufgabe und stand als `BL-28` im Backlog (dort inzwischen
+  **erledigt**, Kaskaden 4 und 5).
+- **Reproducer-Test**: `test/hm11_senden_test.dart`
+"""
+
+FELDFALL_BACKLOG = (
+    "| Nr | Was | Woher | Status |\n"
+    "|---|---|---|---|\n"
+    "| BL-28 | Zwei-Spalten-Entwurf des Lehrerpults | Feld | "
+    "**erledigt (Kaskaden 4 und 5, Stufen 19-27)** |\n")
+
+
+def test_der_feldfall_aus_dem_beutebuch_bleibt_still(tmp_path):
+    """`BL-192` — der gemeldete Fall, buchstabengetreu nachgestellt.
+
+    Ein Beutebuch-Fundblock ist eine Markdown-Liste **ohne** Leerzeile und
+    damit per Definition **ein** Absatz. Absatzweise gelesen lag die
+    auslösende Zukunftswendung — *„nicht ‚noch nicht' optimiert"*, ein
+    wörtliches Regelzitat — im selben Fenster wie eine Nummer weiter unten,
+    mit der sie nichts zu tun hat.
+
+    Der Befund war **unabtragbar**: Den zitierenden Satz nachzuziehen half
+    nicht (die Wendung steht woanders), und die Wendung umzuformulieren hieße,
+    ein Zitat zu fälschen. Im meldenden Projekt stand der Lint deshalb über
+    zwei Closeouts auf Exit 3 mit genau diesem einen Befund.
+
+    **Der Schaden ist nicht die eine Zeile, sondern die Gewöhnung**: Ein Lint,
+    der bei jedem Lauf denselben unbehebbaren Befund meldet, erzieht dazu,
+    seinen Exit-Code zu überlesen — und dann fällt der echte Befund daneben
+    nicht mehr auf. Genau dafür ist das Werkzeug gebaut worden.
+
+    Behoben hat das `BL-184` am selben Tag und aus derselben Erwägung:
+    `SATZ_RE` trennt ausdrücklich an neuen Markdown-Listenpunkten — die
+    Variante, die der Melder als die genauere vorgeschlagen hat. Dieser Fall
+    nagelt den Feldfall fest, damit der Schnitt nicht unbemerkt zurückgedreht
+    wird. **Gemessen, nicht angenommen:** Mit der Absatz-Fassung von 2.13.0
+    meldet derselbe Text Exit 3.
+    """
+    beutebuch = _datei(tmp_path, FELDFALL_BEUTEBUCH, name="beutebuch.md")
+    r = _lauf(tmp_path, beutebuch, backlog=FELDFALL_BACKLOG)
+    assert r.returncode == 0, (
+        "BL-192: Der Feldfall meldet wieder — der Fundblock wird als EIN "
+        f"Fenster gelesen statt satzweise:\n{r.stdout}{r.stderr}")
+
+
 def test_der_backlog_des_kits_bleibt_ruhig():
     """Die Messung, die den Umbau rechtfertigt.
 

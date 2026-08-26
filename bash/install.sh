@@ -8,6 +8,9 @@
 #
 #   <zielpfad>          Das Projekt, in das das Team einziehen soll. Muss ein
 #                       Git-Repository sein. Pflichtangabe (außer bei --hilfe).
+#   --ohne-selbsttest   Ueberspringt den Regressionslauf am Ende. NUR fuer den
+#                       Selbsttest des Kits gedacht (BL-195) — er betaetigt den
+#                       Installer neunmal und pruefte sonst neunmal dasselbe.
 #   --nicht-interaktiv  Keine Rückfragen; Werte aus den TEAM_INIT_*-Umgebungs-
 #                       variablen oder den Defaults. Für Skripte und Tests.
 #   --update            Nur die Team-INFRASTRUKTUR aktualisieren (Entrypoints
@@ -53,6 +56,19 @@ KIT="$(dirname "$BAHN")"
 ZIEL=""
 INTERAKTIV=1
 FORCE=0
+# BL-195: Der installer-eigene Regressionslauf ist bei einer ERSTINSTALLATION
+# die einzige Stelle, an der ein Anwender erfaehrt, dass seine Maschine das Kit
+# nicht traegt. Im SELBSTTEST des Kits ist er eine Wiederholung: Dort wird der
+# Installer neunmal betaetigt, und sechs dieser Laeufe pruefen, was dieselbe
+# Stufe gleich darauf ohnehin explizit prueft. Gemessen 2026-08-26: 19:20 je
+# Durchgang, rund zwei Stunden Wiederholung in EINEM Selbsttest.
+#
+# Ein Nachweis, der einen halben Arbeitstag kostet, wird nicht gefahren — und
+# ein Selbsttest, den niemand faehrt, ist genau der Zustand, den BL-145 gerade
+# behoben hat. Deshalb ein Schalter, den NUR der Selbsttest setzt. Die
+# Voreinstellung bleibt "fahren", und der Uebersprung ist LAUT: Ein stiller
+# Uebersprung liest sich hinterher wie ein bestandener Nachweis.
+OHNE_SELBSTTEST=0
 UPDATE=0
 # Welche Bahnen installiert werden. Default ist BEIDE — siehe die ausfuehrliche
 # Begruendung am Kopierblock: die zwei Konfigurationen sind zwei Generate EINER
@@ -114,6 +130,7 @@ for arg in "$@"; do
     case "$arg" in
         -h|--hilfe|--help)  hilfe; exit 0 ;;
         --nicht-interaktiv) INTERAKTIV=0 ;;
+        --ohne-selbsttest)  OHNE_SELBSTTEST=1 ;;
         --force)            FORCE=1 ;;
         --update)           UPDATE=1 ;;
         --nur-bash)         NUR_BAHN="bash" ;;
@@ -1202,7 +1219,10 @@ PY
     # Sonst gilt z. B. TEAM_DOMAENEN des Projekts auch fuer die Fixtures, und
     # jeder Test mit domaene="team" scheitert an einem Projekt, das diese
     # Domaene gar nicht fuehrt — ein Fehlalarm, der nur im Update auftraete.
-    if PYTEST_AUFRUF="$(team_pytest)"; then
+    if [ "$OHNE_SELBSTTEST" -eq 1 ]; then
+        gelb "  ! Regressionstests AUF VERLANGEN uebersprungen (--ohne-selbsttest)."
+        gelb "    Das ist KEIN gruenes Ergebnis, sondern eine fehlende Probe."
+    elif PYTEST_AUFRUF="$(team_pytest)"; then
         if (cd "$ZIEL" && unset "${!TEAM_@}" && pytest_mitschnitt /tmp/team-update-pytest.log $PYTEST_AUFRUF); then
             gruen "  ✓ Regressionstests grün ($(grep -oE '[0-9]+ passed' /tmp/team-update-pytest.log | head -1))"
         else
@@ -1777,7 +1797,10 @@ else
     rot "  ✗ Python-Werkzeuge fehlerhaft"; FEHLER=1
 fi
 
-if PYTEST_AUFRUF="$(team_pytest)"; then
+if [ "$OHNE_SELBSTTEST" -eq 1 ]; then
+    gelb "  ! Regressionstests AUF VERLANGEN uebersprungen (--ohne-selbsttest)."
+    gelb "    Das ist KEIN gruenes Ergebnis, sondern eine fehlende Probe."
+elif PYTEST_AUFRUF="$(team_pytest)"; then
     if (cd "$ZIEL" && pytest_mitschnitt /tmp/team-init-pytest.log $PYTEST_AUFRUF); then
         gruen "  ✓ Regressionstests grün ($(grep -oE '[0-9]+ passed' /tmp/team-init-pytest.log | head -1))"
     else

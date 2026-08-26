@@ -191,6 +191,13 @@ kopf "1/11 — Wegwerf-Repo anlegen"
 wegwerf_repo "$ZIEL"
 gruen "  ✓ $ZIEL"
 
+# BL-195: Die Installer- und Update-Aufrufe unten laufen mit
+# --ohne-selbsttest — bis auf den ERSTEN in Schritt 2. Dort haengt BL-127:
+# Der Selbsttest des INSTALLERS muss seine Regressionstests wirklich fahren,
+# und diese Zusicherung darf ein Laufzeit-Schalter nicht aushebeln.
+#
+# Alle weiteren wiederholen ihn nur. Bei rund 19 Minuten je Durchgang war das
+# der groesste einzelne Posten in der Laufzeit dieses Skripts.
 kopf "2/11 — Kit installieren (nicht-interaktiv)"
 # Ohne TEAM_INIT_*-Vorgaben: genau die Defaults, die ein Anwender bekäme.
 if ! bash "$KIT/bash/install.sh" "$ZIEL" --nicht-interaktiv > "$ZIEL/.install.log" 2>&1; then
@@ -257,7 +264,7 @@ gruen "  ✓ Produktivcode-Ordner src/ angelegt, mit .gitkeep"
 # damit die Hauptinstallation unberuehrt bleibt.
 ZIEL2="$(mktemp -d -t team-kit-bl121.XXXXXX)"
 wegwerf_repo "$ZIEL2"
-if ! TEAM_INIT_PRODUKTIVCODE="quelle/" bash "$KIT/bash/install.sh" "$ZIEL2" \
+if ! TEAM_INIT_PRODUKTIVCODE="quelle/" bash "$KIT/bash/install.sh" "$ZIEL2" --ohne-selbsttest \
         --nicht-interaktiv > "$ZIEL2/.install.log" 2>&1; then
     rot "  ✗ install.sh mit TEAM_INIT_PRODUKTIVCODE schlug fehl:"
     tail -20 "$ZIEL2/.install.log" >&2
@@ -459,7 +466,7 @@ sed -i '/^\.team-focus-harry$/d; /^\.team-focus-marv$/d' "$ZIEL/.gitignore"
 # gitattributes_abgleich() in der bash-Bahn ueberhaupt nie.
 sed -i '/^\*\.psm1[[:space:]]/d; /^\*\.bat[[:space:]]/d' "$ZIEL/.gitattributes"
 
-if ! bash "$KIT/bash/install.sh" "$ZIEL" --update > "$ZIEL/.update.log" 2>&1; then
+if ! bash "$KIT/bash/install.sh" "$ZIEL" --update --ohne-selbsttest > "$ZIEL/.update.log" 2>&1; then
     rot "  ✗ install.sh --update schlug fehl:"
     tail -20 "$ZIEL/.update.log" >&2
     exit 1
@@ -575,7 +582,7 @@ pruefe ".gitattributes wird NICHT von selbst ergaenzt" \
 # Mit vollstaendigem Fragment muss derselbe Lauf schweigen.
 printf '.team-focus-harry\n.team-focus-marv\n' >> "$ZIEL/.gitignore"
 printf '*.psm1  text eol=lf\n*.bat   text eol=crlf\n' >> "$ZIEL/.gitattributes"
-if ! bash "$KIT/bash/install.sh" "$ZIEL" --update > "$ZIEL/.update2.log" 2>&1; then
+if ! bash "$KIT/bash/install.sh" "$ZIEL" --update --ohne-selbsttest > "$ZIEL/.update2.log" 2>&1; then
     rot "  ✗ zweiter install.sh --update (Gegenprobe) schlug fehl:"
     tail -20 "$ZIEL/.update2.log" >&2
     exit 1
@@ -618,7 +625,7 @@ git -C "$BESTAND_REPO" commit -q -m "Bestand vor dem Einzug"
 
 # tests/ im Pruefumfang ist die Falle aus dem Feld: Der Ordner steht dann
 # zugleich als "tabu" und als Schreibziel im selben Rollen-Prompt.
-if ! TEAM_INIT_WEITERER_CODE="tests/" bash "$KIT/bash/install.sh" "$BESTAND_REPO" --nicht-interaktiv \
+if ! TEAM_INIT_WEITERER_CODE="tests/" bash "$KIT/bash/install.sh" "$BESTAND_REPO" --nicht-interaktiv --ohne-selbsttest \
         > "$BESTAND_REPO/.install.log" 2>&1; then
     rot "  ✗ install.sh schlug im Bestandsprojekt fehl:"
     tail -20 "$BESTAND_REPO/.install.log" >&2
@@ -666,7 +673,7 @@ b_pruefe "und meldet die leere Schreibzone ausdruecklich" \
     "$(grep -c 'nichts fremdes in der Schreibzone' "$ZIEL/.install.log")" "1"
 # BL-52: Der Hinweis auf ungeprueften Wurzel-Code kommt beim Update, weil
 # team.config.sh dort nicht angefasst wird.
-if ! bash "$KIT/bash/install.sh" "$BESTAND_REPO" --update \
+if ! bash "$KIT/bash/install.sh" "$BESTAND_REPO" --update --ohne-selbsttest \
         > "$BESTAND_REPO/.update.log" 2>&1; then
     rot "  ✗ install.sh --update schlug im Bestandsprojekt fehl:"
     tail -20 "$BESTAND_REPO/.update.log" >&2
@@ -756,7 +763,7 @@ A_REPO="$(mktemp -d)/projekt"
 wegwerf_repo "$A_REPO"
 git -C "$A_REPO" commit -q --allow-empty -m "init"
 
-bash "$KIT/bash/install.sh" "$A_REPO" --nicht-interaktiv --nur-bash \
+bash "$KIT/bash/install.sh" "$A_REPO" --nicht-interaktiv --nur-bash --ohne-selbsttest \
      > "$A_REPO/.abwahl.log" 2>&1 || { rot "  ✗ Installation mit --nur-bash schlug fehl"; exit 1; }
 
 a_pruefe() {
@@ -788,7 +795,7 @@ a_pruefe "und die Einbahnigkeit steht in der Zusammenfassung" \
 # --- Der Bestand (BL-147): Das Routine-Update haelt die Bahn
 git -C "$A_REPO" add -A >/dev/null 2>&1
 git -C "$A_REPO" commit -q -m "einbahnig installiert"
-bash "$KIT/bash/install.sh" "$A_REPO" --update > "$A_REPO/.bestand.log" 2>&1 \
+bash "$KIT/bash/install.sh" "$A_REPO" --update --ohne-selbsttest > "$A_REPO/.bestand.log" 2>&1 \
     || { rot "  ✗ --update auf einem einbahnigen Projekt schlug fehl"; \
          sed 's/\x1b\[[0-9;]*m//g' "$A_REPO/.bestand.log" | tail -20; exit 1; }
 a_pruefe "--update laesst die einbahnige Ablage einbahnig (BL-147)" \
@@ -801,7 +808,7 @@ a_pruefe "und die Erkennung steht im Protokoll" \
 # --- Der Rueckweg, jetzt ausdruecklich (BL-119 + BL-147)
 git -C "$A_REPO" add -A >/dev/null 2>&1
 git -C "$A_REPO" commit -q -m "einbahnig geblieben"
-bash "$KIT/bash/install.sh" "$A_REPO" --update --beide-bahnen > "$A_REPO/.rueckweg.log" 2>&1 \
+bash "$KIT/bash/install.sh" "$A_REPO" --update --beide-bahnen --ohne-selbsttest > "$A_REPO/.rueckweg.log" 2>&1 \
     || { rot "  ✗ --update --beide-bahnen auf einem einbahnigen Projekt schlug fehl"; \
          sed 's/\x1b\[[0-9;]*m//g' "$A_REPO/.rueckweg.log" | tail -20; exit 1; }
 # BL-154: gemessen gegen die Quelle statt gegen eine abgeschriebene Zahl —
@@ -838,7 +845,7 @@ wegwerf_repo "$B_REPO"
 git -C "$B_REPO" commit -q --allow-empty -m "init"
 
 TEAM_INIT_PRODUKTIVCODE="quellcode/" TEAM_INIT_PROJEKT="einbahnig-pwsh" \
-    bash "$KIT/bash/install.sh" "$B_REPO" --nicht-interaktiv --nur-pwsh \
+    bash "$KIT/bash/install.sh" "$B_REPO" --nicht-interaktiv --nur-pwsh --ohne-selbsttest \
     > "$B_REPO/.abwahl.log" 2>&1 \
     || { rot "  ✗ Installation mit --nur-pwsh schlug fehl"; \
          sed 's/\x1b\[[0-9;]*m//g' "$B_REPO/.abwahl.log" | tail -10; exit 1; }
@@ -887,7 +894,7 @@ git -C "$B_REPO" commit -q -m "einbahnig pwsh installiert"
 # Bestand zuerst, spiegelbildlich zu oben: Ein Windows-Projekt bekommt von
 # einem Routine-Update keine .sh dazu (BL-147). Die Richtung wiegt hier
 # schwerer — ein Windows-Projekt OHNE bash ist der Normalfall der pwsh-Bahn.
-bash "$KIT/bash/install.sh" "$B_REPO" --update > "$B_REPO/.bestand.log" 2>&1 \
+bash "$KIT/bash/install.sh" "$B_REPO" --update --ohne-selbsttest > "$B_REPO/.bestand.log" 2>&1 \
     || { rot "  ✗ --update auf einem NUR-PWSH-Projekt schlug fehl (BL-126)"; \
          sed 's/\x1b\[[0-9;]*m//g' "$B_REPO/.bestand.log" | tail -20; exit 1; }
 a_pruefe "--update laesst die nur-pwsh-Ablage einbahnig (BL-147)" \
@@ -897,7 +904,7 @@ a_pruefe "und die Erkennung nennt die pwsh-Bahn" \
 
 git -C "$B_REPO" add -A >/dev/null 2>&1
 git -C "$B_REPO" commit -q -m "einbahnig pwsh geblieben"
-bash "$KIT/bash/install.sh" "$B_REPO" --update --beide-bahnen > "$B_REPO/.rueckweg.log" 2>&1 \
+bash "$KIT/bash/install.sh" "$B_REPO" --update --beide-bahnen --ohne-selbsttest > "$B_REPO/.rueckweg.log" 2>&1 \
     || { rot "  ✗ --update --beide-bahnen auf einem NUR-PWSH-Projekt schlug fehl (BL-126)"; \
          sed 's/\x1b\[[0-9;]*m//g' "$B_REPO/.rueckweg.log" | tail -20; exit 1; }
 a_pruefe "--beide-bahnen holt die Bash-Bahn zurueck" \
@@ -1066,7 +1073,7 @@ printf '#!/usr/bin/env bash\n# alte Kopie\nexec bash "$HOME/Source/team-kit/inst
 E_ZIEL="$(mktemp -d)/projekt"
 wegwerf_repo "$E_ZIEL"
 git -C "$E_ZIEL" commit -q --allow-empty -m init
-HOME="$E_HOME" bash "$KIT/bash/install.sh" "$E_ZIEL" --nicht-interaktiv >"$E_LOG" 2>&1 || true
+HOME="$E_HOME" bash "$KIT/bash/install.sh" "$E_ZIEL" --nicht-interaktiv --ohne-selbsttest >"$E_LOG" 2>&1 || true
 e_pruefe "Installer meldet eine veraltete Launcher-Kopie" \
     "$(grep -c 'ist eine KOPIE aus einer' "$E_LOG")" "1"
 
@@ -1074,7 +1081,7 @@ e_pruefe "Installer meldet eine veraltete Launcher-Kopie" \
 #     Launcher darf sie NICHT ausloesen, sonst warnt der Installer immer und
 #     niemand liest die Warnung noch.
 cp "$KIT/bash/scripts/team-init.sh" "$E_HOME/.claude/scripts/team-init.sh"
-HOME="$E_HOME" bash "$KIT/bash/install.sh" "$E_ZIEL" --update >"$E_LOG" 2>&1 || true
+HOME="$E_HOME" bash "$KIT/bash/install.sh" "$E_ZIEL" --update --ohne-selbsttest >"$E_LOG" 2>&1 || true
 e_pruefe "und schweigt beim aktuellen Launcher" \
     "$(grep -c 'ist eine KOPIE aus einer' "$E_LOG")" "0"
 rm -rf "$E_HOME" "$(dirname "$E_ZIEL")"

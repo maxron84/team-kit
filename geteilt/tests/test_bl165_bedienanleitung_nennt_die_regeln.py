@@ -124,6 +124,72 @@ def test_das_briefing_nennt_den_fall_den_sein_eigener_rat_erzeugt():
         "ihre Kosten selbst bucht.")
 
 
+def _bl193_absatz():
+    """Der **eine** Absatz, der die Regel trägt — nicht der ganze Abschnitt.
+
+    Der erste Entwurf dieser Fälle prüfte den ganzen Punkt 2 auf `--addieren`
+    und `Pfad`. Beides steht dort schon aus anderem Grund (`--addieren` für
+    den Nachlauf einer Rolle), und drei von drei Gegenproben blieben grün. Die
+    Zusicherung gilt dem Absatz, also wird der Absatz geschnitten.
+    """
+    t = _lies("geteilt", "prompts", "rolle-architekt.md")
+    anfang = t.index("Kit-BL-193")
+    # Rueckwaerts bis zum Satzanfang der Regel, vorwaerts bis zum naechsten
+    # Absatz von Punkt 2 (er beginnt mit "Der erste Befehl bucht").
+    anfang = t.rindex("**\u201e", 0, anfang)
+    ende = t.index("Der erste Befehl bucht", anfang)
+    return t[anfang:ende]
+
+
+def test_der_closeout_nennt_die_zweite_architekten_sitzung():
+    """`BL-193` — der Rückweg, dort wo jemand nachschlägt.
+
+    `BL-165` hat die **Vorbeugung** gebracht: Eine reine Planungssitzung bucht
+    ihre Kosten selbst. Die Meldung aus dem Feld kam gegen die Fassung davor —
+    und sie zeigt eine zweite Hälfte, die auch mit der Regel offen bleibt.
+
+    **Wer beim Closeout steht, hat die Aushärtung schon hinter sich.** War sie
+    nicht gebucht, hilft ihm die Vorbeugungsregel nicht mehr; er braucht den
+    **Rückweg**, und der muss an Punkt 2 des Closeout-Abschnitts stehen. Dort
+    stand bis dahin „meine eigene Sitzung" — im Closeout-Kontext eindeutig die
+    Closeout-Sitzung. Die Aushärtungs-Sitzung derselben Kaskade wurde an
+    **keiner** Stelle erwähnt.
+
+    Der Abschnitt kannte die verwandte Falle bereits, aber nur in der
+    **anderen** Richtung: „Ein Closeout je Sitzung" warnt vor **zwei**
+    Buchungen aus **einer** Sitzung (`BL-116`). Der umgekehrte Fall — **eine**
+    Kaskade über **mehrere** Sitzungen, von denen nur die letzte gemessen wird
+    — fehlte. Im Feld waren das 10,65 USD, 39 % der Architektenkosten einer
+    Kaskade.
+    """
+    absatz = _bl193_absatz()
+    assert "--addieren" in absatz, (
+        "BL-193: Der Rueckweg fehlt. Die Faehigkeit ist da "
+        "(sitzung-messen <pfad>), sie braucht nur einen Aufrufer im Ablauf.")
+    assert "Pfad" in absatz, (
+        "BL-193: Ohne den Hinweis auf den PFAD bleibt nur `--projekt .`, und "
+        "das liest genau die falsche Sitzung.")
+    assert "Aushärtung" in absatz, (
+        "BL-193: Der Absatz benennt die zweite Sitzung nicht.")
+
+
+def test_der_closeout_warnt_vor_der_doppelbuchung():
+    """Die Gegenrichtung, und sie ist der Grund, warum der Rückweg nicht
+    einfach „immer nachbuchen" heißen darf.
+
+    Wurde die Aushärtung an ihrem Ende gebucht (`BL-165`), steckt sie bereits
+    im Ledger. Ein Rückweg ohne diese Unterscheidung erzeugte genau den
+    Schaden, den `BL-116` beschreibt — denselben Betrag zweimal.
+    """
+    absatz = _bl193_absatz()
+    assert re.search(r"nicht\*{0,2}\s+noch einmal", absatz), (
+        "BL-193: Der Rueckweg sagt nicht, wann er NICHT gilt. Dann bucht er "
+        "den Betrag ein zweites Mal (BL-116).")
+    assert "Kit-BL-165" in absatz, (
+        "BL-193: Der Absatz verweist nicht auf die Vorbeugungsregel. Ohne sie "
+        "liest sich der Rueckweg wie 'immer nachbuchen'.")
+
+
 # --- BL-183: --watch ---------------------------------------------------------
 
 

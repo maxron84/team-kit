@@ -3,6 +3,8 @@
   install.ps1 — installiert das T.E.A.M. in ein Zielprojekt (Windows, nativ).
 
   Aufruf:  pwsh -File install.ps1 <zielpfad> [-NichtInteraktiv] [-Force|-Update]
+           [-OhneSelbsttest]  ueberspringt den Regressionslauf am Ende;
+                              NUR fuer den Selbsttest des Kits (BL-195)
                                              [-NurBash|-NurPwsh|-BeideBahnen]
            pwsh -File install.ps1 -Hilfe
 
@@ -59,6 +61,15 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)][string]$Ziel = "",
+    # BL-195: Ueberspringt den Regressionslauf am Ende. NUR fuer den Selbsttest
+    # des Kits gedacht — er betaetigt den Installer neunmal, und sechs dieser
+    # Laeufe pruefen, was dieselbe Stufe gleich darauf ohnehin explizit prueft
+    # (gemessen 2026-08-26: 19:20 je Durchgang, rund zwei Stunden Wiederholung
+    # in EINEM Selbsttest). Bei einer ERSTINSTALLATION ist derselbe Lauf die
+    # einzige Stelle, an der ein Anwender erfaehrt, dass seine Maschine das Kit
+    # nicht traegt — die Voreinstellung bleibt deshalb "fahren", und der
+    # Uebersprung ist LAUT.
+    [switch]$OhneSelbsttest,
     [switch]$NichtInteraktiv,
     [switch]$Force,
     [switch]$Update,
@@ -1441,7 +1452,11 @@ if ($Update) {
     Gelb "  [!] Die .sh-Entrypoints wurden NICHT geprueft — hier liegt keine bash."
     Gelb "      Sie sind mitinstalliert und gelten unveraendert aus dem Kit."
 
-    $pt = Finde-Pytest
+    $pt = if ($OhneSelbsttest) { $null } else { Finde-Pytest }
+    if ($OhneSelbsttest) {
+        Gelb "  [!] Regressionstests AUF VERLANGEN uebersprungen (-OhneSelbsttest)."
+        Gelb "      Das ist KEIN gruenes Ergebnis, sondern eine fehlende Probe."
+    }
     if ($pt) {
         # OHNE die TEAM_*-Variablen, die dieser Prozess geerbt haben koennte:
         # Sonst gilt z. B. TEAM_DOMAENEN des Projekts auch fuer die Fixtures.
@@ -1863,8 +1878,11 @@ if (-not $py) {
     else { Rot "  [x] Python-Werkzeuge fehlerhaft"; $fehler = 1 }
 }
 
-$pt = Finde-Pytest
-if ($pt) {
+$pt = if ($OhneSelbsttest) { $null } else { Finde-Pytest }
+if ($OhneSelbsttest) {
+    Gelb "  [!] Regressionstests AUF VERLANGEN uebersprungen (-OhneSelbsttest)."
+    Gelb "      Das ist KEIN gruenes Ergebnis, sondern eine fehlende Probe."
+} elseif ($pt) {
     Push-Location $Ziel
     try {
         $log = Join-Path ([System.IO.Path]::GetTempPath()) 'team-init-pytest.log'

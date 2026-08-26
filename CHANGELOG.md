@@ -143,6 +143,69 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Der Selbsttest fuhr dieselbe Suite neunmal — jetzt viermal** (`BL-195`).
+  Beide Installer fahren am Ende ihres Laufs die volle Suite. Bei einer
+  **Erstinstallation** ist das genau richtig: Der Anwender soll erfahren, ob
+  das, was da eingezogen ist, auf seiner Maschine läuft. Im **Selbsttest des
+  Kits** ist derselbe Lauf eine Wiederholung — dort ist der Installer kein
+  Ereignis, sondern ein Werkzeug, das mehrfach betätigt wird.
+
+  **Gemessen, nicht geschätzt:** 19:20 je Durchgang in der installierten
+  Ablage. Neun Durchgänge ergaben rund 2 h 55 min reine Suite-Zeit, davon
+  etwa zwei Stunden Wiederholung. Der Lauf dauert jetzt **1 h 01 min**.
+
+  **Warum das mehr ist als Wartezeit:** Ein Nachweis, der einen halben
+  Arbeitstag kostet, wird nicht gefahren — und ein Selbsttest, den niemand
+  fährt, ist genau der Zustand, den `BL-145` behebt. `BL-136`/`BL-144` blieben
+  vier Commits lang unbemerkt, weil der teure Nachweis unterblieb.
+
+  Neu ist deshalb ein Schalter (`--ohne-selbsttest` / `-OhneSelbsttest`), den
+  **nur der Selbsttest** setzt. Die Voreinstellung bleibt **fahren**, und der
+  Übersprung ist **laut**: Er sagt an jeder Stelle, dass hier eine Probe
+  **fehlt** und nicht eine bestanden wurde.
+
+  **Zwei Grenzen sind ausdrücklich gezogen.** Der **erste** Installer-Aufruf
+  jeder Bahn behält seinen Regressionslauf — dort hängt `BL-127`, und ein
+  Laufzeit-Schalter darf eine Zusicherung nicht aushebeln, nur eine
+  Wiederholung abstellen. Und `kit-test.ps1` weist am Ende aus, wie viele
+  Durchgänge er wirklich gefahren hat; die Zahl steht neben `PruefungenSoll`
+  und ist dieselbe Sorte Absturzschutz.
+
+  **Ein Fund im selben Zug:** Die `BL-127`-Prüfung — *hat der Installer seine
+  Regressionstests wirklich gefahren?* — gab es auf der **pwsh-Bahn gar
+  nicht**. Sie ist jetzt da.
+
+- **Der Feldfall zu `zitat_lint` ist nachgestellt und nachgemessen**
+  (`BL-192`, gemeldet von `Feld E` gegen 2.13.0). Ein Beutebuch-Fundblock ist
+  eine Markdown-Liste **ohne** Leerzeile und damit **ein** Absatz; absatzweise
+  gelesen lag die auslösende Zukunftswendung — ein wörtliches Regelzitat — im
+  selben Fenster wie eine Nummer 27 Zeilen weiter unten. Der Befund war
+  **unabtragbar**, und der Schaden war nicht die eine Zeile, sondern die
+  Gewöhnung: Ein Lint, der immer denselben unbehebbaren Befund meldet, erzieht
+  dazu, seinen Exit-Code zu überlesen.
+
+  **Behoben hatte das `BL-184` am selben Tag** — `SATZ_RE` trennt an neuen
+  Markdown-Listenpunkten, also genau die Variante, die der Melder als die
+  genauere vorschlägt. Nachgemessen statt behauptet: Der gemeldete Block läuft
+  gegen die heutige Fassung auf **Exit 0**, gegen die von 2.13.0 auf **Exit 3**.
+  Er steht jetzt als eigener Regressionsfall in der Suite.
+
+- **Das Closeout-Briefing nennt jetzt die zweite Architekten-Sitzung**
+  (`BL-193`, gemeldet von `Feld E`). „Meine eigene Sitzung" sind **zwei** —
+  die Aushärtung der Kaskade und der Closeout —, und `sitzung-messen
+  --projekt .` liest nur die letzte. Im Feld fehlten dadurch **10,65 USD**,
+  **39 %** der Architektenkosten einer Kaskade, und **nichts meldet die
+  Lücke**: Das Ledger ist stimmig, `--ledger-pruefen` schweigt mangels Rohlog,
+  `--budget` zeigt eine plausible Summe.
+
+  `BL-165` hatte die **Vorbeugung** gebracht (eine reine Planungssitzung bucht
+  selbst). Die hilft aber nur, wer **vor** der Aushärtung steht; wer beim
+  Closeout steht, braucht den **Rückweg**. Der steht jetzt dort — messen über
+  den **Pfad**, buchen mit `--addieren` —, samt der Gegenrichtung: Wurde die
+  Aushärtung schon gebucht, darf sie **nicht** ein zweites Mal drauf
+  (`BL-116`). **Offen bleibt** der maschinelle Lückenfinder; er verlangt die
+  Transkript-ID in der Ledger-Zeile und damit eine Formatänderung.
+
 - ⚠️ **Drei rote Fälle in jeder Installation auf einem POSIX-Wirt — der Fix zu
   `BL-186` war nur auf der Maschine grün, auf der er entstand** (`BL-191`, aus
   `Feld E`). `projekt_ordnername()` bildete den Ordnernamen der Agenten-CLI mit

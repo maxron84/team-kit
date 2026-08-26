@@ -120,6 +120,20 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    `{{RUF}}team-status{{ENDUNG}} --rollen-abschluss <N> <domaene>` und meine eigene Sitzung
    per `{{RUF}}team-status{{ENDUNG}} --architekt-abschluss <USD> <domaene> "<notiz>"`.
    Ohne diesen Schritt sind meine Kosten strukturell unerfasst.
+   **„Meine eigene Sitzung" sind ZWEI** (`Kit-BL-193`): die **Aushärtung**
+   dieser Kaskade und dieser Closeout. Zwischen beiden lag der Lauf, also eine
+   eigene Sitzung — und `sitzung-messen --projekt .` liest nur das **zuletzt
+   geänderte** Transkript, hier also den Closeout. Habe ich die Aushärtung an
+   ihrem Ende gebucht (siehe unten, `Kit-BL-165`), ist sie drin und ich rechne
+   sie **nicht** noch einmal drauf. Habe ich es versäumt, hole ich sie **jetzt**
+   über ihren **Pfad** nach — `{{PYTHON}} team/tools/kosten.py sitzung-messen
+   <pfad>.jsonl` — und buche sie mit `--addieren`. Im Feld waren das **10,65 USD**
+   und **39 %** der Architektenkosten einer Kaskade; frühere Aushärtungen
+   desselben Projekts lagen zwischen 8,7 und 34,8 USD. **Nichts meldet diese
+   Lücke**: Das Ledger ist in sich stimmig, `--ledger-pruefen` schweigt (für
+   eine interaktive Sitzung gibt es keinen Rohlog), und `--budget` zeigt eine
+   plausible Summe. Sichtbar wird sie nur, wenn ich die Transkript-Ablage gegen
+   das Ledger halte — also hier.
    Der erste Befehl bucht **beide** Laufquellen als zwei Zeilen (`roles` für
    Harry/Marv/Frank/Axel, `ralph` für die Baukosten) und archiviert beide
    Log-Ordner. Lief nach dem Closeout noch eine Rolle, **bricht** ein zweiter
