@@ -532,9 +532,18 @@ nicht deines Projekts.
   Datei liegt nicht im Projekt; ein Fund am Team selbst gehört ebenfalls
   dorthin zurück (siehe [`{{PLAN_ORDNER}}/backlog.md`]({{PLAN_ORDNER}}/backlog.md)).
 - **Fund am Team melden**: `{{RUF}}kit-melden{{ENDUNG}} neu --titel "…"` legt
-  einen Entwurf an, `… pruefen` redigiert ihn. **Senden darf nur der Mensch** —
-  ein Pull Request wirkt nach außen, und die Meldung entsteht beim Lesen einer
-  privaten Codebasis. Eine Rolle schreibt und legt ab; sie sendet nie.
+  einen Entwurf an, `… pruefen` redigiert ihn. **Rausgeben darf nur der
+  Mensch** — die Meldung entsteht beim Lesen einer privaten Codebasis, und was
+  rausgeht, ist öffentlich. Eine Rolle schreibt und legt ab; sie gibt nie raus.
+  **Zwei Wege, und wer welchen nimmt, ist eine Regel und keine Vorliebe**
+  (`Kit-BL-187`): Ein **fremder** Kit-Nutzer sendet einen Pull Request
+  (`… senden`). Der **Owner** des Kits legt die Meldung ins lokal liegende Repo
+  (`… ablegen`) und schreibt eine `BL-n`-Zeile in dessen Backlog — ein PR gegen
+  das eigene Repo hieße, die eigene Meldung zu reviewen und zu mergen, und
+  jedes Feldprojekt erzeugte Zweige und Issues am eigenen Repo. `senden`
+  erkennt den Owner am GitHub-Konto und nennt den richtigen Weg. `ablegen`
+  committet, **pusht aber nicht** (`Kit-BL-168`): Zuständigkeit ist nicht
+  Veröffentlichung.
 
 Diese Datei bleibt **Regelquelle**: geltende Regeln hierher, Herleitung und
 Historie in ein eigenes Historien-Doc (siehe „Doku-Hygiene").

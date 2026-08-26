@@ -9,6 +9,57 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`kit-melden ablegen` — der Weg für alle, die das Kit daneben liegen haben**
+  (`BL-168`, gemeldet von `Feld E`). Bis hierher gab es ein Werkzeug für den
+  Weg, den niemand geht (Pull Request über `gh`), und keins für den, den alle
+  gehen: Das Kit liegt geklont daneben, `TEAM_KIT_PFAD` zeigt darauf, und
+  `gh auth status` ist auf der Maschine nicht angemeldet.
+
+  **Die Folge war messbar:** Im meldenden Projekt sind **acht** Funde von Hand
+  ins lokale Kit getippt worden — am Werkzeug vorbei und damit auch an seiner
+  Redaktionsprüfung, der einzigen Stelle, an der ein Projektname auffällt,
+  **bevor** er in einem öffentlichen Repo steht.
+
+  `ablegen` kopiert die Meldung nach `<kit>/plans/meldungen/` und committet sie
+  dort — **ohne Push** und **ohne `BL-`Nummer**. Committet wird **pfadgenau**:
+  Der Kit-Arbeitsbaum gehört dem Maintainer, ein `git add -A` nähme fremde
+  Arbeit mit (`BL-12`). Die Redaktionsprüfung ist hier **Vorbedingung**, nicht
+  Empfehlung.
+
+  **Warum committen ja und pushen nein:** Owner zu sein löst die Frage der
+  **Zuständigkeit**, nicht die der **Veröffentlichung**. Das Kit-Repo ist
+  öffentlich, und die Meldung entsteht beim Lesen einer privaten Codebasis.
+
+  Dazu zwei Teile, die denselben Weg begehbar machen: `pruefen` löst den
+  **blanken** Dateinamen jetzt auch gegen den Meldungsordner auf (CWD gewinnt)
+  — bis dahin nannte die Vorlage einen Befehl, den sie selbst nicht lauffähig
+  machte. Und `TEAM_FELD_KUERZEL` steht in **beiden** `team.config.*`: Das
+  Kürzel lebte bis hierher ausschließlich im Kit-README, also **außerhalb** der
+  Installation, die es nennen müsste.
+
+### Changed
+
+- **Der Rückkanal trennt jetzt zwei Rollen — und `senden` sagt es selbst**
+  (`BL-187`, Entscheid des Owners 2026-08-26). Ein **fremder** Kit-Nutzer
+  sendet einen Pull Request; der **Owner** legt die Meldung ins lokal liegende
+  Repo und schreibt dort eine `BL-n`-Zeile. Ein PR gegen das eigene Repo hieße,
+  die eigene Meldung zu reviewen und zu mergen — und ohne die Unterscheidung
+  erzeugt jedes Feldprojekt des Owners Zweige, PRs und Issues am eigenen Repo:
+  eine Vorgangs-Historie, die keine Vorgänge abbildet.
+
+  `senden` prüft das GitHub-Konto gegen den Repo-Eigentümer, bricht ab und
+  nennt den richtigen Weg — **vor** der Bestätigungsfrage. Vorher kannte das
+  Werkzeug denselben Fall bereits und nutzte ihn nur, um den Fork zu
+  überspringen: Es lief **sehenden Auges** in den falschen Weg. Zwei Fallen
+  sind eigens geschlossen: Antwortet `gh` nicht, wird **niemand** zum
+  Eigentümer erklärt, und eine **leere** Antwort gilt nicht als Treffer.
+
+  Die Rollen stehen jetzt in Briefing, `bootstrap/TEAM.md`,
+  `bootstrap/CLAUDE.md.vorlage`, `bootstrap/backlog.md` und
+  `plans/meldungen/README.md` — jeweils mit dem Grund daneben.
+
 ### Fixed
 
 - ⚠️ **`kit-melden` war auf der pwsh-Bahn komplett funktionsunfähig — der
@@ -201,10 +252,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Anzeige bleibt der volle Pfad, das Ziel ist jetzt relativ, wie bei den zwei
   älteren Zeilen.
 
-_Sonst nichts Offenes aus dieser Version. Die 19 offenen Backlog-Einträge sind_
-_elf Meldungen aus `Feld E` (`BL-164`…`BL-174`), drei aus `Feld B`_
-_(`BL-183`…`BL-185`) und sechs eigene Vorhaben am Kit (`BL-117`, `BL-144`,_
-_`BL-145`, `BL-180`, `BL-187`, `BL-189`) — siehe_
+_Sonst nichts Offenes aus dieser Version. Die 17 offenen Backlog-Einträge sind_
+_zehn Meldungen aus `Feld E` (`BL-164`…`BL-167`, `BL-169`…`BL-174`), drei_
+_aus `Feld B` (`BL-183`…`BL-185`) und vier eigene Vorhaben am Kit_
+_(`BL-117`, `BL-145`, `BL-180`, `BL-189`) — siehe_
 _[plans/backlog.md](plans/backlog.md)._
 
 ## [2.13.1] — 2026-08-25

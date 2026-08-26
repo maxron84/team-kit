@@ -354,8 +354,26 @@ dann:
 
 ```
 {{RUF}}kit-melden{{ENDUNG}} pruefen                # Exit 4 = bitte ansehen
+{{RUF}}kit-melden{{ENDUNG}} ablegen <datei>        # Kit liegt daneben — kein gh nötig
 {{RUF}}kit-melden{{ENDUNG}} senden <datei>         # Pull Request — fragt vorher
 ```
+
+**Welchen der beiden Wege du nimmst, hängt davon ab, wem das Kit gehört:**
+
+| Du bist | Weg | Warum |
+|---|---|---|
+| **fremder Kit-Nutzer** | `senden` — Pull Request | Du hast keine Schreibrechte am Kit; der PR ist dein Weg hinein |
+| **Owner des Kits** | `ablegen` **plus** eine `BL-n`-Zeile im Kit-Backlog | Ein PR gegen dein eigenes Repo hieße, deine eigene Meldung zu reviewen und zu mergen. Ohne die Unterscheidung erzeugt jedes deiner Feldprojekte Zweige, PRs und Issues am eigenen Repo — eine Vorgangs-Historie, die keine Vorgänge abbildet (`Kit-BL-187`) |
+
+`senden` erkennt den Owner am GitHub-Konto, bricht ab und nennt den richtigen
+Weg — du musst es nicht wissen, bevor du tippst.
+
+**`ablegen` committet, aber pusht nicht** (`Kit-BL-168`). Owner zu sein löst die
+Frage der **Zuständigkeit**, nicht die der **Veröffentlichung**: Das Kit-Repo
+ist öffentlich, und deine Meldung ist beim Lesen einer privaten Codebasis
+entstanden. Der Push ist deine Entscheidung, nach dem Gegenlesen. Eine
+`BL-`Nummer steht bewusst nicht in der Datei — die vergibt der Maintainer beim
+Triage.
 
 **Drei Dinge, die du wissen solltest:**
 

@@ -57,6 +57,10 @@ Team-Werkzeug $TEAM_MELDUNG_TOOL (@(
     '--projektwurzel', '.',
     '--meldungen', $meldungen,
     '--kit', "$(if ($TEAM_KIT_PFAD) { $TEAM_KIT_PFAD } else { '' })",
-    '--projekt', "$(if ($TEAM_PROJEKT) { $TEAM_PROJEKT } else { '' })"
+    '--projekt', "$(if ($TEAM_PROJEKT) { $TEAM_PROJEKT } else { '' })",
+    # BL-168: Unter welchem Kuerzel dieses Projekt im Kit gefuehrt wird. Es
+    # lebte bis 2026-08-26 nur im Kit-README, also ausserhalb der Installation,
+    # die es nennen muesste.
+    '--kuerzel', "$(if ($TEAM_FELD_KUERZEL) { $TEAM_FELD_KUERZEL } else { '' })"
 ) + $args)
 exit $LASTEXITCODE

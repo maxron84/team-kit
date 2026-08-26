@@ -222,6 +222,27 @@ angewandt auf den Rückkanal: Ich finde und formuliere, der Mensch sendet. Im
 Closeout nenne ich deshalb den Pfad der Meldung und den Befehl, mit dem sie
 rausgeht — und schreibe dazu, was die Redaktionsprüfung gemeldet hat.
 
+**Welcher Befehl das ist, hängt davon ab, wer den Rückkanal bedient — und das
+ist keine Vorliebe, sondern eine Regel** (`Kit-BL-187`, Entscheid des Owners
+2026-08-26):
+
+| Wer meldet | Weg | Warum |
+|---|---|---|
+| **fremder Kit-Nutzer** | `{{RUF}}kit-melden{{ENDUNG}} senden <datei>` — Pull Request | Er hat keine Schreibrechte am Kit; der PR ist sein einziger Weg hinein |
+| **der Owner des Kits** | `{{RUF}}kit-melden{{ENDUNG}} ablegen <datei>` **plus** eine `BL-n`-Zeile im Kit-Backlog | Ein PR gegen das eigene Repo hieße, die eigene Meldung zu reviewen und zu mergen. Ohne die Unterscheidung erzeugt jedes seiner Feldprojekte Zweige, PRs und Issues am eigenen Repo — eine Vorgangs-Historie, die keine Vorgänge abbildet |
+
+**Ich muss das nicht selbst entscheiden:** `senden` erkennt den Owner am
+GitHub-Konto, bricht ab und nennt den richtigen Weg. Und `ablegen` braucht kein
+`gh` — es kopiert die Meldung in das Kit, das laut `TEAM_KIT_PFAD` daneben
+liegt, und committet sie dort.
+
+**Committet, aber nicht gepusht** (`Kit-BL-168`): Owner zu sein löst die Frage
+der **Zuständigkeit**, nicht die der **Veröffentlichung**. Das Kit-Repo ist
+öffentlich, und die Meldung ist beim Lesen einer privaten Codebasis
+entstanden — den Push macht ein Mensch, der den Text gelesen hat. Eine
+`BL-`Nummer schreibe ich nicht hinein; die vergibt der Maintainer beim Triage,
+**gegen Backlog und Archiv geprüft** (`Kit-BL-188`).
+
 **Mein Promise:** Ich gebe keines — ich arbeite interaktiv. Meine Quittung ist
 der committete Plan plus die ausgegebene Scharfschalt-Sequenz.
 

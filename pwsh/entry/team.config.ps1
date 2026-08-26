@@ -34,6 +34,19 @@ function Team-Ordner { param([string]$Wert) return ($Wert.TrimEnd('/', '\') + '/
 # Name des Projekts/Repos — erscheint in Berichten und Ledger-Notizen.
 $TEAM_PROJEKT = Team-Wert 'TEAM_PROJEKT' '{{PROJEKTNAME}}'
 
+# Feldkuerzel: Unter welchem Namen dieses Projekt im Kit gefuehrt wird
+# (`Feld A`, `Feld B`, …). LEER lassen, wenn noch keins vergeben ist — der
+# Maintainer vergibt es beim Triage der ersten Meldung.
+#
+# BL-168: Das Kuerzel lebte bis 2026-08-26 AUSSCHLIESSLICH in der
+# Profiltabelle des Kit-READMEs, also ausserhalb der Installation, die es
+# nennen muesste. Wer eine Meldung schrieb, wusste deshalb nicht, wie sein
+# Projekt drueben heisst — und schrieb entweder den NAMEN hinein (den die
+# Redaktionspruefung dann zu Recht anschlaegt) oder gar nichts. Genau dieser
+# Anonymisierung wegen fuehrt das Kit seine Feldbelege ueberhaupt unter
+# Kuerzeln.
+$TEAM_FELD_KUERZEL = Team-Wert 'TEAM_FELD_KUERZEL' ''
+
 # --- Pfade --------------------------------------------------------------------
 # Produktivcode: das, was Harry, Marv und Axel NIEMALS anfassen duerfen.
 # Der abschliessende Schraegstrich ist egal — er wird unten vereinheitlicht.

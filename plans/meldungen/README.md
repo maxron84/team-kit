@@ -41,6 +41,33 @@ des Owners, 2026-08-26:
    Triage-Schritt entfaellt, weil Melder und Maintainer dieselbe Person sind.
 3. **Kein `senden`, kein Zweig, kein PR, kein Issue.**
 
+**Seit 2026-08-26 ist das ein Verb und keine Handarbeit mehr** (`BL-168`):
+
+```
+kit-melden ablegen <datei>
+```
+
+kopiert die Meldung hierher und committet sie im Kit — **ohne Push** und
+**ohne `BL-`Nummer**. Es braucht kein `gh`, sondern nur ein Kit, das laut
+`TEAM_KIT_PFAD` daneben liegt; genau das ist die Lage des Owners. Die
+Redaktionspruefung laeuft dabei als **Vorbedingung**, nicht als Empfehlung —
+was hier landet, ist gleich oeffentlich. Committet wird **pfadgenau**, damit
+der Kit-Arbeitsbaum nichts Fremdes mitnimmt.
+
+**Warum committen ja und pushen nein:** Owner zu sein loest die Frage der
+**Zustaendigkeit**, nicht die der **Veroeffentlichung**. Dieses Repo ist
+oeffentlich, und die Meldung entsteht beim Lesen einer privaten Codebasis.
+
+**Warum es das Verb ueberhaupt brauchte:** Vorher gab es ein Werkzeug fuer den
+Weg, den niemand geht (Pull Request ueber `gh`), und keins fuer den, den alle
+gehen. Im Feld sind daraufhin **acht** Funde von Hand ins lokale Kit getippt
+worden — am Werkzeug vorbei und damit auch an seiner Redaktionspruefung, der
+einzigen Stelle, an der ein Projektname vor der Veroeffentlichung auffaellt.
+
+**`senden` sagt es jetzt selbst:** Erkennt es am GitHub-Konto, dass du das Repo
+besitzt, bricht es ab und nennt diesen Weg — statt sehenden Auges einen PR
+gegen das eigene Repo anzulegen.
+
 **Warum das eine Regel braucht und nicht dem Augenmass ueberlassen bleibt:**
 Ohne sie erzeugt jedes Owner-Feldprojekt PRs und Zweige am eigenen Repo. Das
 Ergebnis waere eine Vorgangs-Historie, die keine Vorgaenge abbildet — der Owner

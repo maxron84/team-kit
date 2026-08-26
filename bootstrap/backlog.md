@@ -13,9 +13,16 @@ aber nicht in seinen Auftrag gehört.
 >
 > ```
 > {{RUF}}kit-melden{{ENDUNG}} neu --titel "Kurz, was schiefging"
-> {{RUF}}kit-melden{{ENDUNG}} pruefen        # Redaktionsprüfung
-> {{RUF}}kit-melden{{ENDUNG}} senden <datei> # Pull Request — fragt vorher
+> {{RUF}}kit-melden{{ENDUNG}} pruefen         # Redaktionsprüfung
+> {{RUF}}kit-melden{{ENDUNG}} ablegen <datei> # Kit liegt daneben — kein gh nötig
+> {{RUF}}kit-melden{{ENDUNG}} senden <datei>  # sonst: Pull Request, fragt vorher
 > ```
+>
+> **Welcher der beiden Wege:** Ein **fremder** Kit-Nutzer sendet einen Pull
+> Request. Der **Owner** des Kits legt die Meldung ins lokal liegende Repo und
+> schreibt dort eine `BL-n`-Zeile — ein PR gegen das eigene Repo wäre Leerlauf
+> (`Kit-BL-187`). `senden` erkennt den Owner am GitHub-Konto und nennt den
+> richtigen Weg; `ablegen` committet, **pusht aber nicht** (`Kit-BL-168`).
 >
 > **Status hier auf „ans Kit gemeldet (…)" setzen**, damit sichtbar bleibt,
 > ob der Rückkanal wirklich bedient wurde. Die drei bisher schwersten

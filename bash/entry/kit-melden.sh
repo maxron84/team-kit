@@ -34,4 +34,5 @@ exec "$TEAM_PYTHON" team/tools/kit_meldung.py \
     --meldungen "${TEAM_PLAN_ORDNER%/}/kit-meldungen" \
     --kit "${TEAM_KIT_PFAD:-}" \
     --projekt "${TEAM_PROJEKT:-}" \
+    --kuerzel "${TEAM_FELD_KUERZEL:-}" \
     "$@"

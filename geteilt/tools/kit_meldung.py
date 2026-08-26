@@ -50,6 +50,13 @@ AUFRUFE
                                    Zeichenketten, der eigene Projektname und
                                    offene TODO-Marken der Vorlage.
                                    Exit 4 = Befunde (auf stderr), Exit 0 = sauber
+  kit_meldung.py ablegen DATEI [--trotzdem]
+                                 → legt die Meldung im LOKAL liegenden Kit ab
+                                   (`plans/meldungen/`) und committet sie dort
+                                   — ohne Push und ohne `BL-`Nummer. Der Weg
+                                   für alle, die das Kit daneben liegen haben:
+                                   braucht kein `gh`. Redaktionsprüfung ist
+                                   hier VORBEDINGUNG, nicht Empfehlung
   kit_meldung.py senden DATEI [--ja] [--repo user/repo]
                                  → Pull Request gegen das Kit-Repo, über `gh`.
                                    Ohne `gh`: druckt einen vorbefüllten
@@ -103,7 +110,8 @@ VORLAGE = """# {titel}
   Meldung an das T.E.A.M.-Kit. Ausfüllen, dann:
 
       {ruf}kit-melden{endung} pruefen  {dateiname}
-      {ruf}kit-melden{endung} senden   {dateiname}
+      {ruf}kit-melden{endung} ablegen  {dateiname}   # liegt das Kit daneben
+      {ruf}kit-melden{endung} senden   {dateiname}   # sonst: Pull Request
 
   REDAKTIONSREGEL: Diese Datei landet in einem ÖFFENTLICHEN Repo. Sie soll
   einen Fehler am KIT beschreiben, nicht dein Projekt. Keine absoluten Pfade,
@@ -118,6 +126,7 @@ VORLAGE = """# {titel}
 - **Kit-Version**: {version}
 - **Bahn**: {bahn}
 - **Plattform**: {plattform}
+- **Feldkürzel**: {kuerzel}
 - **Lage des Projekts**: TODO — z. B. „Greenfield, Linux, bash-Bahn, Python"
 
 ## Was passiert ist
@@ -216,12 +225,23 @@ def kit_repo_ermitteln(kit, vorgabe=None):
     return KIT_REPO_DEFAULT
 
 
-def _git(cwd, *args):
+def _git_lauf(cwd, *args):
+    """Der volle Prozess — fuer Aufrufe, deren Exit-Code eine AUSSAGE ist.
+
+    `_git` darunter gibt nur stdout und schluckt den Code; das passt fuer
+    Abfragen, nicht fuer `add`/`commit`. Ein fehlgeschlagenes `git commit`,
+    das als leerer String zurueckkommt, sieht aus wie ein leeres Ergebnis
+    (BL-186: Waechter ueber leerem Ergebnis).
+    """
     try:
-        r = subprocess.run(["git", "-C", str(cwd)] + list(args),
-                           capture_output=True, text=True, encoding="utf-8")
-    except OSError:
-        return ""
+        return subprocess.run(["git", "-C", str(cwd)] + list(args),
+                              capture_output=True, text=True, encoding="utf-8")
+    except OSError as e:
+        return subprocess.CompletedProcess(args, 127, "", str(e))
+
+
+def _git(cwd, *args):
+    r = _git_lauf(cwd, *args)
     return r.stdout if r.returncode == 0 else ""
 
 
@@ -302,6 +322,46 @@ def _meldungsordner(a):
     return Path(a.projektwurzel or REPO_ROOT) / plan / "kit-meldungen"
 
 
+def _feldkuerzel(a):
+    """Das Kuerzel, unter dem dieses Projekt im Kit gefuehrt wird (`Feld A` …).
+
+    BL-168, vierter Teil: Das Kuerzel lebte bis hierher AUSSCHLIESSLICH in der
+    Profiltabelle des Kit-READMEs — also ausserhalb der Installation, die es
+    nennen muesste. Wer eine Meldung schreibt, weiss deshalb nicht, wie sein
+    Projekt drueben heisst, und schreibt entweder den Namen hinein (den die
+    Redaktionspruefung dann zu Recht anschlaegt) oder gar nichts.
+
+    Ohne Wert bleibt ein TODO stehen: Ein leeres Feld sieht aus wie ein
+    beantwortetes. Vergeben wird das Kuerzel weiterhin vom Maintainer — hier
+    steht nur, was das Projekt darueber schon weiss.
+    """
+    wert = getattr(a, "kuerzel", None) or os.environ.get("TEAM_FELD_KUERZEL")
+    return wert.strip() if wert and wert.strip() else (
+        "TODO — trag es in team.config.* als TEAM_FELD_KUERZEL ein, "
+        "sonst vergibt es der Maintainer")
+
+
+def _meldung_finden(a, name):
+    """Loest den Namen einer Meldung auf — CWD gewinnt, dann der Meldungsordner.
+
+    BL-168, zweiter Teil: Der Kommentarkopf jeder frisch angelegten Meldung
+    nennt den Aufruf mit dem BLANKEN Dateinamen. Aufgeloest wurde er
+    ausschliesslich gegen das Arbeitsverzeichnis — von der Projektwurzel aus
+    liegt die Datei aber unter `<plan-ordner>/kit-meldungen/`. Der von der
+    Vorlage SELBST genannte Befehl meldete deshalb "gibt es nicht": korrekt
+    gemeldet, nur eben nicht das, was der Anwender wollte.
+
+    Die Reihenfolge ist nicht beliebig. CWD zuerst, weil ein ausdruecklich
+    getippter Pfad immer gewinnen muss — sonst greift das Werkzeug an einer
+    Datei vorbei, die der Anwender vor der Nase hat.
+    """
+    p = Path(name)
+    if p.exists():
+        return p
+    im_ordner = _meldungsordner(a) / p.name
+    return im_ordner if im_ordner.exists() else p
+
+
 def _kit_version(kit):
     """Die Version, gegen die gemeldet wird — aus dem CHANGELOG des Kits.
 
@@ -343,6 +403,7 @@ def verb_neu(a):
         dateiname=name,
         ruf=ruf,
         endung=endung,
+        kuerzel=_feldkuerzel(a),
     )
     if a.nummer:
         text = text.replace("- **Art**:", f"- **Bezug**: {a.nummer}\n- **Art**:", 1)
@@ -354,7 +415,8 @@ def verb_neu(a):
 
 
 def verb_pruefen(a):
-    dateien = [Path(d) for d in a.dateien] or sorted(_meldungsordner(a).glob("*.md"))
+    dateien = ([_meldung_finden(a, d) for d in a.dateien]
+               or sorted(_meldungsordner(a).glob("*.md")))
     if not dateien:
         print("Keine Meldung zu prüfen.", file=sys.stderr)
         return 3
@@ -423,6 +485,105 @@ def verb_issue_link(a):
     return 0
 
 
+def _eigenes_repo(repo):
+    """Der GitHub-Kontoname, wenn er dem Eigentuemer von `repo` entspricht.
+
+    Sonst `None` — auch dann, wenn `gh` gar nicht antwortet. Ein Werkzeug, das
+    aus einer nicht beantwortbaren Frage eine Aussage macht, ist schlimmer als
+    eines, das die Frage nicht stellt.
+    """
+    try:
+        r = subprocess.run(["gh", "api", "user", "--jq", ".login"],
+                           capture_output=True, text=True, encoding="utf-8")
+    except OSError:
+        return None
+    if r.returncode != 0:
+        return None
+    konto = r.stdout.strip()
+    return konto if konto and konto == repo.split("/")[0] else None
+
+
+def verb_ablegen(a):
+    """Legt die Meldung im LOKAL liegenden Kit ab — committet, aber ohne Push.
+
+    BL-168. Bis hierher gab es ein Werkzeug fuer den Weg, den niemand geht
+    (Pull Request ueber `gh`), und keins fuer den, den alle gehen: Das Kit
+    liegt geklont daneben, `TEAM_KIT_PFAD` zeigt darauf, und `gh` ist auf der
+    Maschine nicht angemeldet. Die Folge war messbar — im meldenden Projekt
+    sind ACHT Funde von Hand ins lokale Kit getippt worden, an diesem Werkzeug
+    vorbei. Damit war auch seine Redaktionspruefung umgangen, und die ist die
+    einzige Stelle, an der ein Projektname vor der Veroeffentlichung auffaellt.
+
+    DREI GRENZEN, UND JEDE HAT EINEN GRUND:
+
+    1. KEIN PUSH. Owner zu sein loest die Frage der ZUSTAENDIGKEIT, nicht die
+       der VEROEFFENTLICHUNG. Das Kit-Repo ist oeffentlich, und die Meldung
+       entsteht beim Lesen einer privaten Codebasis. Committen ja, pushen
+       nein — den Push macht ein Mensch, der den Text gelesen hat.
+    2. KEINE `BL-`NUMMER. Die vergibt der Maintainer beim Triage.
+       `plans/meldungen/README.md` begruendet es: Der Nummernraum waere sonst
+       ein Wettlauf zwischen Meldern, die voneinander nichts wissen.
+    3. DIE REDAKTIONSPRUEFUNG IST VORBEDINGUNG, NICHT EMPFEHLUNG. Was hier
+       durchgeht, liegt im Eingangskorb eines oeffentlichen Repos.
+
+    Committet wird PFADGENAU (`git commit -- <pfad>`): Der Kit-Arbeitsbaum
+    kann alles Moegliche enthalten, und ein `git add -A` wuerde fremde Arbeit
+    mitnehmen. Das ist dieselbe Lehre wie BL-12.
+    """
+    datei = _meldung_finden(a, a.datei)
+    if not datei.exists():
+        print(f"Gibt es nicht: {datei}", file=sys.stderr)
+        return 1
+    kit, woher = kit_finden(a.kit)
+    if not kit:
+        print("Kein Kit gefunden — `ablegen` braucht das Repo LOKAL.\n"
+              "Trag den Pfad als TEAM_KIT_PFAD in team.config.* ein, oder "
+              "nimm `senden` (Pull Request über `gh`).", file=sys.stderr)
+        return 3
+
+    # Vorbedingung, nicht Empfehlung.
+    if not a.trotzdem:
+        merk = argparse.Namespace(**vars(a))
+        merk.dateien = [str(datei)]
+        if verb_pruefen(merk) != 0:
+            print("\nNichts abgelegt. Die Befunde oben ansehen — oder "
+                  "`--trotzdem`, wenn du sie geprüft hast.", file=sys.stderr)
+            return 4
+
+    ziel = kit / "plans" / "meldungen" / datei.name
+    ziel.parent.mkdir(parents=True, exist_ok=True)
+    if ziel.exists() and ziel.read_text(encoding="utf-8") == \
+            datei.read_text(encoding="utf-8"):
+        print(f"Liegt schon unverändert im Kit: {ziel}")
+        return 0
+    # BL-137: newline="" — kein Textmodus, der unter Windows jedes \n uebersetzt.
+    with ziel.open("w", newline="", encoding="utf-8") as fh:
+        fh.write(datei.read_text(encoding="utf-8"))
+
+    rel = f"plans/meldungen/{datei.name}"
+    titel = datei.read_text(encoding="utf-8").splitlines()[0].lstrip("# ").strip()
+    r = _git_lauf(kit, "add", "--", rel)
+    if r.returncode != 0:
+        print(f"git add schlug fehl:\n{r.stderr.strip()}", file=sys.stderr)
+        return 1
+    # Pfadgenau: Was sonst noch im Kit-Arbeitsbaum liegt, geht uns nichts an.
+    r = _git_lauf(kit, "commit", "-m", f"meldung: {titel}", "--", rel)
+    if r.returncode != 0 and "nothing to commit" not in (r.stdout + r.stderr):
+        print(f"git commit schlug fehl:\n{r.stdout.strip()}\n"
+              f"{r.stderr.strip()}", file=sys.stderr)
+        return 1
+
+    print(f"Abgelegt:  {ziel}")
+    print(f"Kit:       {kit} ({woher})")
+    print("Committet — aber NICHT gepusht: Das Kit-Repo ist öffentlich, und "
+          "diese Meldung ist beim Lesen einer privaten Codebasis entstanden.")
+    print("Der Push ist deine Entscheidung, nach dem Gegenlesen:")
+    print(f"    git -C \"{kit}\" push")
+    print("Eine `BL-`Nummer vergibt der Maintainer beim Triage — sie steht "
+          "bewusst nicht in dieser Datei.")
+    return 0
+
+
 def verb_senden(a):
     datei = Path(a.datei)
     if not datei.exists():
@@ -446,6 +607,31 @@ def verb_senden(a):
               file=sys.stderr)
         print(_issue_link(repo, datei))
         print(f"\nDie Meldung bleibt als Datei liegen: {datei}", file=sys.stderr)
+        return 3
+
+    # BL-187: Der PR-Weg ist fuer FREMDE Kit-Nutzer gedacht. Wer das Repo
+    # selbst besitzt, wuerde seine eigene Meldung reviewen und mergen — und
+    # jedes seiner Feldprojekte erzeugte Zweige, PRs und Issues am eigenen
+    # Repo. Das Ergebnis waere eine Vorgangs-Historie, die keine Vorgaenge
+    # abbildet; der Owner nennt es "Data Pollution".
+    #
+    # Das Werkzeug ERKANNTE diesen Fall schon, nutzte ihn aber nur, um den Fork
+    # zu ueberspringen — es lief also sehenden Auges in den falschen Weg. Die
+    # Pruefung steht jetzt VOR der Bestaetigungsfrage, nicht hinter ihr.
+    besitzer = _eigenes_repo(repo)
+    if besitzer:
+        print(f"Du bist der Eigentümer von {repo} ({besitzer}).\n"
+              "Ein Pull Request gegen das eigene Repo hieße, die eigene "
+              "Meldung zu reviewen und zu mergen — für dich ist das der "
+              "falsche Weg (Entscheid des Owners, 2026-08-26).\n\n"
+              "Stattdessen:\n"
+              f"    kit-melden ablegen {datei.name}\n"
+              "  legt sie in `<kit>/plans/meldungen/` und committet dort "
+              "(ohne Push).\n"
+              "  Danach eine `BL-n`-Zeile in `<kit>/plans/backlog.md` "
+              "schreiben, die auf sie zeigt —\n"
+              "  Nummer gegen Backlog UND Archiv geprüft (`BL-188`).",
+              file=sys.stderr)
         return 3
 
     zweig = f"meldung/{datei.stem}"
@@ -556,6 +742,9 @@ def main():
     ap.add_argument("--meldungen")
     ap.add_argument("--kit")
     ap.add_argument("--projekt")
+    # BL-168: Das Feldkuerzel lebte bis hierher nur im Kit-README, also
+    # AUSSERHALB der Installation, die es nennen muesste.
+    ap.add_argument("--kuerzel", help="Feldkürzel dieses Projekts (`Feld A` …)")
     ap.add_argument("--repo")
     sub = ap.add_subparsers(dest="verb", required=True)
 
@@ -569,6 +758,13 @@ def main():
     p = sub.add_parser("pruefen", help="Redaktionsprüfung (Exit 4 = Befunde)")
     p.add_argument("dateien", nargs="*")
     p.set_defaults(fn=verb_pruefen)
+
+    p = sub.add_parser("ablegen",
+                       help="ins lokal liegende Kit legen und dort committen")
+    p.add_argument("datei")
+    p.add_argument("--trotzdem", action="store_true",
+                   help="trotz Redaktionsbefunden ablegen")
+    p.set_defaults(fn=verb_ablegen)
 
     p = sub.add_parser("senden", help="Pull Request anlegen (fragt vorher)")
     p.add_argument("datei")
