@@ -112,7 +112,7 @@ fi
 # unbereit, auf der seine NATIVE Bahn tadellos laeuft, und schickt den
 # Anwender an ein Paket (util-linux), das es fuer Git-Bash nicht gibt. Eine
 # Abhilfe, die auf dieser Maschine nicht ausfuehrbar ist, ist keine — dieselbe
-# Erwaegung wie bei BL-144, wo `Set-ExecutionPolicy -Scope CurrentUser` gegen
+# Erwaegung wie bei BL-189, wo `Set-ExecutionPolicy -Scope CurrentUser` gegen
 # eine Gruppenrichtlinie empfohlen wurde.
 #
 # Was NICHT passiert: Die Befunde verschwinden. Sie bleiben sichtbar, sie

@@ -50,6 +50,29 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   `pwsh`. **Gegenprobe:** jede der drei Hälften einzeln zurückgedreht → 6, 8
   und 8 der 10 Fälle fallen; wieder eingesetzt → 10 grün.
 
+- **`BL-144` war DOPPELT vergeben — aktiver Backlog und Archiv trugen unter
+  derselben Nummer zwei verschiedene Funde** (`BL-188`). Am 2026-08-21 vergaben
+  zwei Maschinen dieselbe Nummer: die Ausführungsrichtlinie per
+  Gruppenrichtlinie (aus `Feld B`) und der rote bash-Selbsttest seit `BL-136`.
+  Beide waren gepusht, bevor es auffiel — die sonst geltende Regel „die
+  ungepushte Seite zieht um" hatte damit keinen Ansatzpunkt mehr.
+
+  **Aufgelöst nach der Zahl der Verweise:** acht zeigen auf den bash-Selbsttest,
+  vier auf die Ausführungsrichtlinie. Die vier sind mitgezogen — einzeln
+  geprüft, nicht pauschal ersetzt, denn die Verweise waren zwischen beiden
+  Bedeutungen gemischt, und genau das war der Schaden. Die
+  Ausführungsrichtlinie heißt jetzt **`BL-189`** und sagt in ihrem Status, wie
+  sie vorher hieß; `Feld B` hat seine Quittung nachgezogen.
+
+  **Der Prüfbefehl ist jetzt ein Test, kein Vorgehen.** Der Fund entstand aus
+  einem `grep | sort | uniq -d`, den jemand von Hand fuhr, weil die Gegenprobe
+  gegen das Archiv Teil seines *Vorgehens* war und nicht Teil seines Auftrags —
+  eine Handprüfung gilt genau einmal.
+  `test_bl188_jede_nummer_nur_einmal.py` prüft die Gattung: keine Nummer in
+  beiden Dateien, keine zweimal in derselben, und der umgezogene Eintrag nennt
+  seinen alten Namen. **Gegenprobe:** Kollision wörtlich wiederhergestellt →
+  der Fall fällt und nennt `BL-144`.
+
 - ⚠️ **Den Block „Bitte von Hand abgleichen" hatte nur `install.sh` — die
   pwsh-Bahn sagte einem Projekt nie, dass ihm Regeln aus einer neueren
   Kit-Fassung fehlen** (`BL-178`). Doku-Dateien tragen Projektanpassungen und
@@ -178,10 +201,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Anzeige bleibt der volle Pfad, das Ziel ist jetzt relativ, wie bei den zwei
   älteren Zeilen.
 
-_Sonst nichts Offenes aus dieser Version. Die 20 offenen Backlog-Einträge sind_
+_Sonst nichts Offenes aus dieser Version. Die 19 offenen Backlog-Einträge sind_
 _elf Meldungen aus `Feld E` (`BL-164`…`BL-174`), drei aus `Feld B`_
 _(`BL-183`…`BL-185`) und sechs eigene Vorhaben am Kit (`BL-117`, `BL-144`,_
-_`BL-145`, `BL-180`, `BL-187`, `BL-188`) — siehe_
+_`BL-145`, `BL-180`, `BL-187`, `BL-189`) — siehe_
 _[plans/backlog.md](plans/backlog.md)._
 
 ## [2.13.1] — 2026-08-25
@@ -608,7 +631,7 @@ für `install.ps1`). Feldbefunde sind mit ⚠️ markiert.
   zweite Wahl. Das Kit erklärte damit eine Maschine für unbereit, auf der
   seine **native** Bahn tadellos läuft — und empfahl `sudo apt install
   util-linux`. Eine Abhilfe, die auf dieser Maschine nicht ausführbar ist, ist
-  keine; dieselbe Erwägung wie bei `BL-144`.
+  keine; dieselbe Erwägung wie bei `BL-189`.
 
   **Die Befunde verschwinden nicht, sie werden Warnungen** — und sie erklären
   jetzt mehr als vorher, nicht weniger: Jede nennt ihre Folge und die Bahn, auf
@@ -643,7 +666,7 @@ für `install.ps1`). Feldbefunde sind mit ⚠️ markiert.
   **drei** Abhilfen — Entwicklermodus plus `MSYS=winsymlinks:nativestrict`, der
   Aufruf über den vollen Pfad, oder die pwsh-Bahn. Die mittlere ist die, die
   auf einer verwalteten Maschine als einzige bleibt. Dieselbe Erwägung wie
-  `BL-144`, und dieselbe wie ein Abschnitt weiter oben. Der Erklärblock steht
+  `BL-189`, und dieselbe wie ein Abschnitt weiter oben. Der Erklärblock steht
   **einmal**, nicht zweimal hintereinander (`BL-14`).
 
   **Gemessen, nicht vermutet:** Auf der Fundmaschine legt `ln -s` eine reguläre

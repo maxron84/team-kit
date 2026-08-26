@@ -17,7 +17,7 @@ BL-159 — DAS POSIX-URTEIL AUF EINEM WINDOWS-WIRT
     Maschine fuer unbereit, auf der seine NATIVE Bahn tadellos laeuft — und
     schickte den Anwender an `sudo apt install util-linux`, ein Paket, das es
     fuer Git-Bash nicht gibt. Eine Abhilfe, die auf dieser Maschine nicht
-    ausfuehrbar ist, ist keine; dieselbe Erwaegung wie bei `BL-144`.
+    ausfuehrbar ist, ist keine; dieselbe Erwaegung wie bei `BL-189`.
 
     Dazu ein zweiter, kleinerer Fund derselben Sorte: Fehlt `flock` als
     WERKZEUG, meldete das Skript den Befund ZWEIMAL — einmal in 2/5 (Werkzeug
