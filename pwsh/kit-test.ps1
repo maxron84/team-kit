@@ -246,6 +246,13 @@ try {
     # eine Luecke im Team selbst schliesst, bevor der Fund im Kit ankommt.
     Set-Content -Path 'team/tests/test_projekteigener_fund.py' `
         -Value "def test_projekteigener_fund():`n    assert True" -Encoding utf8
+    # BL-178: Eine eigene Regel in CLAUDE.md — so, wie ein gelebtes Projekt
+    # sie hat. Sie ist zugleich der Pruefkoerper fuer den Abgleich-Block: Das
+    # Update fasst CLAUDE.md zu Recht nicht an (sie traegt Projektarbeit), muss
+    # die Abweichung von der Kit-Fassung aber MELDEN. Ohne diese Zeile waere
+    # die installierte Datei identisch mit der frisch gerenderten, der Block
+    # meldete "nichts offen", und die Erkennung bliebe ungeprueft.
+    Add-Content -Path 'CLAUDE.md' -Value 'Eigene Projektregel dieses Projekts.' -Encoding utf8
     & git add -A | Out-Null
     & git commit -q -m 'projektstand' | Out-Null
 } finally { Pop-Location }
@@ -274,6 +281,25 @@ try {
     # Die Gegenprobe: Die INFRASTRUKTUR muss sich sehr wohl erneuert haben.
     Pruefe 'PowerShell-Kern ist installiert' (Test-Path 'team/lib.psm1') $true
     Pruefe 'Sweep-Logik ist installiert' (Test-Path 'team/redteam.ps1') $true
+    # BL-178: Der Abgleich-Block, den es bis 2026-08-26 nur in install.sh gab.
+    # Er ist die einzige Stelle, an der ein Projekt erfaehrt, dass ihm REGELN
+    # aus einer neueren Kit-Fassung fehlen — die Mechanik wird aktualisiert,
+    # die Regeln nicht (die Haelfte von BL-4). Geprueft wird beides: dass der
+    # Block laeuft UND dass er die praeparierte Abweichung findet. Ein Block,
+    # der nur "nichts offen" sagen kann, waere von einem fehlenden nicht zu
+    # unterscheiden.
+    $abgleichLog = Get-Content -Raw $updateLog
+    Pruefe 'Abgleich-Block laeuft (BL-178)' `
+        ($abgleichLog -match 'Bitte von Hand abgleichen') $true
+    Pruefe 'Abgleich meldet die eigene Projektregel' `
+        ($abgleichLog -match 'CLAUDE\.md weicht von der Kit-Fassung ab') $true
+    Pruefe 'Abgleich ordnet die Abweichung ein' `
+        ($abgleichLog -match 'CLAUDE\.md ist eine Abweichung normal') $true
+    # TEAM.md wird seit BL-175 im Update mitgerendert und muss deshalb GLEICH
+    # sein. Die Zeile ist die Gegenrichtung: Ein Abgleich, der alles meldet,
+    # ist so wertlos wie einer, der nichts meldet (BL-14).
+    Pruefe 'Abgleich meldet TEAM.md NICHT' `
+        ($abgleichLog -match 'TEAM\.md weicht von der Kit-Fassung ab') $false
 } finally { Pop-Location }
 
 # --------------------------------------------------------- 6/6 Trockenlauf

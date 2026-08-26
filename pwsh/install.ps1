@@ -283,6 +283,36 @@ function Team-Kodierung {
     return (New-Object System.Text.UTF8Encoding($mitBom))
 }
 
+function Abgleich-Unterschiede {
+    <#
+      BL-178: Die Zeilen, in denen sich zwei Textdateien unterscheiden —
+      OHNE dass die Zeilenenden ins Gewicht fallen.
+
+      Eigene Funktion, damit ein Test sie aus der ECHTEN Datei holen und
+      fahren kann. Ein Test gegen einen nachgebauten Zwilling beweist etwas
+      ueber den Zwilling (Lehre BL-142); und die Zeilenenden sind hier genau
+      die Stelle, an der die bash-Fassung schon einmal falsch lag (BL-137).
+
+      `diff --strip-trailing-cr` hat auf dieser Bahn kein Gegenstueck — es
+      wird auch keines gebraucht: `Get-Content` zerlegt an CRLF UND an LF und
+      liefert die Zeilen ohne Wagenruecklauf. Eine vor BL-137 unter Windows
+      installierte Fassung mit CRLF vergleicht sich damit sauber gegen die
+      frisch gerenderte mit LF, statt JEDE Zeile als abgewichen zu melden.
+      Ein stiller Fehler, gegen einen lauten Fehlalarm getauscht, waere kein
+      Fortschritt (Bauart BL-14). Dass es so ist, steht unter Test — nicht
+      nur in diesem Kommentar.
+
+      Compare-Object vergleicht als MENGE, nicht Zeile gegen Zeile: Eine
+      reine Umsortierung faellt damit nicht auf. Bewusst in Kauf genommen —
+      `-SyncWindow 0` laesst eine einzige eingefuegte Zeile alle folgenden
+      als abgewichen gelten, und eine Zahl, die bei jeder Kleinigkeit
+      dreistellig wird, sagt dem Leser nichts.
+    #>
+    param([string]$Links, [string]$Rechts)
+    return @(Compare-Object (Get-Content -LiteralPath $Links) `
+                            (Get-Content -LiteralPath $Rechts))
+}
+
 function Fuelle-Datei {
     <#
       Ersetzt die {{PLATZHALTER}} in einer Datei. In install.sh macht das ein
@@ -1255,6 +1285,75 @@ if ($Update) {
     }
 
     Melde-VeraltetenRegeltext
+
+    # BL-178: Diesen Block hatte NUR install.sh — auf einer reinen pwsh-Ablage,
+    # unter Windows der Normalfall, bekam ihn also niemand je zu sehen.
+    #
+    # Doku-Dateien tragen Projektanpassungen (gefuellte TODOs, eigene
+    # Abschnitte) und werden deshalb NICHT ueberschrieben. Der Mensch muss aber
+    # erfahren, dass sich die Kit-Fassung geaendert hat — sonst laufen die
+    # REGELN im Projekt der Mechanik hinterher, und das war die Haelfte des
+    # BL-4-Fehlers. Es ist dieselbe Gattung wie BL-145 ("gruen bedeutet auf den
+    # beiden Bahnen verschieden viel"), nur bei den REGELN statt bei den Tests.
+    # `Feld B` ist pwsh-only, ist mehrfach aktualisiert worden und hat diese
+    # Meldung nie bekommen — ein Teil der Antwort darauf, warum die kaputte
+    # CLAUDE.md dort so lange unbemerkt blieb (BL-177).
+    #
+    # PORTIERUNG, KEIN NEUENTWURF: Die bash-Fassung ist erprobt und traegt ihre
+    # Feldlehren im Quelltext. Verglichen wird die MIT DENSELBEN WERTEN
+    # gerenderte Kit-Vorlage gegen die installierte Datei — sonst meldet der
+    # Abgleich immer eine Abweichung (gefuellte gegen ungefuellte Platzhalter)
+    # und wird zur Warnung, die man wegklickt (BL-14).
+    Kopf "Bitte von Hand abgleichen"
+    $abgleich = 0
+    # Gerendert wird in den TEMP-Bereich, NICHT ins Projekt: Eine uncommittete
+    # Datei ausserhalb der Whitelist sieht fuer den Read-Only-Guard aus wie ein
+    # Regelbruch.
+    $abgleichDir = Join-Path ([System.IO.Path]::GetTempPath()) `
+                             ("team-kit-abgleich-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
+    New-Item -ItemType Directory -Force -Path $abgleichDir | Out-Null
+    foreach ($paar in @(
+        @{ Quelle = 'bootstrap/TEAM.md';           Name = 'TEAM.md' },
+        @{ Quelle = 'bootstrap/CLAUDE.md.vorlage'; Name = 'CLAUDE.md' })) {
+        $installiert = Join-Path $Ziel $paar.Name
+        if (-not (Test-Path $installiert -PathType Leaf)) { continue }
+        $gerendert = Join-Path $abgleichDir $paar.Name
+        Copy-Item (Join-Path $KIT $paar.Quelle) $gerendert -Force
+        Fuelle-Datei $gerendert
+        # Die Begruendung zu Zeilenenden und Mengenvergleich steht bei
+        # Abgleich-Unterschiede — dort, wo sie auch unter Test steht.
+        $unterschied = Abgleich-Unterschiede $gerendert $installiert
+        if ($unterschied.Count) {
+            Write-Host "  ! $($paar.Name) weicht von der Kit-Fassung ab ($($unterschied.Count) Zeilen)"
+            # Der genannte Befehl muss AUF DIESER BAHN ausfuehrbar sein. Ein
+            # `diff`-Aufruf, den Windows nicht kennt, ist die Bauart BL-44
+            # (angekuendigt, aber nicht am wirksamen Ort ausfuehrbar) — und
+            # genau der Fehler, den die bash-Fassung schon einmal gemacht hat.
+            # Es ist WOERTLICH derselbe Aufruf, den Abgleich-Unterschiede eine
+            # Zeile hoeher gefahren hat: Wer hier ein anderes Bild saehe als
+            # der Installer, suchte den Fehler an der falschen Stelle.
+            Write-Host "      Compare-Object (Get-Content -LiteralPath '$gerendert') (Get-Content -LiteralPath '$installiert')"
+            $abgleich++
+        } else {
+            Remove-Item -LiteralPath $gerendert -Force
+        }
+    }
+    if ($abgleich -eq 0) {
+        Remove-Item -LiteralPath $abgleichDir -Force -Recurse -ErrorAction SilentlyContinue
+        Gruen "  [ok] nichts offen"
+    } else {
+        # Ohne diesen Absatz ist der Block eine Warnung, die man wegklickt
+        # (BL-14): Bei CLAUDE.md ist eine Abweichung der NORMALFALL, und wer
+        # das nicht weiss, haelt den Befund fuer Rauschen.
+        Gelb "  Bei CLAUDE.md ist eine Abweichung normal (Projektanpassungen,"
+        Gelb "  gefuellte TODOs). Entscheidend ist, ob dir REGELN aus der neuen"
+        Gelb "  Kit-Fassung fehlen — die Mechanik ist aktualisiert, die Regeln"
+        Gelb "  im Projekt sind es nicht (das war die Haelfte von BL-4)."
+        Write-Host "  Die gerenderte Kit-Fassung liegt unter $abgleichDir\ bereit;"
+        Write-Host "  sie traegt bereits deine Werte. Temporaer — nach dem Abgleich"
+        Write-Host "  loeschen. Behalte deine Projekt-Spezifika und eigene Regeln,"
+        Write-Host "  uebernimm den Rest."
+    }
 
     Kopf "Selbsttest"
     $fehler = 0

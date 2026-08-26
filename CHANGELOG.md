@@ -50,6 +50,50 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   `pwsh`. **Gegenprobe:** jede der drei Hälften einzeln zurückgedreht → 6, 8
   und 8 der 10 Fälle fallen; wieder eingesetzt → 10 grün.
 
+- ⚠️ **Den Block „Bitte von Hand abgleichen" hatte nur `install.sh` — die
+  pwsh-Bahn sagte einem Projekt nie, dass ihm Regeln aus einer neueren
+  Kit-Fassung fehlen** (`BL-178`). Doku-Dateien tragen Projektanpassungen und
+  werden vom Update zu Recht nicht überschrieben; der Mensch muss aber
+  erfahren, dass sich die Kit-Fassung geändert hat — sonst laufen die
+  **Regeln** im Projekt der Mechanik hinterher, und das war die Hälfte des
+  `BL-4`-Fehlers. Gemessen war der Fund als `grep -c`: `install.sh` 1,
+  `install.ps1` 0; die drei ähnlich klingenden Blöcke dort (Gitignore-,
+  Gitattributes-, Python-Abgleich) sind andere Prüfungen.
+
+  Es ist dieselbe Gattung wie `BL-145` („grün bedeutet auf den beiden Bahnen
+  verschieden viel"), nur bei den **Regeln** statt bei den Tests. Der
+  Feldbeleg lag schon vor: `Feld B` ist pwsh-only, ist mehrfach aktualisiert
+  worden und hat diese Meldung nie bekommen — ein Teil der Antwort darauf,
+  warum die kaputte `CLAUDE.md` dort so lange unbemerkt blieb (`BL-177`).
+
+  **Portierung, kein Neuentwurf**, mit allen vier Auflagen: in den TEMP-Bereich
+  rendern statt ins Projekt (eine uncommittete Datei außerhalb der Whitelist
+  sieht für den Read-Only-Guard aus wie ein Regelbruch); Zeilenenden ausnehmen
+  — `Get-Content` zerlegt an CRLF **und** LF und liefert die Zeilen ohne
+  Wagenrücklauf, `--strip-trailing-cr` braucht es hier also nicht; einen auf
+  **dieser** Bahn ausführbaren Befehl nennen (`Compare-Object`, kein `diff`,
+  das Windows nicht kennt — Bauart `BL-44`); und sagen, dass eine Abweichung
+  bei `CLAUDE.md` **normal** ist.
+
+  **Ein bewusster Unterschied, benannt statt verschwiegen:** `Compare-Object`
+  vergleicht als Menge — eine reine Umsortierung fällt nicht auf.
+  `-SyncWindow 0` ließe dagegen eine einzige eingefügte Zeile alle folgenden
+  als abgewichen gelten.
+
+  **Nachweis, zweistufig:** 13 Fälle in
+  `test_bl178_abgleich_auf_beiden_bahnen.py` (Gleichstand, die vier Auflagen
+  einzeln, und das Verhalten der echten Vergleichsfunktion über den
+  Syntaxbaum), dazu vier Prüfungen in `kit-test.ps1` Schritt 5 gegen eine
+  echte Installation mit präparierter Projektregel — der Block muss die
+  Abweichung **finden**, nicht nur laufen.
+
+  **End-zu-End gefahren:** frische Installation, eigene Projektregel in
+  `CLAUDE.md`, neue Regel in der Kit-Vorlage, dann `-Update`. Gemeldet wird
+  `CLAUDE.md … (2 Zeilen)` und **nicht** `TEAM.md`; der genannte Befehl,
+  wörtlich ausgeführt, liefert dieselben 2 Zeilen. Die installierte Datei trug
+  dabei eine CRLF-Zeile, die **keinen** Fehlalarm erzeugte, und im Projekt
+  blieb nichts liegen.
+
 - ⚠️ **Die pwsh-Bahn sammelte die Ausgabe jeder Rolle ein, statt sie zu
   streamen — Konsole und Lauf-Log blieben während des Laufs stumm** (`BL-181`,
   gemeldet von `Feld B` mit vollständiger Messreihe). In `Rolle-Starten` stand
@@ -134,10 +178,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Anzeige bleibt der volle Pfad, das Ziel ist jetzt relativ, wie bei den zwei
   älteren Zeilen.
 
-_Sonst nichts Offenes aus dieser Version. Die 21 offenen Backlog-Einträge sind_
+_Sonst nichts Offenes aus dieser Version. Die 20 offenen Backlog-Einträge sind_
 _elf Meldungen aus `Feld E` (`BL-164`…`BL-174`), drei aus `Feld B`_
-_(`BL-183`…`BL-185`) und sieben eigene Vorhaben am Kit (`BL-117`, `BL-144`,_
-_`BL-145`, `BL-178`, `BL-180`, `BL-187`, `BL-188`) — siehe_
+_(`BL-183`…`BL-185`) und sechs eigene Vorhaben am Kit (`BL-117`, `BL-144`,_
+_`BL-145`, `BL-180`, `BL-187`, `BL-188`) — siehe_
 _[plans/backlog.md](plans/backlog.md)._
 
 ## [2.13.1] — 2026-08-25

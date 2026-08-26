@@ -55,6 +55,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from conftest import (kit_pfad, ueberspringe_ohne_bahn, verlange_pwsh,
                       werkzeug_wert)
 
@@ -98,19 +100,34 @@ def test_kit_melden_nennt_keine_bash_variable_mehr():
 def test_die_werkzeugzeile_steht_in_der_konfiguration():
     """Die Gegenrichtung: Man darf (1) nicht durch Loeschen gruen machen."""
     ueberspringe_ohne_bahn("pwsh")
-    marke = "".join(("{{", "PYTHON", "}}"))
     text = _lies(KONFIG_PS1)
     assert re.search(r"\$TEAM_MELDUNG_TOOL\s*=", text), (
         "team.config.ps1 setzt TEAM_MELDUNG_TOOL nicht — dann hat der "
         "Rueckkanal auf dieser Bahn keinen Interpreter, und wir sind wieder "
         "bei BL-182.")
-    assert re.search(r"\$TEAM_MELDUNG_TOOL\s*=.*" + re.escape(marke), text), (
-        f"TEAM_MELDUNG_TOOL traegt den {marke}-Platzhalter nicht — dann haengt "
-        "der Interpreter am Namen der BAUZEIT statt an dem der Maschine "
-        "(BL-131).")
     assert "Team-Werkzeug $TEAM_MELDUNG_TOOL" in _lies(MELDEN_PS1), (
         "kit-melden.ps1 benutzt die Werkzeugzeile nicht ueber Team-Werkzeug — "
         "PowerShell uebergibt eine Zeichenkette sonst als EIN Argument.")
+
+
+def test_die_vorlage_traegt_den_platzhalter():
+    """Nur an der KIT-Vorlage pruefbar — in der Installation ist er gefuellt.
+
+    Die Marke wird zur Laufzeit zusammengesetzt und nicht woertlich getippt:
+    Stufe 3 des Selbsttests sucht nach ungefuellten Platzhaltern in der
+    ausgelieferten Ablage und meldete eine woertlich zitierte Marke als
+    Befund. `test_bl153_rueckkanal_meldung.py` loest es seit langem so.
+    """
+    ueberspringe_ohne_bahn("pwsh")
+    if KONFIG_PS1.parent.name != "entry":
+        pytest.skip("installierte Ablage — der Platzhalter ist hier gefuellt, "
+                    "und das ist genau richtig")
+    marke = "".join(("{{", "PYTHON", "}}"))
+    text = _lies(KONFIG_PS1)
+    assert re.search(r"\$TEAM_MELDUNG_TOOL\s*=.*" + re.escape(marke), text), (
+        f"TEAM_MELDUNG_TOOL traegt den {marke}-Platzhalter nicht — dann haengt "
+        "der Interpreter am Namen der BAUZEIT statt an dem der Maschine "
+        "(BL-131), und beide Installer haben nichts einzusetzen.")
 
 
 # --- (2) Die Gattung: kein Wert bleibt an der Modulgrenze liegen --------------
@@ -182,6 +199,28 @@ def test_das_laufende_modul_reicht_die_werte_wirklich_durch(tmp_path):
 # --- (4) Alle fuenf Verben, end-to-end ---------------------------------------
 
 
+KIT_NAME = "ein-kit"
+
+
+def _baue_kit(tmp_path):
+    """Eine Ablage, die kit_meldung.py als Kit erkennen MUSS.
+
+    ABSICHTLICH gestellt statt REPO_ROOT: In der INSTALLIERTEN Ablage ist
+    REPO_ROOT das PROJEKT und kein Kit — der Fall waere dort rot statt
+    uebersprungen, und die Zwei-Marken-Regel (`BL-153`) weist ihn zu Recht ab.
+    Dieselbe zwei Marken wie in test_bl153_rueckkanal_meldung.py.
+    """
+    kit = tmp_path / KIT_NAME
+    for marke in ("bootstrap/CLAUDE.md.vorlage", "geteilt/tools/kosten.py"):
+        p = kit / marke
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("x", encoding="utf-8", newline="\n")
+    (kit / "CHANGELOG.md").write_text(
+        "# Changelog\n\n## [Unreleased]\n\n## [2.13.1] — 2026-08-25\n",
+        encoding="utf-8", newline="\n")
+    return kit
+
+
 def _fixture_projekt(tmp_path):
     """Ein projektfoermiger Baum, wie ihn kit-melden.ps1 erwartet.
 
@@ -189,6 +228,7 @@ def _fixture_projekt(tmp_path):
     Geschwister-Unterordner daneben liegen — dieselbe Bauart wie in
     test_bl142_notizen_bleiben_ein_array.py.
     """
+    kit = _baue_kit(tmp_path)
     projekt = tmp_path / "feldprojekt"
     (projekt / "team" / "tools").mkdir(parents=True)
     (projekt / "plans").mkdir()
@@ -199,7 +239,7 @@ def _fixture_projekt(tmp_path):
     (projekt / "team.config.ps1").write_text(
         '$TEAM_PROJEKT = "Pruefprojekt"\n'
         '$TEAM_PLAN_ORDNER = "plans/"\n'
-        f'$TEAM_KIT_PFAD = "{REPO_ROOT.as_posix()}"\n'
+        f'$TEAM_KIT_PFAD = "{kit.as_posix()}"\n'
         '$TEAM_MELDUNG_TOOL = "'
         + werkzeug_wert("team/tools/kit_meldung.py") + '"\n',
         encoding="utf-8-sig", newline="\n")
@@ -261,7 +301,7 @@ def test_kit_pfad_findet_das_kit_das_die_konfiguration_nennt(tmp_path):
     assert "TEAM_KIT_PFAD" not in r.stderr, (
         "kit-pfad verlangt den Wert, den die Konfiguration bereits traegt — "
         f"er kommt an der Aufrufstelle nicht an:\n{aus}")
-    assert REPO_ROOT.name in r.stdout, (
+    assert KIT_NAME in r.stdout, (
         f"kit-pfad nennt das Kit aus der Konfiguration nicht:\n{aus}")
 
 
