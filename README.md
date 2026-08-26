@@ -111,7 +111,7 @@ gedreht.
 **Offen sind 5 Einträge** — keine Reste dieser Version, sondern drei
 Meldungen aus dem Feld und zwei eigene Bauvorhaben:
 [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (140 Einträge).
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (141 Einträge).
 
 ---
 
@@ -342,7 +342,7 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen sechs Quellen
 kommen die Backlog-Einträge `BL-1`…`BL-195`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (140 Einträge), der Rest in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (141 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors

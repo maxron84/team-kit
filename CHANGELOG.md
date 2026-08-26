@@ -143,6 +143,40 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- ⚠️ **`kit-test.ps1` fuhr 6 von 11 Schritten und 15 von 127 Einzelprüfungen —
+  jetzt 8 Schritte und 58 Prüfungen** (`BL-145`). Der Fix zu `BL-136` galt als
+  *„kit-test.ps1 alle Schritte grün"* nachgewiesen. Er war es auch — nur prüfte
+  dieses Skript den Fall gar nicht, an dem er zerbrach: Der **bash**-Selbsttest
+  war rot, während der Nachweis der **pwsh**-Bahn grün meldete, vier Commits
+  lang unbemerkt (`BL-144`).
+
+  Nachgezogen sind die drei Schritte, die der Eintrag nach **Wirkung** ordnet:
+  Schritt 6 auf den Umfang der bash-Fassung (`.gitignore`/`.gitattributes`
+  gegen die Vorlage, samt der Gegenprobe, dass ein **vollständiges** Fragment
+  schweigt — dort saß `BL-136`), Schritt 7 neu für die **Bahn-Abwahl** (auf
+  Windows ist die einbahnige Ablage der Normalfall, und `BL-129`s Zusicherung
+  galt hier unbelegt), Schritt 5 neu für die Suite unter angepasster
+  Konfiguration. Schritt 3 nimmt jetzt `__pycache__` aus, wie die bash-Fassung.
+
+  **Was er weiterhin nicht prüft, sagt er selbst** — Regel-Inventar, Einzug in
+  eine gewachsene Codebasis, Einrichtungsroutine.
+
+  **Die Gegenprobe, die den Eintrag erst gültig macht, ist gefahren:** Der
+  `BL-136`-Fix zurückgedreht — „Block vorhanden" gilt wieder als
+  „vollständig" — lässt `kit-test.ps1` in Schritt 6 mit **fünf** roten
+  Prüfungen und **Exit 1** enden. Genau das hat er am 2026-08-21 nicht getan.
+
+  **Zwei Funde beim Bauen.** `PruefungenSoll` stand auf 15, gefahren wurden
+  längst 19 — ein früherer Commit hatte vier Prüfungen ergänzt und die
+  Sollzahl nicht nachgezogen; der Selbsttest wäre am Schluss rot geworden, und
+  niemand hat es gemerkt, weil ihn niemand fährt. Und ein Testfall hängte
+  seinen Übersprung am **Dateinamen**: In einer Installation liegt dort der
+  Backlog des **Projekts**, und der Fall wurde rot statt übersprungen.
+
+  **`BL-145` und `BL-195` gehören zusammen:** Der eine macht den
+  pwsh-Selbsttest **aussagekräftig**, der andere **bezahlbar**. Ohne den
+  Laufzeit-Fix wäre dieser Nachweis nicht zu führen gewesen.
+
 - **Der Selbsttest fuhr dieselbe Suite neunmal — jetzt viermal** (`BL-195`).
   Beide Installer fahren am Ende ihres Laufs die volle Suite. Bei einer
   **Erstinstallation** ist das genau richtig: Der Anwender soll erfahren, ob
