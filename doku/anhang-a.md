@@ -92,7 +92,8 @@ darin.
 
 ```gitignore
 .ralph-logs/ .team-logs/     # Rohlogs, rotiert
-.team-loop.lock
+.team-loop.lock              # Sperre, wenn flock da ist
+.team-loop.lock.d/           # Ersatzsperre ohne flock (BL-190)
 .ralph-state .harry-state .marv-state
 .ralph-plan                  # Zeiger auf den aktiven Plan
 .frank-attempts              # Versuchszähler des Fixers

@@ -143,6 +143,71 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- ⚠️ **Fehlte `flock`, meldete die bash-Bahn einen Sperrkonflikt, den es nicht
+  gab — jetzt gibt es einen Ersatz** (`BL-190`). `team_lock()` entschied an
+  **einer** Bedingung über **zwei** Fehlerklassen: Ein fehlendes Programm
+  lieferte denselben Nicht-Null-Status wie eine belegte Sperre. Unter **Git for
+  Windows** gibt es `flock` nicht — es gehört nicht zum MSYS2-Kern, den Git
+  mitliefert —, und dort brach damit **jede** Rolle der bash-Bahn sofort ab,
+  mit der Meldung *„Eine andere T.E.A.M.-Pipeline läuft bereits"*. Wer ihr
+  folgte, suchte einen zweiten Lauf, killte Prozesse oder löschte die
+  Lock-Datei; nichts davon half, weil die Datei nie das Problem war. Dieselbe
+  Fehlerklassen-Verwechslung wie `BL-173` (ein PATH-Problem als Auth-Fehler).
+
+  **Zwei Verfahren, ein Versprechen.** `team_lock` fragt jetzt **vor** dem
+  Sperrversuch, ob `flock` auflösbar ist. Ist es da, bleibt alles wie bisher.
+  Fehlt es, sagt das Kit das **einmal** an — mit dem Werkzeug beim Namen — und
+  nimmt einen **Sperrordner** (`.team-loop.lock.d`): `mkdir` ist auf jedem
+  POSIX-Dateisystem und unter MSYS **atomar**, Prüfen und Anlegen sind ein
+  Schritt. Damit bleibt die Zusicherung *„eine Pipeline zur Zeit"* **erhalten**,
+  statt gegen eine Meldung getauscht zu werden — zwei Rollen gleichzeitig im
+  selben Arbeitsbaum sind der Schaden, den `BL-12` teuer belegt hat.
+
+  **Die Leiche ist mitgebaut**, und ohne sie wäre der Fix ein Rückschritt: Der
+  Ordner trägt die **PID**. Ist der Prozess tot, gilt die Sperre als verwaist
+  und wird übernommen — **still**, denn ein toter Prozess hält nichts. Ohne
+  diesen Teil hätte man einen Fehlalarm gegen einen **dauerhaften** getauscht.
+  Dazu `team_unlock()` (Gleichstand mit der pwsh-Bahn), das **nur** freigibt,
+  was der eigene Prozess hält, und ein `EXIT`-Trap, der nur gesetzt wird, wenn
+  `EXIT` noch frei ist — ein `trap … EXIT` aus einer Bibliothek überschriebe
+  sonst still, was das aufrufende Skript dort hängen hat.
+
+  **Beide Gegenproben des Eintrags sind gefahren.** Zwei Läufe in derselben
+  Ablage: Der zweite wird abgewiesen, **auf einer Maschine ohne `flock`**. Ein
+  Lauf ohne `flock` und ohne gehaltene Sperre erzeugt **genau eine** Meldung,
+  die das Werkzeug nennt, und **keine** über eine fremde Pipeline. Mit dem alten
+  `team_lock` reproduziert sich der Feldfall wörtlich. **Zwölf Gegenproben,
+  jede greift** (20 Fälle im Test). `.team-loop.lock.d/` steht
+  im `.gitignore`-Fragment — das Muster `.team-loop.lock` deckt den Ordner
+  **nicht** ab.
+
+  **Der Eintrag ist eine Gattung, keine Stelle** (`BL-154`), und das fiel erst
+  beim Bauen auf: Die Frage *„läuft gerade eine Pipeline?"* steht an **drei**
+  Orten, und alle drei fragten `flock` — in **entgegengesetzte** Richtungen
+  falsch. `install.sh` las vor jedem `--update` ein fehlendes Programm als
+  *„gehalten"* und brach ab, sobald die Lock-Datei überhaupt existierte (derselbe
+  Defekt wie in `team_lock`, seit `BL-10` an zweiter Stelle). `team-status.sh`
+  hatte `command -v` davor und hätte ab jetzt **„idle"** gemeldet, während der
+  Ersatzweg sperrt — ein Schaden, den erst die Reparatur erzeugt hätte. Beide
+  fragen jetzt **beide** Mechaniken (`team_pipeline_laeuft()`), und eine
+  **verwaiste** Sperre gilt dort ausdrücklich nicht als laufende Pipeline.
+
+  **Was der Ersatz ausdrücklich NICHT abdeckt:** Er greift, wenn `flock`
+  **fehlt** — nicht, wenn es **da ist und nicht hält** (Netz- oder
+  Windows-Laufwerk, WSL 1). Dafür steht die Zwei-Prozess-Probe in
+  `kit-einrichten.sh` weiterhin als **Fehler** da. Die Diagnosetexte sind
+  mitgezogen: Auf Windows ist der fehlende `flock` jetzt ein **grüner** Befund,
+  der den Ersatzweg nennt; auf Linux ist aus dem Fehler eine **Warnung**
+  geworden. `doku/einrichtung.md`, `doku/anhang-a.md` und das README sagen
+  jetzt „bevorzugter Weg“ statt „Voraussetzung“.
+
+  **Warum die Fälle an Einzelfunktionen hängen:** Ob `flock` da ist, ist eine
+  Eigenschaft der **Maschine**. Ein Test, der nur `team_lock` fährt, prüft unter
+  Linux ausschliesslich den einen Zweig und unter Windows ausschliesslich den
+  anderen — auf beiden wäre er grün, und die jeweils andere Hälfte bliebe
+  unbelegt. Das ist die Doppelbahn-Drift, die `BL-131` und `BL-145` teuer
+  bezahlt haben.
+
 - ⚠️ **`kit-test.ps1` fuhr 6 von 11 Schritten und 15 von 127 Einzelprüfungen —
   jetzt 8 Schritte und 58 Prüfungen** (`BL-145`). Der Fix zu `BL-136` galt als
   *„kit-test.ps1 alle Schritte grün"* nachgewiesen. Er war es auch — nur prüfte

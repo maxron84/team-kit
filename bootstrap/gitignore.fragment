@@ -5,6 +5,7 @@
 .ralph-logs/
 .team-logs/
 .team-loop.lock
+.team-loop.lock.d/
 .ralph-state
 .ralph-plan
 .harry-state

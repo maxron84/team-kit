@@ -216,9 +216,14 @@ def _umgebung(repo, fang):
     u["TEAM_PROMPT_FANG"] = str(fang)
     u["TEAM_AUTH_MODE"] = "abo"
     # Hauskonvention der Rollen-Tests: Die Sperre wird als bereits gehalten
-    # gemeldet. Sie ist nicht der Gegenstand dieses Tests, und unter Git for
-    # Windows gibt es kein `flock` — `team_lock` meldet dort "eine andere
-    # Pipeline laeuft bereits" und bricht ab, bevor ein Prompt entsteht.
+    # gemeldet. Sie ist nicht der Gegenstand dieses Tests, und ohne die
+    # Konvention legte jeder Lauf eine Sperre in der Wegwerf-Ablage an.
+    #
+    # Bis BL-190 stand hier ein zweiter Grund: Unter Git for Windows gibt es
+    # kein `flock`, und `team_lock` brach dort mit "eine andere Pipeline laeuft
+    # bereits" ab, bevor ein Prompt entstand. Das ist behoben — der Ersatzweg
+    # sperrt ueber einen Ordner. Der Grund steht hier trotzdem, weil er erklaert,
+    # warum die Konvention aelter ist als dieser Test.
     u["TEAM_LOCK_HELD"] = "1"
     return u
 

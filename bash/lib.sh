@@ -1106,16 +1106,180 @@ team_reproducer_liegt_vor() {
 }
 
 # --- Lock (eine Pipeline zur Zeit) -----------------------------------------------
-# team_lock <label>: nimmt .team-loop.lock (non-blocking). Läuft das Skript
+# Zwei Verfahren, EIN Versprechen. Der Normalfall ist `flock`; fehlt es, nimmt
+# das Kit einen Sperrordner.
+#
+# BL-190: Vorher entschied EINE Bedingung (`if ! flock -n 9`) ueber beides —
+# ein FEHLENDES PROGRAMM lieferte dort denselben Nicht-Null-Status wie eine
+# BELEGTE SPERRE. Unter Git for Windows gibt es `flock` nicht (es gehoert nicht
+# zum MSYS2-Kern, den Git mitliefert), und dort brach damit JEDE Rolle der
+# bash-Bahn sofort ab — mit einer Meldung, die auf einen
+# Nebenlaeufigkeitskonflikt zeigte, den es nicht gab. Wer ihr folgte, suchte
+# einen zweiten Lauf, killte Prozesse oder loeschte die Lock-Datei; nichts
+# davon half, weil die Datei nie das Problem war. Dieselbe
+# Fehlerklassen-Verwechslung wie BL-173 (ein PATH-Problem als Auth-Fehler) und
+# dieselbe Abhilfe: die Klasse TRENNEN, bevor man handelt.
+#
+# Warum ein ORDNER und nicht "laut ohne Sperre weiterlaufen": `mkdir` ist auf
+# jedem POSIX-Dateisystem und unter MSYS atomar — Pruefen und Anlegen sind EIN
+# Schritt, es gibt kein Fenster dazwischen. Damit bleibt die Zusicherung "eine
+# Pipeline zur Zeit" ERHALTEN, statt gegen eine Meldung getauscht zu werden.
+# Zwei Rollen gleichzeitig im selben Arbeitsbaum sind der Schaden, den BL-12
+# teuer belegt hat.
+#
+# Der Ordner ist der ERSATZ, nicht der Normalfall: Wo `flock` da ist, bleibt
+# es. Sonst laegen zwei Sperrmechaniken im Feld, und bei einem Vorfall wuesste
+# niemand, welche gegriffen hat — genau deshalb sagt der Ersatzweg einmal
+# ausdruecklich an, dass er laeuft.
+TEAM_LOCK_DATEI=".team-loop.lock"
+TEAM_LOCK_ORDNER=".team-loop.lock.d"
+
+# team_flock_vorhanden: Ist `flock` aufloesbar? (0 = ja)
+# Reine ABFRAGE, ohne zu melden — Bauart team_cli_vorhanden (BL-173).
+team_flock_vorhanden() {
+    command -v flock >/dev/null 2>&1
+}
+
+# team_flock_fehlt_melden <label>: sagt den Ersatzweg an, mit dem Werkzeug beim
+# Namen.
+#
+# Das ist kein Fehler und keine Warnung, sondern eine Bestandsangabe: Bei einem
+# Vorfall muss ohne Nachforschen feststehen, WELCHE der beiden Sperren gegriffen
+# hat. Sie erscheint hoechstens einmal je Pipeline — die Kind-Skripte laufen
+# unter TEAM_LOCK_HELD=1 und kommen hier nie an.
+team_flock_fehlt_melden() {
+    echo "[${1:-team}] Hinweis: 'flock' ist auf dieser Maschine nicht vorhanden." >&2
+    echo "  Die Sperre läuft deshalb über den Ordner $TEAM_LOCK_ORDNER (gleichwertig, BL-190)." >&2
+    echo "  Das ist KEIN Sperrkonflikt — es läuft keine zweite Pipeline." >&2
+}
+
+# team_lock_ordner_verwaist: Haelt den Sperrordner noch ein LEBENDER Prozess?
+# (0 = verwaist, darf uebernommen werden)
+#
+# Die hinterlegte PID ist genau dafuer da. Ohne diesen Teil tauscht man einen
+# Fehlalarm gegen einen DAUERHAFTEN: Ein Lauf, der abstuerzt, blockierte sonst
+# jeden folgenden, und niemand koennte den Unterschied zu einem echten
+# Doppellauf sehen.
+#
+# Uebernommen wird STILL. Ein toter Prozess haelt nichts — das ist kein Befund,
+# und eine Meldung, die nach jedem regulaeren Lauf erscheint, waere nach BL-14
+# keine.
+team_lock_ordner_verwaist() {
+    local pid
+    pid="$(cat "$TEAM_LOCK_ORDNER/pid" 2>/dev/null || true)"
+    # Keine lesbare PID: Der Ordner steht, aber niemand bekennt sich zu ihm —
+    # der Lauf ist zwischen mkdir und dem Schreiben gestorben. Als "gehalten"
+    # zu werten machte die Ablage dauerhaft unbrauchbar, und zwar durch genau
+    # den Fehlalarm, den dieser Eintrag abstellt.
+    [ -n "$pid" ] || return 0
+    kill -0 "$pid" 2>/dev/null && return 1
+    return 0
+}
+
+# team_lock_ordner_nehmen <label>: der Ersatzweg. 0 = Sperre gehoert uns.
+team_lock_ordner_nehmen() {
+    local label="$1" pid
+    if ! mkdir "$TEAM_LOCK_ORDNER" 2>/dev/null; then
+        if ! team_lock_ordner_verwaist; then
+            pid="$(cat "$TEAM_LOCK_ORDNER/pid" 2>/dev/null || true)"
+            echo "[$label] Eine andere T.E.A.M.-Pipeline läuft bereits ($TEAM_LOCK_ORDNER, PID ${pid:-?}) — Abbruch." >&2
+            return 1
+        fi
+        rm -rf "$TEAM_LOCK_ORDNER"
+        if ! mkdir "$TEAM_LOCK_ORDNER" 2>/dev/null; then
+            # Zwischen Pruefung und Anlegen war ein anderer schneller. DAS ist
+            # der Konfliktfall, und hier heisst die Meldung zu Recht so.
+            echo "[$label] Eine andere T.E.A.M.-Pipeline läuft bereits ($TEAM_LOCK_ORDNER) — Abbruch." >&2
+            return 1
+        fi
+    fi
+    printf '%s\n' "$$" > "$TEAM_LOCK_ORDNER/pid"
+    team_lock_aufraeumen_anmelden
+    return 0
+}
+
+# team_lock_aufraeumen_anmelden: gibt den Sperrordner beim Prozessende frei.
+#
+# Beim flock-Weg macht das der Kernel — der Deskriptor faellt beim Exit weg.
+# Ein Ordner faellt nicht weg. Die PID-Uebernahme oben fuehrt zwar auch ohne
+# diesen Teil zum Ziel, hinterliesse aber nach JEDEM Lauf ein Verzeichnis in
+# der Ablage des Anwenders (dieselbe Gattung wie BL-196).
+#
+# Gesetzt wird der Trap nur, wenn EXIT noch FREI ist: Ein `trap ... EXIT` aus
+# einer Bibliothek ueberschreibt still, was das aufrufende Skript dort schon
+# haengen hat — ein teurer Nebeneffekt fuer eine Aufraeumarbeit. Ist EXIT
+# belegt, bleibt die PID-Uebernahme der Weg. Sie ist der Grund, warum dieser
+# Teil eine Bequemlichkeit sein DARF und keine Zusicherung sein MUSS.
+team_lock_aufraeumen_anmelden() {
+    if [ -n "$(trap -p EXIT)" ]; then return 0; fi
+    trap 'team_unlock' EXIT
+}
+
+# team_unlock: Gegenstueck zu team_lock, mit dem pwsh-Zweig gleichgezogen.
+# Gibt NUR frei, was dieser Prozess selbst haelt — sonst raeumte ein Lauf die
+# Sperre eines fremden weg und machte aus der Zusicherung das Gegenteil.
+team_unlock() {
+    if [ -d "$TEAM_LOCK_ORDNER" ] \
+       && [ "$(cat "$TEAM_LOCK_ORDNER/pid" 2>/dev/null || true)" = "$$" ]; then
+        rm -rf "$TEAM_LOCK_ORDNER"
+    fi
+    # Und der flock-Weg: Beim Prozessende faellt der Deskriptor ohnehin weg,
+    # aber wer team_unlock RUFT, will die Sperre JETZT los — sonst gaebe die
+    # Funktion auf dem einen Weg frei und auf dem anderen nur den Anschein.
+    # Auf einem nie geoeffneten Deskriptor ist das folgenlos.
+    exec 9>&- 2>/dev/null || true
+    unset TEAM_LOCK_HELD
+    return 0
+}
+
+# team_lock <label>: nimmt die Sperre (non-blocking). Läuft das Skript
 # unterhalb der Vollautomatik (TEAM_LOCK_HELD=1), wird nicht erneut gelockt.
 team_lock() {
     if [ "${TEAM_LOCK_HELD:-0}" = "1" ]; then return 0; fi
-    exec 9>.team-loop.lock
-    if ! flock -n 9; then
-        echo "[$1] Eine andere T.E.A.M.-Pipeline läuft bereits (.team-loop.lock) — Abbruch." >&2
-        return 1
+    if team_flock_vorhanden; then
+        exec 9>"$TEAM_LOCK_DATEI"
+        if ! flock -n 9; then
+            echo "[$1] Eine andere T.E.A.M.-Pipeline läuft bereits ($TEAM_LOCK_DATEI) — Abbruch." >&2
+            return 1
+        fi
+    else
+        team_flock_fehlt_melden "$1"
+        team_lock_ordner_nehmen "$1" || return 1
     fi
     export TEAM_LOCK_HELD=1
+}
+
+# team_pipeline_laeuft [wurzel]: Haelt gerade jemand die Sperre? (0 = ja)
+#
+# BL-190 ist eine GATTUNG, keine Stelle (BL-154): Die Frage "laeuft gerade eine
+# Pipeline?" wird an DREI Orten gestellt — hier, in `team-status.sh` (Zeile
+# "Pipeline: laeuft/idle") und in `install.sh` vor einem `--update`. Alle drei
+# fragten `flock`, und alle drei gaben ohne `flock` die falsche Antwort:
+#
+#   * `install.sh` las `! flock -n … true` als "gehalten", weil ein fehlendes
+#     Programm Nicht-Null liefert — ein `--update` brach also ab, sobald die
+#     Datei ueberhaupt existierte. Derselbe Fehler wie in `team_lock`, an einer
+#     zweiten Stelle.
+#   * `team-status.sh` hatte `command -v flock` davor und meldete deshalb
+#     "idle" — was ab jetzt falsch ist, weil der Ersatzweg eine Sperre haelt,
+#     von der die Zeile nichts weiss. Ein Bericht, der eine laufende Pipeline
+#     als idle ausweist, ist schlimmer als gar keiner.
+#
+# Beide Mechaniken werden gefragt, und der Ordner zuerst: Wo er liegt, ist er
+# die gueltige Sperre.
+team_pipeline_laeuft() {
+    local wurzel="${1:-.}" pid
+    if [ -d "$wurzel/$TEAM_LOCK_ORDNER" ]; then
+        pid="$(cat "$wurzel/$TEAM_LOCK_ORDNER/pid" 2>/dev/null || true)"
+        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            return 0
+        fi
+    fi
+    if [ -e "$wurzel/$TEAM_LOCK_DATEI" ] && command -v flock >/dev/null 2>&1 \
+       && ! flock -n "$wurzel/$TEAM_LOCK_DATEI" true 2>/dev/null; then
+        return 0
+    fi
+    return 1
 }
 
 # --- Ergebnis-Prüfung --------------------------------------------------------

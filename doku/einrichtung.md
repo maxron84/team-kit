@@ -23,7 +23,7 @@ Produktnamen niemanden zum Laufen bringt. Die Trennlinie:
 | Schicht | Pflicht | Beispiel in dieser Anleitung | Warum die Pflicht Pflicht ist |
 |---|---|---|---|
 | Betriebssystem | **entweder** POSIX mit `bash` ≥ 4 **oder** PowerShell ≥ 7 | Linux; Windows über WSL2 (WSL1 nur mit [Gegenprobe](#wenn-nur-wsl-1-geht--vm-gesperrte-firmware-verwalteter-rechner)); Windows nativ | Das Kit hat **zwei Orchestrierungen** — Bash und PowerShell — die dieselben Python-Werkzeuge und dieselben Rollen-Briefings benutzen. Siehe [Windows nativ](#der-kurze-weg--windows-nativ-ohne-wsl) |
-| Bordmittel | `git`, `python3` ≥ 3.8; auf dem Bash-Weg zusätzlich `flock` | — | Git trägt Commit, Rollback und Guard; `team/tools/` ist Python. Die Serialisierung von Ledger und Kaskadenstand macht auf dem Bash-Weg `flock`, auf dem PowerShell-Weg `[System.IO.FileStream]` — dort braucht es **kein** `flock` |
+| Bordmittel | `git`, `python3` ≥ 3.8; auf dem Bash-Weg **empfohlen** `flock` | — | Git trägt Commit, Rollback und Guard; `team/tools/` ist Python. Die Loop-Sperre nimmt auf dem Bash-Weg `flock`, wo es da ist, und sonst einen `mkdir`-Sperrordner (`BL-190`) — **fehlendes `flock` ist damit kein Abbruchgrund mehr**; auf dem PowerShell-Weg sperrt `[System.IO.FileStream]`, dort braucht es ohnehin **kein** `flock`. Die Ledger-Datei serialisiert Python selbst |
 | Testrunner | `pytest` (nur für `team-test.sh`/`kit-test.sh`/`kit-test.ps1`) | — | Die Rollen selbst brauchen ihn nicht |
 | **IDE** | **keine** | VS Codium (Linux), VS Code + WSL-Erweiterung (Windows) | Das Kit wird im Terminal bedient. Ein Editor ist Komfort |
 | **Agenten-Werkzeug** | **eine** CLI, die headless arbeitet und ein maschinenlesbares Ergebnis liefert | Claude Code (`claude -p`) | Die einzige Aufrufstelle ist `team_claude()` in [team/lib.sh](../bash/lib.sh) |
@@ -115,8 +115,11 @@ behauptet.
 | Arch, Manjaro | `sudo pacman -S git python python-pytest util-linux` |
 | openSUSE | `sudo zypper install git python3 python3-pytest util-linux` |
 
-`flock` steckt in `util-linux` und ist fast überall vorinstalliert. `pytest`
-darf auch aus `pipx install pytest` kommen.
+`flock` steckt in `util-linux` und ist fast überall vorinstalliert. Fehlt es
+— wie unter Git for Windows —, sperrt die bash-Bahn seit `BL-190` über einen
+`mkdir`-Sperrordner; die Zusicherung *„eine Pipeline zur Zeit“* bleibt, das Kit
+sagt den Ersatzweg einmal an. `pytest` darf auch aus `pipx install pytest`
+kommen.
 
 ### 2. Klonen
 
@@ -144,8 +147,9 @@ Fünf Abschnitte, in dieser Reihenfolge:
 1. **Umgebung** — Linux oder WSL, und ob es WSL2 ist. WSL1 ist eine Warnung,
    kein Abbruch — was dann zu tun ist, steht unter
    [Wenn nur WSL 1 geht](#wenn-nur-wsl-1-geht--vm-gesperrte-firmware-verwalteter-rechner).
-2. **Werkzeuge** — `bash` ≥ 4, `git`, `python3` ≥ 3.8, `flock` sind Fehler,
-   wenn sie fehlen; `pytest` und die Agenten-CLI nur Hinweise.
+2. **Werkzeuge** — `bash` ≥ 4, `git` und `python3` ≥ 3.8 sind Fehler, wenn sie
+   fehlen; `flock`, `pytest` und die Agenten-CLI nur Hinweise. Bei `flock`
+   nennt der Hinweis den Ersatzweg (`BL-190`).
 3. **Lage des Klons** — Zeilenenden, Dateisystem, und zwei **Proben** statt
    Annahmen: Greift `chmod +x` hier? Hält `flock` hier?
 4. **Auth** — legt auf Wunsch `~/.config/claude-team/` an (Abo als Prio 1).
@@ -706,7 +710,7 @@ installiert, wie komme ich dazu?"* — steht in der [FAQ](faq.md).
 | `/usr/bin/env: bad interpreter` | CRLF-Zeilenenden (Klon aus Windows) | In der Distro neu klonen; `git config --global core.autocrlf input` |
 | `./vollautomatik.sh: Permission denied` | Exec-Bit greift nicht (DrvFs unter `/mnt/c`) | Repo ins Linux-Dateisystem verlegen; notfalls `chmod +x *.sh` |
 | Alles quälend langsam unter WSL | Repo liegt unter `/mnt/c` (9p) | dito |
-| `flock: … not implemented` oder Lauf hängt an der Sperre | Netz- oder Windows-Laufwerk | Repo auf ein lokales Linux-Dateisystem |
+| `flock: … not implemented` oder Lauf hängt an der Sperre | Netz- oder Windows-Laufwerk | Repo auf ein lokales Linux-Dateisystem. **Nicht zu verwechseln mit `flock: command not found`** — das ist ein fehlendes Werkzeug, und dort greift seit `BL-190` der Sperrordner |
 | `kit-einrichten.sh`: „nicht erkennbar WSL2" | Distro läuft unter WSL1 — in VMs meist fehlende nested virtualization | Warnung, kein Abbruch: [Wenn nur WSL 1 geht](#wenn-nur-wsl-1-geht--vm-gesperrte-firmware-verwalteter-rechner) — erst Hypervisor prüfen, sonst Zwei-Prozess-Gegenprobe für `flock` |
 | `python3: command not found` mitten im Lauf | Bordmittel fehlt | `sudo apt install python3` — die Team-Werkzeuge sind Python |
 | CLI meldet „takes precedence" | `ANTHROPIC_API_KEY` im Profil oder in der Umgebung | `bash/scripts/team-auth-setup.sh`, dann `unset ANTHROPIC_API_KEY` — **und die IDE neu starten** (geerbte Umgebung) |

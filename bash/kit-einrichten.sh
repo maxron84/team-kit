@@ -254,20 +254,30 @@ elif [ "$WIRT" = "windows" ]; then
     # BL-159: Hier stand ein Fehler samt "sudo apt install util-linux" — auf
     # einer Windows-Maschine ein Rat ins Leere. Git for Windows liefert kein
     # flock, und es gibt kein Paket, das eines nachliefert.
-    warnung "flock fehlt — Git for Windows liefert keines." \
-            "Folge: Zwei Rollen koennen gleichzeitig auf Ledger und" \
-            "Kaskadenstand schreiben, ohne dass es jemand merkt." \
-            "Kein Fehler, sondern die Lage dieser Bahn auf dieser Maschine:" \
-            "Nativ unter Windows ist die pwsh-Bahn zustaendig (README," \
-            "Zwei-Bahnen-Tabelle). Sie sperrt ueber echte Dateisperren des" \
-            "Betriebssystems und braucht kein flock." \
-            "Wer die bash-Bahn hier trotzdem faehrt: keine zwei Rollen" \
-            "gleichzeitig starten — die Serialisierung fehlt."
+    #
+    # BL-190: Und hier stand bis dahin, die Serialisierung FEHLE dann. Das war
+    # damals wahr und ist es nicht mehr — die bash-Bahn sperrt ohne flock ueber
+    # einen mkdir-Sperrordner. Eine Einrichtungspruefung, die dem Code
+    # widerspricht, ist schlimmer als keine: Sie erzieht dazu, ihr nicht zu
+    # glauben.
+    # Gruen, nicht gelb: Die Lage ist vollstaendig abgedeckt, und eine Warnung,
+    # die auf JEDER Git-for-Windows-Maschine erscheint und nichts zu tun
+    # uebriglaesst, ist nach BL-14 keine.
+    ok "flock fehlt — Git for Windows liefert keines; der Ersatzweg greift"
+    echo "      Die bash-Bahn sperrt hier ueber einen mkdir-Sperrordner"
+    echo "      (.team-loop.lock.d, BL-190). Die Zusicherung 'eine Pipeline zur"
+    echo "      Zeit' bleibt; das Kit sagt den Ersatzweg beim Lauf einmal an."
+    echo "      Nativ unter Windows ist ohnehin die pwsh-Bahn zustaendig"
+    echo "      (README, Zwei-Bahnen-Tabelle) — sie sperrt ueber echte"
+    echo "      Dateisperren des Betriebssystems und braucht kein flock."
 else
-    fehler "flock fehlt (Paket util-linux)." \
-           "Ohne Dateisperre laufen zwei Rollen unbemerkt gleichzeitig auf" \
-           "Ledger und Kaskadenstand." \
-           "Debian/Ubuntu:  sudo apt install util-linux"
+    warnung "flock fehlt (Paket util-linux)." \
+            "Seit BL-190 kein Abbruchgrund mehr: Die bash-Bahn weicht auf" \
+            "einen mkdir-Sperrordner aus, und 'eine Pipeline zur Zeit' bleibt" \
+            "zugesichert. flock ist trotzdem der bevorzugte Weg — es ist der" \
+            "erprobte, und zwei Sperrmechaniken im Feld erschweren die" \
+            "Ursachensuche bei einem Vorfall." \
+            "Debian/Ubuntu:  sudo apt install util-linux"
 fi
 
 # pytest: nur für die Testläufe nötig, nicht für den Betrieb der Rollen.

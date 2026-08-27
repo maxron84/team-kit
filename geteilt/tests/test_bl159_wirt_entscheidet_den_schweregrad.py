@@ -81,19 +81,20 @@ def test_der_wirt_wird_ueberhaupt_erkannt():
 
 
 @pytest.mark.parametrize("befund,warum", [
-    ("flock fehlt — Git for Windows liefert keines",
-     "Der alte Text nannte 'sudo apt install util-linux' — auf einer "
-     "Windows-Maschine ein Rat ins Leere"),
     ("chmod +x wirkt hier nicht",
      "NTFS traegt unter Git-Bash kein Exec-Bit; das ist das Dateisystem "
      "und keine kaputte Maschine"),
 ])
-def test_die_zwei_windows_befunde_sind_warnungen(befund, warum):
+def test_die_windows_befunde_sind_keine_fehler(befund, warum):
     """Sie verschwinden NICHT — sie wechseln den Schweregrad.
 
     Geprueft wird deshalb beides: dass der Befund noch dasteht, und dass er
     ueber `warnung` laeuft. Ein Befund, der still wird, waere schlimmer als
     einer mit falschem Schweregrad.
+
+    BL-190 hat den flock-Befund aus dieser Liste herausgenommen — nicht
+    weggelassen: Er hat jetzt einen eigenen Fall darunter, weil sein
+    Schweregrad noch eine Stufe weiter gefallen ist.
     """
     quelle = _quelle()
     assert befund in quelle, f"Der Befund ist verschwunden statt milder: {warum}"
@@ -105,6 +106,38 @@ def test_die_zwei_windows_befunde_sind_warnungen(befund, warum):
         f"'{befund}' wird nicht als Warnung ausgegeben (BL-159). {warum}. "
         "Als Fehler erklaert das Kit eine Maschine fuer unbereit, auf der "
         "seine native Bahn laeuft.")
+
+
+def test_der_flock_befund_ist_seit_bl190_kein_mangel_mehr():
+    """Umgedrehter Fall, nicht geloeschter (Bauart aus BL-20/BL-172).
+
+    BL-159 hat den flock-Befund vom FEHLER zur WARNUNG gemacht, und das war
+    richtig, solange die Folge stimmte: "zwei Rollen koennen gleichzeitig
+    schreiben". Seit BL-190 stimmt sie nicht mehr — die bash-Bahn sperrt ohne
+    flock ueber einen mkdir-Ordner, und die Zusicherung bleibt.
+
+    Damit ist gelb der falsche Schweregrad geworden: Eine Warnung, die auf
+    JEDER Git-for-Windows-Maschine erscheint und nichts zu tun uebriglaesst,
+    ist nach BL-14 keine. Der Befund bleibt sichtbar — er sagt jetzt nur, was
+    STATT flock greift. Geprueft wird beides: dass er nicht still wird, und
+    dass er den Ersatz beim Namen nennt.
+    """
+    quelle = _quelle()
+    marke = "flock fehlt — Git for Windows liefert keines"
+    assert marke in quelle, "der flock-Befund ist still geworden statt milder"
+    stelle = quelle.index(marke)
+    kopf = quelle.rfind("\n", 0, stelle)
+    zeile = quelle[kopf + 1:stelle]
+    assert "fehler" not in zeile, (
+        "der flock-Befund ist wieder ein FEHLER — das war der Fund aus BL-159")
+    assert "warnung" not in zeile, (
+        "der flock-Befund steht wieder als Warnung da. Seit BL-190 gibt es "
+        "dort nichts zu tun, und eine Warnung ohne Handlung erzieht zum "
+        "Wegsehen (BL-14).")
+    block = quelle[stelle:stelle + 900]
+    assert ".team-loop.lock.d" in block and "BL-190" in block, (
+        "der Befund nennt den Ersatzweg nicht — dann liest er sich weiter wie "
+        "ein Mangel")
 
 
 def test_die_windows_befunde_nennen_die_bahn_die_es_besser_kann():

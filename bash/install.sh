@@ -671,9 +671,28 @@ if [ "$UPDATE" -eq 1 ]; then
     # buchte seine Runde als Fehlschlag — obwohl er seine Ermittlungsakte
     # geliefert hatte. Das war die dritte Stagnation in Folge und stoppte den
     # Lauf. Der Guard hat richtig gehandelt; fehlen durfte nur diese Sperre.
-    if [ -e "$ZIEL/.team-loop.lock" ] && \
-       ! flock -n "$ZIEL/.team-loop.lock" true 2>/dev/null; then
-        rot "FEHLER: In $ZIEL laeuft gerade ein Team-Lauf (.team-loop.lock ist gehalten)."
+    # BL-190, zweite Stelle derselben Gattung: Hier stand die flock-Abfrage
+    # ohne `command -v` davor. Ein FEHLENDES Programm liefert Nicht-Null, das
+    # `!` machte daraus "gehalten" — auf einer Maschine ohne flock brach also
+    # JEDES Update ab, sobald die Datei ueberhaupt existierte, mit einer
+    # Meldung ueber einen Lauf, der nicht lief. Gefragt werden jetzt BEIDE
+    # Mechaniken; die Vorlage ist `team_pipeline_laeuft` in lib.sh. Hier steht
+    # sie ausgeschrieben, weil der Installer bewusst nichts sourct — die
+    # Zusicherung, dass beide Stellen dieselbe Frage gleich beantworten, haengt
+    # deshalb an einem Testfall und nicht am Vertrauen.
+    LAUF_LAEUFT=0
+    if [ -d "$ZIEL/.team-loop.lock.d" ]; then
+        LOCK_PID="$(cat "$ZIEL/.team-loop.lock.d/pid" 2>/dev/null || true)"
+        if [ -n "$LOCK_PID" ] && kill -0 "$LOCK_PID" 2>/dev/null; then
+            LAUF_LAEUFT=1
+        fi
+    fi
+    if [ -e "$ZIEL/.team-loop.lock" ] && command -v flock >/dev/null 2>&1 \
+       && ! flock -n "$ZIEL/.team-loop.lock" true 2>/dev/null; then
+        LAUF_LAEUFT=1
+    fi
+    if [ "$LAUF_LAEUFT" = "1" ]; then
+        rot "FEHLER: In $ZIEL laeuft gerade ein Team-Lauf (die Sperre ist gehalten)."
         echo "  Ein Update wuerde uncommittete Dateien in team/ ablegen. Der naechste"
         echo "  Read-Only-Lauf (Harry/Marv/Axel) wertet die als Guard-Verletzung,"
         echo "  raeumt sie weg und bucht seine Runde als Fehlschlag — im Feld hat das"

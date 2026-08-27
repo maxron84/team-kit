@@ -4,7 +4,7 @@
 [![macOS — nicht belegt](https://img.shields.io/badge/macOS-nicht_belegt-9f9f9f?style=flat-square&logo=apple&logoColor=white)](doku/einrichtung.md#belegstand)
 
 [![Version 2.13.1](https://img.shields.io/badge/Version-2.13.1-007ec6?style=flat-square)](CHANGELOG.md)
-[![Regressionstests 757](https://img.shields.io/badge/Regressionstests-757-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
+[![Regressionstests 973](https://img.shields.io/badge/Regressionstests-973-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
 [![Selbsttest 11 Stufen](https://img.shields.io/badge/Selbsttest-11_Stufen-2ea44f?style=flat-square)](bash/kit-test.sh)
 [![Lizenz MIT](https://img.shields.io/badge/Lizenz-MIT-007ec6?style=flat-square)](LICENSE)
 
@@ -77,10 +77,10 @@ im Linux-Dateisystem. Die ganze Routine für beide Plattformen, mit IDE (VS
 Codium bzw. VS Code) und Agenten-Werkzeug, steht in
 [doku/einrichtung.md](doku/einrichtung.md).
 
-Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 153 Dateien im
+Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 169 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
-`TEAM.md` und 757 Regressionstests.
+`TEAM.md` und 973 Regressionstests.
 
 **Stand: Version 2.13.1** (2026-08-25). Drei Fehlerbehebungen aus dem Feld,
 ausgelöst durch eine Frage statt durch eine rote Zeile: „Hängt der Installer
@@ -111,7 +111,7 @@ gedreht.
 **Offen sind 5 Einträge** — keine Reste dieser Version, sondern drei
 Meldungen aus dem Feld und zwei eigene Bauvorhaben:
 [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (141 Einträge).
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (142 Einträge).
 
 ---
 
@@ -324,7 +324,7 @@ nicht genannt** — für den Beleg zählt nicht, wie sie heißen, sondern was si
 haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 
 > **Zahlen in dieser Tabelle nennen ihren Träger** — „86 Tests in Feld E" oder
-> „86 Projekt-Tests", nie bloß „86 Tests". Sie beschreiben **fremde** Projekte;
+> „86 Projekt-Tests", nie bloß die nackte Zahl. Sie beschreiben **fremde** Projekte;
 > eine unqualifizierte Zahl ist eine Aussage über das **Kit**, und
 > `kit-readme-pruefen.py` prüft sie als solche gegen die gemessene Fallzahl.
 > Eine blanke Feldzahl hat `kit-test.sh` Stufe 3 schon einmal nach 45 Minuten
@@ -340,9 +340,9 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 
 | **`Feld E`** | Greenfield, Linux, bash-Bahn: Dart/Flutter + SQLite für ein **Android-Tablet** — Neubau, dessen Python/tkinter-Vorgänger (~25.500 LOC, 17 Spec-Dokumente) als reine Lesereferenz danebenliegt | **Zwei Kaskaden geplant, gebaut und abgeschlossen** (2026-08-24): Datenfundament und Einrichtungs-Wizard, zusammen 10 Stufen ohne Fehlversuch, 86 Tests in `Feld E`, 5 Red-Team-Funde, rund 50 USD Abo-Gegenwert — vollständig geledgert. `BL-158`…`BL-168` — **elf Funde**: die ersten acht vor der ersten gebauten Stufe, aus dem Lesen der Kopplungen zwischen Konfiguration, Testläufer und Rollen-Prompt; die letzten drei aus dem Betrieb (Preistabelle, Zeitpunkt der Gegenprobe, Rückkanal). Der erste Stack ohne pytest: Was das Kit an Python-Annahmen mitträgt, wird hier zum ersten Mal sichtbar. Zugleich der erste Beleg für den Rückkanal als Werkzeug statt als Handarbeit |
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen sechs Quellen
-kommen die Backlog-Einträge `BL-1`…`BL-198`; was davon behoben ist, steht im
+kommen die Backlog-Einträge `BL-1`…`BL-199`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (141 Einträge), der Rest in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (142 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors
@@ -570,7 +570,7 @@ geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 │                       in denselben Dateien. Die pwsh-Bahn ist eine zweite
 │                       ORCHESTRIERUNG, kein zweiter Zustandscode
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-├── tests/              97 Testdateien, 757 Fälle — der Doppelbahn-Harnisch
+├── tests/              113 Testdateien, 973 Fälle — der Doppelbahn-Harnisch
 │                       fährt jeden Fall gegen BEIDE Bahnen, aus EINEM
 │                       Testkörper
 ├── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
@@ -748,11 +748,12 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
 - **Noch nie gelaufen: Axel.** Der Forensiker hat in keinem Feld eine einzige
   Ledgerzeile — sein Pfad ist getestet, aber nicht im Feld belegt.
 - **Kein Binary, keine Fassung ohne Bordmittel.** Das Kit ist eine Sammlung von
-  Skripten und setzt `git`, `bash` ≥ 4 bzw. PowerShell ≥ 7, `python3` und
-  `flock` voraus. Eine gepackte, abhängigkeitsfreie Auslieferung ist **nicht
-  geplant** — und macOS ist damit nicht verboten, aber unbelegt: Die
-  Bordmittel-`bash` ist dort 3.2 und `flock` fehlt. `kit-einrichten.sh` sagt
-  das an der Maschine, statt es vorauszusetzen.
+  Skripten und setzt `git`, `bash` ≥ 4 bzw. PowerShell ≥ 7 und `python3`
+  voraus; `flock` ist seit `BL-190` nur noch der **bevorzugte** Weg zur
+  Loop-Sperre, nicht mehr Bedingung. Eine gepackte, abhängigkeitsfreie
+  Auslieferung ist **nicht geplant** — und macOS ist damit nicht verboten, aber
+  unbelegt: Die Bordmittel-`bash` ist dort 3.2. `kit-einrichten.sh` sagt das an
+  der Maschine, statt es vorauszusetzen.
 - **Modellagnostisch ja, CLI-agnostisch nein.** Die Rollen sprechen zwei Stufen
   an (`TEAM_MODEL_LOOP`/`TEAM_MODEL_STRONG`), keine Modellnamen — aber der
   einzige erprobte Weg zu einem Modell führt heute über `claude -p`. Daran
@@ -761,7 +762,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   `team/lib.sh`); belegt ist er nicht. Ebenso wenig belegt ist bisher ein Lauf
   mit einem lokalen Open-Weights-Modell — das ist Ziel, nicht Zustand.
 - **Selbstverifikation**: `bash bash/kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 757 Tests — **zweimal**: einmal mit den
+  Wegwerf-Repo und fährt dort die 973 Tests — **zweimal**: einmal mit den
   Auslieferungswerten, einmal mit angepasster `team.config.sh` (Caps,
   Commit-Präfixe, zwei Domänen). Der zweite Lauf ist die Lehre aus `BL-58`: In
   einer frischen Installation stehen dieselben Werte wie in `team/lib.sh`, ein
@@ -794,7 +795,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
 
 Benutzen, ändern, weitergeben und in eigene Projekte einziehen ist ausdrücklich
 erlaubt, kommerziell wie privat; es bleibt nur die Namensnennung. Das gilt
-**auch für die 153 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
+**auch für die 169 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
 lösen keine Lizenzpflicht für den Code des Zielprojekts aus. Der Code stammt aus
 einem eigenen Projekt des Autors; das Urheberrecht liegt vollständig bei ihm.
 

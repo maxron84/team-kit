@@ -107,8 +107,11 @@ status_einmal() {
     fi
 
     # Lock
-    if [ -f .team-loop.lock ] && command -v flock >/dev/null \
-       && ! flock -n .team-loop.lock true 2>/dev/null; then
+    # BL-190: Die Frage geht an team_pipeline_laeuft, weil es seit dem Eintrag
+    # ZWEI Sperrmechaniken gibt. Hier stand die flock-Abfrage ausgeschrieben —
+    # und haette auf einer Maschine ohne flock ab sofort "idle" gemeldet,
+    # waehrend der Ersatzweg eine Sperre haelt.
+    if team_pipeline_laeuft; then
         echo "  Pipeline: 🟢 läuft gerade (Lock gehalten)"
     else
         echo "  Pipeline: ⚪ idle"
