@@ -38,19 +38,27 @@ frisch angelegt **oder seit Jahren gewachsen**.
 **Regiepult**. Sechs KI-Rollen mit harten Auflagen, ein Loop, der einen
 geschriebenen Plan Stufe für Stufe abarbeitet — **ein Commit je Stufe** —, und
 eine Buchführung, die hinterher zeigt, was jede einzelne Stufe gekostet hat. Du
-tippst den Code nicht; du entscheidest, **was** gebaut wird, liest den Diff und
-gibst die nächste Stufe frei.
+tippst den Code nicht; du entscheidest, **was** gebaut wird, urteilst am
+Ergebnis und gibst die nächste Stufe frei.
 
-**Für wen.** Für **erfahrene Entwickler**, die ihren eigenen Code lesen und
-verstehen und ihr KI-Team Schritt für Schritt anleiten wollen — in der Rolle
-eines **fachlich orientierten Stakeholders**: Product Owner, Chefentwickler,
-Tech Lead. Das ist keine Höflichkeitsformel, sondern eine **Betriebsbedingung**.
-Das tragende Prinzip **Finder ≠ Fixer** endet bei einem Menschen, der den Fund
-*beurteilen* muss: Ist der Red-Team-Fund echt oder Rauschen? Behebt Franks Fix
-die Ursache oder das Symptom? Ist die Stufe abnahmereif? Wer den Diff nicht
-liest, kann diese Fragen nicht beantworten — dann wird das Beutebuch zur Ablage
-statt zur Entscheidung, und das Team baut zuverlässig, ausdauernd und teuer am
-Ziel vorbei.
+**Für wen.** Für **erfahrene Entwickler** — nicht, damit sie mehr Code lesen,
+sondern damit sie weniger müssen. Das T.E.A.M. ist eine
+**Abstraktionsschicht**, kein Beiwerk zum Selbertippen: Du entscheidest,
+**was** gebaut wird, und urteilst am **Ergebnis** — trägt die Stufe ihre
+Zusicherung, ist der Red-Team-Fund echt oder Rauschen, behebt Franks Fix die
+Ursache oder das Symptom, stimmt der Preis? Die Rolle dabei ist die eines
+**fachlich orientierten Stakeholders**: Product Owner, Chefentwickler, Tech
+Lead.
+
+**Warum trotzdem „erfahren"?** Weil jede Abstraktionsschicht irgendwann klemmt.
+Wer den Diff nie lesen **könnte**, kann einen Fehler des Teams nicht von einem
+Fehler der eigenen Vorgabe unterscheiden — und beurteilt dann nur noch, ob es
+sich gut anhört. Der Unterschied ist der zwischen *„ich lese den Diff nicht"*
+(Normalbetrieb, völlig in Ordnung) und *„ich könnte ihn nicht lesen"* (die
+eigentliche Betriebsbedingung). Das tragende Prinzip **Finder ≠ Fixer** endet
+bei einem Menschen, der den Fund *beurteilen* muss; kann er das nicht, wird das
+Beutebuch zur Ablage statt zur Entscheidung, und das Team baut zuverlässig,
+ausdauernd und teuer am Ziel vorbei.
 
 **Warum es das gibt.** Der Antrieb ist **Kosten/Nutzen**, nicht Bequemlichkeit —
 agnostisch gesagt: **Nutzen je Token**. Das ist der Unterschied zum Bauen über
@@ -247,10 +255,11 @@ nicht in der Historie, beim Maschinenwechsel weg. Hier ist der Commit ein
    Rollback ansetzen. Deshalb ist auch der Rollback keine kostenlose Geste: Er
    wirft bezahlte Arbeit weg, und genau das ist der Grund, warum die Caps
    großzügig stehen.
-3. **Prüfeinheit des Menschen.** Ein Diff je Stufe ist die Menge, die ein
-   Stakeholder noch lesen und verantworten kann. Die Feinkörnigkeit ist keine
-   Ordnungsliebe — sie ist die **Portionierung, in der Kontrolle überhaupt
-   ausübbar bleibt**, und damit die Verbindung zurück zu „für wen".
+3. **Prüfeinheit des Menschen.** Eine Stufe je Commit ist die Menge, die ein
+   Stakeholder noch verantworten kann — und die er, wenn es klemmt, als Diff
+   auch noch lesen kann. Die Feinkörnigkeit ist keine Ordnungsliebe — sie ist
+   die **Portionierung, in der Kontrolle überhaupt ausübbar bleibt**, und damit
+   die Verbindung zurück zu „für wen".
 
 **Und die Grenze, damit es keine Sparversprechen gibt:** Das Kit senkt nicht
 den Preis pro Token. Es senkt die **Zahl der Token, die für nichts verbrannt
