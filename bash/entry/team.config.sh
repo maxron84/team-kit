@@ -59,6 +59,11 @@ TEAM_PLAN_ORDNER="${TEAM_PLAN_ORDNER:-{{PLAN_ORDNER}}}"
 TEAM_PRODUKTIVCODE="${TEAM_PRODUKTIVCODE%/}/"
 TEAM_TEST_ORDNER="${TEAM_TEST_ORDNER%/}/"
 TEAM_PLAN_ORDNER="${TEAM_PLAN_ORDNER%/}/"
+# BL-209: Die Python-Werkzeuge suchen die Plandatei einer Kaskade darin
+# (`kaskade_beginn`, Grundlage des Zeitraum-Abgleichs aus BL-45 und der
+# P1b-Pruefung aus BL-27). Ohne diesen Export nahmen sie "plans" an — in einem
+# Projekt mit anderem Ordner fanden sie nie etwas und schwiegen dazu.
+export TEAM_PLAN_ORDNER
 
 # --- Prüfumfang außerhalb des Produktivcode-Ordners (BL-52) -------------------
 # Leerliste von Dateien UND Ordnern, die zum Prüfumfang des Red Teams gehören,

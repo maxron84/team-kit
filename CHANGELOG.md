@@ -143,6 +143,44 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Kaskaden-Plandateien heißen künftig `team-kaskade-N-<thema>.md` — und der
+  Weg dorthin war ein anderer als gedacht** (`BL-202`, gemeldet von `Feld B`;
+  die Prämissen-Korrektur ist `BL-209`, Kit-eigener Fund). Der alte Name nennt
+  **eine** Rolle, während das Dokument alle bindet: Ralph liest die
+  Stufenblöcke, Harry/Marv beziehen ihren Sweep-Fokus aus dem Plankopf, Frank
+  arbeitet gegen dieselben Zusicherungen, und der Mensch entscheidet an genau
+  dieser Datei, was überhaupt gebaut wird.
+
+  **Der Eintrag nahm an, es hänge keine Mechanik am Präfix. Das stimmte
+  nicht** — sie sitzt an **sechs** Stellen über beide Bahnen:
+  `kaskade_beginn()` in `kosten.py` (Träger von `BL-45` und `BL-27`),
+  `team_architekt_kaskade` und `team_bau_notiz` in `lib.sh` (`BL-34`), die
+  Altlast-Kennzahl in `team-status.sh` und die drei pwsh-Gegenstücke.
+
+  **Warum das schlimmer ist als ein Fehler:** In allen sechs Fällen ist „nichts
+  gefunden" ein **gültiger** Wert — eine benannte Kaskade hat keine Nummer, ein
+  frisches Projekt keine Plandatei. Eine Umbenennung hätte die Ableitungen also
+  nicht kaputt gemacht, sondern **stumm gestellt**.
+
+  Der Fix ist deshalb die **Toleranz**: Alle sechs Stellen erkennen beide
+  Formen, `kosten.py` hält sie in `PLAN_PRAEFIXE` an einer Stelle (`BL-154`).
+  Umbenannt ist erst danach, und nur in den **Vorlagen** — Bestandsprojekte
+  behalten ihre Dateinamen, und die historischen Verweise im Kit-Archiv bleiben
+  ausdrücklich stehen: Sie sind die Spur, und die Spur ist hier das Produkt.
+
+  **Zweiter Fund in derselben Zeile, und er trifft schon heute:**
+  `kaskade_beginn()` hatte auch den **Ordner** als Literal (`"plans"`), obwohl
+  `TEAM_PLAN_ORDNER` im Interview abgefragt wird. **Jedes Projekt mit einem
+  abweichenden Planordner hat `BL-45` und `BL-27` seither stumm.** Beide
+  `team.config.*` exportieren den Wert jetzt, wie `TEAM_DOMAENEN` daneben.
+
+  **Am Verhalten belegt, nicht nur am Quelltext:** vier Kombinationen aus
+  Präfix und Ordner durch `kaskade_beginn` gefahren — gegen den alten Stand
+  liefert genau **eine** einen Zeitstempel, die anderen drei `None`. Mit
+  Gegenrichtung: Eine benannte Kaskade muss weiter `None` liefern.
+  Regressionstest `test_bl202_plandatei_traegt_beide_praefixe.py`, 23 Fälle;
+  gegen den alten Stand fallen 20.
+
 - **`src/` + `tests/` als ausgelieferte Ordner-Defaults machten Reproducer-Tests
   in jedem paketgebundenen Stack unausführbar — und zwar stumm** (`BL-169`,
   gemeldet von `Feld E`). Die Vorgaben tragen, solange der Testläufer die

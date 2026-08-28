@@ -1735,8 +1735,14 @@ team_architekt_kaskade() {
     # gaben rc=0, `set -euo pipefail` riss den Aufrufer weg. Alle bauenden und
     # pruefenden Rollen laufen mit voller Strenge; die Zusicherung muss also
     # dort gelten, wo sie gebraucht wird, nicht nur eine Stufe darunter.
+    # BL-209/BL-202: BEIDE Praefixe. `ralph-kaskade-` nennt eine Rolle,
+    # obwohl die Datei das ganze Team bindet; kuenftige Projekte bekommen
+    # `team-kaskade-`. Bestandsprojekte behalten ihre Namen — beide Formen
+    # muessen deshalb NEBENEINANDER erkannt werden. Ohne das schaltet eine
+    # Umbenennung diese Ableitung STUMM ab: Sie gibt dann leer zurueck, und
+    # leer ist hier ein gueltiger Wert (benannte Kaskade), kein Fehler.
     { printf '%s' "$plan_datei" \
-        | grep -oE 'ralph-kaskade-[0-9]+' | grep -oE '[0-9]+' | head -1; } || true
+        | grep -oE '(ralph|team)-kaskade-[0-9]+' | grep -oE '[0-9]+' | head -1; } || true
 }
 
 # team_bau_notiz [plan-datei]: Notiztext fuer die ralph-(Bau-)Ledgerzeile,
@@ -1757,10 +1763,11 @@ team_bau_notiz() {
     local plan_datei="${1:-$(team_plan_datei)}" name nummer thema
     name="$(basename -- "$plan_datei" 2>/dev/null)"
     name="${name%.md}"
+    # BL-209/BL-202: beide Praefixe, siehe team_kaskaden_nummer daneben.
     case "$name" in
-        ralph-kaskade-[0-9]*)
+        ralph-kaskade-[0-9]*|team-kaskade-[0-9]*)
             nummer="$(printf '%s' "$name" | grep -oE '[0-9]+' | head -1)"
-            thema="${name#ralph-kaskade-${nummer}}"
+            thema="${name#*-kaskade-${nummer}}"
             thema="${thema#-}"
             [ -n "$thema" ] && printf 'K%s %s' "$nummer" "$thema" \
                             || printf 'K%s' "$nummer"

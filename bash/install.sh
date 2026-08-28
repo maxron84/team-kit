@@ -2019,7 +2019,7 @@ Nächste Schritte im Zielprojekt:
   5. Erste Kaskade planen — Sitzung im Projektordner, starke Stufe (Default Opus):
        "Du bist unser Architekt, lies team/prompts/rolle-architekt.md."
      Er härtet eine Skizze aus ${PLAN_ORDNER}roadmap-skizzen.md zu
-     ${PLAN_ORDNER}ralph-kaskade-1-….md aus (mit RALPH_CAP= und
+     ${PLAN_ORDNER}team-kaskade-1-….md aus (mit RALPH_CAP= und
      BUDGET_EMPFEHLUNG_USD=) und gibt die Scharfschalt-Sequenz aus.
   6. Lauf starten:      cd "$ZIEL" && TEAM_BUDGET_USD=15 ./vollautomatik.sh
      ^ Deckel für DIESEN Lauf. Für einen kurzen Erstlauf sind 15 USD ein

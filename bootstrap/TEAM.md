@@ -160,14 +160,14 @@ Kontostand in `{{RUF}}team-status{{ENDUNG}} --budget` und nicht im Kleingedruckt
 
 Er schreibt eine Skizze in
 [`{{PLAN_ORDNER}}/roadmap-skizzen.md`]({{PLAN_ORDNER}}/roadmap-skizzen.md),
-härtet sie auf deine Freigabe zu `{{PLAN_ORDNER}}/ralph-kaskade-N-….md` aus und
+härtet sie auf deine Freigabe zu `{{PLAN_ORDNER}}/team-kaskade-N-….md` aus und
 gibt dir am Ende eine **kopierfertige Scharfschalt-Sequenz**. Du musst nichts
 selbst zusammensuchen.
 
 ### 2. Scharfschalten
 
 ```bash
-echo {{PLAN_ORDNER}}/ralph-kaskade-N-….md > .ralph-plan
+echo {{PLAN_ORDNER}}/team-kaskade-N-….md > .ralph-plan
 ```
 
 Diese Zeiger-Datei ist die **einzige** Quelle für Plan-Pfad, `RALPH_CAP` und

@@ -270,6 +270,34 @@ def erlaubte_domaenen():
     return tuple(roh) if roh else DEFAULT_DOMAENEN
 
 
+# --- Wo die Plandateien liegen und wie sie heissen (BL-209) -----------------
+# Beides war hier verdrahtet: der Ordner als Literal "plans" und der Dateiname
+# als Literal "ralph-kaskade-". Der Ordner ist aber ueber TEAM_PLAN_ORDNER
+# konfigurierbar — in einem Projekt, das im Interview etwas anderes geantwortet
+# hat, fand `kaskade_beginn` deshalb NIE eine Plandatei und gab None zurueck.
+# Und None ist hier kein Fehler, sondern Schweigen: Der Zeitraum-Abgleich aus
+# BL-45 und die P1b-Pruefung aus BL-27 haengen daran und hoeren beide still auf
+# zu arbeiten. Ein Waechter, der nichts mehr sagt, ist von einem, der nichts
+# findet, nicht zu unterscheiden.
+#
+# Der Praefix ist die zweite Haelfte: BL-202 will die Plandateien kuenftig
+# `team-kaskade-N-<thema>.md` nennen, weil sie das ganze Team binden. Der
+# Eintrag nimmt an, es haenge keine Mechanik daran — hier haengt welche. Beide
+# Formen duerfen deshalb NEBENEINANDER bestehen; Bestandsprojekte behalten ihre
+# Namen, neue bekommen den neuen, und dieses Werkzeug findet beide.
+PLAN_PRAEFIXE = ("team-kaskade-", "ralph-kaskade-")
+
+
+def plan_ordner():
+    """Der konfigurierte Planordner, mit `plans` als Auslieferungswert.
+
+    Gelesen aus der Umgebung, wie TEAM_DOMAENEN daneben — beide
+    `team.config.*` exportieren ihn dafuer ausdruecklich.
+    """
+    roh = os.environ.get("TEAM_PLAN_ORDNER", "").strip().rstrip("/")
+    return roh or "plans"
+
+
 def pruefe_domaene(domaene):
     """Wirft ValueError, wenn die Domaene nicht konfiguriert ist."""
     erlaubt = erlaubte_domaenen()
@@ -907,8 +935,15 @@ def kaskade_beginn(kaskade, repo="."):
     gegen den Kaskadenbeginn haelt."""
     if not kaskade:
         return None
-    muster = os.path.join(repo, "plans", f"ralph-kaskade-{kaskade}-*.md")
-    treffer = sorted(glob.glob(muster))
+    # BL-209: Ordner aus der Konfiguration, Dateiname in BEIDEN Schreibweisen
+    # (BL-202). Vorher stand hier beides als Literal — in einem Projekt mit
+    # anderem Planordner fand die Suche nie etwas und schwieg.
+    treffer = []
+    for praefix in PLAN_PRAEFIXE:
+        muster = os.path.join(repo, plan_ordner(),
+                              f"{praefix}{kaskade}-*.md")
+        treffer.extend(glob.glob(muster))
+    treffer.sort()
     if not treffer:
         return None
     relativ = os.path.relpath(treffer[0], repo)

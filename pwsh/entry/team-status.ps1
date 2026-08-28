@@ -389,7 +389,8 @@ function Status-Altlast {
     # Als Zeitmarke dient der Add-Commit der N-letzten Kaskaden-Plandatei: Die
     # entsteht bei jeder Scharfschaltung genau einmal und ist damit die einzige
     # maschinell lesbare Kaskadengrenze im Repo.
-    $marken = @(& git log --diff-filter=A --format='%H %ct' --reverse -- "${TEAM_PLAN_ORDNER}ralph-kaskade-*.md" 2>$null |
+    # BL-209/BL-202: BEIDE Praefixe, siehe die bash-Fassung.
+    $marken = @(& git log --diff-filter=A --format='%H %ct' --reverse -- "${TEAM_PLAN_ORDNER}ralph-kaskade-*.md" "${TEAM_PLAN_ORDNER}team-kaskade-*.md" 2>$null |
                 Where-Object { $_ })
     if ($marken.Count -lt $n) {
         [Console]::Out.WriteLine("Altlast-Kennzahl: weniger als $n Kaskaden im Repo — noch keine Aussage moeglich.")

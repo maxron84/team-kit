@@ -452,8 +452,12 @@ status_altlast() {
     # Als Zeitmarke dient der Add-Commit der N-letzten Kaskaden-Plandatei: Die
     # entsteht bei jeder Scharfschaltung genau einmal und ist damit die einzige
     # maschinell lesbare Kaskadengrenze im Repo (dieselbe Quelle wie BL-45).
+    # BL-209/BL-202: BEIDE Praefixe als getrennte Pathspecs — git nimmt
+    # mehrere, und eine Umbenennung darf diese Kennzahl nicht stumm
+    # abschalten (Bestandsprojekte behalten `ralph-kaskade-`).
     seit="$(git log --diff-filter=A --format='%H %ct' --reverse \
-             -- "${TEAM_PLAN_ORDNER}ralph-kaskade-*.md" 2>/dev/null \
+             -- "${TEAM_PLAN_ORDNER}ralph-kaskade-*.md" \
+                "${TEAM_PLAN_ORDNER}team-kaskade-*.md" 2>/dev/null \
             | tail -n "$n" | head -1 | awk '{print $2}')"
     if [ -z "$seit" ]; then
         echo "Altlast-Kennzahl: weniger als $n Kaskaden im Repo — noch keine Aussage moeglich."

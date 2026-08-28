@@ -25,7 +25,7 @@ team_lock ralph
 # PLAN_DATEI: der aktive, ausgehärtete Kaskaden-Plan. Zeigt der Stakeholder
 # per Zeiger-Datei .ralph-plan (eine Zeile, Pfad) auf den jeweils freigegebenen
 # Plan — Umschalten auf die nächste Kaskade ist damit ein Einzeiler:
-#   echo plans/ralph-kaskade-N-….md > .ralph-plan
+#   echo plans/team-kaskade-N-….md > .ralph-plan
 PLAN_ZEIGER=".ralph-plan"
 # Starterkit-Fix: `head` auf eine fehlende Datei liefert RC!=0 und riss unter
 # `set -e -o pipefail` den ganzen Loop weg, BEVOR die Fehlermeldung unten kam —

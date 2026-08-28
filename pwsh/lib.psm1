@@ -704,7 +704,11 @@ function team_architekt_kaskade {
     param([string]$PlanDatei = $null)
     if (-not $PlanDatei) { $PlanDatei = (team_plan_datei) }
     if (-not $PlanDatei) { return }
-    $m = [regex]::Match([string]$PlanDatei, 'ralph-kaskade-(\d+)')
+    # BL-209/BL-202: BEIDE Praefixe. Bestandsprojekte heissen
+    # `ralph-kaskade-`, kuenftige `team-kaskade-`; beide Formen muessen
+    # nebeneinander erkannt werden, sonst schaltet eine Umbenennung diese
+    # Ableitung STUMM ab.
+    $m = [regex]::Match([string]$PlanDatei, '(?:ralph|team)-kaskade-(\d+)')
     if (-not $m.Success) { return }
     Write-Output $m.Groups[1].Value
 }
@@ -720,7 +724,11 @@ function team_bau_notiz {
     if (-not $PlanDatei) { $PlanDatei = (team_plan_datei) }
     if (-not $PlanDatei) { return }
     $name = [System.IO.Path]::GetFileNameWithoutExtension($PlanDatei)
-    $m = [regex]::Match($name, '^ralph-kaskade-(\d+)-?(.*)$')
+    # BL-209/BL-202: BEIDE Praefixe. Bestandsprojekte heissen
+    # `ralph-kaskade-`, kuenftige `team-kaskade-`; beide Formen muessen
+    # nebeneinander erkannt werden, sonst schaltet eine Umbenennung diese
+    # Ableitung STUMM ab.
+    $m = [regex]::Match($name, '^(?:ralph|team)-kaskade-(\d+)-?(.*)$')
     if (-not $m.Success) { return }
     $nummer = $m.Groups[1].Value
     $thema = $m.Groups[2].Value

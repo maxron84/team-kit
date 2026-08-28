@@ -248,7 +248,7 @@ Stufen-Nummern, **ohne** Cap.
 
 **2. Aushärtung on demand.** **Erst wenn ein Strang zur nächsten Kaskade wird**
 (der Stakeholder gibt frei), härtet der Architekt ihn voll aus: eigene
-`{{PLAN_ORDNER}}/ralph-kaskade-N-….md`, fester Stufen-Bogen, `## Stufe N`-Blöcke
+`{{PLAN_ORDNER}}/team-kaskade-N-….md`, fester Stufen-Bogen, `## Stufe N`-Blöcke
 (Umsetzung / Verifikation / Promise), gesetzter `RALPH_CAP`. Nur die **jeweils
 nächste** Kaskade wird so ausgehärtet; alles Fernere bleibt Skizze.
 

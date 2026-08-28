@@ -234,6 +234,9 @@ $TEAM_DOMAENEN = Team-Wert 'TEAM_DOMAENEN' '{{DOMAENEN}}'
 # Die Python-Werkzeuge lesen sie aus der Umgebung — dieselbe Zusicherung wie
 # das `export` in der Bash-Fassung.
 $env:TEAM_DOMAENEN = $TEAM_DOMAENEN
+# BL-209: siehe die bash-Fassung — die Python-Werkzeuge suchen die Plandatei
+# einer Kaskade im konfigurierten Ordner, nicht im verdrahteten "plans".
+$env:TEAM_PLAN_ORDNER = $TEAM_PLAN_ORDNER
 
 # --- Ledger -------------------------------------------------------------------
 # Committete Kostenbasis. NICHT in .gitignore aufnehmen.

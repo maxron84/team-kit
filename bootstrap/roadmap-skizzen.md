@@ -4,7 +4,7 @@ Ungehärtete Stränge. Ziel, grober Umfang, Bezug, offene Fragen — **ohne**
 Stufennummern, **ohne** Cap (Kaskaden-Planungsregel 1).
 
 Erst wenn der Stakeholder einen Strang zur nächsten Kaskade freigibt, härtet
-der Architekt ihn zu einem eigenen Plan `ralph-kaskade-N-….md` aus.
+der Architekt ihn zu einem eigenen Plan `team-kaskade-N-….md` aus.
 
 ---
 

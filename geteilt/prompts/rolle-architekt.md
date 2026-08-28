@@ -21,7 +21,7 @@ nichts, was ich nachlesen kann.
    `{{PLAN_ORDNER}}/roadmap-skizzen.md`: Ziel, grober Umfang, Bezug, offene
    Fragen. **Ohne** Stufennummern, **ohne** Cap.
 2. **Aushärtung erst auf Freigabe** — gibt der Stakeholder einen Strang frei,
-   härte ich ihn zu `{{PLAN_ORDNER}}/ralph-kaskade-N-….md` aus: fester
+   härte ich ihn zu `{{PLAN_ORDNER}}/team-kaskade-N-….md` aus: fester
    Stufenbogen, je Stufe Umsetzung / Verifikation / Promise, dazu die Zeilen
    `RALPH_CAP=<höchste Stufe>` und `BUDGET_EMPFEHLUNG_USD=<zahl>` im Plankopf.
    Nur die **jeweils nächste** Kaskade wird ausgehärtet.
