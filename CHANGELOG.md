@@ -920,6 +920,41 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed (Doku)
 
+- **Der ausstehende `bash bash/kit-test.sh` ist nachgeholt — und hat drei
+  veraltete README-Zahlen gefunden, bevor er Stufe 3 erreichte.** Der Lauf stand
+  seit dem 2026-08-24 aus; er ist jetzt vollständig durch: **11 von 11 Stufen,
+  134 Prüfungen grün, Exit 0**, 4 min 02. Zwei Übersprünge, beide mit benanntem
+  Grund und beide `pwsh`-abhängig (Wurzel-Code-Prüfung der pwsh-Bahn `BL-155`,
+  Gleichstand der Installer, Stufe 11).
+
+  **Nachgezogen, jede Zahl gegen eine frische Installation gemessen:** die Zahl
+  der ausgelieferten Dateien (169 → **175**, zwei Stellen), die Zahl der
+  Testfälle (1054 → **1053**, vier Stellen samt Badge), die BL-Spanne
+  (`BL-207` → `BL-208`, drei Stellen in zwei Schreibweisen) und die Zahl der
+  offenen Einträge (5 → **10**). Der Prüfer quittiert jetzt alle fünf Gattungen:
+  *1053 Testfälle, 119 Testdateien, 175 installierte Dateien, 142
+  Archiv-Einträge, höchste Nummer BL-208.*
+
+  **Warum die Testfallzahl um eins fiel und das kein Rückschritt ist:** Sie
+  hängt am Körper, in dem gezählt wird. In der Kit-Ablage sind es 1054, in einer
+  Installation 1053; die Differenz ist genau ein Fall — die Parametrisierung von
+  `test_kit_pruefer_ueberlebt_eine_cp1252_ausgabe` läuft über `geteilt/kit-*.py`
+  (zwei Prüfer im Kit; in einer Installation gibt es `geteilt/` nicht, und der
+  Rückfallwert liefert einen Parameter). Maßgeblich ist die **Installation** —
+  dort gilt die Zusicherung. Das README trug die Kit-Zahl.
+
+  Der Rest daraus steht als `BL-208` im Backlog: `kit-test.ps1` prüft von den
+  drei Zahlen-Gattungen nur zwei — die Dateizahl liest es aus dem Installer-Log
+  und **druckt sie bloß**, ohne sie gegen das README zu halten. Genau deshalb
+  konnte die 169 sechs neue Dateien lang überleben, während der Selbsttest der
+  anderen Bahn grün meldete.
+
+- **Die `flock`-Gegenrichtung aus `BL-190` ist erstmals gefahren statt
+  übersprungen.** `test_bl190_sperre_ohne_flock.py::test_team_lock_mit_flock_nimmt_weiter_flock`
+  sichert zu, dass `flock` weiter genommen wird, **wo es da ist** — belegbar nur
+  auf einem Wirt mit `flock`, und der Fund stammte von einem ohne. Auf einem
+  Linux-Wirt jetzt grün.
+
 - **Sechs Backlog-Zeilen verlinkten ihre Meldungsdatei ins Leere.** Die am
   2026-08-26 eingetragenen Zeilen schrieben `](plans/meldungen/…)` — aus
   `plans/backlog.md` heraus zeigt das auf `plans/plans/meldungen/…`. Die
