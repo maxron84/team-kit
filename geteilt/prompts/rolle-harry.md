@@ -20,6 +20,12 @@ Produktivcode, ich fixe nichts. Erlaubt ist nur: Lesen, kreativ testen
 (Reproducer-Tests unter `{{TEST_ORDNER}}` oder Wegwerf-Skripte) und **präzise
 dokumentieren**.
 
+**Lange Befehle laufen im VORDERGRUND** (`Kit-BL-201`): nie als Hintergrund-Task,
+kein Wakeup, kein Monitor — headless kommt keine Benachrichtigung, wer darauf wartet
+endet ohne Quittung, und das Log meldet trotzdem `subtype: success`. Der Neustart
+wirft dann fertige, bezahlte Arbeit weg (19,47 USD im Feld). Dauert ein Lauf zu lange,
+erhöhe ich das Zeitlimit auf `TEAM_SMOKE_TEST_TIMEOUT` aus `{{KONFIG}}`, statt auszuweichen.
+
 **Mein Dreisatz (Beutezug):**
 1. Fund ins Beutebuch `{{BEUTEBUCH}}` eintragen: `HM-<Nr>`, Angreifer,
    Schweregrad, Reproschritte, Erwartung vs. Realität.

@@ -308,9 +308,21 @@ def main():
     # einem Aufruf ohne Argumente, bei dem KEINE einzige Zahlenpruefung lief.
     # Das ist die Gattung von BL-145: Zwei Aufrufwege desselben Skripts sichern
     # verschieden viel zu und melden dasselbe Gruen.
+    # BL-208: Und die Schlusszeile sagt jetzt auch, GEGEN WAS gemessen wurde.
+    # Der Prüfer nimmt die Zahlen vom Aufrufer entgegen und kann von sich aus
+    # nicht wissen, ob sie aus dem Kit oder aus einer Installation stammen —
+    # und die beiden zählen VERSCHIEDEN. Gemessen am 2026-08-28: Kit-Ablage
+    # 1054 Fälle, frische Installation 1053. Die Differenz ist genau ein Fall
+    # (`test_kit_pruefer_ueberlebt_eine_cp1252_ausgabe` ist über
+    # `geteilt/kit-*.py` parametrisiert; in einer Installation gibt es
+    # `geteilt/` nicht). Wer von Hand nachmisst, misst im Kit und liegt um
+    # eins daneben — genau so kam die falsche Zahl ins README.
     print("✓ README: alle genannten Pfade existieren.")
     if gemessen:
         print("  Gemessen und deckungsgleich: " + ", ".join(gemessen) + ".")
+        print("  Maßstab sind die Zahlen des AUFRUFERS; die Selbsttests messen "
+              "an einer\n  frischen INSTALLATION, nicht an der Kit-Ablage — "
+              "die beiden zählen verschieden (BL-208).")
     else:
         print("  KEINE Zahl geprüft — dieser Aufruf sichert nur die Pfade zu.")
     return 0

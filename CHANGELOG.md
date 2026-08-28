@@ -143,6 +143,185 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`src/` + `tests/` als ausgelieferte Ordner-Defaults machten Reproducer-Tests
+  in jedem paketgebundenen Stack unausführbar — und zwar stumm** (`BL-169`,
+  gemeldet von `Feld E`). Die Vorgaben tragen, solange der Testläufer die
+  Dateien am **Pfad** findet (pytest). Sie tragen nicht, sobald er sie am
+  **Paket** findet: Dart/Flutter sammelt ausschließlich innerhalb des Pakets
+  und unterhalb von `test/`; liegt das Paket unter `src/`, liegt `tests/`
+  außerhalb davon. Dieselbe Bauart bei Cargo, Go und Gradle. **Die zweite
+  Hälfte wiegt schwerer und ist vom Ordner unabhängig:** Der Läufer nimmt nur
+  ein Namensmuster (`_test.dart`, `_test.go`) — die Kit-Konvention
+  buchstabengetreu übertragen ergibt einen Namen, den er ignoriert.
+
+  **Die Folge ist in beiden Hälften dieselbe und schlimmer als ein Fehler:**
+  Franks regelkonform abgelegter Reproducer wird **nie ausgeführt**, der
+  Smoke-Test bleibt **grün**, das Beutebuch zeigt einen Fund mit Reproducer —
+  geprüft wird nichts. Getroffen wird ausschließlich der **Erstlauf**.
+
+  **(1)** Beide Installer halten die Interview-Antwort `TECH_STACK` gegen den
+  Testordner und melden den Widerspruch mit den üblichen Ordnern **und** dem
+  Namensmuster. **Gemeldet, nicht repariert** — der Stack ist freie Prosa, und
+  wer daraus Ordner umschreibt, rät; dieselbe Entscheidung wie in `BL-200`.
+  **(2)** Für den unerkannten Stack steht die Kopplung jetzt im Kommentar am
+  `TEAM_TEST_ORDNER` beider Konfigurationsvorlagen.
+
+  **End-zu-end gefahren:** frische Installation mit dem Stack
+  *„Flutter Dart sqlite"* — die Meldung erscheint mit `lib/`, `test/` und
+  `<stichwort>_test.dart`. Und die Gegenrichtung: *„python3 tkinter sqlite"*
+  und *„TypeScript React Vite"* erzeugen **null** Meldungen. Regressionstest
+  `test_bl169_paketgebundener_stack.py`, 11 Fälle, alle elf fallen gegen den
+  alten Stand. **Bewusst offen bleibt** die Gegenprobe am *Läufer* — sie
+  braucht Dart, Cargo oder Go auf dem Wirt.
+
+- **Von den drei Zahlen-Gattungen des READMEs prüfte `kit-test.ps1` nur zwei —
+  die Dateizahl las es aus dem Installer-Log und druckte sie bloß** (`BL-208`,
+  Kit-eigener Fund). `BL-198` Teil (3) hatte den README-Schritt auf die
+  pwsh-Bahn gebracht und dort Testfälle und Testdateien geschlossen;
+  `--dateien` kam in der Datei **nullmal** vor, in `kit-test.sh` dreimal.
+  **Messbare Folge:** Die Dateizahl im README stand auf 169, während der
+  Installer 175 schrieb — sechs Dateien lang veraltet, und der Selbsttest der
+  anderen Bahn meldete in derselben Zeit grün. Die Gattung von `BL-145`,
+  wieder aufgetaucht an der Stelle, die `BL-198` einen Tag zuvor geschlossen
+  hatte.
+
+  **(1)** `kit-test.ps1` hält die Zahl jetzt in einer Variablen und reicht sie
+  an den Prüfer durch, mit Gegenprobe (verfälschte Dateizahl wird rot) — und
+  mit dem Fall, den der Fix sonst selbst aufgestellt hätte: Ist die Zahl nicht
+  lesbar, sagt der Schritt das **laut**, statt weniger zu prüfen und grün
+  auszusehen.
+
+  **(2)** Die Schlusszeile des Prüfers nennt jetzt den **Maßstab**, nicht nur
+  die geprüften Gattungen: Gemessen wird an einer frischen **Installation**,
+  nicht an der Kit-Ablage — und die beiden zählen verschieden. Die Differenz
+  ist genau ein Fall: `test_kit_pruefer_ueberlebt_eine_cp1252_ausgabe` ist über
+  `geteilt/kit-*.py` parametrisiert, und `geteilt/` gibt es in einer
+  Installation nicht. Wer von Hand nachmisst, misst im Kit und liegt um eins
+  daneben — genau so kam die falsche Zahl ins README. Mit Gegenrichtung: Bei
+  einem Aufruf ohne Zahlen erscheint der Satz **nicht**.
+
+  Regressionstest `test_bl208_dateizahl_auf_beiden_bahnen.py`, 7 Fälle; gegen
+  den alten Stand fallen alle sieben. Der **end-zu-end**-Beleg der pwsh-Bahn
+  braucht PowerShell 7 auf demselben Wirt und bleibt benannt offen.
+
+- **Frank hatte keine Regel für eine schon vor ihm rote Suite — und stellte
+  headless Rückfragen, die niemand liest** (`BL-205`, gemeldet von `Feld B`).
+  Er hatte einen fertigen, nachweislich nicht-regressiven Diff; die Suite war
+  rot, aber **unabhängig von ihm**. Seine Auflage *„Smoke-Test grün"* war
+  **absolut** und kannte den Fall nicht — sie maß damit eine Eigenschaft der
+  **Maschine** statt eine des Fixes und traf ausgerechnet den Lauf, in dem die
+  Rolle richtig gearbeitet hat. Kostenpunkt: 2,7517 USD verworfen und im
+  Folgeaufruf neu bezahlt.
+
+  **(1)** `$SMOKE_SUFFIX` sagt jetzt, dass eine schon vorher rote Suite **kein
+  Abbruchgrund** ist: Frank misst beide Stände und belegt, dass durch **seinen**
+  Fix kein **neuer** Fehlschlag entsteht. Die Fähigkeit war da — er kennt
+  seinen Ausgangs-Commit über `team_guard_begin` ohnehin, es fehlte nur die
+  Auflage.
+
+  **(2) Der dritte Ausgang.** Frank kannte zwei (Promise / kein Promise); für
+  *„Hindernis, aber unterwegs einen echten neuen Fehler gefunden"* gab es
+  keinen, und der Beifang endete im gitignorierten Log. Jetzt legt er dafür
+  einen **neuen Fundblock mit Status `offen`** an und behebt ihn **nicht** —
+  das bestätigt *Finder ist nicht Fixer*, statt es zu verletzen.
+
+  **(3)** *„Es liest niemand mit"* steht jetzt in seinem Auftrag, samt dem, was
+  stattdessen gilt: keine Rückfragen, belegbar entscheiden, das Entschiedene
+  aufschreiben.
+
+  **Wo es gelandet ist:** (1) in beiden Bibliotheken, (2) und (3) im
+  **Auftragstext** beider Frank-Entrypoints — nicht im Briefing, das exakt auf
+  dem harten 45-Zeilen-Limit liegt. Regressionstest
+  `test_bl205_frank_kennt_die_schon_rote_suite.py`, 11 Fälle, darunter die
+  Gegenrichtung, dass die ältere Vordergrund-Auflage in derselben Zeile
+  **nicht** verdrängt wird. Gegen den alten Stand fallen 9 von 11.
+
+- **Die Vorsorge gegen den vierten Ausgang fehlte im Briefing jeder Loop-Rolle
+  — das Kit kannte ihn nur als Nachsorge** (`BL-201`, gemeldet von `Feld B`).
+  `BL-41` erkennt den vierten Ausgang zuverlässig; die **vorbeugende** Auflage
+  stand in der `CLAUDE.md`-Vorlage, also in einem Abschnitt, der der Rolle
+  einleitend sagt, er betreffe größtenteils die Shell und nicht sie. Gemessen:
+  Eine Suche nach `Vordergrund`, `Hintergrund`, `Wakeup`, `Monitor` oder `43`
+  über die fünf Loop-Briefings lieferte **0 Treffer in allen fünf**.
+
+  **(1)** Die Auflage steht jetzt in `rolle-ralph.md`, `rolle-axel.md`,
+  `rolle-harry.md` und `rolle-marv.md` — mit **Grund** (headless, keine
+  Benachrichtigung, das Log meldet trotzdem `subtype: success`), mit **Preis**
+  (19,47 USD im Feld) und vor allem mit dem **Ausweg**: Dauert ein Lauf zu
+  lange, wird das *Zeitlimit* auf `TEAM_SMOKE_TEST_TIMEOUT` gehoben, statt in
+  den Hintergrund auszuweichen. Das ist die Naht zu `BL-207` — eine Auflage,
+  die eine Rolle nicht einhalten **kann**, erzeugt genau das Verhalten, das sie
+  verbieten soll.
+
+  **Frank steht bewusst nicht dabei.** Er trägt die Auflage seit `BL-207`
+  **wörtlich zur Laufzeit** in Schritt 1 seines Auftrags — genau weil er den
+  Smoke-Test öfter fährt als Ralph —, und sein Briefing liegt **exakt** auf dem
+  harten 45-Zeilen-Limit. Ein Briefing liegt in **jedem** Prompt seiner Rolle;
+  ein Zusatz, der eine andere Zusicherung bricht, ist keiner. Ein eigener
+  Testfall sichert die Ausnahme ab, sonst wäre sie ein Loch.
+
+  **(2)** Die Nachsorge behauptet nicht mehr, als sie weiß. Die Meldung zum
+  vierten Ausgang nennt jetzt das Log-Feld `result` — den einzigen Ort, an dem
+  im Feld die Ursache wörtlich stand und den die Anleitung nirgends erwähnte.
+  Und die Rot-Meldung der Selbstprüfung ist **relativiert**: *„Miss im
+  VORDERGRUND nach, bevor du den Befund verwendest."* Ohne das liest sich ein
+  Befund als sicher, der es nicht ist — im Feld meldete sie „Smoke-Test ist
+  ROT" bei grünem Baum, und die anschließende Prüfreihenfolge bot zwei Zweige,
+  die **beide** einen roten Baum voraussetzen; der zweite hätte eine fertige,
+  bezahlte Stufe weggeworfen. Beides auf **beiden** Bahnen, mit
+  Gleichstands-Fall.
+
+  Regressionstest `test_bl201_vordergrund_auflage_in_allen_briefings.py`,
+  23 Fälle; gegen den alten Stand fallen 21. Beim Bauen wäre fast eine andere
+  Zusicherung gerissen — der erste Wurf hängte allen fünf Briefings einen
+  13-zeiligen Absatz an und schob vier über das Zeilenlimit. Der Fall dagegen
+  steht jetzt in der Datei.
+
+- **Eine Sitzung ohne Closeout buchte ihre Kosten nicht — und ihr Ausfall war
+  im Bericht baulich unsichtbar** (`BL-197`, gemeldet von `Feld E`). Das Ledger
+  war in sich stimmig, `--ledger-pruefen` schwieg, `--budget` zeigte eine
+  plausible Summe. Gemessen fehlten **43,90 USD** Abo-Gegenwert aus zwei
+  regulären, produktiven Sitzungen **eines** Tages.
+
+  **(1) Den stillen Fall laut gemacht.** `ledger_pruefen()` P1 stuft eine
+  **nummerierte** Kaskade mit `ralph`-Zeile und ohne `architekt`-Zeile jetzt
+  als **Warnung** statt als Hinweis ein. Das Argument ist wörtlich dasselbe,
+  das `ralph-fehlt` schon trägt — dort *„gebaut wurde immer, wenn gesweept
+  wurde"*, hier *„geplant wurde immer, wenn gebaut wurde"*. **Benannte**
+  Kaskaden bleiben Hinweis (`post-20` ist eine Out-of-Loop-Fixserie ohne
+  Aushärtung), dieselbe Unterscheidung und derselbe Grund wie in `BL-14`.
+
+  **Warum die Schwere hier keine Beschriftungsfrage ist:** Der Kontostand zeigt
+  auf **beiden** Bahnen ausschließlich `[WARNUNG]`-Zeilen. Ein Hinweis
+  erschien dort nie — die Einstufung entscheidet zwischen *unsichtbar* und
+  *sichtbar*, und genau das war der Fund.
+
+  **Die Falle ist von Anfang an mitgebaut:** Ein unter einer älteren
+  Kit-Fassung gewachsenes Ledger erzeugt **eine** gebündelte Warnung mit Zahl
+  und namentlich genannten Kaskaden, nicht N dauerhaft unauflösbare. Eine
+  Warnung, die immer erscheint, ist keine (`BL-14`).
+
+  **(2) Den Auslöser dorthin gelegt, wo er entsteht.** Der Kostenabschluss der
+  Sitzung hängt jetzt als **letzter, kopierfertiger Schritt** an der
+  Scharfschalt-Sequenz — einer Pflicht-Ausgabe am Ende **jeder** Aushärtung.
+  Damit hängt er an einem **Ereignis** statt an einer Erinnerung. Das ist der
+  ganze Unterschied: Der Melder **hatte** die `BL-165`-Regel, zitierte sie
+  wörtlich und hatte sie verstanden — sie griff trotzdem an einem Tag zweimal
+  nicht, weil eine reine Aushärtungssitzung einfach *endet*. Zwei Befehle, weil
+  der Betrag erst gemessen werden muss. Die `BL-165`-Regel wird ausdrücklich
+  **nicht** ersetzt: Sie sagt das **Warum**, die Sequenz das **Wann**.
+
+  Regressionstest `test_bl197_architekt_fehlt_ist_eine_warnung.py`, 13 Fälle,
+  darunter die vier vom Eintrag wörtlich verlangten Gegenproben, jede einzeln
+  zurückgedreht. Gegen den alten Stand fallen 4 von 10 Fällen in Teil (1) und
+  3 von 3 in Teil (2); die übrigen sind die Gegenrichtungen und müssen
+  beidseitig grün bleiben.
+
+  **Vier bestehende Fälle mitgezogen** (`test_bl13` dreimal, `test_bl46`
+  einmal): Ihre Fixtures trugen eine nummerierte Kaskade ohne Architekt-Zeile
+  und behaupteten `rc == 0` nur nebenbei. Sie prüfen P2/P3 und bekommen die
+  Zeile jetzt, damit sie das prüfen, was sie meinen.
+
 - ⚠️ **Die Sperre galt nie bahnübergreifend — jetzt gilt sie, mit benannten
   Grenzen** (`BL-199`). Beide Bahnen liegen nach einer Installation im
   **selben** Arbeitsbaum (`BL-126`), und die Zusicherung heißt *„eine Pipeline

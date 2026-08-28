@@ -31,6 +31,24 @@ TEAM_FELD_KUERZEL="${TEAM_FELD_KUERZEL:-}"
 TEAM_PRODUKTIVCODE="${TEAM_PRODUKTIVCODE:-{{PRODUKTIVCODE}}}"
 
 # Test-Ordner: hier dürfen Red Team und Frank Reproducer ablegen.
+#
+# DIE KOPPLUNG, DIE HIER STEHEN MUSS (`Kit-BL-169`): Der Testordner muss dort
+# liegen, wo DEIN Testläufer sucht, und der Dateiname so heißen, dass er ihn
+# nimmt. Beides ist stackabhängig, und beides fällt sonst LAUTLOS aus:
+#   * pytest findet die Dateien am PFAD — `src/` + `tests/` trägt.
+#   * Dart/Flutter sammelt ausschließlich INNERHALB des Pakets und
+#     ausschließlich unterhalb von `test/`. Liegt das Paket unter `src/`,
+#     liegt `tests/` außerhalb davon und wird nie gelesen. Dieselbe Bauart
+#     bei Cargo (`tests/` relativ zu `Cargo.toml`), Go (Paketverzeichnis)
+#     und Gradle (`src/test/`).
+#   * Der Läufer nimmt oft nur ein NAMENSMUSTER: `_test.dart`, `_test.go`.
+#     Die Kit-Konvention `test_hm<nr>_<stichwort>.py` buchstabengetreu auf
+#     Dart übertragen ergibt `test_hm36_foo.dart` — einen Namen, den der
+#     Läufer ignoriert. Pass das Muster im Beutebuch-Format mit an.
+# Die Folge ist in beiden Hälften dieselbe und schlimmer als ein Fehler:
+# Franks regelkonform abgelegter Reproducer wird NIE ausgeführt, der
+# Smoke-Test bleibt grün, das Beutebuch zeigt einen Fund mit Reproducer —
+# geprüft wird nichts.
 TEAM_TEST_ORDNER="${TEAM_TEST_ORDNER:-{{TEST_ORDNER}}}"
 
 # Plan-Ordner: Kaskaden-Pläne, Beutebuch, Ermittlungsakten, Roadmap, Backlog.

@@ -96,7 +96,7 @@ if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
     # Fehlversuch (.frank-attempts) und eskaliert ab dem dritten an Axel —
     # das teure Modell wird also fuer einen Formfehler gerufen. Deshalb
     # steht die Auflage hier ausgeschrieben statt nur bei Ralph.
-    SMOKE_SUFFIX=" Smoke-Test grün: ${TEAM_SMOKE_TEST}. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu ${TEAM_SMOKE_TEST_TIMEOUT} Sekunden brauchen, setze das Zeitlimit deines Werkzeugs auf diesen Wert. NIEMALS als Hintergrund-Task und kein Wakeup darauf: Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (BL-41)."
+    SMOKE_SUFFIX=" Smoke-Test grün: ${TEAM_SMOKE_TEST}. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu ${TEAM_SMOKE_TEST_TIMEOUT} Sekunden brauchen, setze das Zeitlimit deines Werkzeugs auf diesen Wert. NIEMALS als Hintergrund-Task und kein Wakeup darauf: Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (BL-41). War die Suite schon VOR deinem Fix rot, brich nicht ab: Miss beide Staende und belege, dass durch DEINEN Fix kein NEUER Fehlschlag entsteht (BL-205)."
 else
     SMOKE_ZEILE="(Kein Smoke-Test konfiguriert — Schritt entfällt. Das Team arbeitet ohne Sicherheitsnetz; TEAM_SMOKE_TEST in team.config.sh nachtragen.)"
     SMOKE_SUFFIX=""
@@ -672,7 +672,17 @@ team_quittung_fehlt_melden() {
     for schritt in "$@"; do
         echo "    - $schritt" >&2
     done
+    # BL-201: Der kuerzeste Weg zur richtigen Diagnose, und er kostet eine
+    # Zeile. Im Feld loeste den Fall ALLEIN das Feld `result` im Lauf-Log —
+    # dort stand die Ursache woertlich ("waiting for the background test
+    # run"). Die Anleitung erwaehnte es an keiner Stelle; ohne den Hinweis
+    # sucht der Mensch in der Pruefreihenfolge weiter, deren beide Zweige
+    # einen roten Baum voraussetzen, und wirft im zweiten eine fertige,
+    # bezahlte Stufe weg.
     echo "  Log: $out" >&2
+    echo "  Lies dort ZUERST das Feld \`result\` — die Rolle sagt darin meist selbst," >&2
+    echo "  worauf sie gewartet hat. Neunmal im Feld stand dort das Warten auf einen" >&2
+    echo "  Hintergrundlauf, und kein einziger erfolgreicher Lauf zeigte dieses Muster." >&2
     return 0
 }
 
@@ -809,6 +819,17 @@ team_quittung_selbstpruefung() {
         echo "      Das gehört an den Menschen: Erst prüfen, WO — sind ausschließlich die von" >&2
         echo "      DIESER Stufe neu angelegten Testdateien rot, ist der Testaufbau der" >&2
         echo "      wahrscheinlichere Schuldige als der Produktivcode (BL-61)." >&2
+        # BL-201: Der Befund kann eine Eigenschaft des LAUFS statt des Codes
+        # sein. Ein Hintergrundlauf, den die Rolle angestossen und nie zu Ende
+        # gefuehrt hat, hinterlaesst einen halben Zustand (halb geschriebene
+        # Datenbankdateien, belegte Ports) — im Feld meldete die
+        # Selbstpruefung daraufhin ROT, obwohl der Baum gruen war. Ein Befund,
+        # der als sicher gelesen wird, obwohl er es nicht ist, schickt den
+        # Menschen in einen Zweig, der eine fertige Stufe wegwirft.
+        echo "      ABER: Dieser Befund ist nicht sicher. Wurde der Test vorher als" >&2
+        echo "      Hintergrundlauf angestossen und nie zu Ende gefuehrt, misst du seinen" >&2
+        echo "      halben Zustand statt deinen Code. Miss im VORDERGRUND nach, bevor du den" >&2
+        echo "      Befund verwendest — und lies das Feld \`result\` im Lauf-Log (BL-201)." >&2
         return 1
     fi
     echo "    ✓ $smoke ist grün." >&2

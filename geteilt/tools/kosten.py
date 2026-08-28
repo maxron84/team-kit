@@ -667,6 +667,7 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
             f"{ohne_quelle} Ledger-Zeile(n) im alten 5-Feld-Schema ohne "
             f"Domaene/Rolle -- sie zaehlen als 'unzugeordnet' und koennen "
             f"nicht auf Vollstaendigkeit geprueft werden (BL-29)."))
+    architekt_fehlt = []          # BL-197: gesammelt, EINE Warnung daraus
     for kaskade in sorted(je_kaskade, key=_kaskade_key):
         vorhanden = je_kaskade[kaskade]
         if not vorhanden & {"ralph", "roles"}:
@@ -695,12 +696,49 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
         for quelle in fehlend:
             if quelle == "ralph":
                 continue
+            # BL-197: Dieselbe Unterscheidung wie bei `ralph-fehlt` eine
+            # Ebene darueber, mit demselben Argument. Dort traegt sie
+            # "gebaut wurde immer, wenn gesweept wurde"; hier "geplant wurde
+            # immer, wenn gebaut wurde" -- ohne Aushaertung gaebe es nichts
+            # zu bauen. Eine NUMMERIERTE Kaskade mit ralph-Zeile und ohne
+            # architekt-Zeile ist deshalb kein Hinweis mehr, sondern geht in
+            # die gebuendelte Warnung unter der Schleife.
+            #
+            # BENANNTE Kaskaden bleiben Hinweis (`post-20`, `roles-post-k13`
+            # sind Out-of-Loop-Fixserien ohne Aushaertung) -- dieselbe
+            # Unterscheidung, derselbe Grund wie in BL-14.
+            if (quelle == "architekt" and kaskade.isdigit()
+                    and "ralph" in vorhanden):
+                architekt_fehlt.append(kaskade)
+                continue
             befunde.append(_befund(
                 f"{quelle}-fehlt", "hinweis",
                 f"Kaskade {kaskade}: keine {quelle}-Zeile. Legitim, wenn "
                 + ("kein Red Team lief" if quelle == "roles" else
                     "der Architekt fuer diese Kaskade nichts abzurechnen "
                     "hatte") + " -- sonst fehlt der Abschluss."))
+
+    # BL-197: EINE gebuendelte Warnung, nicht eine je Kaskade. Die Falle
+    # gehoert von Anfang an mitgebaut: Ein unter einer aelteren Kit-Fassung
+    # gewachsenes Ledger, in dem der Architekt nie gebucht hat, wuerde sonst
+    # auf einen Schlag N Warnungen erzeugen -- dauerhaft unaufloesbar, weil
+    # die Transkripte laengst weg sind. Das ist der Fehlermodus aus BL-14
+    # selbst: Eine Warnung, die immer erscheint, ist keine.
+    #
+    # Gemessen im Feld (Feld E, 2026-08-26): 43,90 USD Abo-Gegenwert aus zwei
+    # Sitzungen EINES Tages, die nie im Ledger standen. Der Fund war bis
+    # hierher baulich unsichtbar -- als "hinweis" erschien er in keinem
+    # --budget, denn der Kontostand zeigt ausschliesslich [WARNUNG]-Zeilen.
+    if architekt_fehlt:
+        genannt = ", ".join(architekt_fehlt)
+        befunde.append(_befund(
+            "architekt-fehlt", "warnung",
+            f"{len(architekt_fehlt)} nummerierte Kaskade(n) mit ralph-Zeile "
+            f"und ohne architekt-Zeile: {genannt}. Die Aushaertung ist nicht "
+            f"gebucht -- ohne sie gaebe es nichts zu bauen. Nachtragen mit "
+            f"`kosten.py sitzung-messen`, dann `--architekt-abschluss <USD> "
+            f"<domaene> \"Kaskade N geplant\" --kaskade <N>` je Kaskade "
+            f"(BL-197)."))
 
     # --- P1b (BL-27) --------------------------------------------------------
     # P1 winkt jede Kaskade ohne ralph/roles-Zeile als "geplant, aber nie

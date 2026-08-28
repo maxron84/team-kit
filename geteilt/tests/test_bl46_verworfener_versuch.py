@@ -181,8 +181,12 @@ def test_ledger_pruefen_alarmiert_nicht_wegen_eines_zettels(tmp_path):
     logs = tmp_path / ".ralph-logs"
     _zettel(logs)
     ledger = tmp_path / ".budget-ledger"
+    # Die architekt-Zeile gehoert seit BL-197 dazu: Eine nummerierte Kaskade
+    # mit ralph und ohne sie ist jetzt selbst eine Warnung. Ohne die Zeile
+    # pruefte dieser Fall nicht mehr P2, sondern P1.
     ledger.write_text(
-        "2026-08-10 | 29 | 12.0000 | abo | produkt | ralph | Bau: K29\n",
+        "2026-08-10 | 29 | 12.0000 | abo | produkt | ralph | Bau: K29\n"
+        "2026-08-10 | 29 | 6.0000 | abo | produkt | architekt | Plan: K29\n",
         encoding="utf-8")
     ergebnis = _kosten("ledger-pruefen", "--pfad", str(ledger), "--kaskade",
                        "29", "--ralph-logs", str(logs), "--team-logs",

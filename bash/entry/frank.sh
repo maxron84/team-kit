@@ -102,6 +102,23 @@ Franks Dreisatz — alle Schritte sind PFLICHT:
    $TEAM_BEUTEBUCH_TOOL set $HM 'erledigt (Frank-Fix, <commit-kurzhash>)'
    (Den CHANGELOG-/Status-Edit im selben oder einem Folge-Commit 'docs: …' sichern.)
 
+
+Zwei Dinge, die keine Rückfrage wert sind — hier steht die Antwort (BL-205):
+* WAR DIE SUITE SCHON VOR DIR ROT, brichst du nicht ab. Du misst beide Stände
+  (deinen Ausgangs-Commit und dein Ergebnis) und belegst, dass durch DEINEN Fix
+  kein NEUER Fehlschlag entstanden ist; die vorbestehenden nennst du im
+  Commit-Text. Eine absolute Auflage misst sonst eine Eigenschaft der MASCHINE
+  statt eine deines Fixes — und trifft ausgerechnet den Lauf, in dem du richtig
+  gearbeitet hast.
+* FINDEST DU UNTERWEGS EINEN ZWEITEN, echten Fehler, der nicht zu $HM gehört,
+  legst du dafür einen NEUEN Fundblock mit Status 'offen' in ${TEAM_BEUTEBUCH}
+  an und fixt ihn NICHT. Das bestätigt 'Finder ist nicht Fixer', statt es zu
+  verletzen. Ein Beifang, der nur im Log steht, ist verloren — im Feld wurde
+  genau so einer nur gerettet, weil ein Mensch später das Log öffnete.
+
+Es liest niemand mit: Diese Sitzung ist headless. Stelle KEINE Rückfragen —
+entscheide belegbar und schreibe auf, was du entschieden hast.
+
 Schaffst du einen sauberen Fix inkl. Dreisatz, beende mit exakt:
 <promise>FRANK_FIX_COMPLETE</promise>
 Sonst gib das Promise NICHT aus und beschreibe das Hindernis."

@@ -256,7 +256,7 @@ Smoke-Test ausführen: $TEAM_SMOKE_TEST — muss grün sein.
     # Fehlversuch (.frank-attempts) und eskaliert ab dem dritten an Axel —
     # das teure Modell wird also fuer einen Formfehler gerufen. Deshalb
     # steht die Auflage hier ausgeschrieben statt nur bei Ralph.
-    $SMOKE_SUFFIX = " Smoke-Test grün: $TEAM_SMOKE_TEST. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu $TEAM_SMOKE_TEST_TIMEOUT Sekunden brauchen, setze das Zeitlimit deines Werkzeugs auf diesen Wert. NIEMALS als Hintergrund-Task und kein Wakeup darauf: Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (BL-41)."
+    $SMOKE_SUFFIX = " Smoke-Test grün: $TEAM_SMOKE_TEST. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu $TEAM_SMOKE_TEST_TIMEOUT Sekunden brauchen, setze das Zeitlimit deines Werkzeugs auf diesen Wert. NIEMALS als Hintergrund-Task und kein Wakeup darauf: Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (BL-41). War die Suite schon VOR deinem Fix rot, brich nicht ab: Miss beide Staende und belege, dass durch DEINEN Fix kein NEUER Fehlschlag entsteht (BL-205)."
 } else {
     $SMOKE_ZEILE = "(Kein Smoke-Test konfiguriert — Schritt entfällt. Das Team arbeitet ohne Sicherheitsnetz; TEAM_SMOKE_TEST in team.config.ps1 nachtragen.)"
     $SMOKE_SUFFIX = ""
@@ -1479,7 +1479,12 @@ function team_quittung_fehlt_melden {
     Team-Fehler "  Die Arbeit ist in diesem Fall meist FERTIG — viermal im Feld, 19,47 USD. Prüfe in"
     Team-Fehler "  dieser Reihenfolge, BEVOR du neu startest (ein Neulauf wirft die bezahlte Arbeit weg):"
     foreach ($s in $Schritte) { Team-Fehler "    - $s" }
+    # BL-201: siehe die bash-Fassung — im Feld loeste den Fall ALLEIN das
+    # Feld `result` im Lauf-Log, und die Anleitung erwaehnte es nirgends.
     Team-Fehler "  Log: $Datei"
+    Team-Fehler "  Lies dort ZUERST das Feld ``result`` — die Rolle sagt darin meist selbst,"
+    Team-Fehler "  worauf sie gewartet hat. Neunmal im Feld stand dort das Warten auf einen"
+    Team-Fehler "  Hintergrundlauf, und kein einziger erfolgreicher Lauf zeigte dieses Muster."
     return $true
 }
 
@@ -1612,6 +1617,12 @@ function team_quittung_selbstpruefung {
         Team-Fehler "      Das gehört an den Menschen: Erst prüfen, WO — sind ausschließlich die von"
         Team-Fehler "      DIESER Stufe neu angelegten Testdateien rot, ist der Testaufbau der"
         Team-Fehler "      wahrscheinlichere Schuldige als der Produktivcode (BL-61)."
+        # BL-201: siehe die bash-Fassung — der Befund kann eine Eigenschaft
+        # des LAUFS statt des Codes sein.
+        Team-Fehler "      ABER: Dieser Befund ist nicht sicher. Wurde der Test vorher als"
+        Team-Fehler "      Hintergrundlauf angestossen und nie zu Ende gefuehrt, misst du seinen"
+        Team-Fehler "      halben Zustand statt deinen Code. Miss im VORDERGRUND nach, bevor du den"
+        Team-Fehler "      Befund verwendest — und lies das Feld ``result`` im Lauf-Log (BL-201)."
         return $false
     }
     Team-Fehler "    ✓ $TEAM_SMOKE_TEST ist grün."

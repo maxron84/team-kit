@@ -215,6 +215,18 @@ if ($LASTEXITCODE -ne 0) {
 $fertig = (Select-String -Path $installLog -Pattern 'Fertig — \d+ Dateien geschrieben' |
            Select-Object -First 1)
 Gruen $(if ($fertig) { $fertig.Matches[0].Value } else { 'installiert' })
+# BL-208: Die Zahl wurde hier bis dahin nur GEDRUCKT, nie gehalten. Von den
+# drei Zahlen-Gattungen, die das README ueber sich selbst behauptet, prueft
+# BL-198 Teil (3) auf dieser Bahn nur zwei — `--dateien` kam in dieser Datei
+# nullmal vor, in kit-test.sh dreimal. Genau deshalb konnte die Dateizahl
+# sechs neue Dateien lang veralten, waehrend dieser Selbsttest gruen meldete:
+# die Gattung von BL-145 an der Stelle, die BL-198 eigentlich geschlossen hat.
+# Gemessen wird sie hier, geprueft weiter unten mit den anderen beiden --
+# EINE Stelle, an der das README gehalten wird, statt zwei.
+$script:GeschriebenIst = 0
+if ($fertig -and $fertig.Matches[0].Value -match '(\d+)') {
+    $script:GeschriebenIst = [int]$Matches[1]
+}
 # BL-127, auf dieser Bahn bis BL-195 nicht geprueft: Der Selbsttest des
 # INSTALLERS muss seine Regressionstests wirklich gefahren haben. Ein
 # Installer, der sie still ueberspringt, meldet trotzdem "Fertig" — und der
@@ -348,7 +360,15 @@ if ($tFaelle -eq 0 -or $tDateien -eq 0) {
 } else {
     $pruefer = Join-Path $KIT 'geteilt/kit-readme-pruefen.py'
     $pyKit = if ($ptBefehl) { $ptBefehl } else { 'python' }
-    & $pyKit $pruefer --faelle $tFaelle --testdateien $tDateien 2>&1 |
+    # BL-208: `--dateien` mitgeben, sonst prueft diese Bahn zwei von drei
+    # Gattungen und meldet trotzdem dasselbe Gruen wie die bash-Bahn.
+    $zahlArgs = @('--faelle', $tFaelle, '--testdateien', $tDateien)
+    if ($script:GeschriebenIst -gt 0) {
+        $zahlArgs += @('--dateien', $script:GeschriebenIst)
+    } else {
+        Gelb 'Die Dateizahl des Installers war nicht lesbar — diese Gattung bleibt UNGEPRUEFT (BL-208).'
+    }
+    & $pyKit $pruefer @zahlArgs 2>&1 |
         ForEach-Object { Zeile $_ }
     if ($LASTEXITCODE -ne 0) {
         Rot 'Das README steht gegen die frische Installation.'
@@ -378,10 +398,19 @@ if ($tFaelle -eq 0 -or $tDateien -eq 0) {
         -Value ($readme -replace '(' + [char]0x5c + 'd+) Einträge', '1 Einträge')
     & $pyKit $pruefer --readme $gegen --faelle $tFaelle --testdateien $tDateien 2>&1 | Out-Null
     Pruefe 'Gegenprobe: verfälschte Archivzahl wird rot' ($LASTEXITCODE -ne 0) $true
+    # BL-208: die dritte Gattung, die dieser Bahn bis dahin fehlte. Ohne
+    # diesen Fall bleibt der Zusatz oben eine Behauptung — ein Waechter, der
+    # nie rot wird, sichert nichts ab.
+    if ($script:GeschriebenIst -gt 0) {
+        Set-Content -LiteralPath $gegen -Encoding utf8 `
+            -Value ($readme -replace "$($script:GeschriebenIst) Dateien", '1 Dateien')
+        & $pyKit $pruefer --readme $gegen @zahlArgs 2>&1 | Out-Null
+        Pruefe 'Gegenprobe: verfälschte Dateizahl wird rot (BL-208)' ($LASTEXITCODE -ne 0) $true
+    }
     # Und die Gegenrichtung, ohne die es keine Gegenprobe ist: Das
     # UNVERAENDERTE README muss gruen bleiben.
     Set-Content -LiteralPath $gegen -Encoding utf8 -Value $readme
-    & $pyKit $pruefer --readme $gegen --faelle $tFaelle --testdateien $tDateien 2>&1 | Out-Null
+    & $pyKit $pruefer --readme $gegen @zahlArgs 2>&1 | Out-Null
     Pruefe 'Gegenrichtung: das unveränderte README bleibt grün' ($LASTEXITCODE -eq 0) $true
     # BL-198 Teil 2: Ohne Zahlenargumente darf die Erfolgszeile nicht
     # behaupten, alle Zahlen seien gemessen.

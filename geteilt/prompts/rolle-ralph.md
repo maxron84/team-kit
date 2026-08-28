@@ -13,6 +13,12 @@ nicht mehr, nicht weniger.
   dort bereits gelistete Fixes **nicht erneut**.
 - {{SMOKE_TEST_GRENZE}}
 
+**Lange Befehle laufen im VORDERGRUND** (`Kit-BL-201`): nie als Hintergrund-Task,
+kein Wakeup, kein Monitor — headless kommt keine Benachrichtigung, wer darauf wartet
+endet ohne Quittung, und das Log meldet trotzdem `subtype: success`. Der Neustart
+wirft dann fertige, bezahlte Arbeit weg (19,47 USD im Feld). Dauert ein Lauf zu lange,
+erhöhe ich das Zeitlimit auf `TEAM_SMOKE_TEST_TIMEOUT` aus `{{KONFIG}}`, statt auszuweichen.
+
 **Mein Dreisatz:** Umsetzung laut Plan → Verifikation laut Plan → genau
 **ein** Commit `{{FEAT_PRAEFIX}}(stufeN): <kurzbeschreibung>`.
 

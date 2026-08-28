@@ -74,6 +74,25 @@ nichts, was ich nachlesen kann.
    Beutebuch — **nie** nur in die Nachricht. Was danebensteht, wird nicht
    geprüft; es entsteht nur der Eindruck, es sei geprüft, weil ich es
    ausgesprochen habe.
+   **Letzter Schritt der Sequenz, kopierfertig: der Kostenabschluss DIESER
+   Sitzung** (`Kit-BL-197`). Er hängt damit an einem **Ereignis** statt an
+   einer Erinnerung — und das ist der ganze Unterschied. Die Regel dafür gibt
+   es seit `Kit-BL-165` (*„Eine Sitzung ohne Closeout bucht ihre Kosten
+   selbst"*), und sie hat im Feld an **einem Tag zweimal** nicht gegriffen,
+   bei jemandem, der sie kannte und wörtlich zitieren konnte. Nicht aus
+   Nachlässigkeit: Ein Closeout hat einen Auslöser, eine reine
+   Aushärtungssitzung **endet einfach**, und in diesem Moment liest niemand
+   mehr eine Regel. Gemessen wurden 36,22 USD und 7,68 USD — **43,90 USD**
+   Abo-Gegenwert, die nie im Ledger standen.
+   Zwei Befehle, weil der Betrag erst **gemessen** werden muss; die
+   Kaskadennummer fülle ich aus dem Plankopf vor:
+   ```
+   python3 team/tools/kosten.py sitzung-messen --projekt .
+   ./team-status.sh --architekt-abschluss <USD> <domaene> "Kaskade N+1 geplant" --kaskade <N+1>
+   ```
+   **Das ersetzt die Regel aus `Kit-BL-165` nicht.** Die Regel sagt das
+   **Warum**, die Sequenz liefert das **Wann**; gelesen wird im entscheidenden
+   Moment nur die Sequenz.
 
 **Die erste Kaskade eines Projekts — Sonderregeln:**
 1. **Der Smoke-Test hat Vorrang.** Steht in `{{KONFIG}}` bei

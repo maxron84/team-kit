@@ -108,13 +108,24 @@ def test_fehlende_roles_zeile_ist_nur_hinweis(tmp_path):
     assert "[WARNUNG]" not in out
 
 
-def test_fehlende_architekt_zeile_ist_nur_hinweis(tmp_path):
+def test_fehlende_architekt_zeile_ist_eine_warnung(tmp_path):
+    """BL-197 hat diesen Fall gedreht, und das ist der Kern des Eintrags.
+
+    Bis dahin stand hier `assert rc == 0` und `[Hinweis]` — und genau deshalb
+    war der Fund BAULICH UNSICHTBAR: Der Kontostand zeigt ausschliesslich
+    [WARNUNG]-Zeilen, ein Hinweis erscheint dort nie. Im Feld sind so an EINEM
+    Tag 43,90 USD Abo-Gegenwert ungebucht geblieben.
+
+    Die Tiefe steht in `test_bl197_architekt_fehlt_ist_eine_warnung.py`; hier
+    bleibt der Fall stehen, weil er zur P1-Reihe gehoert.
+    """
     pfad = _ledger(tmp_path,
                     _zeile("1", 2.1621, "ralph"),
                     _zeile("1", 1.0969, "roles"))
     rc, out, _ = _run("--pfad", str(pfad), *_leere_logs(tmp_path))
-    assert rc == 0, out
-    assert "keine architekt-Zeile" in out
+    assert rc == 4, out
+    assert "[WARNUNG]" in out
+    assert "ohne architekt-Zeile" in out
 
 
 def test_geplante_kaskade_ohne_lauf_wird_nicht_bemaengelt(tmp_path):
@@ -167,7 +178,13 @@ def test_bl5_unarchivierte_logs_bei_gebuchter_kaskade(tmp_path):
 def test_offene_kaskade_mit_logs_ist_kein_befund(tmp_path):
     """Unarchivierte Logs waehrend eines LAUFENDEN Baus sind der Normalzustand
     -- die Kaskade ist noch nicht gebucht. Kein Befund."""
-    pfad = _ledger(tmp_path, _zeile("1", 2.1621, "ralph"))
+    # Kaskade 1 rundum gebucht: Sonst schlaegt seit BL-197 P1 an (nummerierte
+    # Kaskade mit ralph und ohne architekt) und dieser Fall pruefte P1b nicht
+    # mehr allein.
+    pfad = _ledger(tmp_path,
+                    _zeile("1", 2.1621, "ralph"),
+                    _zeile("1", 1.0969, "roles"),
+                    _zeile("1", 6.1614, "architekt"))
     ralph = tmp_path / ".ralph-logs"
     team = tmp_path / ".team-logs"
     team.mkdir()
@@ -234,7 +251,8 @@ def test_ledger_groesser_als_rohlogs_ist_kein_befund(tmp_path):
     die Gegenrichtung ist der Sinn des Ledgers."""
     pfad = _ledger(tmp_path,
                     _zeile("1", 9.4204, "ralph"),
-                    _zeile("1", 1.0969, "roles"))
+                    _zeile("1", 1.0969, "roles"),
+                    _zeile("1", 6.1614, "architekt"))   # BL-197: sonst P1
     ralph = tmp_path / ".ralph-logs"
     team = tmp_path / ".team-logs"
     team.mkdir()
@@ -312,6 +330,7 @@ def test_frank_zeile_zaehlt_gegen_team_logs(tmp_path):
     pfad = _ledger(tmp_path,
                     _zeile("1", 1.0000, "ralph"),
                     _zeile("1", 2.0000, "roles"),
+                    _zeile("1", 6.1614, "architekt"),   # BL-197: sonst P1
                     _zeile("post-1", 4.0000, "frank"))
     ralph = tmp_path / ".ralph-logs"
     team = tmp_path / ".team-logs"

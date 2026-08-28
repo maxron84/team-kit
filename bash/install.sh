@@ -1630,6 +1630,49 @@ erklaerung "Der Architekt plant im Gespräch mit dir die nächste Runde und legt
            "oder dir die fertigen Befehle zum Kopieren geben (n)?"
 frage COMMIT_MODUS "Architekt committet selbst? (j/n)" "n"
 
+# --- BL-169: paketgebundener Stack gegen die Auslieferungswerte ---------------
+# Die Vorgabewerte `src/` + `tests/` tragen, solange der Testlaeufer die
+# Dateien am PFAD findet (pytest). Sie tragen NICHT, sobald er sie am PAKET
+# findet: Dart/Flutter sammelt ausschliesslich innerhalb des Pakets und
+# ausschliesslich unterhalb von `test/`; liegt das Paket unter `src/`, liegt
+# der vom Kit vorgesehene Testordner AUSSERHALB davon. Dieselbe Bauart bei
+# Cargo, Go und Gradle.
+#
+# Der Schaden ist stumm und deshalb teuer: Franks regelkonform abgelegter
+# Reproducer wird nie ausgefuehrt, der Smoke-Test bleibt gruen, das Beutebuch
+# zeigt einen Fund mit Reproducer — geprueft wird nichts. Getroffen wird
+# ausschliesslich der ERSTLAUF; hat ein Projekt seine Ordner einmal richtig
+# gesetzt, ist der Default fuer immer unsichtbar.
+#
+# GEMELDET, NICHT REPARIERT — dieselbe Entscheidung wie in BL-200: Der Stack
+# steht als freie Prosa da ("Flutter Dart sqlite"), und ein Installer, der
+# daraus stillschweigend Ordner umschreibt, raet. Wer die Vorgabe bewusst
+# behalten will, darf das; er weiss dann nur, was es kostet.
+stack_klein="$(printf '%s' "$TECH_STACK" | tr '[:upper:]' '[:lower:]')"
+STACK_TREFFER=""; STACK_PROD=""; STACK_TEST=""; STACK_MUSTER=""
+case "$stack_klein" in
+    *dart*|*flutter*) STACK_TREFFER="Dart/Flutter"; STACK_PROD="lib/"; STACK_TEST="test/"; STACK_MUSTER="<stichwort>_test.dart" ;;
+    *cargo*|*rust*)   STACK_TREFFER="Cargo/Rust";   STACK_PROD="src/";  STACK_TEST="tests/"; STACK_MUSTER="<stichwort>.rs" ;;
+    *golang*|*" go "*|"go "*|*" go")
+                      STACK_TREFFER="Go";           STACK_PROD="./";    STACK_TEST="(Paketverzeichnis)"; STACK_MUSTER="<stichwort>_test.go" ;;
+    *gradle*|*kotlin*|*maven*)
+                      STACK_TREFFER="JVM/Gradle";   STACK_PROD="src/main/"; STACK_TEST="src/test/"; STACK_MUSTER="<Stichwort>Test.java" ;;
+esac
+if [ -n "$STACK_TREFFER" ] && { [ "$TEST_ORDNER" = "tests/" ] || [ "$TEST_ORDNER" = "tests" ]; } \
+   && [ "$STACK_TEST" != "tests/" ]; then
+    echo
+    gelb "  ! $STACK_TREFFER erkannt, aber der Testordner steht auf \"$TEST_ORDNER\"."
+    gelb "    Dieser Läufer sucht seine Tests nicht am PFAD, sondern am PAKET —"
+    gelb "    er wird \"$TEST_ORDNER\" nie lesen. Üblich sind hier:"
+    gelb "        Programmcode: $STACK_PROD     Tests: $STACK_TEST"
+    gelb "        Reproducer-Dateiname: $STACK_MUSTER"
+    gelb "    Bleibt es so, wird Franks Reproducer NIE ausgeführt: Der Smoke-Test"
+    gelb "    bleibt grün, das Beutebuch zeigt einen Fund mit Reproducer, geprüft"
+    gelb "    wird nichts. Das fällt nur beim Erstlauf auf (Kit-BL-169)."
+    gelb "    Geändert wird hier nichts — trag die Werte bei Bedarf selbst nach:"
+    gelb "        TEAM_PRODUKTIVCODE / TEAM_TEST_ORDNER in team.config.*"
+fi
+
 # Kollision Pruefumfang/Schreibzone: Derselbe Ordner kann nicht beides sein.
 # Stand er in beiden Antworten, sagte der Rollen-Prompt in EINEM Absatz "tabu"
 # und "schreib hierhin" — beobachtet an Feld C, wo tests/ in beiden

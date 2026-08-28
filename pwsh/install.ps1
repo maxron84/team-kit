@@ -1862,6 +1862,36 @@ Erklaerung @("Der Architekt plant im Gespraech mit dir die naechste Runde und le
              "oder dir die fertigen Befehle zum Kopieren geben (n)?")
 $CommitModus = Frage 'COMMIT_MODUS' 'Architekt committet selbst? (j/n)' 'n'
 
+# --- BL-169: paketgebundener Stack gegen die Auslieferungswerte --------------
+# Siehe die bash-Fassung fuer die volle Begruendung. Kurz: `src/` + `tests/`
+# traegt, solange der Testlaeufer die Dateien am PFAD findet (pytest). Sobald
+# er sie am PAKET findet (Dart/Flutter, Cargo, Go, Gradle), liegt der vom Kit
+# vorgesehene Testordner ausserhalb seines Suchraums — und der Schaden ist
+# STUMM: Franks Reproducer wird nie ausgefuehrt, der Smoke-Test bleibt gruen.
+# GEMELDET, NICHT REPARIERT (dieselbe Entscheidung wie BL-200): Der Stack ist
+# freie Prosa, und ein Installer, der daraus Ordner umschreibt, raet.
+$stackKlein = "$TechStack".ToLower()
+$stackTreffer = ''; $stackProd = ''; $stackTest = ''; $stackMuster = ''
+switch -Regex ($stackKlein) {
+    'dart|flutter'        { $stackTreffer = 'Dart/Flutter'; $stackProd = 'lib/'; $stackTest = 'test/'; $stackMuster = '<stichwort>_test.dart'; break }
+    'cargo|rust'          { $stackTreffer = 'Cargo/Rust';   $stackProd = 'src/'; $stackTest = 'tests/'; $stackMuster = '<stichwort>.rs'; break }
+    '(^|\s)go(\s|$)|golang' { $stackTreffer = 'Go';           $stackProd = './';   $stackTest = '(Paketverzeichnis)'; $stackMuster = '<stichwort>_test.go'; break }
+    'gradle|kotlin|maven' { $stackTreffer = 'JVM/Gradle';   $stackProd = 'src/main/'; $stackTest = 'src/test/'; $stackMuster = '<Stichwort>Test.java'; break }
+}
+if ($stackTreffer -and ($TestOrdner -in @('tests/', 'tests')) -and $stackTest -ne 'tests/') {
+    Write-Host ''
+    Gelb "  ! $stackTreffer erkannt, aber der Testordner steht auf `"$TestOrdner`"."
+    Gelb '    Dieser Läufer sucht seine Tests nicht am PFAD, sondern am PAKET —'
+    Gelb "    er wird `"$TestOrdner`" nie lesen. Üblich sind hier:"
+    Gelb "        Programmcode: $stackProd     Tests: $stackTest"
+    Gelb "        Reproducer-Dateiname: $stackMuster"
+    Gelb '    Bleibt es so, wird Franks Reproducer NIE ausgeführt: Der Smoke-Test'
+    Gelb '    bleibt grün, das Beutebuch zeigt einen Fund mit Reproducer, geprüft'
+    Gelb '    wird nichts. Das fällt nur beim Erstlauf auf (Kit-BL-169).'
+    Gelb '    Geändert wird hier nichts — trag die Werte bei Bedarf selbst nach:'
+    Gelb '        TEAM_PRODUKTIVCODE / TEAM_TEST_ORDNER in team.config.*'
+}
+
 # Kollision Pruefumfang/Schreibzone: Derselbe Ordner kann nicht beides sein.
 # Stand er in beiden Antworten, sagte der Rollen-Prompt in EINEM Absatz "tabu"
 # und "schreib hierhin".
