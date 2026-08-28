@@ -286,8 +286,27 @@ fi
 
 # Whitelist-Änderungen deterministisch committen (der Angreifer selbst darf nicht).
 echo "$HEAD_HASH" > "$STATE_FILE"
-if [ -n "$(git status --porcelain -- "$TEAM_BEUTEBUCH" "$TEAM_TEST_ORDNER")" ]; then
-    git add "$TEAM_BEUTEBUCH" "$TEAM_TEST_ORDNER"
+# BL-206 (Feld B): NAMENTLICH stagen statt den Ordner blanko. `git add
+# <testordner>` nimmt jede untracked Datei darin mit — auch eine fremde, die
+# schon vor dem Rollenstart dalag. Sie landete dann unter der Sweep-Botschaft,
+# also unter einer Urheberschaft, die nicht stimmt. team_eigene_pfade schickt
+# dieselbe Liste durch team_fremd_ausfiltern, den der Guard und der Rollback
+# ohnehin benutzen; diese Stelle war die dritte mit derselben Zustaendigkeit
+# und die einzige ohne den Filter.
+EIGENE_PFADE="$(team_eigene_pfade "$TEAM_BEUTEBUCH" "$TEAM_TEST_ORDNER")"
+if [ -n "$EIGENE_PFADE" ]; then
+    ADD_PFADE=()
+    while IFS= read -r PFAD; do
+        [ -n "$PFAD" ] && ADD_PFADE+=("$PFAD")
+    done <<< "$EIGENE_PFADE"
+    # EIN Aufruf statt einer Schleife: Nimmt git einen der Pfade nicht an
+    # (`git status --porcelain` zitiert Namen mit Sonderzeichen), soll gar
+    # nichts gestaged sein statt die Haelfte — und der Lauf soll daran nicht
+    # sterben, denn die Arbeit der Rolle ist zu diesem Zeitpunkt fertig.
+    if ! git add -- "${ADD_PFADE[@]}"; then
+        echo "[$ROLLE] WARNUNG: git add hat die eigenen Pfade nicht angenommen — nichts committet. Pfade:" >&2
+        echo "$EIGENE_PFADE" >&2
+    fi
     git commit -q -m "docs(beute): ${ROLLE^}-Sweep über $RANGE_DESC — $FUND_TEXT" || true
     if [ "$NEUE_FUNDE" -eq 0 ]; then
         # Der benannte Fall: geprüft, nichts gefunden — committet sind nur

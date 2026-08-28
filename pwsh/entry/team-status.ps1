@@ -101,16 +101,20 @@ function Status-Einmal {
     # Sperre — hier zeigt sich die pwsh-Bahn von ihrer besseren Seite: Der
     # Oeffnungsversuch mit FileShare::None ist eine echte Probe, waehrend die
     # Bash-Fassung auf ein kooperatives flock angewiesen ist.
-    $laeuft = $false
-    if (Test-Path '.team-loop.lock') {
-        try {
-            $s = [System.IO.File]::Open('.team-loop.lock', [System.IO.FileMode]::Open,
-                 [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
-            $s.Close()
-        } catch { $laeuft = $true }
+    # BL-199: Die Frage geht an team_pipeline_laeuft, weil es seit BL-190 ZWEI
+    # Sperrartefakte gibt und die Antwort DREI Zustaende hat. Hier stand die
+    # Dateiprobe ausgeschrieben — und meldete `idle` auf eine Sperre der
+    # bash-Bahn, die sie nicht kennt. Ein Bericht, der eine laufende Pipeline
+    # als idle ausweist, ist schlimmer als gar keiner.
+    switch (team_pipeline_laeuft) {
+        0 { [Console]::Out.WriteLine('  Pipeline: 🟢 läuft gerade (Sperre gehalten)') }
+        2 {
+            [Console]::Out.WriteLine("  Pipeline: 🟡 unbekannt — es liegt eine Sperre der anderen Bahn ($TEAM_LOCK_ORDNER),")
+            [Console]::Out.WriteLine('            deren Prozess von hier aus nicht prüfbar ist (BL-199). Vor einem')
+            [Console]::Out.WriteLine('            Start selbst nachsehen; ist der Lauf durch, den Ordner entfernen.')
+        }
+        default { [Console]::Out.WriteLine('  Pipeline: ⚪ idle') }
     }
-    if ($laeuft) { [Console]::Out.WriteLine('  Pipeline: 🟢 läuft gerade (Sperre gehalten)') }
-    else { [Console]::Out.WriteLine('  Pipeline: ⚪ idle') }
 
     # Beutebuch
     [Console]::Out.WriteLine('  ──────── Beutebuch ────────')

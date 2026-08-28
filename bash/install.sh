@@ -326,6 +326,91 @@ python_aus_config() {  # python_aus_config <konfigdatei>
     printf '%s' "$name"
 }
 
+# --- konfig_abgleich (BL-200) -------------------------------------------------
+# Der Grundsatz "--update fasst team.config.* nicht an" ist richtig; die Datei
+# traegt Projektwerte. Es gab aber KEINEN Schritt, der die SCHLUESSELMENGE
+# abgleicht: Ein Wert, den die Vorlage neu einfuehrt, erreichte eine bestehende
+# Installation nie — und wurde auch nicht gemeldet.
+#
+# Gemessen im Feld (Feld B, 2026-08-27), nicht vermutet: Nach einem Update
+# fehlten in team.config.ps1 VIER Werte, die die Vorlage inzwischen setzt.
+# TEAM_MELDUNG_TOOL (BL-182) ist dabei HART — `Team-Werkzeug ''` laeuft in
+# `& $null` und bricht ab, fuer JEDES Verb des Rueckkanals. Das Update hat dort
+# den Fix ausgeliefert und den Fehler mit woertlich derselben Meldung
+# wiederhergestellt, nur eine Zeile tiefer. Jeder kuenftige Fix, der einen
+# neuen Konfigurationswert einfuehrt, waere im Feld ab dem Update ein REGRESS
+# statt eines Fixes, und welche Klasse er trifft, entschiede der Zufall.
+#
+# Derselbe Schnitt wie python_abgleich (BL-133) und wie BL-109 bei der
+# .gitignore, nur fuer die ganze Schluesselmenge statt fuer EINEN Wert.
+#
+# GEMELDET, NICHT REPARIERT: Der Installer kennt die Werte dieses Projekts
+# nicht, und TEAM_KIT_PFAD ist Maschinensache.
+konfig_schluessel() {  # konfig_schluessel <datei> <sh|ps1>
+    # tr -d '\r' aus demselben Grund wie in python_aus_config: Eine unter
+    # Windows angelegte Konfiguration traegt CRLF, und GNU sed nimmt den
+    # Wagenruecklauf nicht von sich aus weg.
+    case "$2" in
+        sh)  tr -d '\r' < "$1" | sed -n 's/^\(TEAM_[A-Z0-9_]*\)=.*/\1/p' ;;
+        ps1) tr -d '\r' < "$1" | sed -n 's/^\$\(TEAM_[A-Z0-9_]*\)[[:space:]]*=.*/\1/p' ;;
+    esac
+}
+
+# konfig_vorlagenzeile <vorlage> <name>: die kopierbare Zeile aus der VORLAGE.
+konfig_vorlagenzeile() {
+    tr -d '\r' < "$1" | grep -m1 -E "^\\\$?$2[[:space:]=]" || true
+}
+
+konfig_abgleich() {
+    local eintrag datei bahn vorlage installiert fehlend name zeile
+    local hart=0 gefunden=0
+    for eintrag in "team.config.sh:sh:bash/entry/team.config.sh" \
+                   "team.config.ps1:ps1:pwsh/entry/team.config.ps1"; do
+        datei="${eintrag%%:*}"
+        bahn="$(printf '%s' "$eintrag" | cut -d: -f2)"
+        vorlage="$KIT/$(printf '%s' "$eintrag" | cut -d: -f3)"
+        installiert="$ZIEL/$datei"
+        [ -f "$installiert" ] && [ -f "$vorlage" ] || continue
+        gefunden=1
+        fehlend="$(comm -23 \
+            <(konfig_schluessel "$vorlage" "$bahn" | sort -u) \
+            <(konfig_schluessel "$installiert" "$bahn" | sort -u))"
+        if [ -z "$fehlend" ]; then
+            gruen "  ✓ $datei: alle Werte der Vorlage sind da"
+            continue
+        fi
+        while IFS= read -r name; do
+            [ -z "$name" ] && continue
+            # Ein Wert, der OHNE Inhalt hart abbricht, verdient einen ROTEN
+            # Befund statt eines gelben Hinweises: Die Installation ist danach
+            # nicht unvollstaendig, sondern kaputt. Erkannt an der GATTUNG und
+            # nicht an einer Namensliste — eine leere Werkzeugzeile laeuft in
+            # einen Aufruf ohne Programm.
+            case "$name" in
+                *_TOOL)
+                    hart=1
+                    rot  "  ✗ $datei: $name fehlt — OHNE diesen Wert bricht der Aufruf ab (BL-200)."
+                    ;;
+                *)
+                    gelb "  ! $datei: $name fehlt — die Bibliothek hat einen Rueckfall (BL-200)."
+                    ;;
+            esac
+            # Die kopierbare Zeile kommt aus der VORLAGE und nicht aus dem Kopf
+            # des Lesers. Steht darin noch ein Platzhalter, ist der Wert
+            # Projekt- oder Maschinensache; das wird ausdruecklich gesagt,
+            # statt den Leser eine geschweifte Klammer eintragen zu lassen.
+            zeile="$(konfig_vorlagenzeile "$vorlage" "$name")"
+            [ -n "$zeile" ] && gelb "      $zeile"
+            case "$zeile" in
+                *'{{'*) gelb "      (Der Platzhalter ist Projekt- oder Maschinensache — von Hand fuellen.)" ;;
+            esac
+        done <<< "$fehlend"
+        gelb "    Nachtragen von Hand — --update fasst die Datei bewusst nicht an."
+    done
+    [ "$gefunden" -eq 1 ] || gelb "  ! keine Konfiguration gefunden"
+    [ "$hart" -eq 0 ]
+}
+
 python_abgleich() {
     local datei name gefunden=0 kaputt=0
     for datei in "$ZIEL/team.config.sh" "$ZIEL/team.config.ps1"; do
@@ -361,6 +446,9 @@ python_abgleich() {
                 gelb "    Nachtragen (--update fasst die Datei nicht an):"
                 gelb "      \$TEAM_BEUTEBUCH_TOOL = Team-Wert 'TEAM_BEUTEBUCH_TOOL' '$PYTHON team/tools/beutebuch.py'"
                 gelb "      \$TEAM_KOSTEN_TOOL    = Team-Wert 'TEAM_KOSTEN_TOOL'    '$PYTHON team/tools/kosten.py'"
+                # BL-200, Nebenbefund: TEAM_MELDUNG_TOOL ist seit BL-182 die
+                # DRITTE Zeile derselben Bauart und fehlte hier.
+                gelb "      \$TEAM_MELDUNG_TOOL   = Team-Wert 'TEAM_MELDUNG_TOOL'   '$PYTHON team/tools/kit_meldung.py'"
                 ;;
         esac
     done
@@ -680,16 +768,36 @@ if [ "$UPDATE" -eq 1 ]; then
     # sie ausgeschrieben, weil der Installer bewusst nichts sourct — die
     # Zusicherung, dass beide Stellen dieselbe Frage gleich beantworten, haengt
     # deshalb an einem Testfall und nicht am Vertrauen.
+    # BL-199, dritte Stelle derselben Gattung: Ein Sperrartefakt, dessen
+    # Lebendigkeitsmerkmal HIER nicht auswertbar ist, gilt als GEHALTEN. Beim
+    # BL-10-Schutz ist Vorsicht die richtige Richtung — ein zu Unrecht
+    # abgelehntes Update kostet einen Satz, ein zu Unrecht erlaubtes hat im
+    # Feld einen laufenden Lauf gestoppt.
     LAUF_LAEUFT=0
     if [ -d "$ZIEL/.team-loop.lock.d" ]; then
         LOCK_PID="$(cat "$ZIEL/.team-loop.lock.d/pid" 2>/dev/null || true)"
-        if [ -n "$LOCK_PID" ] && kill -0 "$LOCK_PID" 2>/dev/null; then
+        if [ -n "$LOCK_PID" ]; then
+            # Lesbares eigenes Merkmal: Sein Ergebnis gilt. Eine tote PID
+            # heisst verwaist — sonst blockierte ein abgestuerzter Lauf
+            # jedes weitere Update, und das ist der Dauer-Fehlalarm, den
+            # BL-190 gerade abgestellt hat.
+            kill -0 "$LOCK_PID" 2>/dev/null && LAUF_LAEUFT=1
+        elif [ -s "$ZIEL/.team-loop.lock.d/winpid" ]; then
+            # Nur ein Merkmal, das DIESE Bahn nicht auswerten kann: unklar,
+            # und beim BL-10-Schutz ist unklar wie gehalten zu behandeln.
             LAUF_LAEUFT=1
         fi
     fi
-    if [ -e "$ZIEL/.team-loop.lock" ] && command -v flock >/dev/null 2>&1 \
-       && ! flock -n "$ZIEL/.team-loop.lock" true 2>/dev/null; then
-        LAUF_LAEUFT=1
+    if [ -e "$ZIEL/.team-loop.lock" ]; then
+        if command -v flock >/dev/null 2>&1 \
+           && ! flock -n "$ZIEL/.team-loop.lock" true 2>/dev/null; then
+            LAUF_LAEUFT=1
+        fi
+        # Die pwsh-Bahn haelt dieselbe Datei mit FileShare::None; flock sieht
+        # das nicht, ein Schreib-Oeffnen schon (BL-199, gemessen).
+        if ! ( exec 9>>"$ZIEL/.team-loop.lock" ) 2>/dev/null; then
+            LAUF_LAEUFT=1
+        fi
     fi
     if [ "$LAUF_LAEUFT" = "1" ]; then
         rot "FEHLER: In $ZIEL laeuft gerade ein Team-Lauf (die Sperre ist gehalten)."
@@ -1112,6 +1220,13 @@ PY
     kopf "Interpreter der Team-Werkzeuge (BL-131/BL-133)"
     python_abgleich || true
 
+    # BL-200: Dieselbe Bauart, eine Ebene hoeher — nicht EIN Wert, sondern
+    # die ganze SCHLUESSELMENGE. Ohne diesen Schritt erreicht ein Wert, den
+    # die Vorlage neu einfuehrt, eine bestehende Installation nie, und der
+    # zugehoerige Fix wird im Feld ab dem Update zum Regress.
+    kopf "Werte der Vorlage in der Konfiguration (BL-200)"
+    konfig_abgleich || true
+
     # BL-133: Die Abwahl einer Bahn wirkt bisher nur bei der ERSTinstallation.
     # `bahn_abgewaehlt` laesst den Installer die Dateien der anderen Bahn
     # ueberspringen — was schon daliegt, bleibt liegen. Fuer ein bestehendes
@@ -1213,9 +1328,18 @@ PY
         gelb "  Kit-Fassung fehlen — die Mechanik ist aktualisiert, die Regeln"
         gelb "  im Projekt sind es nicht (das war die Haelfte von BL-4)."
         echo "  Die gerenderte Kit-Fassung liegt unter $ABGLEICH_DIR/ bereit;"
-        echo "  sie traegt bereits deine Werte. Temporaer — nach dem Abgleich"
-        echo "  loeschen. Behalte deine Projekt-Spezifika und eigene Regeln,"
-        echo "  uebernimm den Rest."
+        echo "  sie traegt bereits deine Werte. Behalte deine Projekt-Spezifika"
+        echo "  und eigene Regeln, uebernimm den Rest."
+        # BL-196: Die Lebensdauer der Ablage BENENNEN und den Loeschbefehl
+        # kopierfertig danebenstellen. Vorher stand hier nur "temporaer —
+        # nach dem Abgleich loeschen": ein Verzeichnis, dessen Lebensdauer
+        # niemand benennt, wird entweder nie geloescht (gemessen: elf Stueck
+        # in %TEMP% nach einem Arbeitstag) oder im falschen Moment, naemlich
+        # bevor der Vergleich gefahren ist. Bauart BL-44 — ein Hinweis, der
+        # eine Handlung ankuendigt, ohne ihren Rahmen zu nennen.
+        echo "  Es ist eine KOPIE zum Nachlesen im Temp-Bereich, kein Teil deines"
+        echo "  Projekts. Wenn du fertig verglichen hast, weg damit:"
+        echo "      rm -rf \"$ABGLEICH_DIR\""
     fi
 
     kopf "Selbsttest"

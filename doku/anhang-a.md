@@ -106,6 +106,44 @@ Kostenbasis. `.ralph-plan` und `.budget-ledger.lock` sind die wichtigsten
 Einträge der Liste: Ohne sie tauchen sie als Arbeitsverzeichnis-Änderung im
 Read-Only-Guard auf.
 
+### Die Reichweite der Sperre — was „eine Pipeline zur Zeit" bedeutet (`BL-199`)
+
+Beide Bahnen liegen nach einer Installation im **selben** Arbeitsbaum
+(`BL-126`: jeder Installer schreibt beide Konfigurationen), und seit `BL-190`
+gibt es **zwei** Sperrartefakte: `.team-loop.lock` hält die pwsh-Bahn mit
+`FileShare::None`, den Ordner `.team-loop.lock.d` nimmt die bash-Bahn, wenn
+`flock` fehlt. Wer welches Artefakt liest, entschied bis `BL-199` darüber, ob
+die Zusicherung überhaupt griff.
+
+**Sie gilt jetzt bahnübergreifend, und zwar gemessen — nicht behauptet:**
+
+- **pwsh sieht die bash-Sperre.** Die bash-Bahn legt neben `pid` auch
+  `winpid` ab (`/proc/<pid>/winpid` unter Git for Windows). Das ist das
+  einzige Merkmal, das die andere Seite auswerten *kann*: Eine MSYS-PID liegt
+  in einem eigenen Prozessraum — gemessen meldete Git-Bash `$$` = 15946,
+  während `Get-Process -Id 15946` zeitgleich nichts fand.
+- **bash sieht die pwsh-Sperre.** Ein Schreib-Öffnen von `.team-loop.lock`
+  scheitert unter Windows mit *„Device or resource busy"*, solange die
+  pwsh-Bahn sie hält — `flock` sieht davon nichts, das Betriebssystem schon.
+
+**Wo sie NICHT gilt, und das gehört genauso hingeschrieben:**
+
+- **Unter Linux** setzt .NET `FileShare::None` nicht durch und `flock` ist
+  kooperativ. Bahnübergreifend hält dort keine der beiden Proben. Der Fall ist
+  praktisch selten (auf Linux ist die pwsh-Bahn die zweite Wahl), aber er ist
+  keine Zusicherung.
+- **Fehlt `winpid`** — eine ältere Sperre, ein Linux-Wirt —, ist die Antwort
+  **`unbekannt`** und nicht `idle`. `team_pipeline_laeuft` gibt dafür auf
+  beiden Bahnen einen **dritten** Wert zurück (`2`). Was Vorsicht heißt,
+  entscheidet der Aufrufer: Der `BL-10`-Schutz im Installer **bricht ab** (ein
+  zu Unrecht abgelehntes Update kostet einen Satz, ein zu Unrecht erlaubtes hat
+  im Feld einen Lauf gestoppt), der Statusbericht sagt **„unbekannt"** (ein
+  dauerhaftes „läuft gerade" wäre dort eine Falschaussage).
+
+**Was die Sperre nie war und nicht wird:** ein Schutz gegen zwei Menschen, die
+wissentlich zwei Läufe starten. Sie fängt den *versehentlichen* Doppellauf.
+
+
 ## A.3 Auth-Fallback ✅ erprobt für alle automatisierten Rollen
 
 Zentral in `team/lib.sh` (Helfer `team_claude`): Rollen starten im
@@ -438,6 +476,26 @@ Ein Session-Limit ist eine **dritte Fehlerklasse** neben „sauberer Erfolg" und
   selbst für erfolgreich erklärt, gibt der Loop eine **benannte** Meldung samt
   Prüfweg aus (Exit **43**) statt „ECHTER Fehler". **Nicht auf Vokabeln
   prüfen:** Drei Vorfälle, drei Formulierungen — geprüft wird die Struktur.
+- **Und die Prävention muss ERFÜLLBAR sein (`BL-207`, `Feld B`).** Die Auflage
+  „Vordergrund, nie im Hintergrund“ ist wertlos, sobald die Suite länger läuft
+  als die Vordergrundgrenze des Werkzeugs (120 s). Gemessen: Suite 149–220 s,
+  in **einem** Lauf dreimal in den vierten Ausgang, 4,9480 USD = 32 % der
+  Rollenkosten. `BL-201` hatte darauf zweimal mit einer **schärferen** Auflage
+  geantwortet — der Beleg, dass Schärfe nicht hilft: **Eine Auflage, die die
+  Rolle nicht einhalten *kann*, erzeugt genau das Verhalten, das sie verbieten
+  soll.** Deshalb trägt sie eine Zahl (`TEAM_SMOKE_TEST_TIMEOUT`, Default
+  600 s), und die Zahl steht im **Prompt** — in `SMOKE_ZEILE` **und** in
+  `SMOKE_SUFFIX`, dem einzigen, was Frank über den Smoke-Test liest.
+- **Und die Erkennung darf im Zweifel nicht „rot“ behaupten (`BL-207`).** Die
+  Selbstprüfung (`BL-110`) startete den Verifikationsbefehl bedingungslos ein
+  **zweites** Mal. Lief der erste noch, kollidierten beide — und sie meldete
+  ROT für einen Baum, der allein gefahren grün war, mitsamt dem `BL-61`-Text,
+  der den Menschen zur Ursachensuche im **Testaufbau** schickt. Eine
+  Selbstprüfung, die im Zweifel etwas behauptet, ist schlimmer als eine, die
+  schweigt. `team_smoke_parallel_lauf` erkennt den Fall an der Prozesstabelle
+  und meldet **UNBEKANNT**, ohne den zweiten Lauf zu starten; ist die Tabelle
+  nicht auswertbar, bleibt es beim bisherigen Verhalten — **lieber keine
+  Erkennung als eine falsche.**
 
 ## A.9 Interaktive Akteur-Kosten erfassen ✅ erprobt
 

@@ -133,6 +133,14 @@ $TEAM_KIT_PFAD = Team-Wert 'TEAM_KIT_PFAD' '{{KIT_PFAD}}'
 # in die Zeile.
 $TEAM_SMOKE_TEST = Team-Wert 'TEAM_SMOKE_TEST' '{{SMOKE_TEST_KONFIG}}'
 
+# BL-207: Wie lange dieser Befehl im VORDERGRUND laufen darf. Die Zahl steht
+# im Prompt jeder bauenden Rolle — sie ist der Grund, warum die Rolle das
+# Zeitlimit ihres Werkzeugs hochsetzt, statt in den Hintergrund auszuweichen.
+# Jede Suite waechst; ab dem Tag, an dem sie die Vordergrundgrenze des
+# Werkzeugs (120 s) reisst, laeuft jede bauende Rolle sonst regelmaessig in
+# den vierten Ausgang (BL-41). Leer lassen heisst: der Bibliotheks-Default.
+$TEAM_SMOKE_TEST_TIMEOUT = Team-Wert 'TEAM_SMOKE_TEST_TIMEOUT' '600'
+
 # --- Commit-Konventionen ------------------------------------------------------
 $TEAM_FIX_PRAEFIX  = Team-Wert 'TEAM_FIX_PRAEFIX'  'fix(uat)'
 $TEAM_FEAT_PRAEFIX = Team-Wert 'TEAM_FEAT_PRAEFIX' 'feat'

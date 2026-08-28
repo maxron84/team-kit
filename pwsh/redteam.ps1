@@ -268,8 +268,23 @@ $fundText = if ($neueFunde -eq 1) { '1 neuer Fund' }
 
 # Whitelist-Aenderungen deterministisch committen (der Angreifer darf nicht).
 Set-Content -Path $stateFile -Value $headHash -Encoding ascii
-if (@(& git status --porcelain -- $TEAM_BEUTEBUCH $TEAM_TEST_ORDNER | Where-Object { $_ }).Count) {
-    & git add $TEAM_BEUTEBUCH $TEAM_TEST_ORDNER | Out-Null
+# BL-206 (Feld B): NAMENTLICH stagen statt den Ordner blanko. `git add
+# <Testordner>` nimmt jede untracked Datei darin mit — auch eine fremde, die
+# schon vor dem Rollenstart dalag. Sie landete dann unter der Sweep-Botschaft,
+# also unter einer Urheberschaft, die nicht stimmt. team_eigene_pfade schickt
+# dieselbe Liste durch team_fremd_ausfiltern, den der Guard und der Rollback
+# ohnehin benutzen; diese Stelle war die dritte mit derselben Zustaendigkeit
+# und die einzige ohne den Filter.
+$eigenePfade = @(team_eigene_pfade $TEAM_BEUTEBUCH $TEAM_TEST_ORDNER)
+if ($eigenePfade.Count) {
+    # EIN Aufruf statt einer Schleife: Nimmt git einen der Pfade nicht an
+    # (`git status --porcelain` zitiert Namen mit Sonderzeichen), soll gar
+    # nichts gestaged sein statt die Haelfte.
+    & git add -- @eigenePfade 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Team-Fehler "[$Rolle] WARNUNG: git add hat die eigenen Pfade nicht angenommen — nichts committet. Pfade:"
+        foreach ($pfad in $eigenePfade) { Team-Fehler "  $pfad" }
+    }
     & git commit -q -m "docs(beute): $(Gross $Rolle)-Sweep über $rangeDesc — $fundText" 2>&1 | Out-Null
     if ($neueFunde -eq 0) {
         # Der benannte Fall: geprueft, nichts gefunden — committet sind nur

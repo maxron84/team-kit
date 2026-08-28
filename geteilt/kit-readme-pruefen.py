@@ -105,6 +105,24 @@ FAELLE = [
 TESTDATEIEN = [re.compile(r"(\d+)\s+Testdateien\b")]
 DATEIEN = [re.compile(r"(\d+)\s+Dateien\b")]
 
+# BL-198: Zwei weitere Zahlen im selben README behaupten dasselbe ueber
+# dasselbe Kit und wurden von NIEMANDEM gemessen — die Spanne der vergebenen
+# Backlog-Nummern und die Zahl der abgetragenen Eintraege. Eingetreten, nicht
+# vermutet: Am 2026-08-26 kam BL-196 dazu, das README nannte weiter BL-195,
+# und alle drei Doku-Waechter blieben gruen.
+#
+# Beide Sollzahlen kommen aus dem REPO und nicht aus einer Installation: Der
+# Backlog des Kits wird nicht mitinstalliert.
+#
+# Die Spanne ist an ihrem ANFANG erkennbar und nicht an ihrem Wortlaut: Ein
+# Feldbeleg nennt Spannen wie `BL-158`…`BL-168`, und die gehoeren ihrem Feld,
+# nicht dem Kit (BL-180). Nur eine Spanne, die bei `BL-1` beginnt, ist eine
+# Aussage ueber den Nummernraum des Kits.
+HOECHSTE_BL = [re.compile(
+    r"`BL-1`\s*(?:…|\.\.\.|bis|–|-)\s*`BL-(\d+)`")]
+ARCHIV = [re.compile(r"backlog-archiv\.md\)[^\n]{0,60}?\((\d+) Einträge\)"),
+          re.compile(r"(\d+)\s+Archiv-Einträge\b")]
+
 # --- Pfade ------------------------------------------------------------------
 PFAD_ENDUNG = re.compile(r"\.(?:sh|ps1|psm1|py|md|cmd|webp|svg)$")
 
@@ -150,23 +168,75 @@ def pruefe_pfade(text):
     return fehler
 
 
-def pruefe_zahlen(text, soll, muster, was):
+# Der BL-180-Hinweis passt nur auf ZAEHLBARES ("86 Testfälle in Feld E"). Fuer
+# die Spanne der Backlog-Nummern ergaebe er Kauderwelsch, und ein Hinweis, der
+# nicht zur Meldung passt, wird ueberlesen wie eine Warnung, die immer kommt.
+FREMD_HINWEIS = (
+    "    Gemeint war die Zahl eines FREMDEN Projekts? Dann muss sie ihren "
+    "Träger nennen — »86 Projekt-{was}« oder »86 {was} in Feld E« (BL-180). "
+    "Eine unqualifizierte Zahl ist eine Aussage über das Kit.")
+
+
+def pruefe_zahlen(text, soll, muster, was, fremd_hinweis=True, verlangt=True):
+    """Prueft jede Zahl der Gattung; `verlangt` steuert nur den LEERFALL.
+
+    BL-198/BL-180, im Selbsttest zusammengestossen: Der Leerfall ("die Zahl
+    steht ueberhaupt nicht mehr da") ist eine Aussage ueber das README DES
+    KITS. Das Werkzeug wird aber ausdruecklich auch auf FREMDE Dateien
+    gerichtet — `--readme` auf eine Gegenprobe-Kopie, auf ein Fixture, auf ein
+    Zielprojekt. Dort ist eine fehlende Kit-Zahl kein Befund, sondern der
+    Normalfall, und ein Waechter, der an einer richtigen Datei rot schlaegt,
+    wird abgeschaltet statt befolgt (Bauart BL-180).
+
+    Ein FALSCHER Wert bleibt ueberall rot — daran aendert der Schalter nichts.
+    Rueckgabe: (fehler, gesehen), damit der Aufrufer nicht behaupten muss,
+    etwas gemessen zu haben, das gar nicht dastand.
+    """
     fehler, gesehen = [], 0
     for rx in muster:
         for m in rx.finditer(text):
             gesehen += 1
             if int(m.group(1)) != soll:
-                fehler.append(
-                    f"README behauptet {m.group(1)} {was}, gemessen sind {soll} "
-                    f"(»{m.group(0).strip()}«).\n"
-                    f"    Gemeint war die Zahl eines FREMDEN Projekts? Dann "
-                    f"muss sie ihren Träger nennen — »86 Projekt-{was}« oder "
-                    f"»86 {was} in Feld E« (BL-180). Eine unqualifizierte Zahl "
-                    f"ist eine Aussage über das Kit.")
-    if gesehen == 0:
+                # Der zitierte Fund wird auf EINE Zeile normalisiert: Die
+                # Spanne darf im README ueber einen Zeilenumbruch laufen, und
+                # eine Fehlermeldung mit eingebettetem Umbruch liest sich wie
+                # zwei Befunde.
+                meldung = (f"README behauptet {m.group(1)} {was}, gemessen "
+                           f"sind {soll} (»{' '.join(m.group(0).split())}«).")
+                if fremd_hinweis:
+                    meldung += "\n" + FREMD_HINWEIS.format(was=was)
+                fehler.append(meldung)
+    if gesehen == 0 and verlangt:
         fehler.append(f"README nennt die {was} ueberhaupt nicht mehr — "
                       f"eine Zusicherung, die verschwindet, faellt nicht auf.")
-    return fehler
+    return fehler, gesehen
+
+
+def backlog_zahlen():
+    """Die zwei Zahlen, die aus dem REPO kommen und nicht aus einer Installation.
+
+    Der Backlog des Kits wird nicht mitinstalliert — wer diese Sollwerte an
+    einer frischen Installation messen wollte, faende nichts. Sie werden
+    deshalb hier abgeleitet, in einer Zeile je Gattung, statt in beiden
+    Selbsttests noch einmal (BL-198).
+
+    Rueckgabe: (archiv_eintraege, hoechste_bl) — je None, wenn die Datei fehlt.
+    """
+    zeile = re.compile(r"^\| BL-(\d+) ", re.M)
+    archiv_datei = KIT / "plans" / "backlog-archiv.md"
+    backlog_datei = KIT / "plans" / "backlog.md"
+    archiv = hoechste = None
+    nummern = []
+    if archiv_datei.is_file():
+        treffer = zeile.findall(archiv_datei.read_text(encoding="utf-8"))
+        archiv = len(treffer)
+        nummern += [int(n) for n in treffer]
+    if backlog_datei.is_file():
+        nummern += [int(n) for n in
+                    zeile.findall(backlog_datei.read_text(encoding="utf-8"))]
+    if nummern:
+        hoechste = max(nummern)
+    return archiv, hoechste
 
 
 def main():
@@ -175,22 +245,74 @@ def main():
     ap.add_argument("--faelle", type=int)
     ap.add_argument("--testdateien", type=int)
     ap.add_argument("--dateien", type=int)
+    # BL-198: Die zwei Backlog-Zahlen misst der Pruefer SELBST, sonst muesste
+    # jeder Aufrufer sie ableiten und jeder koennte es anders. Ein Schalter
+    # dagegen bleibt: `--ohne-backlog-zahlen` fuer den Fall, dass der Backlog
+    # nicht danebenliegt (eine installierte Ablage).
+    ap.add_argument("--ohne-backlog-zahlen", action="store_true")
     a = ap.parse_args()
 
     text = Path(a.readme).read_text(encoding="utf-8")
     fehler = pruefe_pfade(text)
+    gemessen = []
+    # Die drei gemessenen Gattungen VERLANGT der Aufrufer selbst: Wer
+    # `--faelle` uebergibt, sagt damit, dass diese Datei die Zahl tragen soll.
+    # Die zwei Backlog-Zahlen misst der Pruefer dagegen ungefragt — sie duerfen
+    # deshalb nur dort eingefordert werden, wo sie hingehoeren (siehe unten).
     if a.faelle is not None:
-        fehler += pruefe_zahlen(text, a.faelle, FAELLE, "Testfälle")
+        neu, _ = pruefe_zahlen(text, a.faelle, FAELLE, "Testfälle")
+        fehler += neu
+        gemessen.append(f"{a.faelle} Testfälle")
     if a.testdateien is not None:
-        fehler += pruefe_zahlen(text, a.testdateien, TESTDATEIEN, "Testdateien")
+        neu, _ = pruefe_zahlen(text, a.testdateien, TESTDATEIEN, "Testdateien")
+        fehler += neu
+        gemessen.append(f"{a.testdateien} Testdateien")
     if a.dateien is not None:
-        fehler += pruefe_zahlen(text, a.dateien, DATEIEN, "installierten Dateien")
+        neu, _ = pruefe_zahlen(text, a.dateien, DATEIEN, "installierten Dateien")
+        fehler += neu
+        gemessen.append(f"{a.dateien} installierte Dateien")
+    if not a.ohne_backlog_zahlen:
+        # NUR am README des Kits ist eine FEHLENDE Backlog-Zahl ein Befund.
+        # `--readme` zeigt regelmaessig woanders hin: auf die Gegenprobe-Kopie
+        # beider Selbsttests, auf ein Fixture, auf ein Zielprojekt. Ein
+        # falscher WERT bleibt auch dort rot — das ist die Zusicherung, auf
+        # die es ankommt (BL-198); nur das Einfordern entfaellt (BL-180).
+        ist_kit_readme = (Path(a.readme).resolve()
+                          == (KIT / "README.md").resolve())
+        archiv, hoechste = backlog_zahlen()
+        if archiv is not None:
+            neu, gesehen = pruefe_zahlen(text, archiv, ARCHIV,
+                                         "Archiv-Einträge",
+                                         verlangt=ist_kit_readme)
+            fehler += neu
+            # Nur nennen, was WIRKLICH dastand: Eine Erfolgszeile, die eine
+            # nicht vorhandene Zahl als "gemessen" auffuehrt, ist dieselbe
+            # Falschaussage, gegen die dieser Eintrag geschrieben ist.
+            if gesehen:
+                gemessen.append(f"{archiv} Archiv-Einträge")
+        if hoechste is not None:
+            neu, gesehen = pruefe_zahlen(text, hoechste, HOECHSTE_BL,
+                                         "als höchste vergebene BL-Nummer",
+                                         fremd_hinweis=False,
+                                         verlangt=ist_kit_readme)
+            fehler += neu
+            if gesehen:
+                gemessen.append(f"höchste Nummer BL-{hoechste}")
 
     if fehler:
         for f in fehler:
             print(f"  ✗ {f}", file=sys.stderr)
         return 1
-    print("✓ README: alle genannten Pfade existieren, alle Zahlen sind gemessen.")
+    # BL-198, die schaerfere Haelfte: Die Schlusszeile sagt, WAS sie geprueft
+    # hat. Vorher stand hier unbedingt "alle Zahlen sind gemessen" — auch bei
+    # einem Aufruf ohne Argumente, bei dem KEINE einzige Zahlenpruefung lief.
+    # Das ist die Gattung von BL-145: Zwei Aufrufwege desselben Skripts sichern
+    # verschieden viel zu und melden dasselbe Gruen.
+    print("✓ README: alle genannten Pfade existieren.")
+    if gemessen:
+        print("  Gemessen und deckungsgleich: " + ", ".join(gemessen) + ".")
+    else:
+        print("  KEINE Zahl geprüft — dieser Aufruf sichert nur die Pfade zu.")
     return 0
 
 

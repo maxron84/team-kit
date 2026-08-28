@@ -283,18 +283,37 @@ Dann entscheidest du **entlang des Ergebnisses**, nicht nach Gefühl:
 | Baum rot, und rot sind **ausschließlich** die von dieser Stufe **neu angelegten** Testdateien (`git status` zeigt sie als `??`) | Der Testaufbau ist der wahrscheinlichere Schuldige als der Produktivcode | Den Aufbau von Hand reparieren — **ohne** eine Zusicherung abzuschwächen. Nicht neu bauen |
 | Rot ist **bestehender** Testbestand | Die Stufe hat etwas gebrochen | Jetzt ist Neubau richtig |
 | Nicht committet | Die Arbeit ist nicht da | Neu bauen |
+| Baum rot, aber es lief noch ein **zweiter** Testlauf | Das Ergebnis ist eine Eigenschaft der Maschine, nicht des Codes | Allein nachmessen, wenn der andere Lauf durch ist. **Nicht** neu bauen |
 
 > **Die dritte Zeile ist die, die im Feld übersehen wurde.** „Baum rot" heißt
 > nicht automatisch „Stufe kaputt" — es kommt darauf an, **wo** er rot ist. Eine
 > Zusicherung abzuschwächen, damit die Suite grün wird, macht den Test wertlos
 > und den Befund unsichtbar.
 
+> **Die LETZTE Zeile ist die teuerste Falle (`Kit-BL-207`).** Zwei
+> gleichzeitige Testläufe kollidieren — über Datenbankdateien, Ports,
+> Nutzerverzeichnisse. Im Feld hat das einen **grünen** Baum als rot gemeldet,
+> mitsamt der Empfehlung, im Testaufbau zu suchen; ein Neubau hätte 2,36 USD
+> fertige Arbeit weggeworfen. Die Selbstprüfung erkennt den Fall inzwischen
+> selbst und meldet dann **UNBEKANNT statt rot** — steht das im Protokoll,
+> ist nichts kaputt, es ist nur nichts gemessen.
+
+> **Warum die Rolle überhaupt in den Hintergrund ausweicht:** weil die Suite
+> irgendwann länger läuft als die Vordergrundgrenze des Agenten-Werkzeugs.
+> Deshalb trägt die Auflage seit `Kit-BL-207` eine Zahl
+> (`TEAM_SMOKE_TEST_TIMEOUT`, Default 600 s), die im Prompt jeder bauenden
+> Rolle steht. Läuft deine Suite länger, **heb den Wert an** — sonst weicht
+> die Rolle weiter aus, und zwar zu Recht.
+
 ### Belegstand
 
 - **Beide Codes und ihre Behandlung stehen im Code des Kits und unter Test** —
   `vollautomatik.sh` reicht `42` aus jeder Phase durch und behandelt `43` als
-  eigenen Ausgang; die vier Entscheidungszeilen oben sind wörtlich die
-  Prüfungen, die `ralph.sh` beim Aussteigen ausgibt.
+  eigenen Ausgang; die ersten **vier** Entscheidungszeilen oben sind wörtlich
+  die Prüfungen, die `ralph.sh` beim Aussteigen ausgibt. Die **fünfte**
+  stammt nicht von dort, sondern aus der Selbstprüfung: Sie erkennt einen
+  laufenden zweiten Verifikationslauf und meldet ihn als UNBEKANNT
+  (`Kit-BL-207`).
 - **Die 19,47 USD sind ein Feldbetrag**, kein hergeleiteter — vier Neubauten
   desselben Falls, bevor `Kit-BL-41` den eigenen Ausgang einführte.
 

@@ -143,6 +143,201 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- ⚠️ **Die Sperre galt nie bahnübergreifend — jetzt gilt sie, mit benannten
+  Grenzen** (`BL-199`). Beide Bahnen liegen nach einer Installation im
+  **selben** Arbeitsbaum (`BL-126`), und die Zusicherung heißt *„eine Pipeline
+  zur Zeit"*, nicht *„eine je Bahn"*. Seit `BL-190` gibt es zwei
+  Sperrartefakte, und die pwsh-Bahn kannte den Ordner der bash-Bahn an **drei**
+  Stellen nicht: `lib.psm1`, `entry/team-status.ps1`, `install.ps1`. Ein
+  bash-Lauf auf einer Windows-Maschine war für alle drei unsichtbar — der
+  Kontostand meldete `idle`, und ein `--update` lief in genau den Schaden
+  hinein, gegen den `BL-10` gebaut wurde.
+
+  **Der naheliegende Fix hätte die Zusicherung abgeschafft statt sie
+  herzustellen:** Die hinterlegte `pid` ist eine MSYS-PID aus einem eigenen
+  Prozessraum — gemessen meldete Git-Bash `$$` = 15946, während
+  `Get-Process -Id 15946` zeitgleich nichts fand. Ein `Get-Process` darauf
+  hätte **jede** gehaltene bash-Sperre als verwaist eingestuft.
+
+  **Gebaut ist deshalb, was sich nachmessen ließ.** Die bash-Bahn legt neben
+  `pid` auch `winpid` ab (`/proc/<pid>/winpid`); PowerShell findet den Prozess
+  darüber, Hin- und Rückweg am 2026-08-28 nachgemessen. Die Gegenrichtung fiel
+  dabei mit ab: Ein Schreib-Öffnen von `.team-loop.lock` scheitert unter
+  Windows mit *„Device or resource busy"*, solange die pwsh-Bahn sie hält —
+  `flock` sieht das nicht, das Betriebssystem schon. Damit sehen sich beide
+  Bahnen, **ohne** dass `FileShare::None` aufgegeben wird.
+
+  `team_pipeline_laeuft` hat jetzt **drei** Zustände (0 läuft / 1 nicht /
+  2 unklar) und existiert erstmals auch auf der pwsh-Bahn. Was Vorsicht heißt,
+  entscheidet der Aufrufer: Der `BL-10`-Schutz **bricht ab** (ein zu Unrecht
+  abgelehntes Update kostet einen Satz, ein zu Unrecht erlaubtes hat im Feld
+  einen Lauf gestoppt), der Statusbericht sagt **„unbekannt"** — ein
+  dauerhaftes „läuft gerade" wäre dort eine Falschaussage.
+
+  **Und was NICHT gilt, steht in `doku/anhang-a.md`:** Unter Linux setzt .NET
+  `FileShare::None` nicht durch und `flock` ist kooperativ; bahnübergreifend
+  hält dort keine der beiden Proben. Die stillste Hälfte des Problems war die
+  falsche Erwartung.
+
+- ⚠️ **Der README-Wächter meldete „alle Zahlen sind gemessen", ohne eine
+  einzige gemessen zu haben** (`BL-198`). Zwei Zahlen im README behaupten
+  dasselbe über dasselbe Kit und wurden von niemandem geprüft: die Spanne
+  `BL-1`…`BL-<N>` und die Zahl der Archiv-Einträge. Eingetreten, nicht
+  vermutet: Am 2026-08-26 kam `BL-196` dazu, das README nannte weiter `BL-195`,
+  und alle drei Doku-Wächter blieben grün.
+
+  `kit-readme-pruefen.py` misst beide jetzt **selbst** aus dem Repo — der
+  Backlog des Kits wird nicht mitinstalliert, ein Aufrufer müsste ihn sonst
+  ableiten und könnte es anders. Geprüft wird die **Gattung**: Die Spanne
+  erkennt man an ihrem Anfang (`BL-1`…), damit ein Feldbeleg wie
+  `BL-158`…`BL-168` nicht mitgemeldet wird (`BL-180`). **Beim ersten Lauf hat
+  der Wächter drei veraltete Stellen gefunden** (199 / 153 / 146 statt 207) —
+  der Beleg für den Eintrag, gefunden von der Mechanik statt von Hand.
+
+  **Die schärfere Hälfte war die Schlusszeile.** Sie stand unbedingt da, auch
+  bei einem Aufruf ohne Argumente, bei dem keine einzige Zahlenprüfung lief —
+  die Gattung von `BL-145`: zwei Aufrufwege, verschieden viel Zusicherung,
+  dasselbe Grün. Jetzt nennt sie die gemessenen Gattungen beim Namen und sagt
+  ausdrücklich *„KEINE Zahl geprüft"*, wenn keine lief. Dazu prüft
+  **`kit-test.ps1`** das README als eigener Schritt (5/9), mit vier
+  Gegenproben — bis dahin hing die Aktualität dieser Zahlen an einem Lauf, den
+  auf einer pwsh-Maschine niemand fahren kann.
+
+  **Und eine Lehre aus dem eigenen Bau**, im vollen Suite-Lauf zugestoßen: Der
+  erste Wurf prüfte die zwei Zahlen **unbedingt** — also auch dann, wenn
+  `--readme` gar nicht auf das README des Kits zeigt. Das tut es regelmäßig:
+  Beide Selbsttests fahren ihre Gegenproben an einer **Kopie**, `BL-180` an
+  einem Fixture aus zwei Zeilen. Dort ist eine fehlende Kit-Zahl der Normalfall,
+  und der Wächter schlug an einer **richtigen** Datei rot an — genau die Bauart,
+  die `BL-180` abgestellt hatte, ohne Absicht wiederhergestellt. Getrennt sind
+  jetzt die zwei Hälften: Ein falscher **Wert** ist überall rot, das
+  **Einfordern** einer fehlenden Zahl gilt nur für `KIT/README.md`. `pruefe_zahlen`
+  gibt dafür zurück, wie viele Treffer es sah — sonst führte die Erfolgszeile
+  eine Zahl als *gemessen* auf, die in der geprüften Datei nie stand.
+
+- ⚠️ **Ein `--update` trug neue Konfigurationswerte nicht nach — und lieferte
+  damit Fixes aus, die es im selben Zug wieder aufhob** (`BL-200`, gemeldet von
+  `Feld B`). Der Grundsatz *„`--update` fasst `team.config.*` nicht an"* ist
+  richtig; es fehlte der Schritt, der die **Schlüsselmenge** abgleicht. Gemessen
+  im Feld: Nach dem Update fehlten in `team.config.ps1` **vier** Werte, die die
+  Vorlage inzwischen setzt. `TEAM_MELDUNG_TOOL` (`BL-182`) ist dabei **hart** —
+  `Team-Werkzeug ''` läuft in `& $null` und bricht ab, für jedes Verb des
+  Rückkanals. Das Update hat den Fix also ausgeliefert und den Fehler mit
+  wörtlich derselben Meldung wiederhergestellt, nur eine Zeile tiefer.
+
+  Beide Installer haben jetzt einen `Konfig-Abgleich`: Er nennt die fehlenden
+  Werte **namentlich** und stellt die Zeile aus der **Vorlage** daneben; steht
+  darin noch ein Platzhalter, sagt er das. **Gemeldet, nicht repariert** — der
+  Installer kennt die Werte dieses Projekts nicht, und `TEAM_KIT_PFAD` ist
+  Maschinensache. Ein Wert, der ohne Inhalt hart abbricht, bekommt einen
+  **roten** Befund statt eines gelben Hinweises; erkannt an der **Gattung**
+  (`*_TOOL` — eine leere Werkzeugzeile läuft in einen Aufruf ohne Programm) und
+  nicht an einer Namensliste.
+
+  Dazu der Riegel für den **nächsten** Wert: Was die Bibliothek liest, ohne
+  einen eigenen Rückfall zu setzen, steht in der Vorlagen-Konfiguration — und
+  die Schlüsselmengen beider Bahnen sind deckungsgleich, bis auf zwei
+  Ausnahmen, die **namentlich mit Grund** festgehalten sind (`TEAM_PYTHON` nur
+  bash, `TEAM_MELDUNG_TOOL` nur pwsh — beides folgt daraus, dass PowerShell
+  eine Zeichenkette als *ein* Argument übergibt). `BL-126` sicherte bisher nur,
+  dass beide Dateien **geschrieben** werden, nicht, dass sie dasselbe
+  **setzen**.
+
+- **Die Abgleichsablage hat jetzt ein benanntes Ende** (`BL-196`, Teile 1
+  und 2). Beide Installer rendern die Kit-Fassung abweichender Dateien in ein
+  Wegwerf-Verzeichnis und ließen es stehen — richtig, damit der Vergleich noch
+  läuft, aber **kein Satz sagte, dass es danach entbehrlich ist**. Gemessen:
+  elf solcher Verzeichnisse in `%TEMP%` nach einem Arbeitstag. Kein
+  Platzproblem, ein Ordnungsproblem — ein Verzeichnis, dessen Lebensdauer
+  niemand benennt, wird entweder nie gelöscht oder im falschen Moment.
+
+  Der Hinweis sagt jetzt, dass es eine **Kopie zum Nachlesen** im Temp-Bereich
+  ist, und stellt den Löschbefehl kopierfertig daneben — in der Schreibweise
+  **ihrer** Bahn, denn ein `rm -rf`, das Windows nicht kennt, wäre die Bauart
+  `BL-44` ein zweites Mal. `kit-test.ps1` räumt seine eigenen Ablagen weg wie
+  `kit-test.sh`, mit derselben Schranke gegen einen unerwarteten Pfad und mit
+  der Gegenrichtung: Erkennt der Lauf **keine** Ablage, fällt der Schritt rot,
+  statt still nichts zu tun und grün auszusehen. Teil 3 des Eintrags (der
+  Installer entfernt beim nächsten Update die Ablage des vorigen) ist bewusst
+  **nicht** gebaut — der Eintrag selbst nennt ihn nachrangig.
+
+- ⚠️ **Der Commit-Block des Red-Team-Sweeps umging den Fremdfilter — fremde
+  untracked Dateien im Testordner wurden unter der Sweep-Botschaft
+  mitcommittet** (`BL-206`, gemeldet von `Feld B`). Beide Bahnen stagten am
+  Ende des Sweeps `git add <beutebuch> <testordner>` **blanko**, und `git add`
+  auf einen Ordner nimmt **jede** untracked Datei darin mit. Sie landete damit
+  unter *„docs(beute): Marv-Sweep … — 1 neuer Fund"*: unter einer
+  Urheberschaft, die nicht stimmt.
+
+  **Das war eine Auslassung, kein Entwurf.** `team_guard_verify` und
+  `team_rollback_rolle` rufen beide `team_fremd_ausfiltern`; der Commit-Block
+  war die **dritte** Stelle mit derselben Zuständigkeit und die einzige ohne
+  den Filter — wörtlich die Bauform von `BL-114`, wo der `git clean`
+  eingeschränkt war und das `git reset --hard` daneben nicht. Zwei Stellen
+  wurden nachgezogen, diese nicht.
+
+  Neu ist `team_eigene_pfade` in **beiden** Bibliotheken: Sie löst die
+  Pathspecs mit `--untracked-files=all` bis zur **Datei** auf (ein blanko
+  gestagter untracked Ordner wäre wieder derselbe Fehler), schickt sie durch
+  denselben Fremdfilter und **meldet auf stderr namentlich**, was sie
+  ausgelassen hat. Ein stilles Auslassen wäre die Fehlerrichtung von `BL-160`.
+  Der Sweep staged danach namentlich.
+
+  **Der Regressionstest fährt beide Richtungen**, und die zweite ist die
+  eigentliche Absicherung: Der Sweep **soll** Reproducer und Beutebuch-Zeilen
+  committen — sonst wird der Fix grün, indem gar nichts mehr committet wird.
+  Gegenprobe gefahren: gegen den alten Stand fallen die Fälle, gegen den neuen
+  laufen sie.
+
+  **Befund 2 der Meldung bleibt offen und liegt als Frage bei:** Ein Pfad, den
+  es beim Rollenstart nicht gab, fällt im Rollback **immer** in den
+  Lösch-Zweig — auch wenn er inzwischen committet ist. Solange das so ist,
+  steht die Handregel in `bootstrap/TEAM.md`: *Während ein Lauf läuft, gehört
+  Handarbeit nicht in diesen Arbeitsbaum.* Sie gehört in die **Vorlage** und
+  nicht ins Feld, weil `--update` die Datei neu schreibt (`BL-58`) — eine nur
+  lokal notierte Regel wäre beim nächsten Update still weg.
+
+- ⚠️ **Die Auflage „Smoke-Test im Vordergrund" war nicht erfüllbar, sobald die
+  Suite länger lief als die Vordergrundgrenze des Werkzeugs — und die
+  `BL-41`-Selbstprüfung stellte dann einen ZWEITEN Testlauf daneben**
+  (`BL-207`, gemeldet von `Feld B`). Gemessen, nicht vermutet: Suite dort
+  149–220 s gegen eine 120-s-Wand; in **einem** Lauf dreimal in den vierten
+  Ausgang (Ralph einmal, Frank zweimal), zusammen **4,9480 USD** = 32 % der
+  Rollenkosten. Franks beide Versuche wurden per Rollback verworfen und als
+  Fehlversuche gezählt, obwohl der Fix inhaltlich fertig war.
+
+  **`BL-201` hatte dieselbe Bauform zweimal mit einer schärferen Auflage
+  beantwortet.** Dies ist der Beleg, dass Schärfe nicht hilft: Es ist kein
+  Disziplinproblem. **Eine Auflage, die die Rolle nicht einhalten *kann*,
+  erzeugt genau das Verhalten, das sie verbieten soll.** Die Antwort ist
+  deshalb eine **Zahl** — `TEAM_SMOKE_TEST_TIMEOUT` (Default **600 s**, in
+  beiden `team.config.*`, mit Bibliotheks-Default, damit ein bestehendes
+  Projekt sie beim Update nicht als Leerwert bekommt, `BL-200`). Sie steht im
+  **Prompt**: in `SMOKE_ZEILE` (Ralph) **und in `SMOKE_SUFFIX`**, dem
+  einzigen, was Frank über den Smoke-Test liest. Frank war härter betroffen —
+  von 28 Läufen endeten 10 ohne Promise, bei neun stand das Warten auf einen
+  Hintergrundlauf wörtlich im Log-Feld `result` (10,7249 USD an einem Tag), und
+  bei ihm zählt der vierte Ausgang zusätzlich als Fehlversuch und eskaliert ab
+  dem dritten an **Axel**.
+
+  **Der zweite Schaden war der gefährlichere.** Ralphs Hintergrund-pytest lief
+  noch, als die Selbstprüfung ihren eigenen startete; zwei gleichzeitige Läufe
+  kollidieren. Sie meldete **ROT** für einen Baum, der allein gefahren grün war
+  (`199 passed`, im Closeout nachgemessen) — und schickte den Menschen per
+  `BL-61`-Text ausdrücklich zur Ursachensuche im Testaufbau. Wer ihr geglaubt
+  und die Stufe neu gebaut hätte, hätte 2,36 USD bezahlte, fertige Arbeit
+  weggeworfen. `team_smoke_parallel_lauf` erkennt jetzt einen laufenden
+  Verifikationslauf an der Prozesstabelle (`Win32_Process` bzw. `ps -eo args=`)
+  und meldet **UNBEKANNT statt ROT**, ohne den `BL-61`-Text — und **ohne** den
+  zweiten Lauf überhaupt zu starten. Die gefundene Kommandozeile steht in der
+  Meldung, damit ein Fehlalarm in einem Blick als solcher erkennbar ist. Ist
+  die Prozesstabelle nicht auswertbar (MSYS-`ps` kennt kein `-o`), bleibt es
+  beim bisherigen Verhalten: **lieber keine Erkennung als eine falsche.**
+
+  **Beide Gegenrichtungen sind Test**, sonst würde der Fix grün, indem die
+  Selbstprüfung gar nichts mehr prüft: Ein wirklich roter Baum bleibt rot
+  (mitsamt `BL-61`), ein grüner wird weiterhin automatisch quittiert.
+
 - ⚠️ **Fehlte `flock`, meldete die bash-Bahn einen Sperrkonflikt, den es nicht
   gab — jetzt gibt es einen Ersatz** (`BL-190`). `team_lock()` entschied an
   **einer** Bedingung über **zwei** Fehlerklassen: Ein fehlendes Programm

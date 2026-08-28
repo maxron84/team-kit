@@ -111,11 +111,18 @@ status_einmal() {
     # ZWEI Sperrmechaniken gibt. Hier stand die flock-Abfrage ausgeschrieben —
     # und haette auf einer Maschine ohne flock ab sofort "idle" gemeldet,
     # waehrend der Ersatzweg eine Sperre haelt.
-    if team_pipeline_laeuft; then
-        echo "  Pipeline: 🟢 läuft gerade (Lock gehalten)"
-    else
-        echo "  Pipeline: ⚪ idle"
-    fi
+    # BL-199: DREI Antworten, nicht zwei. Ein Sperrartefakt der anderen Bahn,
+    # dessen Lebendigkeitsmerkmal hier nicht auswertbar ist, darf weder als
+    # "idle" noch als "laeuft" durchgehen — beides waere eine Behauptung, und
+    # ein Bericht, der einmal falsch lag, wird nicht mehr gelesen.
+    team_pipeline_laeuft; local sperre=$?
+    case "$sperre" in
+        0) echo "  Pipeline: 🟢 läuft gerade (Lock gehalten)" ;;
+        2) echo "  Pipeline: 🟡 unbekannt — es liegt eine Sperre der anderen Bahn ($TEAM_LOCK_ORDNER),"
+           echo "            deren Prozess von hier aus nicht prüfbar ist (BL-199). Vor einem"
+           echo "            Start selbst nachsehen; ist der Lauf durch, den Ordner entfernen." ;;
+        *) echo "  Pipeline: ⚪ idle" ;;
+    esac
 
     # Beutebuch
     echo "  ──────── Beutebuch ────────"

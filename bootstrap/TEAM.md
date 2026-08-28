@@ -29,6 +29,19 @@ Team-Infrastruktur gelöscht, weil sie noch nicht committet war.
 Der Rollback ist heute chirurgisch (er trifft nur die konkret gelisteten Pfade),
 aber die Regel bleibt: **erst committen, dann starten.**
 
+## ⚠️ Und danach: währenddessen nichts von Hand schreiben
+
+**Während ein Lauf läuft, gehört Handarbeit nicht in diesen Arbeitsbaum.**
+Der Guard merkt sich den Baumzustand beim **Rollenstart**. Was danach
+entsteht, gilt für ihn als Werk der Rolle — und wird beim nächsten Rollback
+zurückgenommen, **auch wenn du es committet hast**. Muss währenddessen etwas
+geschrieben werden (Kit-Meldung, Notiz), dann in einem zweiten Klon, oder
+warte den Lauf ab.
+
+Der Abschnitt darüber regelt den Zeitpunkt **davor** und deckt diesen Fall
+nicht ab: Ein Commit schützt nur, was **vor** dem Rollenstart lag. Wirksam ist
+*vorher*, nicht *sofort*.
+
 ---
 
 ## Worum es überhaupt geht

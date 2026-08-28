@@ -854,6 +854,93 @@ function Python-Aus-Config {
     return $name
 }
 
+function Konfig-Schluessel {
+    <#
+      Die Namen, die eine Konfigurationsdatei SETZT. Gegenstueck zu
+      konfig_schluessel in install.sh, mit derselben Ausgabe.
+    #>
+    param([string]$Pfad, [string]$Bahn)
+    if (-not (Test-Path -LiteralPath $Pfad)) { return @() }
+    $text = Get-Content -Raw -LiteralPath $Pfad -ErrorAction SilentlyContinue
+    if (-not $text) { return @() }
+    $muster = if ($Bahn -eq 'sh') { '(?m)^(TEAM_[A-Z0-9_]+)=' }
+              else                { '(?m)^\$(TEAM_[A-Z0-9_]+)\s*=' }
+    return @([regex]::Matches($text, $muster) |
+             ForEach-Object { $_.Groups[1].Value }) | Select-Object -Unique
+}
+
+function Konfig-Abgleich {
+    <#
+      BL-200. Der Grundsatz "-Update fasst team.config.* nicht an" ist richtig;
+      die Datei traegt Projektwerte. Es gab aber KEINEN Schritt, der die
+      SCHLUESSELMENGE abgleicht: Ein Wert, den die Vorlage neu einfuehrt,
+      erreichte eine bestehende Installation nie — und wurde auch nicht
+      gemeldet.
+
+      GEMESSEN IM FELD (Feld B, 2026-08-27), nicht vermutet: Nach einem Update
+      fehlten in team.config.ps1 VIER Werte, die die Vorlage inzwischen setzt.
+      TEAM_MELDUNG_TOOL (BL-182) ist dabei HART — `Team-Werkzeug ''` laeuft in
+      `& $null` und bricht ab, fuer JEDES Verb des Rueckkanals. Das Update hat
+      dort den Fix ausgeliefert und den Fehler mit woertlich derselben Meldung
+      wiederhergestellt, nur eine Zeile tiefer. Jeder kuenftige Fix, der einen
+      neuen Konfigurationswert einfuehrt, waere im Feld ab dem Update ein
+      REGRESS statt eines Fixes.
+
+      Derselbe Schnitt wie Python-Abgleich (BL-133), nur fuer die ganze
+      Schluesselmenge statt fuer EINEN Wert.
+
+      GEMELDET, NICHT REPARIERT: Der Installer kennt die Werte dieses Projekts
+      nicht, und TEAM_KIT_PFAD ist Maschinensache.
+    #>
+    $hart = $false
+    $gefunden = $false
+    foreach ($eintrag in @(
+        @{ Datei = 'team.config.sh';  Bahn = 'sh';  Vorlage = 'bash/entry/team.config.sh' },
+        @{ Datei = 'team.config.ps1'; Bahn = 'ps1'; Vorlage = 'pwsh/entry/team.config.ps1' })) {
+        $installiert = Join-Path $Ziel $eintrag.Datei
+        $vorlage = Join-Path $KIT $eintrag.Vorlage
+        if (-not (Test-Path -LiteralPath $installiert)) { continue }
+        if (-not (Test-Path -LiteralPath $vorlage)) { continue }
+        $gefunden = $true
+        $soll = @(Konfig-Schluessel $vorlage $eintrag.Bahn)
+        $ist  = @(Konfig-Schluessel $installiert $eintrag.Bahn)
+        $fehlend = @($soll | Where-Object { $ist -notcontains $_ })
+        if (-not $fehlend.Count) {
+            Gruen "  [ok] $($eintrag.Datei): alle Werte der Vorlage sind da"
+            continue
+        }
+        $vorlagenText = Get-Content -LiteralPath $vorlage -ErrorAction SilentlyContinue
+        foreach ($name in $fehlend) {
+            # Ein Wert, der OHNE Inhalt hart abbricht, verdient einen ROTEN
+            # Befund statt eines gelben Hinweises: Die Installation ist danach
+            # nicht unvollstaendig, sondern kaputt. Erkannt an der GATTUNG und
+            # nicht an einer Namensliste — eine leere Werkzeugzeile laeuft in
+            # einen Aufruf ohne Programm.
+            if ($name -like '*_TOOL') {
+                $hart = $true
+                Rot  "  [x] $($eintrag.Datei): $name fehlt — OHNE diesen Wert bricht der Aufruf ab (BL-200)."
+            } else {
+                Gelb "  [!] $($eintrag.Datei): $name fehlt — die Bibliothek hat einen Rueckfall (BL-200)."
+            }
+            # Die kopierbare Zeile kommt aus der VORLAGE und nicht aus dem Kopf
+            # des Lesers. Steht darin noch ein Platzhalter, ist der Wert
+            # Projekt- oder Maschinensache; das wird ausdruecklich gesagt.
+            $zeile = @($vorlagenText | Where-Object {
+                $_ -match ('^\$?' + [regex]::Escape($name) + '[\s=]')
+            }) | Select-Object -First 1
+            if ($zeile) {
+                Gelb "        $zeile"
+                if ($zeile -match '\{\{') {
+                    Gelb "        (Der Platzhalter ist Projekt- oder Maschinensache — von Hand fuellen.)"
+                }
+            }
+        }
+        Gelb "      Nachtragen von Hand — -Update fasst die Datei bewusst nicht an."
+    }
+    if (-not $gefunden) { Gelb "  [!] keine Konfiguration gefunden" }
+    return (-not $hart)
+}
+
 function Python-Abgleich {
     <#
       BL-133, derselbe Schnitt wie BL-109 bei der .gitignore: "-Update fasst
@@ -912,6 +999,9 @@ function Python-Abgleich {
         } else {
             Gelb "        `$TEAM_BEUTEBUCH_TOOL = Team-Wert 'TEAM_BEUTEBUCH_TOOL' '$hier team/tools/beutebuch.py'"
             Gelb "        `$TEAM_KOSTEN_TOOL    = Team-Wert 'TEAM_KOSTEN_TOOL'    '$hier team/tools/kosten.py'"
+            # BL-200, Nebenbefund: TEAM_MELDUNG_TOOL ist seit BL-182 die DRITTE
+            # Zeile derselben Bauart und fehlte hier.
+            Gelb "        `$TEAM_MELDUNG_TOOL   = Team-Wert 'TEAM_MELDUNG_TOOL'   '$hier team/tools/kit_meldung.py'"
         }
     }
     if (-not $gefunden) { Gelb "  [!] keine Konfiguration gefunden" }
@@ -1077,23 +1167,55 @@ if ($Update) {
     #
     # Hier steht eine ECHTE Sperrpruefung: FileShare::None wird vom
     # Betriebssystem durchgesetzt, anders als das kooperative flock.
+    #
+    # BL-199, dritte Stelle derselben Gattung: Seit BL-190 gibt es ZWEI
+    # Sperrartefakte, und der Ordner der bash-Bahn war hier unsichtbar — ein
+    # bash-Lauf auf einer Windows-Maschine lief also genau in den Schaden
+    # hinein, gegen den dieser Block gebaut ist. Ausgewertet wird `winpid`
+    # (eine MSYS-PID liegt ausserhalb des Windows-Prozessraums, gemessen);
+    # fehlt sie, gilt die Sperre als GEHALTEN. Vorsicht ist hier die richtige
+    # Richtung: Ein zu Unrecht abgelehntes Update kostet einen Satz, ein zu
+    # Unrecht erlaubtes hat im Feld einen laufenden Lauf gestoppt.
+    #
+    # Ausgeschrieben und nicht aus lib.psm1 geholt, weil der Installer bewusst
+    # nichts importiert — die Zusicherung, dass beide Stellen dieselbe Frage
+    # gleich beantworten, haengt deshalb an einem Testfall (wie auf der
+    # bash-Bahn seit BL-190).
+    $laufLaeuft = $false
+    $lockOrdner = Join-Path $Ziel '.team-loop.lock.d'
+    if (Test-Path -LiteralPath $lockOrdner -PathType Container) {
+        $wp = Join-Path $lockOrdner 'winpid'
+        $wpWert = ''
+        if (Test-Path -LiteralPath $wp -PathType Leaf) {
+            $wpWert = (Get-Content -LiteralPath $wp -Raw -ErrorAction SilentlyContinue)
+            if ($wpWert) { $wpWert = $wpWert.Trim() }
+        }
+        if ($wpWert -match '^[0-9]+$') {
+            if (Get-Process -Id ([int]$wpWert) -ErrorAction SilentlyContinue) { $laufLaeuft = $true }
+        } else {
+            $laufLaeuft = $true
+        }
+    }
     $lock = Join-Path $Ziel '.team-loop.lock'
-    if (Test-Path $lock) {
+    if (-not $laufLaeuft -and (Test-Path $lock)) {
         $frei = $false
         try {
             $s = [System.IO.File]::Open($lock, [System.IO.FileMode]::Open,
                  [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
             $s.Close(); $frei = $true
         } catch { $frei = $false }
-        if (-not $frei) {
-            Rot "FEHLER: In $Ziel laeuft gerade ein Team-Lauf (.team-loop.lock ist gehalten)."
-            Write-Host "  Ein Update wuerde uncommittete Dateien in team\ ablegen. Der naechste"
-            Write-Host "  Read-Only-Lauf (Harry/Marv/Axel) wertet die als Guard-Verletzung,"
-            Write-Host "  raeumt sie weg und bucht seine Runde als Fehlschlag — im Feld hat das"
-            Write-Host "  einen laufenden Lauf gestoppt (BL-10)."
-            Write-Host "  Erst den Lauf beenden lassen, dann erneut aufrufen."
-            exit 2
-        }
+        if (-not $frei) { $laufLaeuft = $true }
+    }
+    if ($laufLaeuft) {
+        Rot "FEHLER: In $Ziel laeuft gerade ein Team-Lauf (die Sperre ist gehalten)."
+        Write-Host "  Ein Update wuerde uncommittete Dateien in team\ ablegen. Der naechste"
+        Write-Host "  Read-Only-Lauf (Harry/Marv/Axel) wertet die als Guard-Verletzung,"
+        Write-Host "  raeumt sie weg und bucht seine Runde als Fehlschlag — im Feld hat das"
+        Write-Host "  einen laufenden Lauf gestoppt (BL-10)."
+        Write-Host "  Erst den Lauf beenden lassen, dann erneut aufrufen."
+        Write-Host "  Liegt .team-loop.lock.d von einem beendeten bash-Lauf, entferne den Ordner"
+        Write-Host "  von Hand: Remove-Item -Recurse -Force '$lockOrdner' (BL-199)."
+        exit 2
     }
 
     $dreckig = & git -C $Ziel status --porcelain 2>$null
@@ -1332,6 +1454,13 @@ if ($Update) {
     Kopf "Interpreter der Team-Werkzeuge (BL-131/BL-133)"
     Python-Abgleich | Out-Null
 
+    # BL-200: Dieselbe Bauart, eine Ebene hoeher — nicht EIN Wert, sondern
+    # die ganze SCHLUESSELMENGE. Ohne diesen Schritt erreicht ein Wert, den
+    # die Vorlage neu einfuehrt, eine bestehende Installation nie, und der
+    # zugehoerige Fix wird im Feld ab dem Update zum Regress.
+    Kopf 'Werte der Vorlage in der Konfiguration (BL-200)'
+    Konfig-Abgleich | Out-Null
+
     # BL-133: Die Abwahl einer Bahn wirkt bisher nur bei der ERSTinstallation.
     # Test-BahnAbgewaehlt laesst den Installer die Dateien der anderen Bahn
     # ueberspringen — was schon daliegt, bleibt liegen. Fuer ein bestehendes
@@ -1436,9 +1565,17 @@ if ($Update) {
         Gelb "  Kit-Fassung fehlen — die Mechanik ist aktualisiert, die Regeln"
         Gelb "  im Projekt sind es nicht (das war die Haelfte von BL-4)."
         Write-Host "  Die gerenderte Kit-Fassung liegt unter $abgleichDir\ bereit;"
-        Write-Host "  sie traegt bereits deine Werte. Temporaer — nach dem Abgleich"
-        Write-Host "  loeschen. Behalte deine Projekt-Spezifika und eigene Regeln,"
-        Write-Host "  uebernimm den Rest."
+        Write-Host "  sie traegt bereits deine Werte. Behalte deine Projekt-Spezifika"
+        Write-Host "  und eigene Regeln, uebernimm den Rest."
+        # BL-196: Die Lebensdauer der Ablage BENENNEN und den Loeschbefehl
+        # kopierfertig danebenstellen — in der Schreibweise DIESER Bahn.
+        # Vorher stand hier nur "temporaer — nach dem Abgleich loeschen": ein
+        # Verzeichnis, dessen Lebensdauer niemand benennt, wird entweder nie
+        # geloescht (gemessen: elf Stueck in %TEMP% nach einem Arbeitstag)
+        # oder im falschen Moment, naemlich bevor der Vergleich gefahren ist.
+        Write-Host "  Es ist eine KOPIE zum Nachlesen im Temp-Bereich, kein Teil deines"
+        Write-Host "  Projekts. Wenn du fertig verglichen hast, weg damit:"
+        Write-Host "      Remove-Item -Recurse -Force -LiteralPath $abgleichDir"
     }
 
     Kopf "Selbsttest"

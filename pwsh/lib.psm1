@@ -206,6 +206,26 @@ function Team-JsonLesen {
 $TEAM_SMOKE_TEST = Team-Default 'TEAM_SMOKE_TEST' ''
 if ($TEAM_SMOKE_TEST -cmatch '^TODO') { $TEAM_SMOKE_TEST = '' }
 
+# --- Wie lange der Verifikationsbefehl im Vordergrund laufen darf (BL-207) ----
+# Die Auflage "im Vordergrund, nie als Hintergrund-Task" (unten) ist richtig,
+# war aber NICHT ERFUELLBAR, sobald die Suite laenger lief als die
+# Vordergrundgrenze des Agenten-Werkzeugs (120 s Default). Feld B, 2026-08-28:
+# Suite 149-220 s, in EINEM Lauf dreimal in den vierten Ausgang gelaufen
+# (Ralph einmal, Frank zweimal), zusammen 4,9480 USD = 32 % der Rollenkosten.
+# Die Rolle stand vor der Wahl zwischen Regelverletzung und Werkzeug-Timeout
+# und waehlte in drei von drei Faellen dieselbe Verletzung.
+#
+# BL-201 hatte dieselbe Bauform zweimal mit einer SCHAERFEREN Auflage
+# beantwortet. Das hier ist der Beleg, dass Schaerfe nicht hilft: Es ist kein
+# Disziplinproblem. Eine Auflage, die die Rolle nicht einhalten KANN, erzeugt
+# genau das Verhalten, das sie verbieten soll. Deshalb bekommt die Auflage eine
+# Zahl, die die Rolle im Werkzeug einstellen kann — und die Zahl steht im
+# Prompt, nicht nur in der Konfiguration.
+#
+# Default 600 s: grosszuegig gegenueber der 120-s-Wand des Werkzeugs und immer
+# noch eine Grenze. Wer laenger braucht, traegt es in team.config.ps1 ein.
+$TEAM_SMOKE_TEST_TIMEOUT = Team-Default 'TEAM_SMOKE_TEST_TIMEOUT' '600'
+
 # --- Abgeleitete Prompt-Bausteine ---------------------------------------------
 if ($TEAM_SMOKE_TEST) {
     # Der Nachsatz ist eine Notbremse gegen einen teuren Fehlermodus, nicht
@@ -223,8 +243,20 @@ Smoke-Test ausführen: $TEAM_SMOKE_TEST — muss grün sein.
    NIEMALS als Hintergrund-Task und plane keinen Wakeup darauf: Diese Sitzung
    ist headless, es kommt keine Benachrichtigung, und du wartest bis zum
    Zeitlimit auf ein Ereignis, das nicht eintreten kann.
+   Er darf dafür bis zu $TEAM_SMOKE_TEST_TIMEOUT Sekunden brauchen: Setze das
+   Zeitlimit deines Werkzeugs auf diesen Wert, statt in den Hintergrund
+   auszuweichen. Läuft er länger, ist das ein Befund für den Menschen —
+   melde ihn, weiche nicht aus.
 "@.TrimEnd()
-    $SMOKE_SUFFIX = " Smoke-Test grün: $TEAM_SMOKE_TEST."
+    # BL-207: Frank bekommt NUR diesen Nachsatz, nicht SMOKE_ZEILE — und er
+    # faehrt den Smoke-Test oefter als Ralph. Im Feld endeten 10 von 28
+    # Frank-Laeufen ohne Promise, bei 9 davon stand das Warten auf einen
+    # Hintergrundlauf woertlich im Log-Feld `result` (10,7249 USD an EINEM
+    # Tag). Bei ihm kostet der vierte Ausgang zusaetzlich einen
+    # Fehlversuch (.frank-attempts) und eskaliert ab dem dritten an Axel —
+    # das teure Modell wird also fuer einen Formfehler gerufen. Deshalb
+    # steht die Auflage hier ausgeschrieben statt nur bei Ralph.
+    $SMOKE_SUFFIX = " Smoke-Test grün: $TEAM_SMOKE_TEST. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu $TEAM_SMOKE_TEST_TIMEOUT Sekunden brauchen, setze das Zeitlimit deines Werkzeugs auf diesen Wert. NIEMALS als Hintergrund-Task und kein Wakeup darauf: Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (BL-41)."
 } else {
     $SMOKE_ZEILE = "(Kein Smoke-Test konfiguriert — Schritt entfällt. Das Team arbeitet ohne Sicherheitsnetz; TEAM_SMOKE_TEST in team.config.ps1 nachtragen.)"
     $SMOKE_SUFFIX = ""
@@ -913,6 +945,73 @@ function team_budget_check {
 # --- Lock ---------------------------------------------------------------------
 $script:TeamLockStrom = $null
 
+# Die beiden Sperrartefakte, beim Namen und greppbar wie in lib.sh. Seit
+# BL-190 gibt es ZWEI: Die pwsh-Bahn haelt die DATEI (FileShare::None, vom
+# Betriebssystem durchgesetzt), die bash-Bahn ohne `flock` den ORDNER.
+$TEAM_LOCK_DATEI = '.team-loop.lock'
+$TEAM_LOCK_ORDNER = '.team-loop.lock.d'
+
+function team_pipeline_laeuft {
+    <#
+      Haelt gerade jemand die Sperre?  0 = ja   1 = nein   2 = UNKLAR
+
+      Gegenstueck zu team_pipeline_laeuft in lib.sh, mit demselben abgestuften
+      Rueckgabewert (Aufrufkonvention Punkt 5).
+
+      WARUM ES SIE GIBT (BL-199): Beide Bahnen liegen nach einer Installation
+      im SELBEN Arbeitsbaum (BL-126), und die Zusicherung heisst "eine Pipeline
+      zur Zeit", nicht "eine je Bahn". Seit BL-190 sperrt die bash-Bahn ohne
+      `flock` ueber einen ORDNER — fuer die pwsh-Bahn war der unsichtbar. Der
+      Kontostand meldete `idle`, und `install.ps1 --update` legte uncommittete
+      Dateien in team/ ab: genau der Schaden, gegen den BL-10 gebaut wurde.
+
+      WARUM NICHT DIE PID AUS DEM ORDNER: Sie ist eine MSYS-PID aus einem
+      EIGENEN Prozessraum. Gemessen am 2026-08-27: Git-Bash meldete `$$` =
+      15946, `Get-Process -Id 15946` fand zeitgleich nichts. Ein Get-Process
+      darauf stufte JEDE gehaltene bash-Sperre als verwaist ein — die
+      Zusicherung waere nicht wiederhergestellt, sondern schriftlich
+      abgeschafft.
+
+      WAS STATTDESSEN: `winpid`. Die bash-Bahn legt sie seit BL-199 zusaetzlich
+      ab, wenn der Wirt eine hat (/proc/<pid>/winpid unter Git for Windows).
+      Nachgemessen am 2026-08-28, Hin- und Rueckweg: PowerShell findet den
+      Prozess darueber.
+
+      UND WENN SIE FEHLT (aeltere Sperre, Linux-Wirt): 2 — UNKLAR. Weder
+      "idle" noch "laeuft" waeren hier eine Messung, beide waeren eine
+      Behauptung. Der Aufrufer entscheidet, was Vorsicht bei IHM heisst.
+    #>
+    param([string]$Wurzel = '.')
+
+    $ordner = Join-Path $Wurzel $TEAM_LOCK_ORDNER
+    if (Test-Path -LiteralPath $ordner -PathType Container) {
+        $winpid = ''
+        $wpDatei = Join-Path $ordner 'winpid'
+        if (Test-Path -LiteralPath $wpDatei -PathType Leaf) {
+            $winpid = (Get-Content -LiteralPath $wpDatei -Raw -ErrorAction SilentlyContinue)
+            if ($winpid) { $winpid = $winpid.Trim() }
+        }
+        if ($winpid -match '^[0-9]+$') {
+            if (Get-Process -Id ([int]$winpid) -ErrorAction SilentlyContinue) { return 0 }
+            # Lesbares Merkmal, toter Prozess: verwaist. STILL uebergehen — ein
+            # toter Prozess haelt nichts, und eine Meldung nach jedem regulaeren
+            # Lauf waere nach BL-14 keine.
+        } else {
+            return 2
+        }
+    }
+
+    $datei = Join-Path $Wurzel $TEAM_LOCK_DATEI
+    if (Test-Path -LiteralPath $datei -PathType Leaf) {
+        try {
+            $s = [System.IO.File]::Open($datei, [System.IO.FileMode]::Open,
+                 [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+            $s.Close()
+        } catch { return 0 }
+    }
+    return 1
+}
+
 function team_lock {
     <#
       Eine Pipeline zur Zeit. Laeuft das Skript unterhalb der Vollautomatik
@@ -1082,6 +1181,46 @@ function team_fremd_ausfiltern {
         })
         -not $treffer.Count
     })
+}
+
+function team_eigene_pfade {
+    <#
+      Gibt die abweichenden Pfade unter <Pfade> (Pathspecs) aus, die dieser
+      Rolle GEHOEREN — fremde sind ausgefiltert. Leere Ausgabe = nichts
+      Eigenes.
+
+      WARUM ES SIE GIBT (BL-206, Feld B): Der Commit-Block des
+      Red-Team-Sweeps war die DRITTE Stelle mit derselben Zustaendigkeit und
+      die einzige ohne den Filter. team_guard_verify und team_rollback_rolle
+      rufen beide team_fremd_ausfiltern; der Sweep staged stattdessen
+      `git add <Testordner>` blanko — und `git add` auf einen Ordner nimmt
+      JEDE untracked Datei darin mit, auch die fremde. Sie landet dann unter
+      der Sweep-Botschaft, also unter einer Urheberschaft, die nicht stimmt.
+      Woertlich die Bauform von BL-114 (dort war der `git clean`
+      eingeschraenkt, das `git reset --hard` daneben nicht): zwei Stellen
+      nachgezogen, die dritte nicht.
+
+      WARUM --untracked-files=all: `git status --porcelain` meldet ein
+      untracked VERZEICHNIS als EINEN Eintrag mit Schraegstrich. Wer den
+      blanko staged, hat wieder den Ordner adressiert statt der Datei — der
+      Fix waere keiner. team_fremd_ausfiltern kennt die Ordner-Schreibweise
+      auf der FREMD-Seite und faengt eine Datei auch unter einem fremden
+      Ordnereintrag ab; die Aufloesung hier kostet also nichts.
+    #>
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Pfade)
+
+    $roh = @(& git status --porcelain --untracked-files=all -- @Pfade 2>$null |
+             Where-Object { $_ } | ForEach-Object { $_.Substring(3) })
+    if (-not $roh.Count) { return }
+    $eigene = @(team_fremd_ausfiltern $roh)
+    # Sichtbar machen statt still weglassen: Wer den Sweep-Commit liest, soll
+    # wissen, dass hier fremde Arbeit lag — und dass sie unangetastet blieb.
+    foreach ($pfad in $roh) {
+        if ($eigene -notcontains $pfad) {
+            Team-Fehler "[guard] Nicht angefasst, lag vor dem Rollenstart im Baum (BL-206): $pfad"
+        }
+    }
+    Write-Output $eigene
 }
 
 function team_pfade_zuruecksetzen {
@@ -1344,6 +1483,57 @@ function team_quittung_fehlt_melden {
     return $true
 }
 
+function team_smoke_parallel_lauf {
+    <#
+      $true  = ein ZWEITER Lauf des Verifikationsbefehls ist nachweisbar
+      $false = keiner nachweisbar (das schliesst "auf diesem Wirt nicht
+               feststellbar" ein — im Zweifel bleibt es beim bisherigen
+               Verhalten)
+
+      WARUM ES SIE GIBT (BL-207, Feld B 2026-08-28): Die Selbstpruefung
+      startete den Verifikationsbefehl bedingungslos ein zweites Mal. Im Feld
+      lief der Hintergrund-pytest der Rolle noch, als die Selbstpruefung IHREN
+      eigenen startete. Zwei gleichzeitige Testlaeufe kollidieren
+      (SQLite-Dateien, Ports, Electron-userData); die Selbstpruefung meldete
+      daraufhin ROT fuer einen Baum, der allein gefahren gruen war (199 passed,
+      im Closeout nachgemessen) — und schickte den Menschen per BL-61-Text
+      ausdruecklich auf die falsche Faehrte "Testaufbau". Wer ihr geglaubt und
+      die Stufe neu gebaut haette, haette 2,36 USD bezahlte, fertige Arbeit
+      weggeworfen.
+
+      Eine Selbstpruefung, die im Zweifel "rot" BEHAUPTET, ist schlimmer als
+      eine, die schweigt. Deshalb: erkannter Parallellauf ⇒ UNBEKANNT.
+
+      Die gefundene Zeile wird mitgegeben ($TEAM_SMOKE_PARALLEL_ZEILE), damit
+      ein Fehlalarm — ein Dauerlaeufer, der den Befehl in seiner Kommandozeile
+      traegt — in einem Blick als solcher erkennbar ist statt als Raetsel.
+    #>
+    $script:TEAM_SMOKE_PARALLEL_ZEILE = ''
+    if (-not $TEAM_SMOKE_TEST) { return $false }
+    $zeilen = @()
+    try {
+        $zeilen = @(Get-CimInstance Win32_Process -ErrorAction Stop |
+                    Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine } |
+                    ForEach-Object { $_.CommandLine })
+    } catch {
+        # Nicht-Windows-Wirt: Win32_Process gibt es dort nicht.
+        # `& ps` waere hier die Falle: `ps` ist in PowerShell ein ALIAS fuer
+        # Get-Process, auch unter Linux. Der Aufruf ginge also nie an das
+        # externe Programm, sondern an ein Cmdlet, das `-eo` nicht kennt — der
+        # Rueckfall waere still tot. Deshalb das Programm ausdruecklich.
+        try {
+            $psBin = (Get-Command ps -CommandType Application -ErrorAction Stop |
+                      Select-Object -First 1).Source
+            $zeilen = @(& $psBin -eo args= 2>$null | Where-Object { $_ })
+        } catch { $zeilen = @() }
+    }
+    if (-not $zeilen.Count) { return $false }
+    $treffer = @($zeilen | Where-Object { $_.Contains($TEAM_SMOKE_TEST) })
+    if (-not $treffer.Count) { return $false }
+    $script:TEAM_SMOKE_PARALLEL_ZEILE = $treffer[0]
+    return $true
+}
+
 function team_quittung_selbstpruefung {
     <#
       BL-110: Die Erkennung oben ist richtig, aber sie haelt den Lauf an und
@@ -1401,6 +1591,18 @@ function team_quittung_selbstpruefung {
     if (-not $TEAM_SMOKE_TEST) {
         Team-Fehler "    ✗ Kein TEAM_SMOKE_TEST konfiguriert — ohne Verifikationsbefehl wird nicht"
         Team-Fehler "      automatisch quittiert."
+        return $false
+    }
+    # BL-207: Kein zweiter Lauf neben einen laufenden stellen. Zwei
+    #     gleichzeitige Testlaeufe kollidieren, und das Ergebnis waere eine
+    #     Eigenschaft der MASCHINE statt eine des Codes.
+    if (team_smoke_parallel_lauf) {
+        Team-Fehler "    ? Es läuft bereits ein Verifikationslauf — Ergebnis UNBEKANNT, nicht rot (BL-207)."
+        Team-Fehler "      Gefunden: $TEAM_SMOKE_PARALLEL_ZEILE"
+        Team-Fehler "      Ein zweiter Lauf daneben kollidiert (Datenbankdateien, Ports,"
+        Team-Fehler "      Nutzerverzeichnisse) und meldete ROT für einen Baum, der allein gefahren"
+        Team-Fehler "      grün ist. Es wird deshalb NICHT automatisch quittiert und NICHTS behauptet."
+        Team-Fehler "      Miss von Hand nach, wenn der laufende Test fertig ist: $TEAM_SMOKE_TEST"
         return $false
     }
     Team-Fehler "    … Smoke-Test läuft ($TEAM_SMOKE_TEST) …"
@@ -1592,13 +1794,15 @@ $script:TEAM_LAST_COST = ''
 $script:TEAM_LAST_OUT = ''
 $script:TEAM_LAST_PAUSE = 0
 $script:TEAM_LAST_RESET = ''
+$script:TEAM_SMOKE_PARALLEL_ZEILE = ''
 
 Export-ModuleMember -Function * -Variable @(
-    'SMOKE_ZEILE', 'SMOKE_SUFFIX',
+    'SMOKE_ZEILE', 'SMOKE_SUFFIX', 'TEAM_SMOKE_TEST_TIMEOUT',
+    'TEAM_SMOKE_PARALLEL_ZEILE',
     'TEAM_MODEL_LOOP', 'TEAM_MODEL_STRONG',
     'TEAM_ROLE_BUDGET_USD', 'TEAM_ROLE_HARDCAP_USD',
     'TEAM_429_MAX_RETRIES', 'TEAM_429_MAX_WARTEN', 'TEAM_429_PUFFER',
-    'TEAM_GUARD_LAUFZEIT',
+    'TEAM_GUARD_LAUFZEIT', 'TEAM_LOCK_DATEI', 'TEAM_LOCK_ORDNER',
     'TEAM_LAST_COST', 'TEAM_LAST_OUT', 'TEAM_LAST_PAUSE', 'TEAM_LAST_RESET',
     'TEAM_PROJEKT', 'TEAM_FELD_KUERZEL',
     'TEAM_PRODUKTIVCODE', 'TEAM_TEST_ORDNER', 'TEAM_PLAN_ORDNER',

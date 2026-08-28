@@ -472,6 +472,13 @@ Guard/Read-Only-Regeln **nicht** auf.
   erfolgreich erklärt, endet der Loop mit **Exit 43** statt „ECHTER Fehler".
   **Vorbeugend gilt für jede bauende Rolle:** Der Smoke-Test läuft im
   **Vordergrund**, nie als Hintergrund-Task und nie mit einem Wakeup darauf.
+  **Damit das erfüllbar bleibt (`Kit-BL-207`):** Die Auflage trägt eine Zahl —
+  `TEAM_SMOKE_TEST_TIMEOUT` (Default **600 s**) in [`{{KONFIG}}`]({{KONFIG}}),
+  und sie steht im Prompt jeder bauenden Rolle. Jede Suite wächst; reißt sie
+  die Vordergrundgrenze des Werkzeugs, weicht die Rolle sonst regelmäßig in den
+  Hintergrund aus — **eine Auflage, die eine Rolle nicht einhalten kann,
+  erzeugt genau das Verhalten, das sie verbieten soll.** Die Rolle setzt das
+  Zeitlimit ihres Werkzeugs auf diesen Wert, statt auszuweichen.
 - **Auslauf-Bremse gegen Leerlaufkosten (`TEAM_FIX_MAX_STAGNATION`, `Kit-BL-25`).**
   Bleibt in der Frank↔Axel-Fixphase **weder** ein Fix **noch** eine neue Akte
   **noch** ein Statuswechsel, bricht die Phase nach N Runden ab, statt teuer

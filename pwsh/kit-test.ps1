@@ -160,7 +160,10 @@ function Dateien-Mit-Endung {
 # die zweite Haelfte des Absturzschutzes: Ein Schritt, der stillschweigend
 # uebersprungen wird, aendert die Zahl — und ein Selbsttest, der weniger
 # geprueft hat als er soll, hat nicht bestanden, sondern nur nichts gemerkt.
-$script:PruefungenSoll = 58
+# BL-198 hat fuenf dazugelegt (README-Schritt 5/9), BL-196 eine (das
+# Aufraeumen der Abgleichsablage). Wer eine Pruefung ergaenzt, zieht die
+# Zahl nach — sonst meldet der Lauf am Ende, ein Schritt sei uebersprungen.
+$script:PruefungenSoll = 64
 
 # BL-195: Die Installer- und Update-Aufrufe ab Schritt 5 laufen mit
 # -OhneSelbsttest. Der Installer wuerde sonst jedes Mal die volle Suite
@@ -181,8 +184,8 @@ $script:SuiteLaeufe = 0
 Write-Host '=== T.E.A.M.-Starterkit — Selbstverifikation (Windows) ===' -ForegroundColor White
 Write-Host "  Kit: $KIT"
 
-# --------------------------------------------------------- 1/8 Wegwerf-Repo
-Kopf '1/8 — Wegwerf-Repo anlegen'
+# --------------------------------------------------------- 1/9 Wegwerf-Repo
+Kopf '1/9 — Wegwerf-Repo anlegen'
 $basis = Join-Path ([System.IO.Path]::GetTempPath()) ("team-kit-test-" + [guid]::NewGuid())
 # Gleicher Basename wie in kit-test.sh: Der Projektname leitet sich aus dem
 # Ordner ab und taucht in Briefings und Ledger-Notizen auf.
@@ -200,8 +203,8 @@ try {
     Gruen "Wegwerf-Repo unter $ziel"
 } finally { Pop-Location }
 
-# ------------------------------------------------------ 2/8 Kit installieren
-Kopf '2/8 — Kit installieren (install.ps1, nicht-interaktiv)'
+# ------------------------------------------------------ 2/9 Kit installieren
+Kopf '2/9 — Kit installieren (install.ps1, nicht-interaktiv)'
 $installLog = Join-Path $basis 'install.log'
 & (Join-Path $KIT 'pwsh\install.ps1') $ziel -NichtInteraktiv *> $installLog
 if ($LASTEXITCODE -ne 0) {
@@ -222,8 +225,8 @@ $script:SuiteLaeufe++
 Pruefe 'der Installer hat seine Regressionstests wirklich gefahren (BL-127)' `
     ((Treffer $installLog 'Regressionstests gruen') -ge 1) $true
 
-# ------------------------------------------------- 3/8 Ungefuellte Platzhalter
-Kopf '3/8 — Ungefüllte Platzhalter suchen'
+# ------------------------------------------------- 3/9 Ungefuellte Platzhalter
+Kopf '3/9 — Ungefüllte Platzhalter suchen'
 # Ein uebrig gebliebenes {{...}} heisst: Der Installer kennt die Datei nicht
 # oder der Platzhalter wurde umbenannt. Beides faellt sonst erst im Feld auf,
 # wo die Briefings die Pfade des Ursprungsprojekts nennen wuerden — falsche
@@ -249,8 +252,8 @@ if ($reste.Count) {
 }
 Gruen 'keine'
 
-# ------------------------------------------------------ 4/8 Regressionstests
-Kopf '4/8 — Regressionstests in der Installation'
+# ------------------------------------------------------ 4/9 Regressionstests
+Kopf '4/9 — Regressionstests in der Installation'
 Push-Location $ziel
 try {
     # Vor dem Testlauf committen — dieselbe Reihenfolge, die TEAM.md dem
@@ -312,8 +315,84 @@ try {
     }
 } finally { Pop-Location }
 
-# ------------------------- 5/8 Suite unter angepasster Konfiguration (BL-58)
-Kopf '5/8 — Regressionstests unter angepasster Konfiguration (BL-58)'
+# ------------------------------------------------------ 5/9 README-Zahlen
+Kopf '5/9 — README gegen die frische Installation (BL-198)'
+# BL-198, Teil 3: Diesen Schritt gab es nur auf der bash-Bahn. Solange nur sie
+# nachrechnet, haengt die Aktualitaet dieser Zahlen an einem Lauf, den auf
+# einer pwsh-Maschine niemand fahren kann — der Rest von BL-145, an derselben
+# Stelle wie BL-196 Teil (2). Bis hierher blieb jede Doku-Aenderung darauf
+# angewiesen, dass jemand von Hand zaehlt.
+#
+# Gemessen wird an der INSTALLATION, nicht am Repo: Das ist der Punkt der
+# Zusicherung. Die zwei Backlog-Zahlen misst der Pruefer selbst aus dem Repo
+# (der Backlog des Kits wird nicht mitinstalliert).
+$tDateien = @(Get-ChildItem (Join-Path $ziel 'team/tests') -Filter 'test_*.py' -File -ErrorAction SilentlyContinue).Count
+$tFaelle = 0
+if ($ptBefehl -or (Get-Command pytest -ErrorAction SilentlyContinue)) {
+    $befehl = if ($ptBefehl) { $ptBefehl } else { 'pytest' }
+    $vorab  = if ($ptBefehl) { @('-m', 'pytest') } else { @() }
+    Push-Location $ziel
+    try {
+        # Eigener collect-only-Lauf statt der Ausgabe von Schritt 4: Deren
+        # Exit-Code traegt das Ergebnis des ganzen Schritts, und eine Pipeline
+        # davor hat genau den schon einmal verschluckt (BL-59).
+        $roh = & $befehl @vorab --collect-only -q team/tests 2>$null
+        $letzte = @($roh | Where-Object { $_ -match '^' + [char]0x5c + 'd+ tests? collected' }) | Select-Object -Last 1
+        if (-not $letzte) { $letzte = @($roh | Where-Object { $_ }) | Select-Object -Last 1 }
+        if ($letzte -match '^(' + [char]0x5c + 'd+)') { $tFaelle = [int]$Matches[1] }
+    } finally { Pop-Location }
+}
+if ($tFaelle -eq 0 -or $tDateien -eq 0) {
+    Rot 'Die Testzahlen liessen sich nicht messen — der README-Schritt saehe sonst gruen aus, ohne etwas zu pruefen.'
+    $script:Fehler = 1
+} else {
+    $pruefer = Join-Path $KIT 'geteilt/kit-readme-pruefen.py'
+    $pyKit = if ($ptBefehl) { $ptBefehl } else { 'python' }
+    & $pyKit $pruefer --faelle $tFaelle --testdateien $tDateien 2>&1 |
+        ForEach-Object { Zeile $_ }
+    if ($LASTEXITCODE -ne 0) {
+        Rot 'Das README steht gegen die frische Installation.'
+        Zeile 'Gemessen wurde an einer FRISCHEN Installation, nicht am Repo.'
+        Zeile 'Die genannten Stellen im README nachziehen.'
+        $script:Fehler = 1
+    } else {
+        Gruen "README: Zahlen gemessen ($tDateien Dateien, $tFaelle Fälle), Pfade existieren"
+    }
+    # Gegenprobe: Ein Waechter, der nie rot wird, sichert nichts ab — er
+    # beschreibt nur, was ohnehin gilt (Bauart BL-14). An einer KOPIE; das
+    # Repo wird dabei nicht angefasst.
+    $gegen = Join-Path $basis 'readme-gegenprobe.md'
+    $readme = Get-Content -Raw (Join-Path $KIT 'README.md')
+    Set-Content -LiteralPath $gegen -Encoding utf8 `
+        -Value ($readme -replace "$tFaelle Regressionstests", '1 Regressionstests')
+    & $pyKit $pruefer --readme $gegen --faelle $tFaelle --testdateien $tDateien 2>&1 | Out-Null
+    Pruefe 'Gegenprobe: verfälschte Testzahl wird rot' ($LASTEXITCODE -ne 0) $true
+    # BL-198, die zweite Haelfte: die BL-Spanne und die Archivzahl. Sie sind
+    # der Grund fuer diesen Eintrag — am 2026-08-26 kam BL-196 dazu, das
+    # README nannte weiter BL-195, und alle drei Doku-Waechter blieben gruen.
+    Set-Content -LiteralPath $gegen -Encoding utf8 `
+        -Value ($readme -replace '`BL-1`…`BL-(' + [char]0x5c + 'd+)`', '`BL-1`…`BL-1`')
+    & $pyKit $pruefer --readme $gegen --faelle $tFaelle --testdateien $tDateien 2>&1 | Out-Null
+    Pruefe 'Gegenprobe: verfälschte BL-Spanne wird rot' ($LASTEXITCODE -ne 0) $true
+    Set-Content -LiteralPath $gegen -Encoding utf8 `
+        -Value ($readme -replace '(' + [char]0x5c + 'd+) Einträge', '1 Einträge')
+    & $pyKit $pruefer --readme $gegen --faelle $tFaelle --testdateien $tDateien 2>&1 | Out-Null
+    Pruefe 'Gegenprobe: verfälschte Archivzahl wird rot' ($LASTEXITCODE -ne 0) $true
+    # Und die Gegenrichtung, ohne die es keine Gegenprobe ist: Das
+    # UNVERAENDERTE README muss gruen bleiben.
+    Set-Content -LiteralPath $gegen -Encoding utf8 -Value $readme
+    & $pyKit $pruefer --readme $gegen --faelle $tFaelle --testdateien $tDateien 2>&1 | Out-Null
+    Pruefe 'Gegenrichtung: das unveränderte README bleibt grün' ($LASTEXITCODE -eq 0) $true
+    # BL-198 Teil 2: Ohne Zahlenargumente darf die Erfolgszeile nicht
+    # behaupten, alle Zahlen seien gemessen.
+    $ohne = (& $pyKit $pruefer --readme $gegen --ohne-backlog-zahlen 2>&1) -join ' '
+    Pruefe 'ohne Argumente sagt der Prüfer, dass er keine Zahl geprüft hat' `
+        ($ohne -match 'KEINE Zahl geprüft') $true
+    Remove-Item -LiteralPath $gegen -Force -ErrorAction SilentlyContinue
+}
+
+# ------------------------- 6/9 Suite unter angepasster Konfiguration (BL-58)
+Kopf '6/9 — Regressionstests unter angepasster Konfiguration (BL-58)'
 # BL-145: Dieser Schritt fehlte der pwsh-Bahn ganz. Er faengt eine Fehlerklasse,
 # die in einer FRISCHEN Installation nie auffaellt: einen Test, der den
 # PROJEKTWERT misst und dabei behauptet, eine Zusicherung des KITS zu pruefen.
@@ -406,8 +485,8 @@ if ($ptBefehl -or (Get-Command pytest -ErrorAction SilentlyContinue)) {
     $script:Fehler = 1
 }
 
-# ----------------------------------------------- 6/8 Update schuetzt Projektdaten
-Kopf '6/8 — Update-Pfad schützt Projektdaten'
+# ----------------------------------------------- 7/9 Update schuetzt Projektdaten
+Kopf '7/9 — Update-Pfad schützt Projektdaten'
 # Dieselbe Praeparation wie in kit-test.sh: Ein Update darf Kostenhistorie,
 # Kaskadenstand, Beutebuch und den von Hand gesetzten Smoke-Test NICHT
 # anfassen. Empirisch nachgestellt (BL-8) — mit --force tut es genau das.
@@ -518,6 +597,32 @@ try {
     Pruefe 'Abgleich meldet TEAM.md NICHT' `
         ($abgleichLog -match 'TEAM\.md weicht von der Kit-Fassung ab') $false
 
+    # BL-196: Die Ablage wegraeumen, wie es kit-test.sh nach jedem Update tut.
+    # Sonst bleibt je Selbsttest-Lauf ein Verzeichnis im Temp-Bereich liegen —
+    # gemessen wurden elf Stueck nach einem Arbeitstag. Kein Platzproblem, ein
+    # Ordnungsproblem: Ein Verzeichnis, dessen Lebensdauer niemand benennt,
+    # wird entweder nie geloescht oder im falschen Moment.
+    #
+    # Aufgeraeumt wird NUR bei einem plausiblen Pfad. Dieselbe Schranke wie in
+    # kit-test.sh, und aus demselben Grund: Ein `Remove-Item -Recurse` auf einen
+    # falsch geparsten Pfad ist teurer als der liegen gebliebene Ordner.
+    $abgleichPfade = @([regex]::Matches(
+        $abgleichLog, "team-kit-abgleich-[0-9a-f]+") | ForEach-Object { $_.Value }) |
+        Select-Object -Unique
+    $weggeraeumt = 0
+    foreach ($name in $abgleichPfade) {
+        $kandidat = Join-Path ([System.IO.Path]::GetTempPath()) $name
+        if (Test-Path -LiteralPath $kandidat -PathType Container) {
+            Remove-Item -LiteralPath $kandidat -Recurse -Force -ErrorAction SilentlyContinue
+            $weggeraeumt++
+        }
+    }
+    # Die Gegenrichtung steckt in der Zahl: Wird NICHTS erkannt, ist entweder
+    # der Block nicht gelaufen oder das Muster veraltet — und dann raeumt
+    # dieser Teil still gar nichts weg, waehrend er gruen aussieht.
+    Pruefe 'Abgleichsablage des Updates wird weggeräumt (BL-196)' `
+        ($weggeraeumt -ge 1) $true
+
     # --- BL-145: der Umfang, den die bash-Fassung seit Langem hat -----------
     # Die Zusicherungen unten haben in dieser Bahn GEFEHLT. Genau darum ging es
     # bei BL-136/BL-144: Der Fix zu BL-136 galt als "kit-test.ps1 alle Schritte
@@ -602,8 +707,8 @@ Pruefe 'vollständige .gitattributes wird nicht angemahnt' `
 Pruefe 'und ausdrücklich als vollständig quittiert' `
     (Treffer $update2Log '\.gitattributes enthaelt den Block vollstaendig') 1
 
-# ------------- 7/8 Abwahl einer Bahn, ihr Bestand und ihr Rueckweg (BL-145)
-Kopf '7/8 — Abwahl einer Bahn, ihr Bestand und ihr Rückweg (BL-119/BL-126/BL-129/BL-147)'
+# ------------- 8/9 Abwahl einer Bahn, ihr Bestand und ihr Rueckweg (BL-145)
+Kopf '8/9 — Abwahl einer Bahn, ihr Bestand und ihr Rückweg (BL-119/BL-126/BL-129/BL-147)'
 # BL-145 nennt diesen Schritt als zweitwichtigsten, und der Grund ist die
 # Verbreitung: **Auf Windows ist die einbahnige Ablage der NORMALFALL** — wer
 # hier installiert, hat meist keine bash und waehlt sie ab. Die Zusicherung von
@@ -722,8 +827,8 @@ Pruefe 'das Nachziehen ist gemeldet worden' `
 
 Remove-Item -Recurse -Force $bBasis -ErrorAction SilentlyContinue
 
-# --------------------------------------------------------- 8/8 Trockenlauf
-Kopf '8/8 — Trockenlauf der Rollen (TEAM_DRY_RUN=1, keine CLI-Kosten)'
+# --------------------------------------------------------- 9/9 Trockenlauf
+Kopf '9/9 — Trockenlauf der Rollen (TEAM_DRY_RUN=1, keine CLI-Kosten)'
 # Der Schritt, den es unter bash so nicht gibt: Er belegt, dass die Kette
 # Shim -> .ps1 -> lib.psm1 -> Werkzeuge auf DIESER Maschine traegt — ohne
 # Agenten-CLI und ohne einen Cent. Genau das ist die Frage, die ein Anwender

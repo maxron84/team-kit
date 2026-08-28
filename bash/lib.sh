@@ -44,6 +44,26 @@ case "${TEAM_SMOKE_TEST:-}" in
     TODO*) TEAM_SMOKE_TEST="" ;;
 esac
 
+# --- Wie lange der Verifikationsbefehl im Vordergrund laufen darf (BL-207) ----
+# Die Auflage "im Vordergrund, nie als Hintergrund-Task" (unten) ist richtig,
+# war aber NICHT ERFUELLBAR, sobald die Suite laenger lief als die
+# Vordergrundgrenze des Agenten-Werkzeugs (120 s Default). Feld B, 2026-08-28:
+# Suite 149-220 s, in EINEM Lauf dreimal in den vierten Ausgang gelaufen
+# (Ralph einmal, Frank zweimal), zusammen 4,9480 USD = 32 % der Rollenkosten.
+# Die Rolle stand vor der Wahl zwischen Regelverletzung und Werkzeug-Timeout
+# und waehlte in drei von drei Faellen dieselbe Verletzung.
+#
+# BL-201 hatte dieselbe Bauform zweimal mit einer SCHAERFEREN Auflage
+# beantwortet. Das hier ist der Beleg, dass Schaerfe nicht hilft: Es ist kein
+# Disziplinproblem. Eine Auflage, die die Rolle nicht einhalten KANN, erzeugt
+# genau das Verhalten, das sie verbieten soll. Deshalb bekommt die Auflage eine
+# Zahl, die die Rolle im Werkzeug einstellen kann — und die Zahl steht im
+# Prompt, nicht nur in der Konfiguration.
+#
+# Default 600 s: grosszuegig gegenueber der 120-s-Wand des Werkzeugs und immer
+# noch eine Grenze. Wer laenger braucht, traegt es in team.config.sh ein.
+TEAM_SMOKE_TEST_TIMEOUT="${TEAM_SMOKE_TEST_TIMEOUT:-600}"
+
 # --- Abgeleitete Prompt-Bausteine (Starterkit) --------------------------------
 # Smoke-Test-Zeile für die bauenden Rollen. Ist kein Befehl konfiguriert, wird
 # der Schritt AUSDRÜCKLICH als offener Punkt benannt, statt still zu
@@ -63,8 +83,20 @@ if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
    Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe. Starte ihn
    NIEMALS als Hintergrund-Task und plane keinen Wakeup darauf: Diese Sitzung
    ist headless, es kommt keine Benachrichtigung, und du wartest bis zum
-   Zeitlimit auf ein Ereignis, das nicht eintreten kann."
-    SMOKE_SUFFIX=" Smoke-Test grün: ${TEAM_SMOKE_TEST}."
+   Zeitlimit auf ein Ereignis, das nicht eintreten kann.
+   Er darf dafür bis zu ${TEAM_SMOKE_TEST_TIMEOUT} Sekunden brauchen: Setze das
+   Zeitlimit deines Werkzeugs auf diesen Wert, statt in den Hintergrund
+   auszuweichen. Läuft er länger, ist das ein Befund für den Menschen —
+   melde ihn, weiche nicht aus."
+    # BL-207: Frank bekommt NUR diesen Nachsatz, nicht SMOKE_ZEILE — und er
+    # faehrt den Smoke-Test oefter als Ralph. Im Feld endeten 10 von 28
+    # Frank-Laeufen ohne Promise, bei 9 davon stand das Warten auf einen
+    # Hintergrundlauf woertlich im Log-Feld `result` (10,7249 USD an EINEM
+    # Tag). Bei ihm kostet der vierte Ausgang zusaetzlich einen
+    # Fehlversuch (.frank-attempts) und eskaliert ab dem dritten an Axel —
+    # das teure Modell wird also fuer einen Formfehler gerufen. Deshalb
+    # steht die Auflage hier ausgeschrieben statt nur bei Ralph.
+    SMOKE_SUFFIX=" Smoke-Test grün: ${TEAM_SMOKE_TEST}. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu ${TEAM_SMOKE_TEST_TIMEOUT} Sekunden brauchen, setze das Zeitlimit deines Werkzeugs auf diesen Wert. NIEMALS als Hintergrund-Task und kein Wakeup darauf: Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (BL-41)."
 else
     SMOKE_ZEILE="(Kein Smoke-Test konfiguriert — Schritt entfällt. Das Team arbeitet ohne Sicherheitsnetz; TEAM_SMOKE_TEST in team.config.sh nachtragen.)"
     SMOKE_SUFFIX=""
@@ -644,6 +676,42 @@ team_quittung_fehlt_melden() {
     return 0
 }
 
+# --- Laeuft der Verifikationsbefehl schon? (BL-207) ---------------------------
+# team_smoke_parallel_lauf
+#   0 = ein ZWEITER Lauf des Verifikationsbefehls ist nachweisbar
+#   1 = keiner nachweisbar (das schliesst "auf diesem Wirt nicht feststellbar"
+#       ein — im Zweifel bleibt es beim bisherigen Verhalten)
+#
+# WARUM ES SIE GIBT (Feld B, 2026-08-28): Die Selbstpruefung startete den
+# Verifikationsbefehl bedingungslos ein zweites Mal. Im Feld lief der
+# Hintergrund-pytest der Rolle noch, als die Selbstpruefung IHREN eigenen
+# startete. Zwei gleichzeitige Testlaeufe kollidieren (Datenbankdateien, Ports,
+# App-Nutzerverzeichnisse); die Selbstpruefung meldete daraufhin ROT fuer einen
+# Baum, der allein gefahren gruen war (199 passed, im Closeout nachgemessen) —
+# und schickte den Menschen per BL-61-Text ausdruecklich auf die falsche
+# Faehrte "Testaufbau". Wer ihr geglaubt und die Stufe neu gebaut haette,
+# haette 2,36 USD bezahlte, fertige Arbeit weggeworfen.
+#
+# Eine Selbstpruefung, die im Zweifel "rot" BEHAUPTET, ist schlimmer als eine,
+# die schweigt. Deshalb: erkannter Parallellauf ⇒ UNBEKANNT, nicht rot.
+#
+# Die gefundene Zeile wird mitgegeben (TEAM_SMOKE_PARALLEL_ZEILE), damit ein
+# Fehlalarm — ein Dauerlaeufer wie pytest-watch, der den Befehl in seiner
+# Kommandozeile traegt — in einem Blick als solcher erkennbar ist statt als
+# Raetsel.
+TEAM_SMOKE_PARALLEL_ZEILE=""
+team_smoke_parallel_lauf() {
+    local muster="${TEAM_SMOKE_TEST:-}" tabelle treffer
+    TEAM_SMOKE_PARALLEL_ZEILE=""
+    [ -z "$muster" ] && return 1
+    tabelle="$(ps -eo args= 2>/dev/null || ps ax 2>/dev/null || true)"
+    [ -z "$tabelle" ] && return 1
+    treffer="$(echo "$tabelle" | grep -F -- "$muster" | head -1 || true)"
+    [ -z "$treffer" ] && return 1
+    TEAM_SMOKE_PARALLEL_ZEILE="$treffer"
+    return 0
+}
+
 # --- Der vierte Ausgang, selbst geprüft (BL-41 automatisiert) -----------------
 # team_quittung_selbstpruefung <rolle> <stufe>
 #
@@ -721,6 +789,18 @@ team_quittung_selbstpruefung() {
     if [ -z "$smoke" ]; then
         echo "    ✗ Kein TEAM_SMOKE_TEST konfiguriert — ohne Verifikationsbefehl wird nicht" >&2
         echo "      automatisch quittiert." >&2
+        return 1
+    fi
+    # BL-207: Kein zweiter Lauf neben einen laufenden stellen. Zwei
+    #     gleichzeitige Testlaeufe kollidieren, und das Ergebnis waere eine
+    #     Eigenschaft der MASCHINE statt eine des Codes.
+    if team_smoke_parallel_lauf; then
+        echo "    ? Es läuft bereits ein Verifikationslauf — Ergebnis UNBEKANNT, nicht rot (BL-207)." >&2
+        echo "      Gefunden: $TEAM_SMOKE_PARALLEL_ZEILE" >&2
+        echo "      Ein zweiter Lauf daneben kollidiert (Datenbankdateien, Ports," >&2
+        echo "      Nutzerverzeichnisse) und meldete ROT für einen Baum, der allein gefahren" >&2
+        echo "      grün ist. Es wird deshalb NICHT automatisch quittiert und NICHTS behauptet." >&2
+        echo "      Miss von Hand nach, wenn der laufende Test fertig ist: $smoke" >&2
         return 1
     fi
     echo "    … Smoke-Test läuft ($smoke) …" >&2
@@ -883,6 +963,44 @@ team_fremd_ausfiltern() {
         done <<< "$fremd"
         [ "$behalten" -eq 1 ] && printf '%s\n' "$pfad"
     done <<< "$liste"
+    return 0
+}
+
+# team_eigene_pfade <pathspec…>
+#   Gibt die abweichenden Pfade unter <pathspec…> aus, die dieser Rolle
+#   GEHOEREN — fremde sind ausgefiltert. Leere Ausgabe = nichts Eigenes.
+#
+#   WARUM ES SIE GIBT (BL-206, Feld B): Der Commit-Block des Red-Team-Sweeps
+#   war die DRITTE Stelle mit derselben Zustaendigkeit und die einzige ohne
+#   den Filter. team_guard_verify und team_rollback_rolle rufen beide
+#   team_fremd_ausfiltern; der Sweep staged stattdessen `git add <testordner>`
+#   blanko — und `git add` auf einen Ordner nimmt JEDE untracked Datei darin
+#   mit, auch die fremde. Sie landet dann unter der Sweep-Botschaft, also
+#   unter einer Urheberschaft, die nicht stimmt. Woertlich die Bauform von
+#   BL-114 (dort war der `git clean` eingeschraenkt, das `git reset --hard`
+#   daneben nicht): zwei Stellen nachgezogen, die dritte nicht.
+#
+#   WARUM --untracked-files=all: `git status --porcelain` meldet ein untracked
+#   VERZEICHNIS als EINEN Eintrag mit Schraegstrich. Wer den blanko staged,
+#   hat wieder den Ordner adressiert statt der Datei — der Fix waere keiner.
+#   team_fremd_ausfiltern kennt die Ordner-Schreibweise auf der FREMD-Seite
+#   und faengt eine Datei auch unter einem fremden Ordnereintrag ab; die
+#   Aufloesung hier kostet also nichts und schliesst die Luecke.
+team_eigene_pfade() {
+    local roh eigene pfad
+    roh="$(git status --porcelain --untracked-files=all -- "$@" 2>/dev/null | cut -c4- | grep -v '^$' || true)"
+    [ -z "$roh" ] && return 0
+    eigene="$(team_fremd_ausfiltern "$roh")"
+    # Sichtbar machen statt still weglassen: Wer den Sweep-Commit liest, soll
+    # wissen, dass hier fremde Arbeit lag — und dass sie unangetastet blieb.
+    # Ein stilles Auslassen waere die Fehlerrichtung von BL-160.
+    while IFS= read -r pfad; do
+        [ -z "$pfad" ] && continue
+        if ! echo "$eigene" | grep -Fxq -- "$pfad"; then
+            echo "[guard] Nicht angefasst, lag vor dem Rollenstart im Baum (BL-206): $pfad" >&2
+        fi
+    done <<< "$roh"
+    echo "$eigene"
     return 0
 }
 
@@ -1194,6 +1312,17 @@ team_lock_ordner_nehmen() {
         fi
     fi
     printf '%s\n' "$$" > "$TEAM_LOCK_ORDNER/pid"
+    # BL-199: Zusaetzlich die WINDOWS-PID, wenn der Wirt eine hat. Sie ist das
+    # einzige Lebendigkeitsmerkmal, das die pwsh-Bahn auswerten KANN — `$$` ist
+    # eine MSYS-PID aus einem eigenen Prozessraum. Gemessen: Git-Bash meldete
+    # `$$` = 15946, `Get-Process -Id 15946` fand zeitgleich nichts; ueber
+    # /proc/<pid>/winpid dagegen findet PowerShell den Prozess (nachgemessen
+    # am 2026-08-28, Hin- und Rueckweg). Unter Linux gibt es die Datei nicht;
+    # dann bleibt es bei `pid`, und die pwsh-Seite meldet ehrlich "unbekannt"
+    # statt zu raten.
+    if [ -r "/proc/$$/winpid" ]; then
+        cat "/proc/$$/winpid" > "$TEAM_LOCK_ORDNER/winpid" 2>/dev/null || true
+    fi
     team_lock_aufraeumen_anmelden
     return 0
 }
@@ -1249,7 +1378,17 @@ team_lock() {
     export TEAM_LOCK_HELD=1
 }
 
-# team_pipeline_laeuft [wurzel]: Haelt gerade jemand die Sperre? (0 = ja)
+# team_pipeline_laeuft [wurzel]: Haelt gerade jemand die Sperre?
+#   0 = ja   1 = nein   2 = UNKLAR (BL-199)
+#
+# Der dritte Zustand ist der Inhalt von BL-199 und keine Bequemlichkeit: Es
+# gibt seit BL-190 ZWEI Sperrartefakte, und ihr Lebendigkeitsmerkmal ist nicht
+# auf jeder Bahn auswertbar. Wer daraus ein Ja/Nein presst, luegt in eine von
+# beiden Richtungen — und beide Luegen sind teuer: "idle" auf einen laufenden
+# Lauf ist ein Bericht, dem man nicht mehr glauben darf; "laeuft" auf einen
+# toten Rest ist der Dauer-Fehlalarm, den BL-190 gerade abgestellt hat.
+# Der Aufrufer entscheidet, was Vorsicht bei IHM heisst: der BL-10-Schutz im
+# Installer bricht bei 2 ab, der Statusbericht sagt "unbekannt".
 #
 # BL-190 ist eine GATTUNG, keine Stelle (BL-154): Die Frage "laeuft gerade eine
 # Pipeline?" wird an DREI Orten gestellt — hier, in `team-status.sh` (Zeile
@@ -1271,13 +1410,35 @@ team_pipeline_laeuft() {
     local wurzel="${1:-.}" pid
     if [ -d "$wurzel/$TEAM_LOCK_ORDNER" ]; then
         pid="$(cat "$wurzel/$TEAM_LOCK_ORDNER/pid" 2>/dev/null || true)"
-        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-            return 0
+        if [ -n "$pid" ]; then
+            # Lesbares eigenes Merkmal: Es wird ausgewertet, und sein
+            # Ergebnis gilt. Eine tote PID heisst verwaist — nicht unklar.
+            kill -0 "$pid" 2>/dev/null && return 0
+        elif [ -s "$wurzel/$TEAM_LOCK_ORDNER/winpid" ]; then
+            # BL-199: Kein lesbares `pid`, aber ein `winpid` — der Ordner
+            # stammt dann von einem Lauf, dessen Merkmal DIESE Bahn nicht
+            # auswerten kann (eine Windows-PID liegt ausserhalb des
+            # MSYS-Prozessraums, gemessen). "Verwaist" waere hier eine
+            # Behauptung, "gehalten" ebenfalls.
+            return 2
         fi
     fi
-    if [ -e "$wurzel/$TEAM_LOCK_DATEI" ] && command -v flock >/dev/null 2>&1 \
-       && ! flock -n "$wurzel/$TEAM_LOCK_DATEI" true 2>/dev/null; then
-        return 0
+    if [ -e "$wurzel/$TEAM_LOCK_DATEI" ]; then
+        # (a) Der eigene, kooperative Weg.
+        if command -v flock >/dev/null 2>&1 \
+           && ! flock -n "$wurzel/$TEAM_LOCK_DATEI" true 2>/dev/null; then
+            return 0
+        fi
+        # (b) BL-199: Dieselbe Datei haelt die pwsh-Bahn mit FileShare::None —
+        # eine Sperre, die das BETRIEBSSYSTEM durchsetzt und die `flock` nicht
+        # sieht. Gemessen: Ein Schreib-Oeffnen scheitert dann mit "Device or
+        # resource busy". Unter Linux setzt .NET FileShare nicht durch, dort
+        # gelingt das Oeffnen immer — die Probe ist also genau dort still, wo
+        # sie nichts zusichern koennte. In einer SUBSHELL, damit der Deskriptor
+        # 9 des Aufrufers (team_lock!) unangetastet bleibt.
+        if ! ( exec 9>>"$wurzel/$TEAM_LOCK_DATEI" ) 2>/dev/null; then
+            return 0
+        fi
     fi
     return 1
 }
