@@ -130,12 +130,33 @@ Denkbare Richtung: Pfade, die ausschließlich von Commits berührt werden, die
 statt gelöscht**. Bewusst als Vorschlag markiert — die Mustererkennung ist
 fragil, die Fehlerrichtung aber die richtige.
 
+### Solange Befund 2 offen ist: die Handregel gehört in die Vorlage
+
+`TEAM.md` hat den Block „⚠️ Zuerst: committen". Der regelt den Zeitpunkt
+**davor** und deckt Fall B nicht ab — dass ein Commit **während** des Laufs
+nicht schützt, steht dort nirgends. Vorschlag als eigener Abschnitt daneben:
+
+> **Während ein Lauf läuft, gehört Handarbeit nicht in diesen Arbeitsbaum.**
+> Der Guard merkt sich den Baumzustand beim **Rollenstart**. Was danach
+> entsteht, gilt für ihn als Werk der Rolle — und wird beim nächsten Rollback
+> zurückgenommen, **auch wenn du es committet hast**. Muss währenddessen etwas
+> geschrieben werden (Kit-Meldung, Notiz), dann in einem zweiten Klon, oder
+> warte den Lauf ab.
+
+**Warum das in die Kit-Vorlage muss und nicht ins Feld:** `--update` schreibt
+`TEAM.md` neu (`BL-58`, inzwischen auch bewusst so gewollt). Eine Handregel,
+die nur lokal steht, ist damit beim nächsten Update weg — und zwar
+stillschweigend. Jede Installation müsste sie selbst erfinden, und nach jedem
+Update erneut. Im Feld steht sie jetzt lokal, mit genau diesem Vorbehalt als
+Fußnote.
+
+Das ist die Zwischenlösung, nicht der Fix: Sobald Befund 2 entschieden ist,
+kann der Abschnitt wieder schrumpfen.
+
 ## Was ich schon versucht habe
 
 **Kein lokaler Fix**, bewusst: Beide Stellen liegen in `team/` und wären beim
-nächsten `--update` weg. Im Feld gilt stattdessen eine Handregel in `TEAM.md` —
-während ein Lauf läuft, gehört Handarbeit nicht in denselben Arbeitsbaum,
-sondern in einen zweiten Klon oder hinter das Laufende.
+nächsten `--update` weg. Im Feld gilt stattdessen die Handregel oben.
 
 **Verworfen: „kit-melden committet selbst."** Das war die naheliegende Antwort
 auf den Auslöser und wäre falsch gewesen — zweifach. `neu` legt einen
