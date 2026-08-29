@@ -46,6 +46,19 @@ richtig (BL-18), heißt hier aber: Das ganze frische Budget kann in einen Sweep
 laufen, den niemand bestellt hat, und die Fixphase steht danach wieder vor
 demselben Deckel wie vorher.
 
+**Nachgemessen (Closeout der Kaskade, gleicher Tag):** Der Fortsetzungslauf
+hat **2,2653 USD** gekostet und **null** Funde gebracht — er bestand fast
+vollstaendig aus den zwei Red-Team-Sweeps ueber Franks Fix-Commits. Das sind
+**27 %** der gesamten Fixphasen-Kosten dieser Kaskade (8,3047 USD). Zum
+Vergleich: Die eigentliche Restarbeit, wegen der fortgesetzt wurde, war eine
+leere Frank-Runde und der Abschlussbericht — beides kostenlos.
+
+Der Ausloeser auf unserer Seite war ein veraltetes `TEAM_BUDGET_USD` in der
+Shell (18 statt der vom Plan empfohlenen 20). Das ist unser Fehler und wird
+hier als eigene Auflage gefuehrt. Es aendert aber nichts am Befund, sondern
+zeigt nur, wie leicht er ausgeloest wird: Jeder Deckel, der einmal knapp
+unter den tatsaechlichen Laufkosten liegt, fuehrt in genau diesen Pfad.
+
 ## Wo es steckt
 
 `vollautomatik.sh` (Entrypoint, bash-Bahn; die pwsh-Bahn `vollautomatik.ps1`
