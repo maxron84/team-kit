@@ -105,6 +105,25 @@ abgerechneten.
 Richtung 2 ist die einzige, die beide Felder gleichzeitig bedient, ohne dass
 eines von beiden auf den nächsten Kit-Entscheid warten muss.
 
+## Verhaeltnis zur Meldung aus Feld E vom 2026-08-30
+
+Im Kit liegt bereits
+`2026-08-30-die-preistabellen-eichung-meldet-fehlalarm-bei-gemischter-5m.md`
+(Feld E). **Das ist ein anderer Fall, aber vermutlich dieselbe Wurzel** — beide
+gehoeren in einen Triage-Vorgang:
+
+| | Feld E, 2026-08-30 | hier, 2026-08-31 |
+|---|---|---|
+| Umfang | **2 von 140** Laeufen | **78 von 79** Laeufen |
+| Abweichung | 1,2 % und 3,2 %, gestreut | **33,3 %, konstant** |
+| Ursache dort | ein Lauf mit **gemischter** 5m/1h-Zusammensetzung, den `min()` ueber die beiden Reinformen nicht treffen kann | ein Basispreis, der um genau `2.00/3.00` danebenliegt |
+
+Feld E zeigt, dass die 5m/1h-Mehrdeutigkeit **innerhalb** eines Laufs
+Fehlalarme erzeugt. Diese Meldung zeigt, was passiert, wenn dieselbe
+Mehrdeutigkeit **zwischen zwei Feldern** als Preisfehler gedeutet und am
+Basispreis „repariert" wird: Das eine Feld wird gruen, das andere komplett rot.
+Wer nur einen der beiden Faelle behebt, hat die Klasse nicht erledigt.
+
 ## Was ich schon versucht habe
 
 Im Projekt lokal auf `3.00` zurückgesetzt, mit Kommentar am Eintrag (Anlass,
