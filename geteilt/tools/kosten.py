@@ -2675,10 +2675,25 @@ def _main(argv):
         # legitime benannte Kaskaden und werden bewusst gesetzt, also nie
         # gegen den Plan gehalten. Fehlt der Plan-Zeiger oder passt sein
         # Muster nicht, wird NICHT geraten (kaskade_aus_plan gibt None).
+        #
+        # BL-226 -- WOHER der Plan gelesen wird, entscheidet das LEDGER und
+        # nicht der Prozess. Der erste Wurf las `.ralph-plan` aus `repo`, also
+        # aus dem Arbeitsverzeichnis. In einem Feldprojekt mit laufender
+        # Kaskade hat das 25 fremde Testfaelle rot gemacht: Sie buchen in ein
+        # Wegwerf-Ledger unter /tmp und uebergeben dabei die Kaskadennummer
+        # ihres Szenarios (1, 3, 16) -- gegengehalten wurde der Plan des
+        # PROJEKTS (13). Zwei Dinge, die nichts miteinander zu tun haben.
+        # Der Plan gehoert zu dem Projekt, dessen Ledger geschrieben wird;
+        # liegt das Ledger woanders, gibt es hier keinen Sollwert und damit
+        # keine Gegenprobe. Die Wirkung im echten Closeout bleibt voll
+        # erhalten: Dort liegt `.budget-ledger` neben `.ralph-plan`.
+        ledger_pfad = pfad if os.path.isabs(pfad) or repo == "." \
+            else os.path.join(repo, pfad)
+        plan_repo = os.path.dirname(ledger_pfad) or "."
         if kaskade is None:
             kaskade = kaskade_aus_plan(repo)
         elif not trotzdem and str(kaskade).isdigit():
-            aus_plan = kaskade_aus_plan(repo)
+            aus_plan = kaskade_aus_plan(plan_repo)
             if aus_plan is not None and str(aus_plan) != str(kaskade):
                 print(
                     f"Fehler: .ralph-plan sagt Kaskade {aus_plan}, uebergeben "
@@ -2692,8 +2707,6 @@ def _main(argv):
         if not logs:
             logs = [logs_default]
 
-        ledger_pfad = pfad if os.path.isabs(pfad) or repo == "." \
-            else os.path.join(repo, pfad)
         # EIN Snapshot S1 fuer Zaehlen UND (optionales) Archivieren — der
         # HM-39/AX-4-Fix. Eine Datei, die NACH diesem glob() neu in logs
         # entsteht, ist weder in S1 noch in der Archiv-Menge; sie bleibt

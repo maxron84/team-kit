@@ -41,6 +41,36 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Changed
 
+- **Die Plan-Gegenprobe aus `BL-220` hielt die Kaskadennummer gegen den Plan
+  des ARBEITSVERZEICHNISSES statt gegen den des Projekts, dessen Ledger
+  geschrieben wird** (`BL-226`, gemeldet aus dem Feld beim ersten `--update`
+  nach der Auslieferung). Im Zielprojekt fielen daraufhin **25 Testfälle aus
+  sieben Dateien** — keiner davon hat mit `BL-220` zu tun: Sie buchen in ein
+  Wegwerf-Ledger unter `/tmp` und übergeben die Kaskadennummer ihres Szenarios
+  (1, 3, 16), gegengehalten wurde der Plan des Projekts (13), in dem pytest
+  zufällig lief.
+
+  Der Plan gehört zu dem Projekt, dessen Ledger geschrieben wird. Gelesen wird
+  er jetzt aus dem **Verzeichnis des Ledgers**; liegt das woanders, gibt es
+  keinen Sollwert und damit keine Gegenprobe. Die Zusicherung aus `BL-220`
+  bleibt vollständig: Im echten Closeout liegt `.budget-ledger` neben
+  `.ralph-plan` — mit absolutem wie mit relativem `--pfad`, beides als eigener
+  Fall abgesichert.
+
+  **Die zweite Hälfte wiegt schwerer, und sie ist der eigentliche Ertrag.**
+  `kit-test.sh` installiert in ein **frisches** Wegwerf-Repo: keine
+  `.ralph-plan`, kein `.ralph-state`, kein gewachsenes Ledger — also genau die
+  Zustände nicht, in denen ein Feldprojekt jeden Tag steht. Jeder Fix, der
+  Projektzustand liest, war damit strukturell ungeprüft: in der Installation
+  grün, im Feld rot. Schritt 4 fährt die Suite deshalb **ein zweites Mal**, mit
+  gesetztem `.ralph-plan` und `.ralph-state`. Geprüft wird die Gattung — »die
+  Suite in einem Projekt, das Zustand hat« —, nicht dieser eine Fall.
+
+  Regressionstest `test_bl226_der_plan_gehoert_zum_ledger.py`, **8 Fälle**.
+  Gegenprobe an der echten Feldlage gefahren: In einer Installation mit
+  `.ralph-plan` auf Kaskade 13 fallen gegen die ausgelieferte Fassung exakt die
+  25 gemeldeten Fälle, gegen die neue keiner.
+
 - **Vier Zahlen in der Doku standen falsch, und drei grüne Wächter hatten
   recht** (`BL-225`). Gefunden auf die Frage *„ist die Doku aktuell?"* — also
   durch Nachmessen, nicht durch einen roten Lauf. Die Wächter decken das

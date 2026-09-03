@@ -358,6 +358,37 @@ if [ "$RC" -ne 0 ]; then
     exit "$RC"
 fi
 
+# BL-226: Derselbe Lauf noch einmal, aber gegen ein Projekt MIT LAUFENDER
+# KASKADE. Das ist die Luecke, durch die BL-220 ins Feld gekommen ist:
+#
+# Bis hierher lief die Suite ausschliesslich in einer FRISCHEN Installation.
+# Dort gibt es keine `.ralph-plan`, keinen `.ralph-state`, kein gewachsenes
+# Ledger — also genau die Zustaende nicht, in denen ein Feldprojekt jeden Tag
+# steht. Ein Fix, der Projektzustand liest, ist hier deshalb strukturell
+# ungeprueft: BL-220 hielt die uebergebene Kaskadennummer gegen `.ralph-plan`,
+# war in der Wegwerf-Installation gruen, und legte beim ersten `--update` in
+# einem echten Projekt 25 Testfaelle um.
+#
+# Der Zustand wird MINIMAL gesetzt und wieder weggeraeumt: Was ein
+# Feldprojekt hat, ist der Zeiger, nicht ein ganzer Verlauf. Die Plandatei
+# wird mit angelegt, damit der Zeiger nicht ins Leere zeigt.
+mkdir -p plans
+: > "plans/ralph-kaskade-13-selbsttest.md"
+echo "plans/ralph-kaskade-13-selbsttest.md" > .ralph-plan
+echo "13" > .ralph-state
+RC=0
+./team-test.sh "${PYTEST_ARGS[@]}" >/tmp/team-kit-kaskadenlauf.log 2>&1 || RC=$?
+rm -f .ralph-plan .ralph-state "plans/ralph-kaskade-13-selbsttest.md"
+if [ "$RC" -ne 0 ]; then
+    rot "  ✗ Die Suite ist rot, sobald eine Kaskade laeuft (Exit $RC)."
+    echo "      Ein Fix, der Projektzustand liest, war bis BL-226 hier" >&2
+    echo "      strukturell ungeprueft — genau so kam BL-220 ins Feld." >&2
+    echo "      Log: /tmp/team-kit-kaskadenlauf.log" >&2
+    tail -25 /tmp/team-kit-kaskadenlauf.log >&2
+    exit "$RC"
+fi
+gruen "  ✓ Suite bleibt gruen, wenn .ralph-plan und .ralph-state gesetzt sind"
+
 # Die beiden Zahlen, die im README stehen — nachgerechnet statt geglaubt.
 # "62 Testdateien" und "369 Tests" standen dort, waehrend es 65 und 476 waren.
 # Eine Zahl, die niemand nachrechnet, veraltet lautlos und liest sich trotzdem
