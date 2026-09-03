@@ -1358,7 +1358,7 @@ def preise_nachrechnen(logs):
         # mit den richtigen Schluesseln reproduzieren ALLE 920 den
         # abgerechneten Betrag auf ein Promille; mit den alten war es keiner.
         nenner = gemeldet if gemeldet else 1.0
-        abweichungen = []
+        grenzen = []
         for art in ("cache_write_1h", "cache_write_5m"):
             gerechnet = 0.0
             vollstaendig = True
@@ -1370,7 +1370,7 @@ def preise_nachrechnen(logs):
                 gerechnet += kosten_aus_tokens(_modelusage_kuebel(u, art), preis)
             if not vollstaendig:
                 break
-            abweichungen.append((abs(gerechnet - gemeldet) / nenner, gerechnet))
+            grenzen.append(gerechnet)
         if not vollstaendig:
             continue
         # Die KLEINERE der beiden Abweichungen zaehlt — und das ist keine
@@ -1400,9 +1400,82 @@ def preise_nachrechnen(logs):
         # verstellte Preistabelle wird bei 920 von 920 Laeufen erkannt, eine um
         # 20 % verstellte bei 907. Die Annahme betrifft nur EINEN Kuebel; der
         # Basispreis, um den es bei einer Preisaenderung geht, steckt in allen.
-        rel, gerechnet = min(abweichungen)
+        #
+        # BL-218: Bis 2.13.1 stand hier `min(abweichungen)` — die BESSERE der
+        # beiden Reinformen. Das ist genau dann falsch, wenn ein Lauf beide
+        # Laufzeiten enthaelt: Seine abgerechnete Summe liegt ZWISCHEN den
+        # Reinformen und trifft keine von beiden. Im Feld hat das zwei von 140
+        # Laeufen als "Preistabelle stimmt nicht mehr" gemeldet (1,2 % und
+        # 3,2 %); nach dem 1h-Anteil aufgeloest ging beides exakt auf (77 %
+        # bzw. 74 %). Der Waechter verbot damit eine RICHTIGE Buchung — und
+        # die Zahl waechst monoton, weil logs_einsammeln() auch das Archiv
+        # liest und ein einmal abweichender Altlauf fuer immer im Nenner
+        # bleibt.
+        #
+        # Deshalb wird jetzt das INTERVALL geprueft statt eines Punktes: Die
+        # Kosten sind im 1h-Anteil linear, also ist jede Mischung eine
+        # Konvexkombination der beiden Reinformen. Ein Betrag INNERHALB der
+        # Grenzen ist erklaerbar und damit kein Befund; nur ein Betrag
+        # AUSSERHALB beweist eine falsche Tabelle.
+        #
+        # Was das kostet, ehrlich benannt: Der Basispreis skaliert BEIDE
+        # Grenzen, ein Betrag ausserhalb bleibt also ausserhalb — aber eine
+        # Preisaenderung, die kleiner ist als die halbe Intervallbreite, kann
+        # jetzt innerhalb landen. Die Intervallbreite ist die 1h/5m-Differenz
+        # EINES Kuebels; sie ist gross genug, dass das bei
+        # cache-write-lastigen Laeufen vorkommen kann. Der Tausch ist trotzdem
+        # richtig herum: Ein Waechter mit Fehlalarmen wird abgeschaltet
+        # (BL-14), und ein abgeschalteter Waechter faengt gar nichts mehr.
+        lo, hi = min(grenzen), max(grenzen)
+        if lo <= gemeldet <= hi:
+            rel, gerechnet = 0.0, gemeldet
+        else:
+            gerechnet = lo if gemeldet < lo else hi
+            rel = abs(gerechnet - gemeldet) / nenner
         befunde.append((pfad, gemeldet, gerechnet, rel))
     return befunde
+
+
+def preis_versatz(logs, schief, gesamt):
+    """Streuung oder Versatz? — die Frage, die vor dem Buchungsverbot steht.
+
+    BL-213/BL-218: Der Waechter meldete bisher jede Abweichung als
+    "Preistabelle stimmt nicht mehr". Das ist eine Aussage ueber die TABELLE,
+    getroffen aus dem Verhalten EINZELNER Laeufe. Im Feld hiess das zweimal
+    dasselbe: 103 von 104 Laeufen reproduzierten sich exakt, einer nicht —
+    und der Rat ("Tabelle nachziehen") haette 103 richtige Laeufe falsch
+    gemacht.
+
+    Ein falscher Tabellensatz trifft JEDEN Lauf des betroffenen Modells, nicht
+    einen. Zwei unabhaengige Belege dafuer:
+
+      1. `preis_diagnose` rechnet den impliziten Satz aus den Einmodell-Laeufen
+         zurueck. Liegt der Tabellenwert INNERHALB der so belegten Spanne, ist
+         die Tabelle nicht die plausible Ursache — ein einzelner Ausreisser
+         weitet die Spanne, ein Versatz verschiebt sie. Genau dieser
+         Widerspruch (Diagnose schweigt, Zeile darueber behauptet "veraltet")
+         stand im Feld stumm in der Ausgabe.
+      2. Der ANTEIL der abweichenden Laeufe. Er traegt auch dort, wo es keine
+         Einmodell-Laeufe gibt und die Diagnose deshalb nichts sagen kann.
+
+    Rueckgabe: (ist_versatz, [modell, …]) — die Modelle, deren Tabellensatz
+    ausserhalb der belegten Spanne liegt.
+    """
+    verdaechtig = []
+    diagnose_traegt = False
+    for modell, (dlo, dhi, tabelle, _n) in preis_diagnose(logs).items():
+        if tabelle is None:
+            continue
+        diagnose_traegt = True
+        if not (dlo <= tabelle <= dhi):
+            verdaechtig.append(modell)
+    if verdaechtig:
+        return True, sorted(verdaechtig)
+    # Ohne belastbare Diagnose bleibt der Anteil. Eine Mehrheit abweichender
+    # Laeufe ist kein Ausreisser mehr — im Feld waren es 78 von 79 (BL-211).
+    if not diagnose_traegt and gesamt and len(schief) > gesamt / 2:
+        return True, []
+    return False, []
 
 
 def preis_diagnose(logs):
@@ -2175,14 +2248,22 @@ def _main(argv):
 
         # ZUERST die Gegenprobe, dann die Zahl. Andersherum liest der Mensch
         # die Summe und ueberblaettert die Warnung darunter.
-        befunde = preise_nachrechnen(logs_einsammeln("."))
-        schief = [b for b in befunde if b[3] > PREIS_TOLERANZ]
+        eich_logs = logs_einsammeln(".")
+        befunde = preise_nachrechnen(eich_logs)
+        abweichend = [b for b in befunde if b[3] > PREIS_TOLERANZ]
+        # BL-213/BL-218: Erst entscheiden, WORUEBER der Befund etwas aussagt.
+        # Ein Buchungsverbot ist nur dann richtig, wenn die TABELLE die
+        # plausible Ursache ist — sonst blockiert es eine Buchung, die mit
+        # der Tabelle nichts zu tun hat.
+        versatz, verdaechtige_modelle = preis_versatz(
+            eich_logs, abweichend, len(befunde)) if abweichend else (False, [])
+        schief = abweichend if versatz else []
         if befunde:
-            if schief:
-                print(f"  ! Preistabelle stimmt nicht mehr: {len(schief)} von "
-                      f"{len(befunde)} nachgerechneten Laeufen weichen ab.",
+            if versatz:
+                print(f"  ! Preistabelle stimmt nicht mehr: {len(abweichend)} "
+                      f"von {len(befunde)} nachgerechneten Laeufen weichen ab.",
                       file=sys.stderr)
-                for pfad, gemeldet, gerechnet, rel in schief[:3]:
+                for pfad, gemeldet, gerechnet, rel in abweichend[:3]:
                     print(f"      {os.path.basename(pfad)}: abgerechnet "
                           f"{gemeldet:.4f}, gerechnet {gerechnet:.4f} "
                           f"({rel * 100:.1f} % daneben)", file=sys.stderr)
@@ -2190,7 +2271,7 @@ def _main(argv):
                 # steht der Betreiber vor einer Tabelle mit elf Saetzen und
                 # weiss nur, dass einer davon falsch ist.
                 for modell, (lo, hi, tabelle, n) in sorted(
-                        preis_diagnose(logs_einsammeln(".")).items()):
+                        preis_diagnose(eich_logs).items()):
                     if tabelle is None:
                         continue
                     if lo <= tabelle <= hi:
@@ -2207,6 +2288,24 @@ def _main(argv):
                 print("    Die Zahl unten ist damit UNGEEICHT. Preistabelle in "
                       "kosten.py nachziehen, bevor du sie buchst.",
                       file=sys.stderr)
+            elif abweichend:
+                # Streuung, kein Versatz: Die Tabelle traegt, einzelne Logs
+                # reproduzieren sich nicht. Das ist eine Aussage ueber DIESE
+                # Logs — nicht ueber die Tabelle, und kein Grund, die aus dem
+                # TRANSKRIPT stammende Zahl unten zu verwerfen.
+                print(f"  ~ {len(abweichend)} von {len(befunde)} "
+                      f"nachgerechneten Laeufen reproduzieren sich nicht — "
+                      f"die Preistabelle ist dafuer NICHT die Ursache "
+                      f"(BL-213/BL-218):", file=sys.stderr)
+                for pfad, gemeldet, gerechnet, rel in abweichend[:3]:
+                    print(f"      {os.path.basename(pfad)}: abgerechnet "
+                          f"{gemeldet:.4f}, erklaerbar bis {gerechnet:.4f} "
+                          f"({rel * 100:.1f} % daneben)", file=sys.stderr)
+                print("    Ein falscher Tabellensatz traefe JEDEN Lauf des "
+                      "Modells, nicht einzelne; die Rueckrechnung der "
+                      "Einmodell-Laeufe deckt die Tabelle. Die Zahl unten "
+                      "bleibt geeicht — die genannten Logs sind verdaechtig, "
+                      "nicht die Tabelle.", file=sys.stderr)
             else:
                 print(f"  ✓ Preistabelle geeicht an {len(befunde)} "
                       f"abgerechneten Laeufen dieses Projekts")

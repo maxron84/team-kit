@@ -216,6 +216,44 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   **argumentlose** Aufruf bleibt unangetastet — davon hängen die
   Bedienanleitung und die Abschlussausgabe der Vollautomatik ab.
 
+- **Die Eichung prüft ein INTERVALL statt eines Punktes — und unterscheidet
+  Streuung von Versatz** (`BL-218` aus `Feld E` und `BL-213` aus `Feld B`,
+  dieselbe Stelle, dieselbe Fehlerrichtung). `modelUsage` führt die
+  Cache-Erstellung als **eine** Summe ohne 5m/1h-Aufteilung; weil die Sätze
+  verschieden sind (Faktor 2,00 gegen 1,25), nahm `preise_nachrechnen()` die
+  bessere der beiden **Reinformen**. Ein Lauf mit **gemischter**
+  Zusammensetzung liegt zwischen beiden und traf keine — im Feld „2 von 140
+  weichen ab" (1,2 % und 3,2 %), Exit 2, Buchungsverbot. Nach dem 1h-Anteil
+  aufgelöst ging beides exakt auf (77 % und 74 %), und die eingebaute
+  Modell-Diagnose nannte folgerichtig **keine** schiefe Zeile: Sie schwieg,
+  während die Zeile darüber „Preistabelle stimmt nicht mehr" behauptete.
+
+  **Der verworfene Betrag stammt gar nicht aus dem Log, sondern aus dem
+  Transkript** — und das führt `cache_write_5m` und `cache_write_1h` getrennt.
+  Der Wächter hatte schlechtere Daten als die Zahl, die er verwarf. Dazu wächst
+  die Zahl monoton: `logs_einsammeln()` liest auch das Archiv, aus „2 von 140"
+  wird „10 von 300", und irgendwann ist der Wächter dauerhaft rot (`BL-14`).
+
+  Zwei Änderungen: (1) Die Kosten sind im 1h-Anteil **linear**, jede Mischung
+  ist also eine Konvexkombination der Reinformen — ein Betrag **innerhalb** der
+  Grenzen ist erklärbar und kein Befund, nur einer **außerhalb** beweist eine
+  falsche Tabelle. (2) Neu ist `preis_versatz()`: Ein falscher Tabellensatz
+  trifft **jeden** Lauf des Modells, nicht einen. Deckt die aus den
+  Einmodell-Läufen zurückgerechnete Spanne den Tabellenwert, ist die Tabelle
+  nicht die Ursache — dann werden die Läufe als **verdächtig** benannt und die
+  Buchung **nicht** blockiert. Das ist der Fall aus `Feld B`: 103 von 104
+  Läufen reproduzierten sich exakt, und der Rat „Tabelle nachziehen" hätte
+  103 richtige Läufe falsch gemacht.
+
+  **Was das kostet, gemessen und benannt:** Der Basispreis skaliert beide
+  Grenzen, ein Betrag außerhalb bleibt außerhalb — aber eine Preisänderung
+  unterhalb der halben Intervallbreite kann jetzt innerhalb landen. Im Fixture
+  sinkt die Trefferzahl bei ±5 % und ±10 % von 5 auf 3 von 5 Läufen. Die
+  Zusicherung, auf die es ankommt, hält bei allen fünf geprüften
+  Verstellungen: Die verstellte Tabelle wird weiter als **Tabellenfehler**
+  erkannt und blockiert die Buchung — das steht seit diesem Eintrag mit unter
+  Test, statt nur der Zähler.
+
 - **Kaskaden-Plandateien heißen künftig `team-kaskade-N-<thema>.md` — und der
   Weg dorthin war ein anderer als gedacht** (`BL-202`, gemeldet von `Feld B`;
   die Prämissen-Korrektur ist `BL-209`, Kit-eigener Fund). Der alte Name nennt

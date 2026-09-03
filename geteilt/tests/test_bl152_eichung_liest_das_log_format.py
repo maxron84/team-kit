@@ -244,11 +244,34 @@ def test_der_adapter_liest_camelcase_und_nicht_snake_case():
 # Feldmessung. Ihn zu verschweigen waere schlimmer als ihn zu tragen: Die
 # Warnung feuert weiterhin, weil sie an "N von M weichen ab" haengt und nicht
 # an "alle".
+# NACHTRAG BL-218 — die Zahlen unten sind gesunken, und das ist der bezahlte
+# Preis des Fixes, kein Regress:
+#
+#     +5 %   5 -> 3        +20 %  5 -> 5
+#     +10 %  5 -> 3        -20 %  4 -> 4
+#     -10 %  5 -> 3
+#
+# `preise_nachrechnen` prueft seit BL-218 das INTERVALL zwischen den beiden
+# Reinformen statt der besseren von beiden — sonst meldete jeder Lauf mit
+# GEMISCHTER 5m/1h-Zusammensetzung eine Abweichung, obwohl die Tabelle stimmt
+# (im Feld 2 von 140, Exit 2, Buchungsverbot fuer eine richtige Buchung).
+#
+# Die beiden Laeufe, die jetzt durchrutschen, sind die zwei cache-schwersten
+# Mehrmodell-Laeufe des Fixtures: Bei ihnen ist das Intervall breiter als die
+# Preisverstellung, der abgerechnete Betrag liegt also innerhalb des
+# Erklaerbaren. Das ist nicht wegzurechnen — `modelUsage` traegt die
+# Aufteilung nicht, und ohne sie IST der Betrag erklaerbar.
+#
+# WAS DESHALB MITGEPRUEFT WIRD: die Zusicherung, auf die es ankommt. Nicht
+# "wieviele Logs weichen ab", sondern "wird die verstellte Tabelle als
+# TABELLENFEHLER erkannt und blockiert die Buchung". Diese Haelfte haelt bei
+# allen fuenf Verstellungen — der Zaehler ist ein Anzeiger, `preis_versatz`
+# ist der Vertrag.
 @pytest.mark.parametrize("faktor,name,mindestens", [
-    (1.05, "+5 %", 5),
-    (1.10, "+10 %", 5),
+    (1.05, "+5 %", 3),
+    (1.10, "+10 %", 3),
     (1.20, "+20 %", 5),
-    (0.90, "-10 %", 5),
+    (0.90, "-10 %", 3),
     (0.80, "-20 %", 4),
 ])
 def test_eine_veraltete_preistabelle_wird_weiterhin_erkannt(
@@ -262,13 +285,22 @@ def test_eine_veraltete_preistabelle_wird_weiterhin_erkannt(
     verstellt = {k: v * faktor for k, v in
                  kosten.PREIS_INPUT_USD_PRO_MTOK.items()}
     monkeypatch.setattr(kosten, "PREIS_INPUT_USD_PRO_MTOK", verstellt)
-    befunde = kosten.preise_nachrechnen(_logs_schreiben(tmp_path, ECHTE_LAEUFE))
+    logs = _logs_schreiben(tmp_path, ECHTE_LAEUFE)
+    befunde = kosten.preise_nachrechnen(logs)
     schief = [b for b in befunde if b[3] > kosten.PREIS_TOLERANZ]
     assert len(schief) >= mindestens, (
         f"Eine um {name} verstellte Preistabelle wurde nur bei "
         f"{len(schief)} von {len(befunde)} Laeufen bemerkt (erwartet: "
         f"mindestens {mindestens}). Die Wahl der guenstigeren Cache-Annahme "
         "darf den Waechter nicht weiter entschaerfen als gemessen.")
+    versatz, modelle = kosten.preis_versatz(logs, schief, len(befunde))
+    assert versatz, (
+        f"BL-218/BL-213: Eine um {name} verstellte Tabelle wird nicht mehr "
+        "als TABELLENFEHLER erkannt — dann bleibt die Buchung erlaubt, und "
+        "der Waechter ist wirkungslos geworden. Das ist die Zusicherung, "
+        f"nicht der Zaehler oben. (schief: {len(schief)}/{len(befunde)})")
+    assert modelle, \
+        "und er muss weiter sagen, WELCHER Satz danebenliegt (BL-166)"
 
 
 def test_beide_cache_laufzeiten_werden_gebraucht(tmp_path):
