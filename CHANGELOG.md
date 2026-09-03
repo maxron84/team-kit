@@ -143,6 +143,79 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`--rollen-abschluss` bucht eine erkannte Fehlzuordnung nicht mehr, sondern
+  bricht ab** (`BL-221`, gemeldet von `Feld E`). `logs_vor_kaskadenbeginn()`
+  erkannte den Fall zuverlässig und nannte die richtige Abhilfe im Klartext
+  (`--kaskade vor-N`) — und das Werkzeug tat danach das Gegenteil: Es buchte
+  die fremden Logs unter der genannten Nummer **und archivierte sie im selben
+  Zug weg**. Der Zustand danach war schlechter als vorher: Die Kosten standen
+  unter der falschen Kaskade, **und** die Belege waren fort, sodass ein
+  zweiter Aufruf sie nicht mehr fand. Die Korrektur war Handarbeit am Ledger —
+  Zeile teilen, Beträge neu rechnen, Notiz nachziehen —, also genau das, was
+  das Ledger verhindern soll; wer sie unterließ, hatte eine Fehlzuordnung, die
+  danach in **keiner** Prüfung mehr sichtbar war (`--ledger-pruefen` hält nur
+  die noch **unarchivierten** Rohlogs gegen das Ledger).
+
+  **Der Fall ist der Regelfall, nicht der Ausreißer:** Zwischen zwei Kaskaden
+  liegen Out-of-Loop-Fixe, und ein Frank-Lauf, der nach der letzten Buchung
+  und vor dem nächsten Kaskadenbeginn endet, fällt zwangsläufig in diese
+  Lücke — im Feld endete er um 23:07, der Kaskadenbeginn war 23:18.
+
+  Jetzt: **Exit 1 vor dem Buchen und vor dem Archivieren**, der Befund als
+  `WARNUNG:` statt `Hinweis:` (von den typisch sieben gutartigen
+  `[Hinweis]`-Zeilen eines Laufs war er nicht zu unterscheiden), und
+  `--auch-aeltere` als benannte Übersteuerung für den Fall, dass die Zuordnung
+  wirklich stimmt. **Die Lehre, eine Ebene höher:** Ein Werkzeug, das eine
+  Fehlzuordnung sicher genug erkennt, um sie zu benennen, darf sie nicht
+  ausführen.
+
+- **`--rollen-abschluss` hält die übergebene Nummer gegen `.ralph-plan`**
+  (`BL-220`, gemeldet von `Feld E`). Im Feld wurde für `<kaskade>` die
+  **Stufennummer** eingesetzt (der `RALPH_CAP`, 59) statt der Kaskadennummer
+  (11) — beide stehen im Plankopf direkt untereinander, beide sind zweistellig,
+  und die Bedienung nannte den Parameter nur `<kaskade>`. Gebucht wurden zwei
+  Zeilen mit korrekten Beträgen unter einer Kaskade, die es nicht gibt.
+
+  **Nichts hat das gemeldet:** Ledger in sich stimmig, `--ledger-pruefen` ohne
+  Befund, `--budget` plausibel. Aufgefallen ist es erst, als jemand
+  `ledger --kaskade 11` rief und nichts zurückbekam. Der Beweis kam vom Prüfer
+  selbst: Nach der Handkorrektur meldete er sofort **beide** echten Lücken —
+  sie waren die ganze Zeit wahr, und unter `59` hat er zu Kaskade 11
+  vollständig geschwiegen, weil es zu Kaskade 11 nichts gab.
+
+  Der Riegel greift **nur bei einer rein numerischen Übergabe**: `vor-10` und
+  andere benannte Kaskaden werden bewusst gesetzt und nie gegen den Plan
+  gehalten. Fehlt der Plan-Zeiger, wird **nicht geraten**. Übersteuerung:
+  `--trotzdem`. Beide Verben (`rollen-abschluss` **und** `ralph-abschluss`)
+  tragen den Riegel — einer allein ließe die Hälfte der Fehlbuchung durch
+  (`BL-4`). Ausdrücklich **nicht** gebaut: eine Beschränkung des Feldes auf
+  Zahlen — sie hätte diesen Fall nicht gefangen und die benannten Kaskaden
+  kaputtgemacht.
+
+- **`team-status` weist unbekannte Optionen zurück, statt Erfolg zu melden**
+  (`BL-222`, gemeldet von `Feld E`; beide Bahnen). Der Dispatcher endete mit
+  einem blanken „sonst zeige den Status" und fing damit **jedes** unbekannte
+  Argument — `./team-status.sh --hilfe` und `--voelliger-unsinn-xyz` lieferten
+  beide die volle Statusausgabe und Exit `0`.
+
+  **Der Schaden war nicht die fehlende Hilfe, sondern das falsche
+  Erfolgssignal:** Alle schreibenden Verben dieses Skripts sind
+  Kostenbuchungen mit langen, leicht zu verfehlenden Namen. Ein fehlendes `s`
+  in `--rollen-abschluss`, ein deutsches `ß`, `--ledger-pruefe` — es buchte
+  nichts, druckte eine plausible Statusausgabe und endete mit `0`. Wer das in
+  einer Sequenz rief, sah Zeilen vorbeiziehen und hakte den Schritt ab.
+  Dieselbe Ausgangslage wie `BL-165` (im Feld 43,90 USD an einem Tag), nur
+  meldete das Werkzeug diesmal aktiv Erfolg. Das Skript konnte es an anderer
+  Stelle längst besser — `status_rollen_abschluss` wies einen unbekannten
+  Buchungsmodus namentlich zurück; die Zurückweisung fehlte nur auf der
+  obersten Ebene, wo sie am meisten trüge.
+
+  Neu: `--hilfe`/`--help`/`-h` gibt den **Dateikopf** aus (keine zweite Fassung
+  daneben, dieselbe Bauart wie `install.sh --hilfe`), jede nicht erkannte
+  Option endet mit **Exit 2** und einer Meldung auf stderr, und der
+  **argumentlose** Aufruf bleibt unangetastet — davon hängen die
+  Bedienanleitung und die Abschlussausgabe der Vollautomatik ab.
+
 - **Kaskaden-Plandateien heißen künftig `team-kaskade-N-<thema>.md` — und der
   Weg dorthin war ein anderer als gedacht** (`BL-202`, gemeldet von `Feld B`;
   die Prämissen-Korrektur ist `BL-209`, Kit-eigener Fund). Der alte Name nennt

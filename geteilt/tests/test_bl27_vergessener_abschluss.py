@@ -199,6 +199,15 @@ def test_log_von_vor_dem_kaskadenbeginn_wird_gemeldet(tmp_path):
 
 
 def test_cli_nennt_das_zu_alte_log_beim_buchen(tmp_path):
+    """BL-45 nannte den Befund, BL-221 macht ihn wirksam.
+
+    Bis 2.13.1 stand hier `assert ergebnis.returncode == 0` samt der Zeile
+    "Kein Abbruch: gebucht wird trotzdem, der Mensch entscheidet" — ein
+    gruener Test, der die Fehlbuchung FESTSCHRIEB. Genau diese Bauart ist
+    schon einmal aufgefallen (BL-143: `auth == "api"` als Zusicherung). Der
+    Mensch KANN an dieser Stelle nicht entscheiden: Wenn er den Hinweis
+    liest, ist gebucht und archiviert.
+    """
     repo = _git_repo(tmp_path)
     _kaskade_anlegen(repo, "28")
     beginn = kosten.kaskade_beginn("28", str(repo))
@@ -209,16 +218,49 @@ def test_cli_nennt_das_zu_alte_log_beim_buchen(tmp_path):
     ergebnis = subprocess.run(
         [sys.executable, str(kit_pfad("tools", "kosten.py")),
          "rollen-abschluss", "--kaskade", "28", "--domaene", "produkt",
+         "--archivieren",
+         "--logs", str(repo / ".team-logs"),
+         "--pfad", str(repo / ".budget-ledger"), "--repo", str(repo)],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        env=dict(os.environ, TEAM_DOMAENEN="produkt"))
+    assert ergebnis.returncode != 0, \
+        "ein erkannter Fehlgriff darf nicht wie ein gelungener Abschluss enden"
+    assert "AELTER als der Beginn" in ergebnis.stderr
+    assert "axel-out-of-loop.json" in ergebnis.stderr
+    assert "vor-N" in ergebnis.stderr, \
+        "die Meldung muss den Ausweg nennen, nicht nur das Problem"
+    # NICHTS gebucht ...
+    assert not [z for z in kosten.ledger_zeilen(str(repo / ".budget-ledger"))
+                if z["rolle"] == "roles"]
+    # ... und NICHTS archiviert: Der Waechter zieht seine zweite Quelle genau
+    # aus diesen Dateien, und die Korrektur von Hand braucht sie auch.
+    assert (repo / ".team-logs" / "axel-out-of-loop.json").exists()
+    assert (repo / ".team-logs" / "harry.json").exists()
+    assert not list((repo / ".team-logs" / "archiv").glob("*.json"))
+
+
+def test_auch_aeltere_bucht_nach_ausdruecklicher_ansage(tmp_path):
+    """Die Gegenrichtung — ohne benannte Uebersteuerung waere der Riegel eine
+    Sackgasse. Gehoeren die Logs doch zu dieser Kaskade, bucht
+    `--auch-aeltere` sie mit, und der Befund bleibt trotzdem stehen."""
+    repo = _git_repo(tmp_path)
+    _kaskade_anlegen(repo, "28")
+    beginn = kosten.kaskade_beginn("28", str(repo))
+    _log(repo / ".team-logs", "axel-out-of-loop.json", 4.2560,
+         mtime=beginn - 3600)
+    _log(repo / ".team-logs", "harry.json", 1.0, mtime=beginn + 60)
+
+    ergebnis = subprocess.run(
+        [sys.executable, str(kit_pfad("tools", "kosten.py")),
+         "rollen-abschluss", "--kaskade", "28", "--domaene", "produkt",
+         "--auch-aeltere",
          "--logs", str(repo / ".team-logs"),
          "--pfad", str(repo / ".budget-ledger"), "--repo", str(repo)],
         capture_output=True, text=True, encoding="utf-8", errors="replace",
         env=dict(os.environ, TEAM_DOMAENEN="produkt"))
     assert ergebnis.returncode == 0, ergebnis.stderr
-    assert "AELTER als der Beginn" in ergebnis.stderr
-    assert "axel-out-of-loop.json" in ergebnis.stderr
-    assert "vor-N" in ergebnis.stderr, \
-        "die Meldung muss den Ausweg nennen, nicht nur das Problem"
-    # Kein Abbruch: gebucht wird trotzdem, der Mensch entscheidet.
+    assert "AELTER als der Beginn" in ergebnis.stderr, \
+        "die Uebersteuerung darf den Befund nicht stumm stellen"
     zeilen = [z for z in kosten.ledger_zeilen(str(repo / ".budget-ledger"))
               if z["rolle"] == "roles"]
     assert len(zeilen) == 1

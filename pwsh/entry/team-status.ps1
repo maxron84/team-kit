@@ -9,10 +9,15 @@
            .\team-status.cmd --budget   Kumulierter Kontostand (Ledger + Logs)
            .\team-status.cmd --architekt-abschluss <USD> <domaene> ["<notiz>"]
            .\team-status.cmd --akteur-abschluss <rolle> <auth> <USD> <domaene> ["<notiz>"]
-           .\team-status.cmd --rollen-abschluss <kaskade> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"] [--addieren|--ersetzen]
+           .\team-status.cmd --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere]
            .\team-status.cmd --ledger-pruefen [--kaskade N]
            .\team-status.cmd --altlast [N]
            .\team-status.cmd --beutebuch-archivieren [--dry-run]
+           .\team-status.cmd --hilfe    Diesen Kopf ausgeben (auch --help, -h)
+
+  Jede NICHT erkannte Option endet mit Exit 2 und einer Meldung auf stderr
+  (BL-222) — ein vertipptes Buchungsverb darf nicht wie ein erfolgreicher
+  Statusaufruf aussehen. Ohne Argument bleibt es bei der Momentaufnahme.
 #>
 $ErrorActionPreference = 'Continue'
 # BL-122: Seit PowerShell 7.4 ist $PSNativeCommandUseErrorActionPreference
@@ -327,12 +332,16 @@ function Status-RollenAbschluss {
       BL-34: Die beiden Zeilen bekommen GETRENNTE Notizen. Fehlt die Bau-Notiz,
       wird sie aus dem Plannamen ABGELEITET — der Text des Menschen wird nicht
       mehr auf eine Zeile kopiert, die er nicht beschreibt.
+
+      BL-220/BL-221: kosten.py kennt zwei weitere Schalter (--trotzdem,
+      --auch-aeltere). Sie werden hier DURCHGEREICHT statt weggeworfen — die
+      Lehre aus BL-143, wo genau das einem Wrapper passiert ist.
     #>
     param([string[]]$Argumente)
     $kaskade = if ($Argumente.Count -ge 1) { $Argumente[0] } else { '' }
     $domaene = if ($Argumente.Count -ge 2) { $Argumente[1] } else { '' }
     if (-not $kaskade -or -not $domaene) {
-        Team-Fehler 'Nutzung: team-status --rollen-abschluss <kaskade> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"] [--addieren|--ersetzen]'
+        Team-Fehler 'Nutzung: team-status --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere]'
         return 1
     }
     $rest = @()
@@ -345,10 +354,15 @@ function Status-RollenAbschluss {
     if ($rest.Count -and $rest[0] -and -not $rest[0].StartsWith('--')) {
         $bauNotiz = $rest[0]; $rest = Rest-Ohne-Erstes $rest
     }
-    $modus = if ($rest.Count) { $rest[0] } else { '' }
-    if ($modus -and $modus -notin @('--addieren', '--ersetzen')) {
-        Team-Fehler "Unbekannter Modus '$modus' — erlaubt: --addieren, --ersetzen"
-        return 1
+    $erlaubt = @('--addieren', '--ersetzen', '--trotzdem', '--auch-aeltere')
+    $schalter = @()
+    foreach ($s in @($rest)) {
+        if (-not $s) { continue }
+        if ($s -notin $erlaubt) {
+            Team-Fehler "Unbekannter Schalter '$s' — erlaubt: $($erlaubt -join ', ')"
+            return 1
+        }
+        $schalter += $s
     }
     # Nur ableiten, wenn der Mensch nichts eigenes gesagt hat. Bleibt die
     # Ableitung leer, schreibt kosten.py seinen eigenen Vorspann — ehrlich
@@ -362,7 +376,7 @@ function Status-RollenAbschluss {
         $a = @($verb, '--kaskade', $kaskade, '--domaene', $domaene)
         if ($zeilenNotiz) { $a += @('--notiz', $zeilenNotiz) }
         $a += '--archivieren'
-        if ($modus) { $a += $modus }
+        if ($schalter.Count) { $a += $schalter }
         Team-Werkzeug $TEAM_KOSTEN_TOOL $a
         if ($LASTEXITCODE -ne 0) { $rc = $LASTEXITCODE }
     }
@@ -419,11 +433,46 @@ function Status-Altlast {
     return 0
 }
 
+function Status-Hilfe {
+    <#
+      Der Hilfetext IST der Dateikopf, keine zweite Fassung daneben — dieselbe
+      Bauart wie `install.ps1 -Hilfe` (BL-154/BL-156). Gelesen wird der Block
+      zwischen `<#` und `#>` am Dateianfang; waechst der Kopf, waechst die
+      Hilfe mit.
+    #>
+    $zeilen = Get-Content -LiteralPath $PSCommandPath -Encoding UTF8
+    $drin = $false
+    foreach ($z in $zeilen) {
+        if (-not $drin) {
+            if ($z.TrimStart().StartsWith('<#')) { $drin = $true }
+            continue
+        }
+        if ($z.TrimStart().StartsWith('#>')) { break }
+        [Console]::Out.WriteLine(($z -replace '^  ', ''))
+    }
+    return 0
+}
+
 # --- Argument-Verteilung ------------------------------------------------------
+# BL-222: Der `default`-Zweig fing bis 2.13.1 JEDES unbekannte Argument ab und
+# meldete mit `exit 0` Erfolg. Alle schreibenden Verben dieses Skripts sind
+# Kostenbuchungen mit langen, leicht zu verfehlenden Namen — ein Tippfehler
+# buchte nichts, druckte eine plausible Statusausgabe und sah aus wie ein
+# gelungener Schritt. Der Exit-Code ist wichtiger als der Text: Er ist das,
+# was ein aufrufendes Skript auswerten kann. Der ARGUMENTLOSE Aufruf bleibt
+# die Momentaufnahme.
 $rest = @()
 if ($args.Count -gt 1) { $rest = @($args[1..($args.Count - 1)]) }
 
-switch ($(if ($args.Count) { $args[0] } else { '' })) {
+# Der argumentlose Fall steht VOR dem switch statt als leerer Zweig darin: Ein
+# `''`-Case neben einem `default`-Case ist die Sorte Feinheit, die auf der
+# falschen Bahn geschrieben und nie gefahren wird (BL-117). Eine ausdrueckliche
+# Bedingung ist hier billiger als eine Zusicherung ueber PowerShell-Semantik.
+$verb = if ($args.Count) { [string]$args[0] } else { '' }
+if ($verb -eq '') { Status-Einmal; exit 0 }
+
+switch ($verb) {
+    { $_ -in @('--hilfe', '--help', '-h') } { exit (Status-Hilfe) }
     '--budget' { Status-Budget; exit 0 }
     '--architekt-abschluss' { exit (Status-ArchitektAbschluss $rest) }
     '--akteur-abschluss'    { exit (Status-AkteurAbschluss $rest) }
@@ -449,5 +498,11 @@ switch ($(if ($args.Count) { $args[0] } else { '' })) {
             Start-Sleep -Seconds 5
         }
     }
-    default { Status-Einmal; exit 0 }
+    default {
+        Team-Fehler ("Unbekannte Option '$verb' — erlaubt: --budget, " +
+                     '--architekt-abschluss, --akteur-abschluss, ' +
+                     '--rollen-abschluss, --ledger-pruefen, --altlast, ' +
+                     '--beutebuch-archivieren, --watch, --hilfe')
+        exit 2
+    }
 }

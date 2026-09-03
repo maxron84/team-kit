@@ -127,7 +127,7 @@ Nutzung:
                                         bleibt bewusst architekt-spezifisch.
     kosten.py rollen-abschluss --kaskade N --domaene <domaene>
               [--notiz TEXT] [--logs DIR...] [--pfad PFAD] [--repo DIR]
-              [--archivieren]
+              [--archivieren] [--trotzdem] [--auch-aeltere]
                                         Kaskadenscharfe Rollenkosten
                                         (BL-17-Restpunkt/BL-29-"1b", Kaskade
                                         16/Stufe 54): summiert die .team-logs
@@ -160,6 +160,21 @@ Nutzung:
                                         (--rollen-abschluss) setzt das Flag.
                                         Nur manueller Kaskaden-Abschluss,
                                         laeuft NICHT in vollautomatik.sh.
+
+                                        ZWEI RIEGEL VOR DEM BUCHEN, beide mit
+                                        benannter Uebersteuerung, beide mit
+                                        Exit 1 statt einer stillen Zeile:
+                                        --kaskade N wird gegen die Nummer aus
+                                        .ralph-plan gehalten (BL-220,
+                                        Uebersteuerung --trotzdem; benannte
+                                        Kaskaden wie `vor-10` sind davon nie
+                                        betroffen), und Logs, die AELTER sind
+                                        als der Beginn der Kaskade, brechen
+                                        den Aufruf ab, statt still fremde
+                                        Kosten unter dieser Nummer zu buchen
+                                        und die Belege wegzuarchivieren
+                                        (BL-221, Uebersteuerung
+                                        --auch-aeltere).
     kosten.py ralph-abschluss  … (Argumente wie rollen-abschluss)
                                         BL-4: identischer Mechanismus fuer
                                         Ralphs BAUKOSTEN — Quelle .ralph-logs
@@ -2410,6 +2425,8 @@ def _main(argv):
         repo = "."
         archivieren = False
         bestand = "abbrechen"   # BL-5: nie stillschweigend ueberschreiben
+        trotzdem = False        # BL-220: Plan-Gegenprobe uebersteuern
+        auch_aeltere = False    # BL-221: zu alte Logs bewusst mitbuchen
         i = 0
         while i < len(rest):
             if rest[i] == "--kaskade":
@@ -2458,6 +2475,12 @@ def _main(argv):
             elif rest[i] == "--ersetzen":
                 bestand = "ersetzen"
                 i += 1
+            elif rest[i] == "--trotzdem":
+                trotzdem = True
+                i += 1
+            elif rest[i] == "--auch-aeltere":
+                auch_aeltere = True
+                i += 1
             else:
                 print(f"Fehler: unbekanntes Argument '{rest[i]}'", file=sys.stderr)
                 return 1
@@ -2465,8 +2488,33 @@ def _main(argv):
         if domaene is None:
             print("Fehler: --domaene <domaene> ist Pflicht", file=sys.stderr)
             return 1
+        # BL-220: Die UEBERGEBENE Nummer gegen die aus .ralph-plan halten,
+        # BEVOR gebucht wird. Im Feld wurde fuer <kaskade> die Stufennummer
+        # (der RALPH_CAP der Kaskade, 59) statt der Kaskadennummer (11)
+        # eingesetzt -- beide stehen im Plankopf untereinander, beide sind
+        # zweistellig. Gebucht wurden zwei Zeilen mit korrekten Betraegen
+        # unter einer Kaskade, die es nicht gibt; nichts hat das gemeldet,
+        # und der Pruefer schwieg zu Kaskade 11 vollstaendig, weil es zu ihr
+        # nichts gab.
+        #
+        # Nur bei einer REIN NUMERISCHEN Uebergabe: `vor-10` & Co. sind
+        # legitime benannte Kaskaden und werden bewusst gesetzt, also nie
+        # gegen den Plan gehalten. Fehlt der Plan-Zeiger oder passt sein
+        # Muster nicht, wird NICHT geraten (kaskade_aus_plan gibt None).
         if kaskade is None:
             kaskade = kaskade_aus_plan(repo)
+        elif not trotzdem and str(kaskade).isdigit():
+            aus_plan = kaskade_aus_plan(repo)
+            if aus_plan is not None and str(aus_plan) != str(kaskade):
+                print(
+                    f"Fehler: .ralph-plan sagt Kaskade {aus_plan}, uebergeben "
+                    f"wurde {kaskade} -- nicht gebucht (BL-220).\n"
+                    f"  Verwechslung mit der STUFENnummer (RALPH_CAP)? Beide "
+                    f"stehen im Plankopf untereinander.\n"
+                    f"  Ist {kaskade} wirklich gemeint, erzwingt `--trotzdem` "
+                    f"die Buchung.",
+                    file=sys.stderr)
+                return 1
         if not logs:
             logs = [logs_default]
 
@@ -2527,20 +2575,35 @@ def _main(argv):
         # in genau diesem Fall in die Irre fuehrt. Beim manuellen Durchlauf
         # aufgefallen. Nur im addieren-Modus: Ohne bestehende Zeile ist die
         # 0.0000-Buchung samt HM-43-Warnung weiterhin richtig.
-        # BL-45: Zeitraum-Abgleich VOR dem Buchen. Kein Abbruch — der Mensch
-        # entscheidet, ob er trennt (`--kaskade` fuer einen eigenen
-        # Out-of-Loop-Eintrag) oder die Notiz anpasst. Nur Sichtbarkeit, wo
-        # bisher geschwiegen wurde; dieselbe Bauart wie die Startwarnung aus
-        # BL-27. Deckt zugleich den zweiten Befund aus BL-27 ab: Logs aus
-        # mehr als einem Lauf werden hier benannt, statt still der falschen
-        # Kaskade zugeschlagen zu werden.
+        # BL-45: Zeitraum-Abgleich VOR dem Buchen. Deckt zugleich den zweiten
+        # Befund aus BL-27 ab: Logs aus mehr als einem Lauf werden hier
+        # benannt, statt still der falschen Kaskade zugeschlagen zu werden.
+        #
+        # BL-221: Bis 2.13.1 war das ein blosser HINWEIS -- der Befund wurde
+        # gedruckt und die Fehlzuordnung im selben Zug vollzogen, samt
+        # Archivierung der Rohlogs. Der Zustand danach war schlechter als
+        # vorher: Die Kosten standen unter der falschen Kaskade UND die
+        # Belege waren weg, sodass ein zweiter Aufruf sie nicht mehr fand.
+        # Ein Werkzeug, das eine Fehlzuordnung sicher genug erkennt, um sie
+        # zu benennen, darf sie nicht ausfuehren. Jetzt: Abbruch vor dem
+        # Buchen und vor dem Archivieren, Exit 1, benannte Uebersteuerung
+        # `--auch-aeltere` fuer den Fall, dass die Zuordnung wirklich stimmt.
+        #
+        # Der Fall ist der Regelfall, nicht der Ausreisser: Zwischen zwei
+        # Kaskaden liegen Out-of-Loop-Fixe (Frank, `--kaskade vor-N`), und
+        # ein Lauf, der nach der letzten Buchung und vor dem naechsten
+        # Kaskadenbeginn endet, faellt zwangslaeufig in diese Luecke.
         _beginn, _zu_alt = logs_vor_kaskadenbeginn(files, kaskade, repo)
         if _zu_alt:
             from datetime import datetime as _dt
-            print(f"Hinweis: {len(_zu_alt)} Log(s) sind AELTER als der Beginn "
+            marke = "Hinweis" if auch_aeltere else "WARNUNG"
+            schluss = ("und werden auf `--auch-aeltere` hin trotzdem unter "
+                       "dieser Nummer gebucht:") if auch_aeltere else \
+                      ("-- es wird NICHTS gebucht und NICHTS archiviert:")
+            print(f"{marke}: {len(_zu_alt)} Log(s) sind AELTER als der Beginn "
                   f"der Kaskade {kaskade} "
                   f"({_dt.fromtimestamp(_beginn).isoformat(timespec='minutes')}) "
-                  f"und werden trotzdem unter dieser Nummer gebucht:",
+                  f"{schluss}",
                   file=sys.stderr)
             for datei, mtime in _zu_alt[:5]:
                 print(f"  {datei} ({_dt.fromtimestamp(mtime).isoformat(timespec='minutes')})",
@@ -2551,6 +2614,10 @@ def _main(argv):
                   "Kaskaden, gehoeren sie unter eine eigene benannte Nummer "
                   "(`--kaskade vor-N`) — sonst traegt diese Kaskade fremde "
                   "Kosten (BL-45).", file=sys.stderr)
+            if not auch_aeltere:
+                print("  Gehoeren sie doch zu dieser Kaskade, bucht "
+                      "`--auch-aeltere` sie mit (BL-221).", file=sys.stderr)
+                return 1
 
         if bestand == "addieren" and not files and abo == 0.0 and api == 0.0:
             print(f"{rolle_ziel.capitalize()}-Zeile Kaskade {kaskade} "

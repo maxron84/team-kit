@@ -49,6 +49,12 @@
 #                                       plans/beutebuch-archiv.md. Manuelles
 #                                       Abschluss-Werkzeug, NICHT in
 #                                       vollautomatik.sh verdrahtet.
+#          ./team-status.sh --hilfe     Diesen Kopf ausgeben und sonst nichts
+#                                       tun (auch --help, -h).
+#
+# Jede NICHT erkannte Option endet mit Exit 2 und einer Meldung auf stderr
+# (BL-222) — ein vertipptes Buchungsverb darf nicht wie ein erfolgreicher
+# Statusaufruf aussehen. Ohne Argument bleibt es bei der Momentaufnahme.
 set -uo pipefail
 cd "$(dirname "$0")"
 # shellcheck source=team/lib.sh
@@ -385,19 +391,27 @@ status_akteur_abschluss() {
 status_rollen_abschluss() {
     local kaskade="${1:-}" domaene="${2:-}"
     if [ -z "$kaskade" ] || [ -z "$domaene" ]; then
-        echo "Nutzung: $0 --rollen-abschluss <kaskade> <domaene> [\"<notiz-rollen>\"] [\"<notiz-bau>\"] [--addieren|--ersetzen]" >&2
+        echo "Nutzung: $0 --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> [\"<notiz-rollen>\"] [\"<notiz-bau>\"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere]" >&2
         return 1
     fi
     shift 2
-    local notiz="" bau_notiz="" modus=""
+    local notiz="" bau_notiz=""
     case "${1:-}" in --*|"") ;; *) notiz="$1"; shift ;; esac
     case "${1:-}" in --*|"") ;; *) bau_notiz="$1"; shift ;; esac
-    modus="${1:-}"
-    case "$modus" in
-        ""|--addieren|--ersetzen) ;;
-        *) echo "Unbekannter Modus '$modus' — erlaubt: --addieren, --ersetzen" >&2
-           return 1 ;;
-    esac
+    # BL-143 (Lehre): Zusatzschalter werden DURCHGEREICHT, nicht weggeworfen.
+    # BL-220/BL-221 haben zwei weitere dazugelegt, deshalb steht hier eine
+    # Schleife statt eines einzelnen Modus-Wortes — ein --trotzdem, das der
+    # Alias erbt, aber der Wrapper wegwirft, waere derselbe Fehler.
+    local -a schalter=()
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --addieren|--ersetzen|--trotzdem|--auch-aeltere)
+                schalter+=("$1"); shift ;;
+            "") shift ;;
+            *) echo "Unbekannter Schalter '$1' — erlaubt: --addieren, --ersetzen, --trotzdem, --auch-aeltere" >&2
+               return 1 ;;
+        esac
+    done
     # Nur ableiten, wenn der Mensch nichts eigenes gesagt hat. Bleibt die
     # Ableitung leer (kein erkennbarer Plannamen), schreibt kosten.py seinen
     # eigenen Vorspann "Bau — abo x / api y" — ehrlich unbeschriftet ist
@@ -423,10 +437,11 @@ status_rollen_abschluss() {
         if [ -n "$zeilen_notiz" ]; then
             $TEAM_KOSTEN_TOOL "$verb" --kaskade "$kaskade" \
                 --domaene "$domaene" --notiz "$zeilen_notiz" --archivieren \
-                ${modus:+"$modus"} || einzel_rc=$?
+                ${schalter[@]+"${schalter[@]}"} || einzel_rc=$?
         else
             $TEAM_KOSTEN_TOOL "$verb" --kaskade "$kaskade" \
-                --domaene "$domaene" --archivieren ${modus:+"$modus"} || einzel_rc=$?
+                --domaene "$domaene" --archivieren \
+                ${schalter[@]+"${schalter[@]}"} || einzel_rc=$?
         fi
         [ "$einzel_rc" -eq 0 ] || rc="$einzel_rc"
     done
@@ -498,7 +513,37 @@ status_beutebuch_archivieren() {
     $TEAM_BEUTEBUCH_TOOL archiviere "$@"
 }
 
-if [ "${1:-}" = "--budget" ]; then
+# status_hilfe: der Hilfetext IST der Dateikopf, keine zweite Fassung daneben
+# — dieselbe Bauart wie `install.sh --hilfe` (BL-154/BL-156). Gelesen wird ab
+# Zeile 3 (Zeile 1 Shebang, Zeile 2 Bahn-Kopfzeile) bis zur ersten Zeile, die
+# kein Kommentar mehr ist. Waechst der Kopf, waechst die Hilfe mit.
+# Gelesen wird der BASENAME: Das Skript hat oben bereits in sein eigenes
+# Verzeichnis gewechselt, ein relativer BASH_SOURCE-Pfad zeigt danach ins
+# Leere.
+status_hilfe() {
+    sed -n '3,${
+        /^#/!q
+        s/^# \{0,1\}//
+        p
+    }' "$(basename "${BASH_SOURCE[0]}")"
+}
+
+# BL-222: Der Dispatcher endete bis 2.13.1 mit einem blanken `else
+# status_einmal`. Gemeint war "ohne Argument zeige den Status"; gefangen hat
+# es JEDES unbekannte Argument, auch jedes mit `--`. Alle schreibenden Verben
+# dieses Skripts sind Kostenbuchungen mit langen, leicht zu verfehlenden
+# Namen — ein fehlendes `s` in `--rollen-abschluss` buchte nichts, druckte
+# eine plausible Statusausgabe und endete mit 0. Wer das in einer Sequenz
+# ruft, sieht Zeilen vorbeiziehen und hakt den Schritt ab: dasselbe
+# Fehlbild wie BL-165, nur meldet das Werkzeug diesmal aktiv Erfolg.
+#
+# Der Exit-Code ist wichtiger als der Text — er ist das, was ein aufrufendes
+# Skript auswerten kann. Das ARGUMENTLOSE status_einmal bleibt unangetastet:
+# Davon haengen `./team-status.sh` in der Bedienanleitung und die
+# Abschlussausgabe der Vollautomatik ab.
+if [ "${1:-}" = "--hilfe" ] || [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    status_hilfe
+elif [ "${1:-}" = "--budget" ]; then
     status_budget
 elif [ "${1:-}" = "--architekt-abschluss" ]; then
     shift
@@ -526,6 +571,11 @@ elif [ "${1:-}" = "--watch" ]; then
         echo "  (--watch: Refresh 5 s · Strg+C beendet)"
         sleep 5
     done
+elif [ -n "${1:-}" ]; then
+    echo "Unbekannte Option '${1}' — erlaubt: --budget, --architekt-abschluss," \
+         "--akteur-abschluss, --rollen-abschluss, --ledger-pruefen, --altlast," \
+         "--beutebuch-archivieren, --watch, --hilfe" >&2
+    exit 2
 else
     status_einmal
 fi
