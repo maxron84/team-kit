@@ -41,6 +41,38 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Changed
 
+- **Vier Zahlen in der Doku standen falsch, und drei grüne Wächter hatten
+  recht** (`BL-225`). Gefunden auf die Frage *„ist die Doku aktuell?"* — also
+  durch Nachmessen, nicht durch einen roten Lauf. Die Wächter decken das
+  README, die Regeln und die Zitate; **daneben** lag Folgendes:
+  `doku/einrichtung.md` nannte in der Übersichtstabelle ganz oben **136
+  Dateien**, der Installer schreibt **189**. *„statt 29 Entrypoints"* stand in
+  README und Anleitung; an drei frischen Installationen gemessen sind es
+  **30** — `kit-melden` kam mit `BL-153` dazu, die Zahl nicht mit. Und der
+  Deckungsgrad des pwsh-Selbsttests (*„6 von 11 Stufen und 15 von 127
+  Prüfungen"*) stand zweimal da, während `kit-test.ps1` inzwischen **9** Stufen
+  fährt — sein eigener Kommentarkopf sagt das sogar.
+
+  **Der Wächter deckt jetzt eine Stelle mehr — genau eine.** Die Dateizahl wird
+  auch in `doku/einrichtung.md` geprüft, und die Meldung nennt die **Datei**:
+  Ohne den Namen sucht man im README und findet dort eine richtige Zahl. Ein
+  falscher Wert ist rot, eine fehlende Zusicherung nicht (`BL-198`).
+  **Absichtlich nicht mitgeprüft** werden dort die Testzahlen — der Belegstand
+  nennt historische (*„160 der 487 Tests fielen"*), und ein Wächter, der an
+  einer richtigen Stelle rot schlägt, wird abgeschaltet statt befolgt
+  (`BL-14`). Ein eigener Fall hält fest, dass die Prüfliste nicht wächst, ohne
+  dass jemand hinsieht.
+
+  **Eine Angabe ist ersatzlos entfallen, und das ist Absicht:** Wie viele
+  Einzelprüfungen `kit-test.ps1` fährt, steht nicht mehr da. Messen ließe sich
+  das nur auf einer Maschine mit PowerShell 7. Was bleibt, ist nachprüfbar: 9
+  eigene Stufen, davon 7 der 11 von `kit-test.sh`, und die vier fehlenden
+  **beim Namen** — Bestandseinzug, Regel-Inventar, Einrichtungsroutine,
+  Installer-Gleichstand. Lieber eine Angabe weniger als eine erfundene.
+
+  Regressionstest `test_bl225_dateizahl_in_der_anleitung.py`, **8 Fälle**;
+  mit geleerter Prüfliste fallen 3, die fünf grünen sind die Gegenrichtungen.
+
 - **`kit-readme-pruefen.py` rechnet zwei Zahlen mehr nach** (`BL-224`) — die
   Zahl der **offenen** Backlog-Einträge und die Spanne der **Feld-Kürzel**.
   Beide standen am 2026-09-03 falsch da, beide sind aus dem Repo ableitbar,

@@ -3,7 +3,7 @@
   kit-test.ps1 — Selbstverifikation des Kits auf einer WINDOWS-Maschine.
 
   WAS DAS HIER IST UND WAS NICHT
-    kit-test.sh ist die vollstaendige Selbstverifikation; ihr Schritt 10/10
+    kit-test.sh ist die vollstaendige Selbstverifikation; ihr Schritt 11/11
     beweist sogar, dass beide Installer byte-identische Baeume erzeugen. Nur:
     Sie braucht bash, und auf einer Windows-Maschine ohne WSL gibt es keine.
     Ein Anwender dort haette also GAR KEINE Moeglichkeit, seine Installation zu

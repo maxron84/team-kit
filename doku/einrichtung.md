@@ -7,7 +7,7 @@ gern verwechselt werden:
 | Vorgang | Was passiert | Wie oft |
 |---|---|---|
 | **Klonen und einrichten** | Das Kit-Repo landet auf der Maschine, die Bordmittel werden geprüft, die Auth des Agenten-Werkzeugs steht | einmal pro Maschine |
-| **Einbinden** | `install.sh` legt die 136 Dateien in ein **Zielprojekt** | einmal pro Projekt |
+| **Einbinden** | `install.sh` legt die 190 Dateien in ein **Zielprojekt** | einmal pro Projekt |
 
 Der kurze Weg steht ganz oben; alles darunter ist die Begründung und der
 Fehlerfall.
@@ -599,7 +599,7 @@ pwsh -File $HOME\Source\team-kit\pwsh\install.ps1 $HOME\Source\mein-projekt
 ```
 
 **Nur eine Bahn installieren?** `--nur-bash` bzw. `--nur-pwsh` (PowerShell:
-`-NurBash` / `-NurPwsh`). Das Projekt bekommt dann statt 29 Entrypoints nur
+`-NurBash` / `-NurPwsh`). Das Projekt bekommt dann statt 30 Entrypoints nur
 die zehn der gewählten Bahn. Es ist eine **Abwahl**, keine Empfehlung — der
 Grund steht im Kasten darunter. Sie ist keine Einbahnstraße: Ein späteres
 `--update` *ohne* Schalter macht das Projekt wieder vollständig, samt der
@@ -655,7 +655,7 @@ env -u ANTHROPIC_API_KEY claude -p 'Antworte nur mit: pong'
 ```powershell
 # Windows nativ — auf der Maschine
 pwsh -File .\pwsh\kit-einrichten.ps1 -NurPruefen              # → Exit 0 *
-pwsh -File .\pwsh\kit-test.ps1                                # → 6 Schritte, 15 Prüfungen
+pwsh -File .\pwsh\kit-test.ps1                                # → 9 Schritte
 
 # im Zielprojekt
 .\team-test.cmd
@@ -845,7 +845,10 @@ verifiziert bezeichnet — der Rest nicht.
 
   **Was das nicht belegt.** Die Kaskade lief in einem **Greenfield**, nicht im
   Bestand. Und der Selbsttest der pwsh-Bahn deckt sie nicht: `kit-test.ps1`
-  fährt 6 von 11 Stufen und 15 von 127 Prüfungen (`BL-145`). Das ist der
+  fährt 9 eigene Stufen und deckt damit 7 der 11 Stufen von `kit-test.sh`
+  ab; es fehlen der Einzug in eine gewachsene Codebasis, das Regel-Inventar,
+  die Einrichtungsroutine und der Gleichstand der beiden Installer
+  (`BL-145`). Das ist der
   strukturelle Grund, warum `BL-136` als „grün" galt, während die bash-Bahn rot
   war (`BL-144`). **Die Regel, die bis dahin gilt:** Ein Fix an gemeinsamem Code
   ist erst nachgewiesen, wenn **`kit-test.sh`** gelaufen ist — nicht, wenn

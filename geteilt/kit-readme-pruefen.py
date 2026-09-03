@@ -185,6 +185,19 @@ MITGEPRUEFT = ("CHANGELOG.md", "plans/backlog.md")
 # `[Unreleased]`, also alles vor der ersten Versionsueberschrift.
 VERSION_UEBERSCHRIFT = re.compile(r"^## \[\d", re.M)
 
+# BL-225: Die Dateizahl einer frischen Installation steht nicht nur im README.
+# `doku/einrichtung.md` nennt sie in der Uebersichtstabelle ganz oben — und
+# stand am 2026-09-03 auf 136, waehrend der Installer 189 schrieb. 53 Dateien
+# Unterschied, in der ersten Bildschirmhoehe der Einrichtungsanleitung.
+#
+# Warum NUR die Dateizahl und NUR diese Datei: Der Belegstand in
+# `einrichtung.md` nennt absichtlich HISTORISCHE Testzahlen ("160 der 487
+# Tests fielen") — die Testzahl-Gattung dort mitzupruefen hiesse, an einer
+# richtigen Stelle rot zu schlagen (BL-14). Und der lebende CHANGELOG-Teil wie
+# der Backlog nennen ihrerseits Dateizahlen aus anderem Anlass. Geprueft wird
+# deshalb genau eine Gattung in genau einer weiteren Datei, und beides ist hier
+# benannt statt gewachsen.
+DATEIZAHL_MITGEPRUEFT = ("doku/einrichtung.md",)
 
 
 def lebender_teil(name, text):
@@ -248,7 +261,8 @@ FREMD_HINWEIS = (
     "Eine unqualifizierte Zahl ist eine Aussage über das Kit.")
 
 
-def pruefe_zahlen(text, soll, muster, was, fremd_hinweis=True, verlangt=True):
+def pruefe_zahlen(text, soll, muster, was, fremd_hinweis=True, verlangt=True,
+                  quelle="README"):
     """Prueft jede Zahl der Gattung; `verlangt` steuert nur den LEERFALL.
 
     BL-198/BL-180, im Selbsttest zusammengestossen: Der Leerfall ("die Zahl
@@ -272,13 +286,13 @@ def pruefe_zahlen(text, soll, muster, was, fremd_hinweis=True, verlangt=True):
                 # Spanne darf im README ueber einen Zeilenumbruch laufen, und
                 # eine Fehlermeldung mit eingebettetem Umbruch liest sich wie
                 # zwei Befunde.
-                meldung = (f"README behauptet {m.group(1)} {was}, gemessen "
+                meldung = (f"{quelle} behauptet {m.group(1)} {was}, gemessen "
                            f"sind {soll} (»{' '.join(m.group(0).split())}«).")
                 if fremd_hinweis:
                     meldung += "\n" + FREMD_HINWEIS.format(was=was)
                 fehler.append(meldung)
     if gesehen == 0 and verlangt:
-        fehler.append(f"README nennt die {was} ueberhaupt nicht mehr — "
+        fehler.append(f"{quelle} nennt die {was} ueberhaupt nicht mehr — "
                       f"eine Zusicherung, die verschwindet, faellt nicht auf.")
     return fehler, gesehen
 
@@ -418,6 +432,20 @@ def main():
         neu, _ = pruefe_zahlen(text, a.dateien, DATEIEN, "installierten Dateien")
         fehler += neu
         gemessen.append(f"{a.dateien} installierte Dateien")
+        # BL-225: dieselbe Zahl, eine Datei weiter. `verlangt=False` — ein
+        # FALSCHER Wert ist rot, ein fehlender ist es nicht: Ob die Anleitung
+        # die Zahl ueberhaupt nennen will, ist ihre Entscheidung.
+        if ist_kit_readme:
+            for weiterer in DATEIZAHL_MITGEPRUEFT:
+                pfad = KIT / weiterer
+                if pfad.is_file():
+                    neu, gesehen = pruefe_zahlen(
+                        pfad.read_text(encoding="utf-8"), a.dateien, DATEIEN,
+                        "installierten Dateien", verlangt=False,
+                        quelle=weiterer)
+                    fehler += neu
+                    if gesehen:
+                        gemessen.append(f"dieselbe Zahl in {weiterer}")
     if not a.ohne_backlog_zahlen:
         # NUR am README des Kits ist eine FEHLENDE Backlog-Zahl ein Befund.
         # `--readme` zeigt regelmaessig woanders hin: auf die Gegenprobe-Kopie
