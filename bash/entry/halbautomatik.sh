@@ -97,6 +97,7 @@ deckel_dialog_ralph() {
 # --- Einzelschritt-Modus (nicht-interaktiv) ----------------------------------
 if [ "$#" -ge 1 ]; then
     case "$1" in
+        --hilfe|--help|-h) team_hilfe_kopf; exit 0 ;;   # BL-223
         status) ./team-status.sh; exit 0 ;;
         next)   naechster_schritt; exit 0 ;;
         ralph|harry|marv|frank|axel)
@@ -104,7 +105,7 @@ if [ "$#" -ge 1 ]; then
             schritt_ausfuehren "$1"; rc=$?
             deute_exit "$1" "$rc"
             exit "$rc" ;;
-        *) echo "Aufruf: ./halbautomatik.sh [ralph|harry|marv|frank|axel|status|next]" >&2; exit 2 ;;
+        *) echo "Aufruf: ./halbautomatik.sh [ralph|harry|marv|frank|axel|status|next|--hilfe]" >&2; exit 2 ;;
     esac
 fi
 

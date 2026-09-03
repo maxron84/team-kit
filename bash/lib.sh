@@ -102,6 +102,63 @@ else
     SMOKE_SUFFIX=""
 fi
 
+# --- Bedienung: Hilfe und Zurueckweisung (BL-223) -----------------------------
+# Warum das in der Bibliothek steht und nicht siebenmal daneben: Eine
+# Konvention, die nur dasteht, wird an der Haelfte der Stellen nicht befolgt —
+# und genau so ist BL-223 entstanden. Von vierzehn Einstiegspunkten hatten
+# DREI eine Hilfe, und die Rollen-Skripte lasen ihre Argumente ueberhaupt
+# nicht: `./ralph.sh --hilfe` zeigte keine Hilfe, wies nichts zurueck und
+# startete einen bezahlten Rollenlauf. Das ist BL-222 eine Stufe teurer — dort
+# war die Folge eine falsche Statusausgabe, hier ein Modellaufruf, den niemand
+# bestellt hat.
+
+# team_hilfe_kopf [datei]: der DATEIKOPF ist der Hilfetext, keine zweite
+# Fassung daneben (dieselbe Bauart wie `install.sh --hilfe`, BL-154/BL-156) —
+# eine Abschrift laeuft irgendwann auseinander, und dann sagt --hilfe etwas
+# anderes als die Datei. Gelesen wird ab Zeile 3 (1 = Shebang, 2 =
+# Bahn-Kopfzeile, beides Maschinensache) bis zur ersten Zeile, die kein
+# Kommentar mehr ist. Waechst der Kopf, waechst die Hilfe mit.
+#
+# Default ist der BASENAME: Jeder Entrypoint wechselt vorher in sein eigenes
+# Verzeichnis, ein relativer Pfad zeigt danach ins Leere.
+team_hilfe_kopf() {
+    local datei="${1:-$0}"
+    [ -f "$datei" ] || datei="$(basename "$datei")"
+    sed -n '3,${
+        /^#/!q
+        s/^# \{0,1\}//
+        p
+    }' "$datei"
+}
+
+# team_argumente_pruefen "$@": fuer Skripte, die KEINE Argumente kennen.
+# --hilfe/--help/-h druckt den Kopf und endet mit 0; jedes andere Argument
+# endet mit 2 auf stderr. Der argumentlose Aufruf laeuft unveraendert durch.
+#
+# Der EXIT-CODE ist die Zusicherung, nicht der Text: Er ist das, was ein
+# aufrufendes Skript auswerten kann (dieselbe Trennung wie bei den
+# Buchungsverben aus BL-222).
+team_argumente_pruefen() {
+    case "${1:-}" in
+        "") return 0 ;;
+        --hilfe|--help|-h) team_hilfe_kopf; exit 0 ;;
+        *) echo "$(basename "$0"): unbekanntes Argument '$1' — dieses Skript nimmt keine Argumente. '--hilfe' zeigt den Dateikopf." >&2
+           exit 2 ;;
+    esac
+}
+
+# team_hilfe_wenn_gefragt "$@": fuer Skripte, die ihre uebrigen Argumente
+# WEITERREICHEN (team-test.sh und kit-test.sh reichen an pytest durch). Hier
+# darf nichts zurueckgewiesen werden — sonst faengt der Riegel genau die
+# Argumente, wegen derer es die Durchreiche gibt. Abgefangen wird deshalb nur
+# `--hilfe`: die deutsche Schreibweise, die pytest nicht kennt. `--help`/`-h`
+# gehen bewusst weiter an pytest, das dafuer eine eigene, bessere Hilfe hat.
+team_hilfe_wenn_gefragt() {
+    [ "${1:-}" = "--hilfe" ] || return 0
+    team_hilfe_kopf
+    exit 0
+}
+
 # team_allowed_tools <redteam|axel>: Werkzeug-Allowlist für Guard-Linie 2.
 # Axel bekommt NUR den Plan-Ordner, das Red Team zusätzlich den Test-Ordner.
 team_allowed_tools() {

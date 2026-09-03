@@ -19,6 +19,30 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 Set-Location $PSScriptRoot
 
+# BL-223: --hilfe abfangen, den Rest an pytest durchreichen.
+#
+# Warum hier eine EIGENE Fassung statt Team-HilfeKopf aus der Bibliothek:
+# Diese Datei importiert team/lib.psm1 bewusst nicht. Sie ist der Testlaeufer
+# und muss auch dann noch laufen, wenn die Bibliothek kaputt ist — genau dann
+# will man sie fahren.
+#
+# Abgefangen wird NUR `--hilfe`: --help und -h gehoeren pytest, das dafuer
+# eine eigene, bessere Hilfe hat. Ein Riegel gegen unbekannte Argumente waere
+# hier falsch — er faenge genau die Argumente, wegen derer es die Durchreiche
+# gibt.
+if ($args.Count -ge 1 -and $args[0] -eq '--hilfe') {
+    $drin = $false
+    foreach ($z in @(Get-Content -LiteralPath $PSCommandPath -Encoding UTF8)) {
+        if (-not $drin) {
+            if ($z.TrimStart().StartsWith('<#')) { $drin = $true }
+            continue
+        }
+        if ($z.TrimStart().StartsWith('#>')) { break }
+        [Console]::Out.WriteLine(($z -replace '^  ', ''))
+    }
+    exit 0
+}
+
 # BL-124: pytest wird AUFGELOEST, nicht vorausgesetzt.
 #
 # Unter Windows legt `pip install pytest` die pytest.exe in ein

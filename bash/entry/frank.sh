@@ -14,6 +14,9 @@ set -euo pipefail
 cd "$(dirname "$0")"
 # shellcheck source=team/lib.sh
 source ./team/lib.sh
+# BL-223: Dieses Skript kennt keine Argumente — bis 2.13.1 hat es sie
+# deshalb NIE GELESEN, und `--hilfe` startete einen bezahlten Rollenlauf.
+team_argumente_pruefen "$@"
 team_lock frank || exit 1
 
 # Zwei-Schwellen-Modell (Stakeholder-Entscheid 2026-07-12, HM-32): Frank ist

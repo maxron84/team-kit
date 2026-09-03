@@ -131,6 +131,65 @@ function Team-Fehler {
     [Console]::Error.WriteLine($Text)
 }
 
+# --- Bedienung: Hilfe und Zurueckweisung (BL-223) -----------------------------
+# Gegenstueck zu team_hilfe_kopf/team_argumente_pruefen in lib.sh. Warum das in
+# der Bibliothek steht und nicht neunmal daneben: Eine Konvention, die nur
+# dasteht, wird an der Haelfte der Stellen nicht befolgt — genau so ist BL-223
+# entstanden.
+
+function Team-HilfeKopf {
+    <#
+      Der DATEIKOPF ist der Hilfetext, keine zweite Fassung daneben (dieselbe
+      Bauart wie `install.ps1 -Hilfe`, BL-154/BL-156): Eine Abschrift laeuft
+      irgendwann auseinander, und dann sagt die Hilfe etwas anderes als die
+      Datei. Gelesen wird der `<# … #>`-Block am Dateianfang.
+
+      Der Pfad wird UEBERGEBEN und nicht erraten: In einer Modulfunktion zeigt
+      $PSCommandPath auf das Modul, nicht auf das aufrufende Skript.
+    #>
+    param([Parameter(Mandatory)][string]$Datei)
+    $drin = $false
+    foreach ($z in @(Get-Content -LiteralPath $Datei -Encoding UTF8)) {
+        if (-not $drin) {
+            if ($z.TrimStart().StartsWith('<#')) { $drin = $true }
+            continue
+        }
+        if ($z.TrimStart().StartsWith('#>')) { break }
+        [Console]::Out.WriteLine(($z -replace '^  ', ''))
+    }
+}
+
+function Team-BedienungPruefen {
+    <#
+      Fuer Skripte, die KEINE Argumente kennen. Rueckgabe ist ein [int]:
+
+        -1  nichts uebergeben — der Aufrufer laeuft normal weiter
+         0  --hilfe/--help/-h: der Kopf ist gedruckt, der Aufrufer beendet mit 0
+         2  unbekanntes Argument: die Meldung steht auf stderr, Exit 2
+
+      WARUM EIN RUECKGABEWERT UND KEIN `exit` IN DER FUNKTION: Diese Bahn wird
+      auf der Entwicklungsmaschine geschrieben und auf einer anderen zum
+      ersten Mal gefahren (BL-117). `exit` aus einer MODULfunktion heraus ist
+      genau die Sorte Feinheit, die dabei still danebengeht — ein Zahlenwert,
+      den der Aufrufer selbst auswertet, ist nicht auslegungsfaehig.
+
+      Der EXIT-CODE ist die Zusicherung, nicht der Text: Er ist das, was ein
+      aufrufendes Skript auswerten kann (dieselbe Trennung wie bei den
+      Buchungsverben aus BL-222).
+    #>
+    param([object[]]$Argumente, [Parameter(Mandatory)][string]$Datei)
+    $liste = @($Argumente | Where-Object { $null -ne $_ -and "$_" -ne '' })
+    if ($liste.Count -eq 0) { return -1 }
+    $erstes = [string]$liste[0]
+    if ($erstes -in @('--hilfe', '--help', '-h')) {
+        Team-HilfeKopf $Datei
+        return 0
+    }
+    Team-Fehler ("$(Split-Path -Leaf $Datei): unbekanntes Argument '$erstes' — " +
+                 "dieses Skript nimmt keine Argumente. '--hilfe' zeigt den Dateikopf.")
+    return 2
+}
+
 function Team-Werkzeug {
     <#
       Ruft eine als ZEICHENKETTE konfigurierte Werkzeugzeile auf

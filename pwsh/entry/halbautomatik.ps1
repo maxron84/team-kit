@@ -103,6 +103,9 @@ function Deckel-Dialog-Ralph {
 # --- Einzelschritt-Modus (nicht-interaktiv) -----------------------------------
 if ($args.Count -ge 1) {
     switch ($args[0]) {
+        { $_ -in @('--hilfe', '--help', '-h') } {   # BL-223
+            Team-HilfeKopf $PSCommandPath; exit 0
+        }
         'status' { & pwsh -NoProfile -File ./team-status.ps1; exit $LASTEXITCODE }
         'next'   { [Console]::Out.WriteLine((Naechster-Schritt)); exit 0 }
         { $_ -in @('ralph', 'harry', 'marv', 'frank', 'axel') } {
@@ -112,7 +115,7 @@ if ($args.Count -ge 1) {
             exit $rc
         }
         default {
-            Team-Fehler 'Aufruf: .\halbautomatik.cmd [ralph|harry|marv|frank|axel|status|next]'
+            Team-Fehler 'Aufruf: .\halbautomatik.cmd [ralph|harry|marv|frank|axel|status|next|--hilfe]'
             exit 2
         }
     }

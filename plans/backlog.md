@@ -571,6 +571,17 @@ danach vollständig durchgelaufen.
 >   `.py`. Das ist kein Textfehler, sondern ein ausgelieferter Vorgabewert —
 >   und damit dieselbe Entscheidung, die `BL-169` offen hält.
 
+> **Der Abtrag hat einen eigenen Fund erzeugt: `BL-223`** (im
+> [Archiv](backlog-archiv.md) begründet, noch am selben Tag abgetragen). Die
+> Rückfrage lautete „Haben die ganzen Skripte jeweils eine help flag?" —
+> und die Antwort war schlechter als erwartet: Von vierzehn Einstiegspunkten
+> hatten **drei** eine Hilfe, und die fünf Rollen-Skripte lasen ihre Argumente
+> **überhaupt nicht**. `./ralph.sh --hilfe` startete damit einen bezahlten
+> Rollenlauf. **Das ist `BL-222` eine Stufe teurer** — dort kostete der stille
+> Ausgang eine falsche Statusausgabe, hier einen Modellaufruf. Der Fund wäre
+> ohne die Rückfrage nicht entstanden: `BL-222` war abgetragen, der Wächter
+> stand, und niemand hätte die Nachbarn nachgemessen.
+
 > **Das Zeilenlimit der Briefings hat zwei dieser Fixes zugeschnitten, und das
 > gehört festgehalten.** `BL-215` und `BL-216` gehören beide in Prompts, die
 > 45 Zeilen nicht überschreiten dürfen — Frank lag exakt auf der Grenze, Harry

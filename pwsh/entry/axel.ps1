@@ -23,6 +23,10 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 Set-Location $PSScriptRoot
 Import-Module ./team/lib.psm1 -Force -DisableNameChecking
+# BL-223: Dieses Skript kennt keine Argumente — bis 2.13.1 hat es sie deshalb
+# NIE GELESEN, und `--hilfe` startete einen bezahlten Rollenlauf.
+$bedienung = Team-BedienungPruefen $args $PSCommandPath
+if ($bedienung -ge 0) { exit $bedienung }
 
 if (-not (team_lock 'axel')) { exit 1 }
 

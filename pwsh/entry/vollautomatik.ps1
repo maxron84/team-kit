@@ -9,6 +9,7 @@
                                          BL-217)
            .\vollautomatik.cmd --von-vorn (verwirft den Phasen-Zeiger und
                                          beginnt bei Phase 1)
+           .\vollautomatik.cmd --hilfe    (diesen Kopf ausgeben; auch --help, -h)
   Env:     TEAM_MAX_RUNDEN   Fix-Runden Frank/Axel (Default 12).
            TEAM_VOLLAUTOMATIK_AB_PHASE  1 wirkt wie --von-vorn (BL-217).
            TEAM_FIX_MAX_STAGNATION  Auslauf-Bremse (Default =
@@ -56,8 +57,12 @@ if ((team_auth_mode_effektiv 'abo') -eq 'abo') { team_warnung_abo_key | Out-Null
 $vonVorn = $false
 foreach ($arg in $args) {
     if ($arg -eq '--von-vorn') { $vonVorn = $true }
+    elseif ($arg -in @('--hilfe', '--help', '-h')) {   # BL-223
+        Team-HilfeKopf $PSCommandPath
+        exit 0
+    }
     else {
-        [Console]::Error.WriteLine("Unbekannte Option: $arg — erlaubt: --von-vorn")
+        [Console]::Error.WriteLine("Unbekannte Option: $arg — erlaubt: --von-vorn, --hilfe")
         exit 2
     }
 }

@@ -61,6 +61,32 @@ KIT="$(pwd)"
 
 BEHALTEN=0
 PYTEST_ARGS=()
+# BL-223: --hilfe abfangen, den Rest an pytest durchreichen.
+#
+# Warum hier eine EIGENE Fassung statt team_hilfe_kopf aus der Bibliothek:
+# Diese Datei sourct team/lib.sh bewusst nicht. Sie ist der Testlaeufer und
+# muss auch dann noch laufen, wenn die Bibliothek oder die Konfiguration
+# kaputt ist — genau dann will man sie fahren. Sechs Zeilen Doppelung sind
+# hier billiger als die Kopplung.
+#
+# Abgefangen wird NUR `--hilfe`: --help und -h gehoeren pytest, das dafuer
+# eine eigene, bessere Hilfe hat. Ein Riegel gegen unbekannte Argumente waere
+# hier falsch — er faenge genau die Argumente, wegen derer es die Durchreiche
+# gibt.
+if [ "${1:-}" = "--hilfe" ]; then
+    # Erst der Pfad, wie er dasteht, dann der Basename: kit-test.sh liest
+    # seine Argumente VOR dem `cd`, team-test.sh danach. Eine der beiden
+    # Formen trifft immer, und die Probe kostet nichts.
+    _selbst="${BASH_SOURCE[0]}"
+    [ -f "$_selbst" ] || _selbst="$(basename "$_selbst")"
+    sed -n '3,${
+        /^#/!q
+        s/^# \{0,1\}//
+        p
+    }' "$_selbst"
+    exit 0
+fi
+
 for arg in "$@"; do
     case "$arg" in
         --behalten) BEHALTEN=1 ;;

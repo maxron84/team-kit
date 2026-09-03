@@ -17,6 +17,10 @@ set -euo pipefail
 cd "$(dirname "$0")"
 # shellcheck source=team/lib.sh
 source ./team/lib.sh
+# BL-223: Gilt fuer harry.sh und marv.sh gemeinsam — sie sourcen diese
+# Datei, $0 bleibt dabei ihr eigener Name, und `team_hilfe_kopf` liest
+# damit den Kopf des AUFRUFENDEN Wrappers statt diesen hier.
+team_argumente_pruefen "$@"
 team_lock "$ROLLE" || exit 1
 
 STATE_FILE=".${ROLLE}-state"

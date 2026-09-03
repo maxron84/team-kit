@@ -143,6 +143,41 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Jeder Einstiegspunkt beantwortet `--hilfe`, und die Rollen weisen alles
+  andere zurück** (`BL-223`, Kit-eigener Fund beim Abtragen von `BL-222`;
+  beide Bahnen). Von vierzehn Einstiegspunkten hatten **drei** eine Hilfe. Der
+  schwerere Teil lag darunter: `ralph.sh`, `harry.sh`, `marv.sh`, `frank.sh`
+  und `axel.sh` fassen `$@` an **keiner** Stelle an — sie werfen Argumente
+  nicht weg, sie sehen sie nie. `./ralph.sh --hilfe` zeigte also keine Hilfe,
+  wies nichts zurück und **startete einen bezahlten Rollenlauf**.
+
+  **Das ist `BL-222` eine Stufe teurer.** Dort war die Folge eine falsche
+  Statusausgabe und ein nicht gebuchter Kostenposten; hier ist es ein
+  Modellaufruf, den niemand bestellt hat — und es trifft genau den Moment, in
+  dem jemand das Kit zum ersten Mal anfasst.
+
+  Neu sind zwei Helfer in **beiden** Bibliotheken statt neun Abschriften
+  daneben: `team_hilfe_kopf`/`Team-HilfeKopf` liest den **Dateikopf** (keine
+  zweite Fassung daneben, `BL-154`), `team_argumente_pruefen`/
+  `Team-BedienungPruefen` beantwortet `--hilfe`/`--help`/`-h` mit Exit 0 und
+  jedes andere Argument mit Exit 2. Bei Harry und Marv sitzt der Riegel im
+  gemeinsamen Rumpf `redteam.sh` — `$0` bleibt dort der Wrapper, die Hilfe
+  druckt also den richtigen Kopf.
+
+  **Zwei bewusste Ausnahmen:** `team-test` und `kit-test` reichen an pytest
+  durch und fangen deshalb **nur** `--hilfe` ab. `--help`/`-h` gehören pytest,
+  das dafür eine bessere Hilfe hat, und ein Riegel gegen unbekannte Argumente
+  fänge hier genau das, wofür es die Durchreiche gibt. Beide tragen eine
+  eigene, kleine Fassung statt der Bibliotheksversion: Sie binden die
+  Bibliothek bewusst nicht ein, weil man sie gerade dann fahren will, wenn
+  diese kaputt ist.
+
+  Der Test läuft gegen eine **echte Installation**, nicht gegen den Quelltext
+  — ein statischer Test hätte den Fund nicht gefunden, denn der Kopf stand ja
+  da, gelesen hat ihn nur niemand. Geprüft wird die **Gattung**: Jeder
+  ausgelieferte Entrypoint muss auf `--hilfe` antworten, damit ein neuer ohne
+  Bedienung auffällt statt still zu bleiben.
+
 - **Die Vollautomatik nimmt einen abgebrochenen Lauf bei der abgebrochenen
   Phase wieder auf** (`BL-217`, gemeldet von `Feld E`; beide Bahnen). Das
   Skript war phasen-**zustandslos**: Es gibt `.ralph-state`, `.harry-state`

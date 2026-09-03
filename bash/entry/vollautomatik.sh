@@ -8,6 +8,7 @@
 #                                        abgebrochenen PHASE wieder auf, BL-217)
 #          ./vollautomatik.sh --von-vorn (verwirft den Phasen-Zeiger und
 #                                        beginnt bei Phase 1)
+#          ./vollautomatik.sh --hilfe    (diesen Kopf ausgeben; auch --help, -h)
 # Env:     TEAM_MAX_RUNDEN   Fix-Runden Frank/Axel (Default 12) — grobe Obergrenze.
 #          TEAM_FIX_MAX_STAGNATION  Auslauf-Bremse (Default = TEAM_FRANK_MAX_VERSUCHE,
 #                            sonst 3; HM-31-Fix): bricht Phase 4 ab, sobald so viele
@@ -55,7 +56,8 @@ VON_VORN=0
 for arg in "$@"; do
     case "$arg" in
         --von-vorn) VON_VORN=1 ;;
-        *) echo "Unbekannte Option: $arg — erlaubt: --von-vorn" >&2; exit 2 ;;
+        --hilfe|--help|-h) team_hilfe_kopf; exit 0 ;;   # BL-223
+        *) echo "Unbekannte Option: $arg — erlaubt: --von-vorn, --hilfe" >&2; exit 2 ;;
     esac
 done
 [ "${TEAM_VOLLAUTOMATIK_AB_PHASE:-}" = "1" ] && VON_VORN=1
