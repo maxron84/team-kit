@@ -41,6 +41,54 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Changed
 
+- **`kit-readme-pruefen.py` rechnet zwei Zahlen mehr nach** (`BL-224`) — die
+  Zahl der **offenen** Backlog-Einträge und die Spanne der **Feld-Kürzel**.
+  Beide standen am 2026-09-03 falsch da, beide sind aus dem Repo ableitbar,
+  und beide hingen an niemandem: Das README nannte *vier* offene Einträge
+  (offen waren fünf), und die Spanne der Feld-Kürzel endete an drei Stellen
+  bei `Feld D`, obwohl `Feld E` seit dem 2026-08-24 zwei Kaskaden gefahren hat.
+
+  **Der bewusst getragene Preis, gleich am eigenen Text eingetreten:** Eine
+  Spanne in der Schreibweise „Feld A … Feld N", beide Kürzel in Backticks,
+  gilt im lebenden Teil **immer** als Behauptung über den heutigen Vorrat —
+  auch in einem Rückblick. Dieser Absatz
+  hier hat den Wächter beim ersten Lauf selbst rot gemacht. Die Auflösung ist
+  nicht, den Wächter aufzuweichen (dann müsste er raten, was gemeint ist),
+  sondern den Rückblick auszuschreiben: *endete bei `Feld D`* statt der
+  Spannenform.
+
+  **Die Offen-Zahl kommt aus der Statusspalte, nicht aus der Zeilenzahl.** In
+  `plans/backlog.md` stehen auch abgetragene Zeilen, die noch nicht ins Archiv
+  verschoben sind — am Fundtag 13 von 18. Gelesen wird das **Merkwort** am
+  Anfang der Zelle (`offen`, `teilweise`, `erledigt`); `teilweise` zählt als
+  offen. **Warum nicht die Prosa:** Ein `"offen" in zelle` zählt jede Zelle
+  mit, die das Wort irgendwo erwähnt, und drei Zellen begannen mit „Befund 1
+  erledigt …, Befund 2 bleibt offen". Solche Zellen meldet der Prüfer jetzt
+  **namentlich als unentscheidbar**, statt zu raten (`BL-160`) — und behauptet
+  die Zahl dann auch nicht (`BL-198`). Die Konvention steht im **Backlog-Kopf**:
+  Eine Formvorschrift, die nur im Prüfer steht, findet erst, wer rot geworden
+  ist.
+
+  **Kein neuer Schalter — und das ist die Doppelbahn-Zusicherung.** Wie die
+  Archivzahl seit `BL-198` misst der Prüfer beide Werte selbst. Damit erben
+  `kit-test.sh` **und** `kit-test.ps1` die Prüfung, ohne dass eine Bahn
+  nachgezogen werden muss; ein Schalter wäre genau die Drift, die `BL-208`
+  aufgedeckt hat.
+
+  **Der erste scharfe Lauf hat die Regel selbst geschärft.** Der Wächter schlug
+  im CHANGELOG an — in einer **abgeschlossenen Version**, wo der Satz den Stand
+  von damals beschreibt. Eine geschnittene Version ist eingefroren wie das
+  Backlog-Archiv; ein Wächter, der verlangt, Historie umzuschreiben, wird
+  abgeschaltet statt befolgt (`BL-14`). Geprüft wird deshalb nur der **lebende**
+  Teil des CHANGELOG (Kopf und `[Unreleased]`), das Archiv gar nicht. Drei echte
+  Funde blieben, alle behoben.
+
+  Regressionstest `test_bl224_offene_eintraege_und_feldkuerzel.py`, **17 Fälle**
+  gegen ein Mini-Kit im tmp-Verzeichnis — ein Test am echten Backlog könnte die
+  Regel nur bestätigen, indem er ihn verstümmelt. Gegenprobe gefahren: gegen den
+  alten Stand fallen 11 von 16 der ursprünglichen Fälle; die fünf grünen sind
+  die Gegenrichtungen, der siebzehnte hält den Entscheid von oben fest.
+
 - **Der README-Kopf nennt drei Stränge, die beschlossen und nicht gebaut sind**
   (Entscheid des Owners, 2026-09-03). Die Abzeichen `Agenten-CLI`, `Sprachen`
   und `Binary` stehen jetzt auf *Claude Code, Codex* · *Deutsch, Englisch

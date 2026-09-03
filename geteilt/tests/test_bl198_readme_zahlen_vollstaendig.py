@@ -255,10 +255,18 @@ def test_am_readme_des_kits_bleibt_die_fehlende_zahl_rot(tmp_path):
 
 
 def test_und_dasselbe_mini_kit_mit_beiden_zahlen_ist_gruen(tmp_path):
-    """Sonst prüfte der Fall darüber nur, dass ein Mini-Kit immer rot ist."""
+    """Sonst prüfte der Fall darüber nur, dass ein Mini-Kit immer rot ist.
+
+    Seit `BL-224` verlangt das README DES KITS eine dritte selbst gemessene
+    Zahl — die der offenen Einträge. Das Fixture steht hier für „ein
+    vollständiges Kit-README"; es muss deshalb mitwachsen, wenn der Vertrag
+    wächst. Der Fall darüber (fehlende Zahl bleibt rot) prüft die
+    Gegenrichtung und bleibt unberührt.
+    """
     pruefer = _mini_kit(
         tmp_path,
-        "Ein Kit mit 7 Tests, `BL-1`…`BL-42`, 3 Archiv-Einträge.\n")
+        "Ein Kit mit 7 Tests, `BL-1`…`BL-42`, 3 Archiv-Einträge, "
+        "1 offene Einträge.\n")
     ergebnis = _mini_lauf(pruefer, "--faelle", "7")
     assert ergebnis.returncode == 0, f"{ergebnis.stdout}{ergebnis.stderr}"
     assert "Gemessen und deckungsgleich" in ergebnis.stdout

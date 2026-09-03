@@ -25,6 +25,29 @@ WAS GEPRUEFT WIRD
     (2) Jede Zahl vor Testdateien gegen die gemessene Dateizahl.
     (3) Jede Zahl vor Dateien gegen das, was der Installer geschrieben hat.
     (4) Jeder Pfad, den das README nennt, gegen das Dateisystem des Kits.
+    (5) Die Zahl der OFFENEN Backlog-Eintraege gegen die Statusspalte von
+        `plans/backlog.md`.
+    (6) Jedes genannte Feld-Kuerzel gegen die Herkunftstabelle des README —
+        und jede Spanne `Feld A`…`Feld N` gegen das hoechste vergebene.
+
+WARUM (5) UND (6) DAZUGEKOMMEN SIND (BL-224)
+    Beim Pflegen der Doku am 2026-09-03 standen beide Gattungen falsch da, und
+    kein Waechter hat es gemerkt:
+
+      * "Offen sind 4 Eintraege" — offen waren fuenf.
+      * `Feld A`…`Feld D` an DREI Stellen (README, CHANGELOG, Backlog-Kopf),
+        obwohl es `Feld E` seit dem 2026-08-24 gibt.
+
+    Beide sind nachrechenbar, beide sind es bis dahin nicht geworden. Das ist
+    die Bauform von BL-198 ein zweites Mal: Der Waechter deckte die Gattungen
+    ab, die er kannte, und meldete darueber hinaus nichts.
+
+    (6) prueft ausdruecklich AUCH `CHANGELOG.md` und `plans/backlog.md`, wenn
+    das README des Kits geprueft wird — dieselbe Zeile steht in allen dreien,
+    und genau das ist die Abschrift, die gemeinsam veraltet. NICHT geprueft
+    wird `plans/backlog-archiv.md`: Dort ist eine alte Spanne die HISTORIE
+    eines abgetragenen Eintrags und kein Fehler; ein Waechter, der an einer
+    richtigen Stelle rot schlaegt, wird abgeschaltet statt befolgt (BL-14).
 
     Die Messwerte kommen von aussen (kit-test.sh misst sie an einer FRISCHEN
     Installation). Ohne sie prueft das Werkzeug nur die Pfade — es rechnet
@@ -122,6 +145,54 @@ HOECHSTE_BL = [re.compile(
     r"`BL-1`\s*(?:…|\.\.\.|bis|–|-)\s*`BL-(\d+)`")]
 ARCHIV = [re.compile(r"backlog-archiv\.md\)[^\n]{0,60}?\((\d+) Einträge\)"),
           re.compile(r"(\d+)\s+Archiv-Einträge\b")]
+
+# BL-224: Wie viele Eintraege OFFEN sind. Auch das ist eine Aussage ueber das
+# Kit und stand am 2026-09-03 auf 4, waehrend es fuenf waren.
+#
+# Der Sollwert kommt aus der Statusspalte von `plans/backlog.md` und nicht aus
+# der Zeilenzahl: In derselben Tabelle stehen abgetragene Zeilen, die noch
+# nicht ins Archiv verschoben sind — am Fundtag 13 von 18. Wer die Zeilen
+# zaehlt, misst etwas anderes als das, was das README behauptet.
+OFFEN = [re.compile(r"Offen sind (\d+) Einträge\b"),
+         re.compile(r"(\d+)\s+offene\s+(?:Backlog-)?Einträge\b")]
+
+# Das Merkwort am Anfang der Statuszelle. Kleingeschrieben, ohne Fettmarken
+# und ohne Satzzeichen — mehr Form wird nicht verlangt, damit die Regel eine
+# gewachsene Tabelle nicht umschreibt (der Rest der Zelle bleibt freie Prosa).
+STATUS_OFFEN = ("offen", "teilweise")
+STATUS_ZU = ("erledigt", "abgetragen", "verworfen", "zurückgestellt")
+
+# --- Feld-Kuerzel -----------------------------------------------------------
+# Die Herkunftstabelle des README ist die einzige Stelle, an der ein Kuerzel
+# DEFINIERT wird. Alles andere zitiert sie.
+FELD_ZEILE = re.compile(r"^\|\s*\*\*`Feld ([A-Z]\d?)`\*\*\s*\|", re.M)
+FELD_NENNUNG = re.compile(r"`Feld ([A-Z]\d?)`")
+# Eine Spanne erkennt man an ihrem ANFANG — `Feld A`. Dieselbe Ueberlegung wie
+# bei HOECHSTE_BL: Nur eine Spanne, die bei A beginnt, redet ueber den ganzen
+# Vorrat an Kuerzeln.
+FELD_SPANNE = re.compile(
+    r"`Feld A`\s*(?:…|\.\.\.|bis|–|-)\s*`Feld ([A-Z]\d?)`")
+
+# Wo dieselbe Zeile sonst noch steht. Das Archiv fehlt hier mit Absicht — dort
+# ist eine alte Spanne die Historie eines abgetragenen Eintrags.
+MITGEPRUEFT = ("CHANGELOG.md", "plans/backlog.md")
+
+# Beim ersten Lauf sofort eingetreten, und die Meldung war BERECHTIGT und
+# trotzdem falsch: Der CHANGELOG nennt `Feld A`…`Feld D` in einer
+# ABGESCHLOSSENEN Version — dort beschreibt der Satz den Stand von damals.
+# Eine geschnittene Version ist eingefroren wie das Archiv; wer sie nachzieht,
+# schreibt Historie um. Geprueft wird deshalb nur der LEBENDE Teil: Kopf und
+# `[Unreleased]`, also alles vor der ersten Versionsueberschrift.
+VERSION_UEBERSCHRIFT = re.compile(r"^## \[\d", re.M)
+
+
+
+def lebender_teil(name, text):
+    """Der Teil einer Datei, der noch geschrieben wird (BL-224)."""
+    if name != "CHANGELOG.md":
+        return text
+    m = VERSION_UEBERSCHRIFT.search(text)
+    return text[:m.start()] if m else text
 
 # --- Pfade ------------------------------------------------------------------
 PFAD_ENDUNG = re.compile(r"\.(?:sh|ps1|psm1|py|md|cmd|webp|svg)$")
@@ -239,6 +310,77 @@ def backlog_zahlen():
     return archiv, hoechste
 
 
+def backlog_offen():
+    """Wie viele Eintraege in `plans/backlog.md` offen sind (BL-224).
+
+    Gelesen wird das MERKWORT am Anfang der Statusspalte, nicht die Prosa
+    dahinter — `offen`, `teilweise`, `erledigt`. Alles andere ist
+    UNENTSCHEIDBAR und wird namentlich gemeldet, statt geraten: Eine Zelle wie
+    "Befund 1 erledigt …, Befund 2 bleibt offen" ist fuer einen Leser klar und
+    fuer einen Zaehler nicht, und ein Zaehler, der sich hier auf ein `in`
+    verlaesst, zaehlt jede Zelle mit, die das Wort irgendwo erwaehnt.
+
+    Die Statuszelle ist die LETZTE der Zeile. Steht ausgerechnet in ihr ein
+    `|`, faellt der Eintrag in den unentscheidbaren Zweig — laut und mit Namen.
+    Das ist die gewollte Richtung: lieber eine Meldung zu viel als eine Zahl,
+    die aus einer verrutschten Spalte stammt (BL-160).
+
+    Rueckgabe: (offen, unentscheidbar) — (None, []), wenn die Datei fehlt.
+    """
+    datei = KIT / "plans" / "backlog.md"
+    if not datei.is_file():
+        return None, []
+    offen, unentscheidbar = 0, []
+    for zeile in datei.read_text(encoding="utf-8").splitlines():
+        m = re.match(r"^\|\s*(BL-\d+)\s*\|", zeile)
+        if not m:
+            continue
+        zelle = zeile.rstrip().rstrip("|").rsplit("|", 1)[-1]
+        wort = zelle.strip().lstrip("*_ ").split(" ")[0].strip("*.,;:—–-").lower()
+        if wort in STATUS_OFFEN:
+            offen += 1
+        elif wort not in STATUS_ZU:
+            unentscheidbar.append(m.group(1))
+    return offen, unentscheidbar
+
+
+def feld_kuerzel():
+    """Die Kuerzel, die die Herkunftstabelle des README DEFINIERT (BL-224)."""
+    datei = KIT / "README.md"
+    if not datei.is_file():
+        return set()
+    return set(FELD_ZEILE.findall(datei.read_text(encoding="utf-8")))
+
+
+def pruefe_feldkuerzel(text, definiert, quelle):
+    """Jede Nennung gegen die Tabelle, jede Spanne gegen das hoechste Kuerzel.
+
+    Ohne Definitionen wird NICHT geprueft — eine fremde Datei neben einem Kit
+    ohne Herkunftstabelle ist kein Befund (dieselbe Lockerung wie bei den
+    Backlog-Zahlen, BL-180). Der Leerfall selbst wird vom Aufrufer geprueft.
+    """
+    if not definiert:
+        return []
+    hoechstes = max(definiert)
+    fehler = []
+    for kuerzel in sorted(set(FELD_NENNUNG.findall(text))):
+        if kuerzel not in definiert:
+            fehler.append(
+                f"{quelle} nennt `Feld {kuerzel}` — die Herkunftstabelle des "
+                f"README kennt nur {', '.join('`Feld ' + k + '`' for k in sorted(definiert))}.")
+    for ende in set(FELD_SPANNE.findall(text)):
+        if ende != hoechstes:
+            fehler.append(
+                f"{quelle} nennt die Spanne »`Feld A`…`Feld {ende}`«, vergeben "
+                f"sind Kürzel bis `Feld {hoechstes}` — eine Spanne, die zu "
+                f"frueh endet, schliesst ein Feld aus dem Beleg aus.\n"
+                "    War ein RUECKBLICK gemeint? Dann ausschreiben (»endete "
+                "bei `Feld D`«) statt der Spannenform: Im lebenden Text ist "
+                "eine Spanne ab `Feld A` immer eine Aussage ueber HEUTE, und "
+                "ein Waechter, der das erraten muesste, raet (BL-224).")
+    return fehler
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--readme", default=str(KIT / "README.md"))
@@ -253,6 +395,11 @@ def main():
     a = ap.parse_args()
 
     text = Path(a.readme).read_text(encoding="utf-8")
+    # NUR am README des Kits ist eine FEHLENDE Zusicherung ein Befund; ein
+    # falscher WERT bleibt ueberall rot (BL-198/BL-180). Die Unterscheidung
+    # braucht seit BL-224 auch der Feld-Kuerzel-Teil, deshalb steht sie hier
+    # oben statt im Backlog-Block.
+    ist_kit_readme = (Path(a.readme).resolve() == (KIT / "README.md").resolve())
     fehler = pruefe_pfade(text)
     gemessen = []
     # Die drei gemessenen Gattungen VERLANGT der Aufrufer selbst: Wer
@@ -277,8 +424,6 @@ def main():
         # beider Selbsttests, auf ein Fixture, auf ein Zielprojekt. Ein
         # falscher WERT bleibt auch dort rot — das ist die Zusicherung, auf
         # die es ankommt (BL-198); nur das Einfordern entfaellt (BL-180).
-        ist_kit_readme = (Path(a.readme).resolve()
-                          == (KIT / "README.md").resolve())
         archiv, hoechste = backlog_zahlen()
         if archiv is not None:
             neu, gesehen = pruefe_zahlen(text, archiv, ARCHIV,
@@ -298,6 +443,50 @@ def main():
             fehler += neu
             if gesehen:
                 gemessen.append(f"höchste Nummer BL-{hoechste}")
+        # BL-224, die dritte selbst gemessene Zahl. Sie kommt aus der
+        # Statusspalte und nicht aus der Zeilenzahl: In `plans/backlog.md`
+        # stehen auch abgetragene Zeilen, die noch nicht ins Archiv
+        # verschoben sind.
+        offen, unentscheidbar = backlog_offen()
+        if unentscheidbar and ist_kit_readme:
+            # Erst melden, was nicht zaehlbar war — sonst prueft der naechste
+            # Block eine Zahl gegen eine Summe mit Loechern.
+            fehler.append(
+                "Die Statusspalte von `plans/backlog.md` ist bei "
+                + ", ".join(unentscheidbar)
+                + " nicht entscheidbar: Die Zelle muss mit einem Merkwort "
+                  "beginnen (`offen`, `teilweise`, `erledigt`), danach darf "
+                  "jede Prosa stehen. Geraten wird hier nicht (BL-224).")
+        elif offen is not None and not unentscheidbar:
+            neu, gesehen = pruefe_zahlen(text, offen, OFFEN,
+                                         "offene Backlog-Einträge",
+                                         fremd_hinweis=False,
+                                         verlangt=ist_kit_readme)
+            fehler += neu
+            if gesehen:
+                gemessen.append(f"{offen} offene Einträge")
+
+    # BL-224: Die Feld-Kuerzel. Sie haengen an keinem Schalter — die
+    # Herkunftstabelle des README definiert sie, und wer sie zitiert, zitiert
+    # eine Abschrift. Am 2026-09-03 stand `Feld A`…`Feld D` an drei Stellen,
+    # obwohl es `Feld E` seit dem 2026-08-24 gibt.
+    definiert = feld_kuerzel()
+    fehler += pruefe_feldkuerzel(text, definiert, "README")
+    if ist_kit_readme:
+        if not definiert and FELD_NENNUNG.search(text):
+            fehler.append(
+                "Das README nennt Feld-Kürzel, aber die Herkunftstabelle gibt "
+                "keine her — der Sollwert ist damit unlesbar, und ein "
+                "ungeprüftes Kürzel ist schlimmer als ein gemeldetes.")
+        for weiterer in MITGEPRUEFT:
+            pfad = KIT / weiterer
+            if pfad.is_file():
+                fehler += pruefe_feldkuerzel(
+                    lebender_teil(weiterer,
+                                  pfad.read_text(encoding="utf-8")),
+                    definiert, weiterer)
+        if definiert:
+            gemessen.append(f"Feld-Kürzel bis `Feld {max(definiert)}`")
 
     if fehler:
         for f in fehler:
