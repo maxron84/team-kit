@@ -11,9 +11,10 @@
 [![Projekt-Stack agnostisch](https://img.shields.io/badge/Projekt--Stack-agnostisch-2ea44f?style=flat-square)](#grenzen)
 [![Antrieb — Nutzen je Token](https://img.shields.io/badge/Antrieb-Nutzen_je_Token-8957e5?style=flat-square)](#der-antrieb-nutzen-je-token)
 [![Modelle agnostisch](https://img.shields.io/badge/Modelle-agnostisch-8957e5?style=flat-square)](#modelle--agnostisch-aber-nicht-anspruchslos)
-[![Agenten-CLI nur Claude Code](https://img.shields.io/badge/Agenten--CLI-nur_Claude_Code-fe7d37?style=flat-square&logo=anthropic&logoColor=white)](#grenzen)
+[![Agenten-CLI Claude Code, Codex](https://img.shields.io/badge/Agenten--CLI-Claude_Code,_Codex-fe7d37?style=flat-square)](#grenzen)
+[![Sprachen Deutsch, Englisch geplant](https://img.shields.io/badge/Sprachen-Deutsch,_Englisch_geplant-fe7d37?style=flat-square)](#grenzen)
 [![Lokale Modelle Fernziel](https://img.shields.io/badge/Lokale_Modelle-Fernziel-fe7d37?style=flat-square)](#modelle--agnostisch-aber-nicht-anspruchslos)
-[![Binary nicht geplant](https://img.shields.io/badge/Binary-nicht_geplant-e05d44?style=flat-square)](#grenzen)
+[![Binary in Planung](https://img.shields.io/badge/Binary-in_Planung-fe7d37?style=flat-square)](#grenzen)
 
 > **Der Farbcode ist der Belegstand des Kits, nicht die Wunschliste:**
 > 🟢 im Feld belegt · 🟡 hergeleitet und an der Maschine geprüft ·
@@ -90,7 +91,15 @@ Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
 `TEAM.md` und 1244 Regressionstests.
 
-**Stand: Version 2.13.1** (2026-08-25). Drei Fehlerbehebungen aus dem Feld,
+> **Was „Version" hier heißt.** Das Kit veröffentlicht **keine Releases**;
+> ausgeliefert wird der **Quellstand** dieses Repos. Die Versionsnummer ist die
+> letzte geschriebene CHANGELOG-Sektion, nicht das, was du beim Klonen bekommst
+> — und der Quellstand ist ihr regelmäßig **voraus**. Was seit der Marke
+> abgetragen wurde, steht vollständig unter [`[Unreleased]`](CHANGELOG.md) und
+> reicht bis zum jeweils höchsten Backlog-Eintrag. Wer ein Projekt
+> aktualisiert, zieht damit **den Quellstand**, nicht die Marke.
+
+**Letzte Versionsmarke: 2.13.1** (2026-08-25). Drei Fehlerbehebungen aus dem Feld,
 ausgelöst durch eine Frage statt durch eine rote Zeile: „Hängt der Installer
 beim Selbsttest?" Er hing nicht — er war **stumm** (`BL-176`), und ein stummer
 Lauf ist von einem hängenden nicht zu unterscheiden. Beim Nachsehen lag
@@ -116,8 +125,13 @@ und ein Gleichstands-Prüfer, der **an seinem eigenen Befund starb**, weil `diff
 mit 1 endet, wenn es etwas findet. Keiner der fallenden Fälle wurde grün
 gedreht.
 
-**Offen sind 4 Einträge** — keine Reste dieser Version, sondern zwei
-Meldungen aus dem Feld und zwei eigene Bauvorhaben:
+**Offen sind 5 Einträge**, und keiner davon ist ein Rest dieser Version.
+**Vier warten auf eine Entscheidung**, die die Einträge selbst dem Owner
+vorbehalten — welche der beiden Bauformen gefahren wird (`BL-194`), ob der
+Lückenfinder eine Formatänderung am Ledger wert ist (`BL-193`), wie der
+Rollback mit Pfaden umgeht, die es beim Rollenstart noch nicht gab (`BL-206`,
+Befund 2), und wie ein Abnahme-Gate zugeschnitten wird (`BL-219`). **Einer ist
+Bauarbeit**: der eigene Einstieg in die Fixphase (`BL-204`). Alles in
 [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
 [plans/backlog-archiv.md](plans/backlog-archiv.md) (155 Einträge).
 
@@ -162,7 +176,7 @@ die Bedienanleitung fürs Zielprojekt ist `TEAM.md`:
 | [CONTRIBUTING.md](CONTRIBUTING.md) | wer einen Fund am Kit zurückmelden will | Der Meldeweg, die Redaktionsregel, was ein Code-PR nachweisen muss |
 | [plans/backlog.md](plans/backlog.md) | wer am Kit mitbaut | Offene Punkte (Abgetragenes im [Archiv](plans/backlog-archiv.md)) |
 | [plans/windows-nativ.md](plans/windows-nativ.md) | wer die pwsh-Bahn versteht oder erweitert | Der Bauplan der zweiten Bahn: Anlass, verworfene Alternativen, Stufen, Abnahmekriterien |
-| [plans/roadmap-skizzen.md](plans/roadmap-skizzen.md) | wer eine Idee sucht statt einer Aufgabe | Ungehärtete Stränge — bewusst noch kein Plan |
+| [plans/roadmap-skizzen.md](plans/roadmap-skizzen.md) | wer eine Idee sucht statt einer Aufgabe | Ungehärtete Stränge — bewusst noch kein Plan. Hier stehen die drei Vorhaben, die der Kopf dieser Seite in Orange nennt: gepackte Auslieferung (E), Codex als zweite CLI (F), englische Fassung (G) |
 | `TEAM.md` | der Stakeholder im Zielprojekt | Bedienanleitung — wird installiert und liegt danach im Projekt |
 
 ---
@@ -309,6 +323,16 @@ das JSON-Ergebnisformat (`is_error`, `subtype`, `total_cost_usd`), der
 Auth-Fallback und die Kostenmechanik dran. Wer das Kit auf eine andere Agenten-
 CLI setzt, tauscht diese eine Funktion, nicht die Rollen.
 
+**Die zweite CLI soll Codex werden** — und zwar als *zweiter* Weg neben Claude
+Code, nicht als Ersatz: Erst wenn dieselbe Kaskade über zwei CLIs läuft, ist
+belegt, dass die Bindung wirklich an einer Funktion hängt und nicht überall
+verstreut. **Gebaut ist davon nichts**; im Kit steht dafür bis heute keine
+Zeile Code. Das Abzeichen oben nennt Codex, weil es der beschlossene nächste
+Schritt ist, und trägt deshalb 🟠 — *gewollt, nicht abgenommen*. Was ein
+Zweitweg mitbringen muss und woran er gemessen wird, steht in
+[anhang-a.md, A.11](doku/anhang-a.md); der Strang selbst als **Skizze F** in
+den [Roadmap-Skizzen](plans/roadmap-skizzen.md).
+
 **Das langfristige Ziel ist lokal.** Der Markt der Open-Weights-Modelle wird
 beobachtet; sobald dort bezahlbare Fassungen die obigen Fähigkeiten halten,
 werden sie **schrittweise von unten nach oben** zum Standard: erst die schwache
@@ -346,8 +370,8 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 | **`Feld B`** | Greenfield, Windows 11, **einbahnig pwsh** installiert | Erste Kaskade geplant, gebaut und abgeschlossen (2026-08-21) — der erste vollständige Kostenabschluss eines Projekts überhaupt |
 | **`Feld C`** | Fremde, **gewachsene** Codebasis: Python/tkinter, Einstiegspunkt in der Wurzel, `src/`, `bin/`, gewachsene `tests/`, belegtes `plans/` | Gelesen (2026-08-11) und installiert (2026-08-13). **Keine** Kaskade — belegt ist der Einzug, nicht der Betrieb |
 | **`Feld D`** | Greenfield, Linux, bash-Bahn: Electron + Python 3 + SQLite — Neubau, dessen tkinter-Vorgänger als reine Lesereferenz danebenliegt | Erste Kaskade geplant und gebaut (2026-08-23), Stufen 1–4 grün, Stufe 5 an der Umgebung blockiert. `BL-149`…`BL-151` — **drei Erstlauf-Funde**, alle aus dem Zeitfenster, das ein laufendes Projekt gar nicht mehr hat |
-
 | **`Feld E`** | Greenfield, Linux, bash-Bahn: Dart/Flutter + SQLite für ein **Android-Tablet** — Neubau, dessen Python/tkinter-Vorgänger (~25.500 LOC, 17 Spec-Dokumente) als reine Lesereferenz danebenliegt | **Zwei Kaskaden geplant, gebaut und abgeschlossen** (2026-08-24): Datenfundament und Einrichtungs-Wizard, zusammen 10 Stufen ohne Fehlversuch, 86 Tests in `Feld E`, 5 Red-Team-Funde, rund 50 USD Abo-Gegenwert — vollständig geledgert. `BL-158`…`BL-168` — **elf Funde**: die ersten acht vor der ersten gebauten Stufe, aus dem Lesen der Kopplungen zwischen Konfiguration, Testläufer und Rollen-Prompt; die letzten drei aus dem Betrieb (Preistabelle, Zeitpunkt der Gegenprobe, Rückkanal). Der erste Stack ohne pytest: Was das Kit an Python-Annahmen mitträgt, wird hier zum ersten Mal sichtbar. Zugleich der erste Beleg für den Rückkanal als Werkzeug statt als Handarbeit |
+
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen sechs Quellen
 kommen die Backlog-Einträge `BL-1`…`BL-223`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
@@ -734,14 +758,15 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
 
 ## Grenzen
 
-- **Sprach- und stackagnostisch, aber python3 wird gebraucht.** Die Team-Werkzeuge
+- **Programmiersprach- und stackagnostisch, aber python3 wird gebraucht.** Die Team-Werkzeuge
   sind Python und liegen unter `team/tools/`. Das ist eine Abhängigkeit der
   **Team-Infrastruktur** — auf einer Ebene mit `git`, `flock` und der Agenten-CLI —
   nicht deines Projekts. Verifiziert in Go-, Rust- und PHP-Projektstrukturen.
 - **Im Feld gelaufen, aber schmal aufgestellt.** Der Dauerbetrieb liegt bei
-  **einem** Projekt (`Feld A`: 33 Kaskaden, Greenfield, Linux, bash-Bahn);
-  `Feld B` hat **eine** Kaskade auf der pwsh-Bahn gefahren, `Feld C` gar keine.
-  Zwei Plattformen und zwei Bahnen sind damit berührt, aber nur **eine**
+  **einem** Projekt (`Feld A`: 33 Kaskaden, Greenfield, Linux, bash-Bahn).
+  Daneben stehen einzelne Kaskaden: `Feld B` **eine** auf der pwsh-Bahn,
+  `Feld D` **eine** und `Feld E` **zwei** auf der bash-Bahn — `Feld C` gar
+  keine. Zwei Plattformen und zwei Bahnen sind damit berührt, aber nur **eine**
   Kombination ist eingelaufen. Jeder Lauf hat Kit-Fehler zutage gefördert —
   `BL-1`…`BL-223`, von der toten Fixphase über zwei Löcher in der
   Kostenerfassung und die Zeilenenden bis zur vierten Fehlerklasse „Stufe
@@ -754,22 +779,53 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   fehlt, ist eine Kaskade mit echten Agenten in einem Bestandsprojekt — bis
   dahin ist belegt, dass das Team dort **einzieht**, nicht, dass es dort
   **arbeitet**.
-- **Noch nie gelaufen: Axel.** Der Forensiker hat in keinem Feld eine einzige
-  Ledgerzeile — sein Pfad ist getestet, aber nicht im Feld belegt.
-- **Kein Binary, keine Fassung ohne Bordmittel.** Das Kit ist eine Sammlung von
-  Skripten und setzt `git`, `bash` ≥ 4 bzw. PowerShell ≥ 7 und `python3`
-  voraus; `flock` ist seit `BL-190` nur noch der **bevorzugte** Weg zur
-  Loop-Sperre, nicht mehr Bedingung. Eine gepackte, abhängigkeitsfreie
-  Auslieferung ist **nicht geplant** — und macOS ist damit nicht verboten, aber
+- **Axel ist gelaufen — belegt ist er hier trotzdem nicht.** Der Forensiker hat
+  Fälle gelöst: in der **Alpha-Phase des Kits** und seither in Projekten mit
+  installiertem Team. Was fehlt, ist nicht der Lauf, sondern der Beleg **in der
+  Form, die hier sonst gilt** — keine Zeile in der Herkunftstabelle, kein Datum,
+  keine Ledgerzeile, die jemand außer dem Autor nachrechnen kann. Die Rolle
+  steht damit auf 🟡: erprobt, aber nicht nachprüfbar dokumentiert. Der Weg
+  dahin ist derselbe wie für alles andere hier — ein Feld, das seinen
+  Axel-Einsatz mit Kaskade, Datum und Ledgerzeile meldet.
+- **Heute kein Binary — eine gepackte Auslieferung ist in Planung, nicht
+  gebaut.** Das Kit ist eine Sammlung von Skripten und setzt `git`, `bash` ≥ 4
+  bzw. PowerShell ≥ 7 und `python3` voraus; `flock` ist seit `BL-190` nur noch
+  der **bevorzugte** Weg zur Loop-Sperre, nicht mehr Bedingung. Eine gepackte,
+  abhängigkeitsärmere Auslieferung steht als Strang auf der
+  [Roadmap](plans/roadmap-skizzen.md) — **Skizze E**, mit den offenen Fragen,
+  die vor dem Bauen zu entscheiden sind: Was genau gepackt wird (die
+  Python-Werkzeuge sind der einzige echte Kandidat, die Orchestrierung ist die
+  Shell selbst), und wie ein Binary mit dem Grundsatz zusammengeht, dass jede
+  Datei im Zielprojekt lesbar danebenliegt. **Bis das gebaut und abgenommen
+  ist, gilt hier die Skriptfassung** — und macOS ist damit nicht verboten, aber
   unbelegt: Die Bordmittel-`bash` ist dort 3.2. `kit-einrichten.sh` sagt das an
   der Maschine, statt es vorauszusetzen.
-- **Modellagnostisch ja, CLI-agnostisch nein.** Die Rollen sprechen zwei Stufen
-  an (`TEAM_MODEL_LOOP`/`TEAM_MODEL_STRONG`), keine Modellnamen — aber der
-  einzige erprobte Weg zu einem Modell führt heute über `claude -p`. Daran
-  hängen das Ergebnis-JSON, der Auth-Fallback und die gesamte Kostenmechanik.
-  Der Tausch findet in **einer** Funktion statt (`team_claude()` in
-  `team/lib.sh`); belegt ist er nicht. Ebenso wenig belegt ist bisher ein Lauf
-  mit einem lokalen Open-Weights-Modell — das ist Ziel, nicht Zustand.
+- **Modellagnostisch ja, CLI-agnostisch noch nicht.** Die Rollen sprechen zwei
+  Stufen an (`TEAM_MODEL_LOOP`/`TEAM_MODEL_STRONG`), keine Modellnamen — aber
+  der einzige **gefahrene** Weg zu einem Modell führt heute über `claude -p`.
+  Daran hängen das Ergebnis-JSON (`is_error`, `subtype`, `total_cost_usd`), der
+  Auth-Fallback und die gesamte Kostenmechanik. **Codex ist die zweite CLI, die
+  bedient werden soll** — im Kit steht dafür bis heute **keine Zeile Code**:
+  kein Aufrufpfad, keine Ergebnis-Auswertung, kein Kostenfeld, kein Test. Das
+  Abzeichen oben steht deshalb auf 🟠 *gewollt, nicht abgenommen* und nicht auf
+  grün. Der Tausch findet in **einer** Funktion statt (`team_claude()` in
+  `team/lib.sh`) — was ein Zweitweg mitbringen muss, steht in
+  [anhang-a.md, A.11](doku/anhang-a.md), der Strang in der
+  [Roadmap](plans/roadmap-skizzen.md) als **Skizze F**. Ebenso wenig belegt ist
+  bisher ein Lauf mit einem lokalen Open-Weights-Modell — das ist Ziel, nicht
+  Zustand.
+- **Das Kit spricht Deutsch — eine englische Fassung ist geplant, nicht
+  vorhanden.** Deutsch ist nicht nur die Sprache der Doku: Die
+  **Rollen-Briefings**, die Auftragstexte, die Meldungen der Werkzeuge und die
+  Regeldatei-Vorlage sind es ebenso, und das ist die Fassung, in der die
+  Auflagen im Feld nachweislich eingehalten werden. Wer ein englischsprachiges
+  Team bedient, bekommt heute deutsche Prompts — funktionsfähig, aber nichts,
+  was dieses Kit *belegen* könnte. Was eine Übersetzung wirklich kostet, steht
+  in der [Roadmap](plans/roadmap-skizzen.md) als **Skizze G**: Nicht die Prosa
+  ist die Arbeit, sondern die Kopplungen — das Regel-Inventar zitiert
+  **wörtlich**, `zitat_lint.py` prüft Zitate, und 1244 Regressionstests
+  greifen auf deutsche Zeichenketten zu. Der Name bleibt in jeder Fassung
+  `T.E.A.M.`; die Auflösungen dafür stehen in `TEAM.md`.
 - **Selbstverifikation**: `bash bash/kit-test.sh` installiert das Kit in ein
   Wegwerf-Repo und fährt dort die 1244 Tests — **zweimal**: einmal mit den
   Auslieferungswerten, einmal mit angepasster `team.config.sh` (Caps,

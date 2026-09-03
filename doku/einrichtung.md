@@ -691,12 +691,16 @@ steht.
 |---|---|---|
 | **Anderes Modell** | `TEAM_MODEL_LOOP` / `TEAM_MODEL_STRONG` in [team/lib.sh](../bash/lib.sh) oder pro Lauf setzen | eine Zeile. Welche **Fähigkeiten** ein Kandidat mitbringen muss, steht im [README](../README.md#modelle--agnostisch-aber-nicht-anspruchslos) |
 | **Andere IDE / keine** | nichts | Das Kit wird im Terminal bedient |
-| **Andere Agenten-CLI** | `team_claude()` in [team/lib.sh](../bash/lib.sh) austauschen — die **einzige** Stelle im Kit, die eine CLI aufruft | überschaubar, aber **nicht belegt**: An dieser Funktion hängen das Ergebnis-JSON (`is_error`, `subtype`, `total_cost_usd`), der Auth-Fallback und die 429-Mechanik. Wer tauscht, muss diese vier Dinge nachbauen — siehe [anhang-a.md, A.11](anhang-a.md) |
+| **Andere Agenten-CLI** | `team_claude()` in [team/lib.sh](../bash/lib.sh) austauschen — die **einzige** Stelle im Kit, die eine CLI aufruft | überschaubar, aber **nicht belegt**: An dieser Funktion hängen das Ergebnis-JSON (`is_error`, `subtype`, `total_cost_usd`), der Auth-Fallback und die 429-Mechanik. Wer tauscht, muss diese drei Dinge nachbauen, dazu den `--permission-mode` der Read-Only-Rollen — siehe [anhang-a.md, A.11](anhang-a.md) |
 | **Anderes Auth-Verfahren** | `bash/scripts/team-auth-setup.sh` ist ein Beispielskript für Claude Code, keine Kit-Mechanik | ersetzen |
 
-Das Kit ist **modellagnostisch, aber nicht CLI-agnostisch**. Das ist eine
-ehrliche Grenze, keine Absichtserklärung: Der einzige erprobte Weg zu einem
-Modell führt heute über `claude -p`.
+Das Kit ist **modellagnostisch, aber noch nicht CLI-agnostisch**. Das ist eine
+ehrliche Grenze, keine Absichtserklärung: Der einzige gefahrene Weg zu einem
+Modell führt heute über `claude -p`. **Codex ist als zweite CLI beschlossen**
+(2026-09-03) und im Kit bisher **nicht gebaut** — keine Zeile Code, kein Test.
+Was ein Zweitweg mitbringen muss, steht in [anhang-a.md, A.11](anhang-a.md),
+der Strang in [`plans/roadmap-skizzen.md`](../plans/roadmap-skizzen.md) als
+Skizze F.
 
 ---
 

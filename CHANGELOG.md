@@ -2,7 +2,7 @@
 
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
-> **Feldbelege tragen Kürzel statt Namen** (`Feld A`…`Feld D`).
+> **Feldbelege tragen Kürzel statt Namen** (`Feld A`…`Feld E`).
 > Wofür sie stehen, sagt die Profiltabelle im
 > [README](README.md#herkunft): Für den Beleg zählt die Lage eines
 > Projekts — Plattform, Bahn, Greenfield oder Bestand —, nicht sein Name.
@@ -41,6 +41,60 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Changed
 
+- **Der README-Kopf nennt drei Stränge, die beschlossen und nicht gebaut sind**
+  (Entscheid des Owners, 2026-09-03). Die Abzeichen `Agenten-CLI`, `Sprachen`
+  und `Binary` stehen jetzt auf *Claude Code, Codex* · *Deutsch, Englisch
+  geplant* · *in Planung* — **alle drei in Orange**, also nach dem Farbcode
+  dieses README *gewollt, aber nicht abgenommen*. `Binary` war bis hierher rot
+  und mit „nicht geplant" begründet.
+
+  **Der Grund, warum das mehr ist als drei geänderte Bilder:** Ein Abzeichen
+  ohne Adresse ist eine Ankündigung. Jeder der drei Stränge hat deshalb im
+  selben Zug eine **Roadmap-Skizze mit den Fragen bekommen, die vor dem Bauen
+  zu entscheiden sind** (`plans/roadmap-skizzen.md`, Skizzen E, F und G) — beim
+  Binary die Frage, ob es dem Grundsatz „jede Datei liegt lesbar daneben"
+  widerspricht; bei Codex der Name von `TEAM_CLAUDE_BIN`, die Kostenmeldung
+  einer fremden CLI und das Abnahmekriterium; bei der englischen Fassung die
+  Kopplungen, die die Übersetzung teuer machen (das Regel-Inventar zitiert
+  **wörtlich** und wird zeichengenau geprüft).
+
+  Und die unbequeme Hälfte steht ausdrücklich dabei, im README wie in
+  `anhang-a.md` A.11 und `doku/einrichtung.md`: **Für Codex gibt es im Kit bis
+  heute keine Zeile Code** — kein Aufrufpfad, keine Ergebnis-Auswertung, kein
+  Kostenfeld, kein Test. Das Abzeichen nennt den beschlossenen nächsten
+  Schritt, nicht einen Zustand; genau dafür gibt es die Farbe Orange.
+
+- **Die Grenze „Noch nie gelaufen: Axel" war falsch und ist ersetzt.** Sie
+  behauptete, der Forensiker habe in keinem Feld eine Ledgerzeile und sei
+  „getestet, aber nicht im Feld belegt". Tatsächlich hat die Rolle Fälle
+  gelöst — in der Alpha-Phase des Kits und seither in Projekten mit
+  installiertem Team. Was fehlt, ist nicht der Lauf, sondern der **Beleg in der
+  Form, die dieses README sonst verlangt**: eine Zeile in der Herkunftstabelle,
+  ein Datum, eine nachrechenbare Ledgerzeile.
+
+  **Warum die Zeile trotzdem unter *Grenzen* bleibt, statt zu verschwinden:**
+  Der Farbcode misst nicht, was der Autor weiß, sondern was ein Leser
+  nachprüfen kann. Die Rolle steht deshalb neu auf 🟡 statt auf „nie gelaufen",
+  mit dem Weg nach 🟢 daneben — ein Feld, das seinen Axel-Einsatz mit Kaskade,
+  Datum und Ledgerzeile meldet. Eine falsche Grenze ist teurer als eine harte:
+  Sie erzieht dazu, den ganzen Abschnitt für Koketterie zu halten.
+
+- **Drei Zahlen und eine Tabelle im README waren verrottet** — gefunden beim
+  Pflegen, nicht von einem Wächter. `Offen sind 4 Einträge` stand gegen fünf
+  offene Zeilen im Backlog (und nennt sie jetzt einzeln, mit dem Unterschied
+  zwischen *wartet auf eine Entscheidung* und *wartet auf Bauarbeit*); die
+  Feldbreite unter *Grenzen* kannte `Feld D` und `Feld E` nicht, obwohl beide
+  Kaskaden gefahren haben; der CHANGELOG-Kopf führte die Kürzel bis `Feld D`;
+  und in der Herkunftstabelle **zerriss eine Leerzeile die Tabelle vor der
+  `Feld E`-Zeile**, sodass die Zeile als eigene Einzeiler-Tabelle rendert und
+  der Folgeabsatz an ihr klebt.
+
+  **Die Lehre gehört zu `BL-198`:** Der README-Wächter prüft die Gattungen, die
+  er kennt — Testfälle, Testdateien, installierte Dateien, Archivzahl,
+  BL-Spanne. Die Zahl der **offenen** Einträge gehört nicht dazu, und die
+  Feldkürzel auch nicht. Beides ist nachrechenbar (`grep -c '^| BL-'` gegen die
+  Statusspalte), beides wäre eine Wächterzeile wert.
+
 - **Der Rückkanal trennt jetzt zwei Rollen — und `senden` sagt es selbst**
   (`BL-187`, Entscheid des Owners 2026-08-26). Ein **fremder** Kit-Nutzer
   sendet einen Pull Request; der **Owner** legt die Meldung ins lokal liegende
@@ -59,8 +113,6 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Die Rollen stehen jetzt in Briefing, `bootstrap/TEAM.md`,
   `bootstrap/CLAUDE.md.vorlage`, `bootstrap/backlog.md` und
   `plans/meldungen/README.md` — jeweils mit dem Grund daneben.
-
-### Changed
 
 - **Fünf Regeln, die es längst gab — nur nicht dort, wo sie gebraucht werden.**
   Gemeinsamer Nenner: Jede war im Code, in einem Test, im Archiv oder im

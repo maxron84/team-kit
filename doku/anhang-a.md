@@ -781,9 +781,26 @@ vollständige Kaskade im Feld · und als Kennzahl die **Rate der Exit-`43`-Fäll
 und Guard-Verletzungen je Kaskade** — sie misst genau das, was Benchmarks nicht
 zeigen: ob das Modell das Protokoll durchhält, wenn niemand zusieht.
 
+**Der zweite Weg ist beschlossen und heißt Codex** (Entscheid des Owners,
+2026-09-03) — als *zweite* CLI neben Claude Code, nicht als Ersatz. Der Grund
+ist der Beleg selbst: Solange es genau einen Weg gibt, ist der Satz „die
+Bindung hängt an **einer** Funktion" weder widerlegt noch belegt. Erst ein
+zweiter zeigt, ob die Annahme wirklich in `team_claude()` sitzt — oder
+mitläuft, wo niemand sie vermutet. **Gebaut ist davon nichts**; im Kit steht
+dafür bis heute keine Zeile Code. Die drei Verträge oben sind die Arbeitsliste,
+dazu der `--permission-mode`, an dem die beiden Read-Only-Rollen hängen (A.5),
+und ein Punkt, den ein Modellwechsel gar nicht hat: Die
+**Preistabelle** in `kosten.py` rechnet Claude-Modelle. Ein zweiter Anbieter
+bringt eigene Modellnamen und eigene Preise mit — der vorhandene Hebel dafür
+ist `TEAM_PREISE` (`BL-211`), nicht eine zweite Tabelle im Quelltext. Der
+Strang steht als **Skizze F** in [`plans/roadmap-skizzen.md`](../plans/roadmap-skizzen.md),
+mit den offenen Fragen (Name der Konfigurationsvariablen, Kostenmeldung,
+Abnahmekriterium).
+
 **Stand:** Alle automatisierten Rollen laufen über Claude Code (`claude -p`),
-die Weiterentwicklung des Kits ebenfalls. Ein Lauf mit einem lokalen
-Open-Weights-Modell ist **nicht** belegt. Das ist Ziel, nicht Zustand.
+die Weiterentwicklung des Kits ebenfalls. Ein Lauf mit einer zweiten Agenten-CLI
+ist **nicht** belegt; ein Lauf mit einem lokalen Open-Weights-Modell ebenso
+wenig. Beides ist Ziel, nicht Zustand.
 
 ## A.12 Die Maschine vor dem Projekt — warum es `kit-einrichten.sh` gibt
 

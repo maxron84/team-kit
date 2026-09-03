@@ -69,9 +69,15 @@ Beleg.
 
 ## Sprache
 
-Das Repo ist durchgehend deutsch. **Englische Meldungen sind trotzdem
-willkommen** — sie werden beim Triage übernommen und normalisiert. Lieber eine
-englische Meldung als keine.
+Das Repo ist durchgehend deutsch — Doku, Briefings, Werkzeugmeldungen.
+**Englische Meldungen sind trotzdem willkommen**: Sie werden beim Triage
+übernommen und normalisiert. Lieber eine englische Meldung als keine.
+
+Eine **englische Fassung des Kits** ist beschlossen und nicht gebaut; was sie
+kostet und welche Fragen vorher zu entscheiden sind, steht als Skizze G in
+[`plans/roadmap-skizzen.md`](plans/roadmap-skizzen.md). Bis dahin gilt für
+Code-Beiträge dieselbe Regel wie für alles andere: Wortlaut auf Deutsch, weil
+das Regel-Inventar **wörtlich** zitiert und zeichengenau geprüft wird.
 
 ## Pull Requests mit Code
 
