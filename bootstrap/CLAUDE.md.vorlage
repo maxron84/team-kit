@@ -122,14 +122,18 @@ nein** — auch das, was in der Aufzählung fehlt. Das ist eine Prompt-Auflage,
 keine Mechanik. Wer die Mechanik will, gibt dem Team einen eigenen leeren
 Plan-Ordner.
 
-**Der Beutezug-Dreisatz** (jeder Einbruch endet so):
+**Der Beutezug-Dreisatz** (jeder Einbruch endet so — seit `Kit-BL-215`
+mit einer vierten Zeile; der Name bleibt, weil beide Red-Team-Briefings
+und jedes Feldprojekt ihn so führen):
 
 1. **Fund ins Beutebuch** [`{{BEUTEBUCH}}`]({{BEUTEBUCH}}) eintragen:
    `HM-<Nr>`, Angreifer (Harry/Marv), Schweregrad (kritisch/hoch/mittel/klein),
    **Reproschritte**, Erwartung vs. Realität.
 2. **Pflicht: `Reproducer-Test`-Zeile setzen**, mit dem Pfad **in Backticks** —
    auch wenn die Datei noch nicht existiert. Sie reserviert den Dateinamen für
-   Frank. Der Substanz-Anker `team_diff_beruehrt_fund` besteht nur, wenn Franks
+   Frank; **zulässig ist auch der Pfad einer bestehenden Datei**, wenn der
+   Nachweis dorthin gehört (`Kit-BL-216`). Der Substanz-Anker
+   `team_diff_beruehrt_fund` besteht nur, wenn Franks
    Diff eine im Fund-Block backtick-referenzierte Datei berührt; eine **neue**
    Testdatei ist nie vorab referenziert, ihr regelkonformer Fix würde also
    stillschweigend zurückgerollt. **Optional** bleibt nur, den Test selbst
@@ -139,7 +143,23 @@ Plan-Ordner.
    `xpass`, und die Suite bleibt in beiden Fällen grün. Im Feld war ein so
    markierter Reproducer byte-identisch grün, nachdem der Fix
    **zurückgedreht** wurde — er hat nie etwas geprüft.
-3. **Übergabe an Frank**: Status von `offen` auf `an Frank übergeben` setzen —
+3. **Behauptetes Laufzeitverhalten einer Sprachkonstruktion wird BELEGT, nicht
+   hergeleitet.** Sagt ein Fund, was eine Sprachkonstruktion zur Laufzeit tut
+   (verzögerte Initialisierung, `finally` gegen `return`, ob Zusicherungen im
+   Auslieferungsbau laufen, wann ein asynchroner Rumpf startet, die
+   Lebensdauer eines UI-Zustandsobjekts), gehört ein **Wegwerf-Test** davor.
+   Er wird nicht abgelegt — er ist die Probe, nicht das Ergebnis.
+
+   **Warum ausgerechnet hier:** Für alles andere ist Lesen die richtige
+   Methode, und `Finder ≠ Fixer` schützt sie. Bei einer Sprachkonstruktion ist
+   Lesen die Methode, die versagt — die Semantik steht in der Spezifikation,
+   nicht im gelesenen Code, und ein sorgfältiger Leser trifft dort eine
+   falsche, aber gut begründete Aussage. Im Feld kostete ein solcher Fehlalarm
+   den Fixer **zwei Versuche und 3,72 USD**; die drei *echten* Funde derselben
+   Kaskade kosteten zusammen **2,89 USD**. Ein Fehlalarm dieser Bauart ist für
+   den Fixer nicht billiger als ein echter Fund, weil er die Ursache erst
+   widerlegen muss (`Kit-BL-215`).
+4. **Übergabe an Frank**: Status von `offen` auf `an Frank übergeben` setzen —
    am besten mit `beutebuch.py set <HM-Nr> 'an Frank übergeben'`, das schreibt
    den **Feldwert** und sonst nichts. **In die Statuszeile gehört immer nur ein
    Wert der Kette, nie der Übergang:** Der Pfeil unten beschreibt, was auf was

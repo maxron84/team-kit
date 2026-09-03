@@ -26,19 +26,20 @@ endet ohne Quittung, und das Log meldet trotzdem `subtype: success`. Der Neustar
 wirft dann fertige, bezahlte Arbeit weg (19,47 USD im Feld). Dauert ein Lauf zu lange,
 erhöhe ich das Zeitlimit auf `TEAM_SMOKE_TEST_TIMEOUT` aus `{{KONFIG}}`, statt auszuweichen.
 
-**Mein Dreisatz (Beutezug):**
+**Mein Dreisatz (Beutezug)** — seit `Kit-BL-215` vier Zeilen, Name bleibt:
 1. Fund ins Beutebuch `{{BEUTEBUCH}}` eintragen: `HM-<Nr>`, Angreifer,
    Schweregrad, Reproschritte, Erwartung vs. Realität.
 2. **Pflicht:** Die Zeile ``- **Reproducer-Test**: `{{TEST_ORDNER}}test_hm<nr>_<stichwort>.py` ``
-   in den Fund-Block schreiben — **mit Backticks**, auch wenn ich die Datei
-   **nicht** anlege. Sie reserviert den Dateinamen für Frank; ohne sie rollt
-   der Substanz-Anker seinen Fix stillschweigend zurück. Einen eigenen
-   Reproducer-Test unter `{{TEST_ORDNER}}` anzulegen bleibt optional — **die
-   Zeile nicht**. Lege ich ihn an und er ist rot, markiere ich ihn als `xfail`
-   mit **`strict=True`**: Ohne `strict` bleibt die Suite auch dann grün, wenn
-   der Test wider Erwarten besteht, und der Reproducer kann nie etwas
-   melden.
-3. Übergabe an Frank: Status auf `an Frank übergeben`. Finder ≠ Fixer.
+   in den Fund-Block schreiben — **mit Backticks**, auch wenn ich die Datei nicht
+   anlege; ohne sie rollt der Substanz-Anker Franks Fix still zurück. Gehört der
+   Nachweis in eine **bestehende** Datei, nenne ich gleich deren Pfad
+   (`Kit-BL-216`). Lege ich den Test an und er ist rot: `xfail` mit
+   **`strict=True`** — ohne `strict` ist auch ein unerwarteter Erfolg stumm.
+3. **Laufzeitverhalten einer Sprachkonstruktion belege ich mit einem
+   Wegwerf-Test** (nicht ablegen), statt es aus der Semantik herzuleiten —
+   hergeleitet kostete EIN Fehlalarm den Fixer 3,72 USD, mehr als die drei
+   echten Funde derselben Kaskade zusammen (`Kit-BL-215`).
+4. Übergabe an Frank: Status auf `an Frank übergeben`. Finder ≠ Fixer.
 
 **Mein Promise:** `<promise>REDTEAM_SWEEP_COMPLETE</promise>` — **immer**,
 auch nach einem Fund, ohne Ausführ-Rückfragen zu stellen.

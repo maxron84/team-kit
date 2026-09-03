@@ -143,6 +143,39 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Die Vollautomatik nimmt einen abgebrochenen Lauf bei der abgebrochenen
+  Phase wieder auf** (`BL-217`, gemeldet von `Feld E`; beide Bahnen). Das
+  Skript war phasen-**zustandslos**: Es gibt `.ralph-state`, `.harry-state`
+  und `.marv-state`, aber keinen Zustand für den Orchestrator. Ein in Phase 4
+  am Deckel abgebrochener Lauf begann beim Fortsetzen wieder bei Phase 1 — und
+  der Abbruchbericht versprach wörtlich das Gegenteil („nimmt den Faden am
+  Zeigerstand auf"; einen Zeiger gab es nur für Ralph).
+
+  **Gemessen, nicht hergeleitet:** Der Fortsetzungslauf kaufte **zwei volle
+  Red-Team-Sweeps über Franks eigene Fix-Commits** — 2,2653 USD, null Funde,
+  **27 %** der gesamten Fixphasen-Kosten dieser Kaskade. Die Restarbeit, wegen
+  der fortgesetzt wurde, war eine leere Frank-Runde und der Abschlussbericht,
+  beides kostenlos. Verschärfend: Der Fortsetzungslauf setzt `LAUF_START` neu
+  (für sich richtig, `BL-18`) — das ganze frische Budget kann in einen Sweep
+  laufen, den niemand bestellt hat. Betroffen war **jeder** Abbruchpfad, der
+  den Weiterweg anbietet: Deckel, Stagnation, Session-Pause 42.
+
+  Neu ist `.vollautomatik-state`: Er trägt die **nächste** Phase plus die Lage,
+  gegen die sie gilt (Plan-Zeiger und Ralphs Stufenstand). Geschrieben wird er
+  erst, wenn eine Phase durch ist, gelöscht beim regulären Ende — er überlebt
+  damit genau die Abbrüche. **Er fällt immer zur sicheren Seite aus:** Passt
+  die Lage nicht mehr (neue Kaskade, umgelegter Plan, von Hand gefahrener
+  Ralph), wird er verworfen und bei Phase 1 begonnen. Ein veralteter Zeiger
+  darf niemals einen Bau überspringen. `--von-vorn` ist der benannte Weg
+  zurück auf Anfang, und der Abbruchbericht nennt die Phase jetzt beim Namen.
+
+  **Der geprüfte Einwand:** Beim Überspringen von Phase 2/3 bleiben Franks
+  Fix-Commits ungesweept. Das ist kein Verlust, sondern Aufschub — die
+  Sweep-Marke ist commit-basiert. Umgekehrt hatte der alte Zustand einen
+  zweiten, stilleren Nachteil: Der ungeplante Sweep verschob die Marke auf
+  `HEAD` und verbrauchte den Prüfdurchgang über die Fix-Commits zu einem
+  Zeitpunkt, zu dem der Fokus-String noch der der Bauphase war.
+
 - **`--rollen-abschluss` bucht eine erkannte Fehlzuordnung nicht mehr, sondern
   bricht ab** (`BL-221`, gemeldet von `Feld E`). `logs_vor_kaskadenbeginn()`
   erkannte den Fall zuverlässig und nannte die richtige Abhilfe im Klartext
@@ -253,6 +286,47 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Verstellungen: Die verstellte Tabelle wird weiter als **Tabellenfehler**
   erkannt und blockiert die Buchung — das steht seit diesem Eintrag mit unter
   Test, statt nur der Zähler.
+
+- **Der Beutezug-Dreisatz verlangt einen Beleg für behauptetes
+  Laufzeitverhalten** (`BL-215`, gemeldet von `Feld E`). Er verlangte
+  Reproschritte, Erwartung, Realität und die reservierte Reproducer-Zeile — er
+  verlangte **nirgends**, dass eine behauptete **Sprachsemantik** vor dem
+  Eintrag ausprobiert wird. Für alles andere ist das richtig (`Finder ≠
+  Fixer`); bei einer Sprachkonstruktion ist Lesen genau die Methode, die
+  versagt: Die Semantik steht in der Spezifikation, nicht im gelesenen Code.
+
+  **Gemessen:** Ein sauber begründeter, nicht existenter Fund über eine
+  verzögert initialisierende Konstruktion kostete den Fixer **zwei Versuche und
+  3,72 USD** — die drei *echten* Funde derselben Kaskade zusammen **2,89 USD**.
+  Ein Fehlalarm dieser Bauart ist für den Fixer nicht billiger als ein echter
+  Fund, weil er die Ursache erst widerlegen muss. Der Fehlertyp ist nicht
+  sprachgebunden: verzögerte Initialisierung, `finally` gegen `return`, ob
+  Zusicherungen im Auslieferungsbau laufen, der Startzeitpunkt eines
+  asynchronen Rumpfs, die Lebensdauer eines UI-Zustandsobjekts.
+
+  Neu in `CLAUDE.md.vorlage` und beiden Red-Team-Briefings: Behauptetes
+  Laufzeitverhalten wird mit einem **Wegwerf-Test** belegt, der nicht abgelegt
+  wird — er ist die Probe, nicht das Ergebnis. Der Name „Dreisatz" bleibt und
+  sagt jetzt selbst, dass er vier Zeilen führt.
+
+- **Die reservierte Reproducer-Datei ist eine Vorauswahl, keine Anweisung**
+  (`BL-216`, gemeldet von `Feld E`). Der Fundblock reserviert einen
+  Dateinamen; daneben verlangt die Konsolidierungs-Auflage **eine** Datei je
+  wiederkehrender Zusicherung. Frank gehorchte beiden auf die einzige Art, die
+  ihm offenstand: Er zog die bestehende Sammeldatei nach **und** legte die
+  reservierte Datei an. Ergebnis im Feld: zwei Dateien, identischer Testname,
+  identische Logik — und genau ein sachlicher Unterschied, `greaterThanOrEqualTo(5)`
+  gegen `(6)`. Die **schwächere** Bedingung stand in der Datei, deren
+  Kopfkommentar den aktuellen Nachweis behauptete; wer aufräumt und das
+  Duplikat löscht, verliert die stärkere Zusicherung, ohne dass ein Test rot
+  wird.
+
+  **Nicht die Mechanik war schuld:** `team_diff_beruehrt_fund` akzeptiert eine
+  bestehende backtick-referenzierte Datei vollständig. Es fehlte die **Regel**.
+  Franks Briefing erlaubt das Umbiegen der Reproducer-Zeile jetzt ausdrücklich
+  (quittiert im Fundblock), und Fund-Format wie Beutebuch-Vorlage nennen den
+  Pfad einer **bestehenden** Datei als zweiten zulässigen Fall. Familie von
+  `BL-15`, `BL-28` und `BL-169`: Der Nachweis sieht aus, als sei er da.
 
 - **Kaskaden-Plandateien heißen künftig `team-kaskade-N-<thema>.md` — und der
   Weg dorthin war ein anderer als gedacht** (`BL-202`, gemeldet von `Feld B`;

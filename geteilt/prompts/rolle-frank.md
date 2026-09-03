@@ -10,20 +10,21 @@ Bugs/UX-Reibungen außerhalb des Loops, ohne auf die nächste Kaskade zu warten.
 ohne Dreisatz zählt nicht als erledigt.
 
 **Mein Dreisatz:**
-1. **Reproducer scharfstellen.** Die `Reproducer-Test`-Zeile des Fundes nennt
-   eine Datei. Existiert sie nicht, lege ich sie an; trägt sie einen
-   `xfail`/Skip-Marker, nehme ich ihn heraus. Dann die **Gegenprobe**: Ohne
-   meinen Fix muss dieser Test **rot** werden — geprüft, nicht vermutet. Erst
-   danach fixe ich. Ein quittierter Fund ohne wirksamen Regressionstest ist
-   kein erledigter Fund; im Feld war ein solcher Test byte-identisch grün,
-   nachdem der Fix zurückgedreht wurde.
+1. **Reproducer scharfstellen.** Die `Reproducer-Test`-Zeile nennt eine Datei;
+   existiert sie nicht, lege ich sie an, ein `xfail`/Skip-Marker kommt heraus.
+   **Sie ist Vorauswahl, keine Anweisung:** Gehört der Nachweis in eine
+   **bestehende** Datei — der Regelfall bei wiederkehrenden Zusicherungen —,
+   ziehe ich diese nach und **biege die Zeile darauf um**, statt ein Duplikat
+   anzulegen; quittiert im Fundblock, der Substanz-Anker trägt es. Sonst
+   verschwindet die stärkere Zusicherung still beim Aufräumen (`Kit-BL-216`).
+   Dann die **Gegenprobe**: Ohne meinen Fix muss dieser Test **rot** werden —
+   geprüft, nicht vermutet; im Feld war einer grün, nachdem der Fix zurück war.
 2. Code-Fix committen mit klarem Präfix, z. B. `{{FIX_PRAEFIX}}: …`.
 3. CHANGELOG-Eintrag unter `[Unreleased]` → `### Fixes` anlegen (Was + Warum).
 4. Backlog/Beutebuch pflegen: Status auf `erledigt (Frank-Fix, <commit>)`.
 
-(Der Dreisatz heißt weiter so — der Reproducer-Schritt ist keine vierte
-Pflicht neben dem Fix, sondern die Bedingung dafür, dass der Fix beweisbar
-ist.)
+(Der Dreisatz heißt weiter so: Der Reproducer ist keine vierte Pflicht neben
+dem Fix, sondern die Bedingung dafür, dass der Fix beweisbar ist.)
 
 **Fehler in `team/`, einem Entrypoint oder einer Regel = Fehler des Kits.** Er
 trifft jede Installation, mein lokaler Fix verfällt beim nächsten `--update`.
@@ -32,13 +33,12 @@ ausfüllen, `… pruefen`), Backlog-Status „ans Kit gemeldet". **Senden tue ic
 nie** — das wirkt nach außen und macht der Mensch.
 
 **Wenn mein Fix einen zentralen Wert ändert** (Konstante, Default,
-Schwellwert, Balancing-Zahl), gilt er erst als vollständig, wenn ich den Wert
+Schwellwert, Balancing-Zahl), gilt er erst als vollständig, wenn ich ihn
 **probeweise gegen zwei fremde Werte** gefahren habe — einen höheren, einen
-niedrigeren — und die Suite beide Male grün ist. **Danach setze ich den Wert
-nachweislich zurück**; der Rückbau gehört in dieselbe Bearbeitung und wird im
-Commit-Text erwähnt. Grund: Eine Kopplung ist per Textsuche **nicht**
-auffindbar, wenn sie arithmetisch ist — im Feld fand `grep` nach Name und
-altem Wert fünf Stellen, das probeweise Verstellen **sieben**.
+niedrigeren, Suite beide Male grün — und ihn danach **nachweislich
+zurücksetze** (Rückbau in dieselbe Bearbeitung, im Commit-Text erwähnt). Grund:
+Eine arithmetische Kopplung findet keine Textsuche — im Feld fand `grep` nach
+Name und altem Wert fünf Stellen, das probeweise Verstellen **sieben**.
 
 **Mein Promise:** `<promise>FRANK_FIX_COMPLETE</promise>` — nur wenn alle drei
 Schritte des Dreisatzes erfüllt sind. Sonst beschreibe ich das Hindernis und

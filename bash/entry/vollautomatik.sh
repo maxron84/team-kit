@@ -4,7 +4,10 @@
 # Kaskade vollautomatisch durch. Ralph baut → Red Team greift an → Frank fixt →
 # Axel knackt die harten Fälle → Abschlussbericht.
 #
-# Aufruf:  ./vollautomatik.sh
+# Aufruf:  ./vollautomatik.sh            (nimmt einen abgebrochenen Lauf bei der
+#                                        abgebrochenen PHASE wieder auf, BL-217)
+#          ./vollautomatik.sh --von-vorn (verwirft den Phasen-Zeiger und
+#                                        beginnt bei Phase 1)
 # Env:     TEAM_MAX_RUNDEN   Fix-Runden Frank/Axel (Default 12) — grobe Obergrenze.
 #          TEAM_FIX_MAX_STAGNATION  Auslauf-Bremse (Default = TEAM_FRANK_MAX_VERSUCHE,
 #                            sonst 3; HM-31-Fix): bricht Phase 4 ab, sobald so viele
@@ -22,6 +25,7 @@
 #                            Durchsetzung misst nur die Kosten dieses einen
 #                            Laufs (A), nicht den lebenslangen Kontostand (BL-18).
 #          TEAM_MODEL_LOOP / TEAM_MODEL_STRONG / AUTH_MODE  (siehe team/lib.sh)
+#          TEAM_VOLLAUTOMATIK_AB_PHASE  1 wirkt wie --von-vorn (BL-217).
 # Exit:    0 = Lauf durch · 1 = echter Fehler (Mensch gefragt; inkl. Stagnation)
 #          43 = Stufe fertig, Quittung fehlt (BL-41, durchgereicht von ralph.sh):
 #               kein Neubau — prüfen und von Hand quittieren
@@ -46,6 +50,15 @@ team_lock vollautomatik || exit 1
 if [ "$(team_auth_mode_effektiv abo)" = "abo" ]; then
     team_warnung_abo_key
 fi
+
+VON_VORN=0
+for arg in "$@"; do
+    case "$arg" in
+        --von-vorn) VON_VORN=1 ;;
+        *) echo "Unbekannte Option: $arg — erlaubt: --von-vorn" >&2; exit 2 ;;
+    esac
+done
+[ "${TEAM_VOLLAUTOMATIK_AB_PHASE:-}" = "1" ] && VON_VORN=1
 
 MAX_RUNDEN="${TEAM_MAX_RUNDEN:-12}"
 # HM-31: Default an TEAM_FRANK_MAX_VERSUCHE koppeln (statt fest 2), sonst
@@ -147,6 +160,87 @@ budget_ok() {
     return 1
 }
 
+# --- Phasen-Zeiger (BL-217) --------------------------------------------------
+# Das Skript war phasen-ZUSTANDSLOS: Es gibt .ralph-state, .harry-state und
+# .marv-state, aber keinen Zustand fuer den Orchestrator selbst. Ein in Phase 4
+# am Deckel abgebrochener Lauf begann beim Fortsetzen wieder bei Phase 1 — und
+# der Abbruchbericht versprach woertlich das Gegenteil ("nimmt den Faden am
+# Zeigerstand auf"; einen Zeiger gab es nur fuer Ralph).
+#
+# Gemessen im Feld: Der Fortsetzungslauf kaufte ZWEI volle Red-Team-Sweeps ueber
+# Franks eigene Fix-Commits — 2,2653 USD, null Funde, 27 % der gesamten
+# Fixphasen-Kosten dieser Kaskade. Seit dem letzten Sweep lagen neue Commits
+# vor, also hatten Harry und Marv "etwas zu tun". Verschaerfend: Der
+# Fortsetzungslauf setzt LAUF_START neu (fuer sich richtig, BL-18) — das ganze
+# frische Budget kann in einen Sweep laufen, den niemand bestellt hat.
+#
+# DER ZEIGER FAELLT IMMER ZUR SICHEREN SEITE AUS: Er gilt nur, solange
+# Plan-Zeiger UND Ralphs Stufenstand unveraendert sind. Passt eines nicht mehr
+# (neue Kaskade, umgelegter Plan, von Hand gefahrener Ralph), wird er
+# verworfen und bei Phase 1 begonnen — ein veralteter Zeiger darf niemals
+# einen Bau ueberspringen.
+#
+# Geschrieben wird er erst, wenn eine Phase DURCH ist (er nennt also die
+# NAECHSTE), und beim regulaeren Ende geloescht. Er ueberlebt damit genau die
+# Abbrueche: Deckel, Stagnation, Session-Pause 42.
+#
+# Der Einwand, den das Feld selbst geprueft hat: Beim Ueberspringen von 2/3
+# bleiben Franks Fix-Commits ungesweept. Das ist kein Verlust, sondern
+# Aufschub — die Sweep-Marke ist commit-basiert, der naechste regulaere Sweep
+# beginnt hinter .harry-state/.marv-state und nimmt sie mit. Der alte Zustand
+# hatte umgekehrt einen zweiten, stilleren Nachteil: Der ungeplante Sweep
+# verschiebt die Marke auf HEAD und verbraucht den Pruefdurchgang ueber die
+# Fix-Commits zu einem Zeitpunkt, zu dem der Fokus-String noch der der
+# Bauphase ist.
+PHASEN_STATE=".vollautomatik-state"
+AB_PHASE=1
+
+phasen_lage() {
+    # Die Lage, gegen die ein Zeiger gilt. Beide Dateien sind gitignoriert und
+    # aendern sich genau dann, wenn ein Ueberspringen falsch waere.
+    printf '%s|%s' "$(cat .ralph-plan 2>/dev/null || echo -)" \
+                   "$(cat .ralph-state 2>/dev/null || echo -)"
+}
+
+phasen_name() {
+    case "$1" in
+        1) echo "Phase 1 (Ralph)" ;;
+        2) echo "Phase Red Team (harry)" ;;
+        3) echo "Phase Red Team (marv)" ;;
+        4) echo "Phase 4 (Fix-Runden)" ;;
+        *) echo "Phase $1" ;;
+    esac
+}
+
+phasen_naechste() {
+    printf '%s\n%s\n' "$1" "$(phasen_lage)" > "$PHASEN_STATE"
+}
+
+phasen_faellig() { [ "$1" -ge "$AB_PHASE" ]; }
+
+phasen_zeiger_lesen() {
+    [ -f "$PHASEN_STATE" ] || return 0
+    if [ "$VON_VORN" -eq 1 ]; then
+        log "Phasen-Zeiger verworfen (--von-vorn) — der Lauf beginnt bei Phase 1."
+        rm -f "$PHASEN_STATE"
+        return 0
+    fi
+    local vermerkt lage
+    vermerkt="$(sed -n 1p "$PHASEN_STATE" 2>/dev/null)"
+    lage="$(sed -n 2p "$PHASEN_STATE" 2>/dev/null)"
+    case "$vermerkt" in
+        2|3|4) ;;
+        *) rm -f "$PHASEN_STATE"; return 0 ;;
+    esac
+    if [ "$lage" != "$(phasen_lage)" ]; then
+        log "Phasen-Zeiger verworfen: Plan oder Stufenstand haben sich seither geaendert — der Lauf beginnt bei Phase 1."
+        rm -f "$PHASEN_STATE"
+        return 0
+    fi
+    AB_PHASE="$vermerkt"
+    log "Faden aufgenommen bei $(phasen_name "$AB_PHASE") — die Phasen davor werden uebersprungen (BL-217). ./vollautomatik.sh --von-vorn beginnt stattdessen bei Phase 1."
+}
+
 # BL-23 (3): Ein Abbruch endet nie ohne Weiterweg. Der Bericht kostet nichts,
 # loest die Kostenfrage nicht — aber die Reibung, und er hilft bei JEDEM
 # Abbruchgrund, nicht nur beim Deckel.
@@ -164,10 +258,20 @@ abbruch_bericht() {
         log "Keine offenen Funde — nur der Closeout fehlt:"
         log "  ./team-status.sh --rollen-abschluss <N> <domaene>"
     fi
-    log "Ganzen Lauf fortsetzen: ./vollautomatik.sh (nimmt den Faden am Zeigerstand auf)"
+    # BL-217: phasengenau statt pauschal. Die alte Zeile versprach eine
+    # Semantik, die das Skript nicht hatte — und der Mensch handelt nach der
+    # Zusage, nicht nach dem Code.
+    if [ -f "$PHASEN_STATE" ]; then
+        log "Ganzen Lauf fortsetzen: ./vollautomatik.sh (setzt bei $(phasen_name "$(sed -n 1p "$PHASEN_STATE")") fort; --von-vorn beginnt bei Phase 1)"
+    else
+        log "Ganzen Lauf fortsetzen: ./vollautomatik.sh (beginnt bei Phase 1)"
+    fi
 }
 
+phasen_zeiger_lesen
+
 # --- Phase 1: Ralph baut die Kaskade -----------------------------------------
+if phasen_faellig 1; then
 log "=== PHASE 1: Ralph (Bau der Kaskade) ==="
 ./ralph.sh; rc=$?
 if [ "$rc" -eq 42 ]; then
@@ -187,10 +291,19 @@ if [ "$rc" -ne 0 ]; then
     log "Ralph endete mit Fehler ($rc) — Vollautomatik stoppt, Mensch gefragt."
     exit 1
 fi
+# Erst JETZT ist Phase 1 durch — der Zeiger nennt immer die naechste Phase,
+# nie die laufende. Ein Abbruch mittendrin faellt damit auf Phase 1 zurueck.
+phasen_naechste 2
 budget_ok || { abbruch_bericht "Budget-Deckel"; exit 1; }
+else
+    log "=== PHASE 1: Ralph — uebersprungen (Faden aufgenommen, BL-217) ==="
+fi
 
 # --- Phase 2+3: Red-Team-Sweeps ----------------------------------------------
+phase_nr=1
 for rolle in harry marv; do
+    phase_nr=$((phase_nr + 1))
+    phasen_faellig "$phase_nr" || { log "=== PHASE Red Team: $rolle — uebersprungen (Faden aufgenommen, BL-217) ==="; continue; }
     log "=== PHASE Red Team: $rolle ==="
     ./"$rolle".sh; rc=$?
     case "$rc" in
@@ -199,10 +312,12 @@ for rolle in harry marv; do
         42) log "⏸ Session-Limit erreicht — Lauf pausiert ($rolle). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."; exit 42 ;;
         *) log "$rolle endete mit ECHTEM Fehler ($rc: is_error/Guard-Verletzung/Aufruf-Fehlschlag — ein bloß fehlendes Promise bei sauberem Fund liefert bereits 0) — Vollautomatik stoppt."; exit 1 ;;
     esac
+    phasen_naechste $((phase_nr + 1))
     budget_ok || { abbruch_bericht "Budget-Deckel"; exit 1; }
 done
 
 # --- Phase 4: Fix-Runden (Frank ↔ Axel) --------------------------------------
+phasen_naechste 4
 # Auslauf-Bremse (Kaskade 11/Stufe 38, Architekt-Beobachtung 2026-07-11): Ein
 # Fund kann über viele Runden hinweg IMMER WIEDER einen Fehlversuch/Fehler
 # produzieren (getan=1, aber kein echter Fortschritt) — TEAM_MAX_RUNDEN allein
@@ -265,6 +380,9 @@ done
 [ "$runde" -ge "$MAX_RUNDEN" ] && log "WARNUNG: Rundenlimit ($MAX_RUNDEN) erreicht — evtl. offene Funde, Mensch prüfen."
 
 # --- Abschluss ---------------------------------------------------------------
+# Der Zeiger ueberlebt genau die Abbrueche: Hier, am regulaeren Ende, faellt er
+# weg, damit der naechste Aufruf wieder eine ganze Kaskadenrunde faehrt.
+rm -f "$PHASEN_STATE"
 log "=== ABSCHLUSSBERICHT ==="
 ./team-status.sh || true
 log "Dieser Lauf: $(lauf_kosten) USD (Deckel $TEAM_BUDGET_USD). Gesamt-Kontostand: $(kontostand_gesamt) USD."

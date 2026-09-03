@@ -4,8 +4,13 @@
   Kaskade durch. Ralph baut -> Red Team greift an -> Frank fixt -> Axel knackt
   die harten Faelle -> Abschlussbericht.
 
-  Aufruf:  .\vollautomatik.cmd
+  Aufruf:  .\vollautomatik.cmd            (nimmt einen abgebrochenen Lauf bei
+                                         der abgebrochenen PHASE wieder auf,
+                                         BL-217)
+           .\vollautomatik.cmd --von-vorn (verwirft den Phasen-Zeiger und
+                                         beginnt bei Phase 1)
   Env:     TEAM_MAX_RUNDEN   Fix-Runden Frank/Axel (Default 12).
+           TEAM_VOLLAUTOMATIK_AB_PHASE  1 wirkt wie --von-vorn (BL-217).
            TEAM_FIX_MAX_STAGNATION  Auslauf-Bremse (Default =
                              TEAM_FRANK_MAX_VERSUCHE, sonst 3): bricht Phase 4
                              ab, sobald so viele Runden IN FOLGE weder einen
@@ -47,6 +52,16 @@ if (-not (team_lock 'vollautomatik')) { exit 1 }
 # erreicht sie nie (analog team_lock/TEAM_LOCK_HELD). Nur im Abo-Modus
 # relevant; im reinen api-Modus ist der Key legitim.
 if ((team_auth_mode_effektiv 'abo') -eq 'abo') { team_warnung_abo_key | Out-Null }
+
+$vonVorn = $false
+foreach ($arg in $args) {
+    if ($arg -eq '--von-vorn') { $vonVorn = $true }
+    else {
+        [Console]::Error.WriteLine("Unbekannte Option: $arg — erlaubt: --von-vorn")
+        exit 2
+    }
+}
+if ($env:TEAM_VOLLAUTOMATIK_AB_PHASE -eq '1') { $vonVorn = $true }
 
 $maxRunden = if ($env:TEAM_MAX_RUNDEN) { [int]$env:TEAM_MAX_RUNDEN } else { 12 }
 # HM-31: Default an TEAM_FRANK_MAX_VERSUCHE koppeln (statt fest 2), sonst
@@ -201,6 +216,74 @@ function Budget-Ok {
     return $false
 }
 
+# --- Phasen-Zeiger (BL-217) ---------------------------------------------------
+# Wortgleiche Bauart wie in der bash-Fassung; die Begruendung steht dort
+# ausfuehrlich. Kurz: Das Skript war phasen-ZUSTANDSLOS, ein in Phase 4
+# abgebrochener Lauf begann beim Fortsetzen wieder bei Phase 1 und kaufte zwei
+# Red-Team-Sweeps ueber Franks eigene Fix-Commits (im Feld 2,2653 USD, null
+# Funde, 27 % der Fixphasen-Kosten) — waehrend der Abbruchbericht woertlich das
+# Gegenteil versprach. Der Zeiger gilt nur, solange Plan-Zeiger UND Ralphs
+# Stufenstand unveraendert sind, und faellt sonst auf Phase 1 zurueck: Ein
+# veralteter Zeiger darf niemals einen Bau ueberspringen.
+$phasenState = '.vollautomatik-state'
+$abPhase = 1
+
+function Phasen-Lage {
+    # .Trim() ist Pflicht, nicht Kosmetik: `-Raw` liefert den abschliessenden
+    # Zeilenumbruch mit, und der wuerde den ZWEIZEILIGEN Zustand sprengen —
+    # die Lage stuende dann ueber drei Zeilen und passte nie wieder.
+    $plan = if (Test-Path -LiteralPath '.ralph-plan') {
+        (Get-Content -LiteralPath '.ralph-plan' -Raw).Trim() } else { '-' }
+    $stand = if (Test-Path -LiteralPath '.ralph-state') {
+        (Get-Content -LiteralPath '.ralph-state' -Raw).Trim() } else { '-' }
+    return "$plan|$stand"
+}
+
+function Phasen-Name {
+    param([int]$Nr)
+    switch ($Nr) {
+        1 { 'Phase 1 (Ralph)' }
+        2 { 'Phase Red Team (harry)' }
+        3 { 'Phase Red Team (marv)' }
+        4 { 'Phase 4 (Fix-Runden)' }
+        default { "Phase $Nr" }
+    }
+}
+
+function Phasen-Naechste {
+    param([int]$Nr)
+    Set-Content -LiteralPath $phasenState -Encoding UTF8 `
+        -Value @("$Nr", (Phasen-Lage))
+}
+
+function Phasen-Faellig {
+    param([int]$Nr)
+    return ($Nr -ge $script:abPhase)
+}
+
+function Phasen-Zeiger-Lesen {
+    if (-not (Test-Path -LiteralPath $phasenState)) { return }
+    if ($vonVorn) {
+        Log 'Phasen-Zeiger verworfen (--von-vorn) — der Lauf beginnt bei Phase 1.'
+        Remove-Item -LiteralPath $phasenState -Force -ErrorAction SilentlyContinue
+        return
+    }
+    $zeilen = @(Get-Content -LiteralPath $phasenState -ErrorAction SilentlyContinue)
+    $vermerkt = if ($zeilen.Count -ge 1) { $zeilen[0] } else { '' }
+    $lage = if ($zeilen.Count -ge 2) { $zeilen[1] } else { '' }
+    if ($vermerkt -notin @('2', '3', '4')) {
+        Remove-Item -LiteralPath $phasenState -Force -ErrorAction SilentlyContinue
+        return
+    }
+    if ($lage -ne (Phasen-Lage)) {
+        Log 'Phasen-Zeiger verworfen: Plan oder Stufenstand haben sich seither geaendert — der Lauf beginnt bei Phase 1.'
+        Remove-Item -LiteralPath $phasenState -Force -ErrorAction SilentlyContinue
+        return
+    }
+    $script:abPhase = [int]$vermerkt
+    Log ("Faden aufgenommen bei " + (Phasen-Name $script:abPhase) + " — die Phasen davor werden uebersprungen (BL-217). .\vollautomatik.cmd --von-vorn beginnt stattdessen bei Phase 1.")
+}
+
 # BL-23 (3): Ein Abbruch endet nie ohne Weiterweg. Der Bericht kostet nichts,
 # loest die Kostenfrage nicht — aber die Reibung, und er hilft bei JEDEM
 # Abbruchgrund, nicht nur beim Deckel.
@@ -218,10 +301,21 @@ function Abbruch-Bericht {
         Log 'Keine offenen Funde — nur der Closeout fehlt:'
         Log '  .\team-status.cmd --rollen-abschluss <N> <domaene>'
     }
-    Log 'Ganzen Lauf fortsetzen: .\vollautomatik.cmd (nimmt den Faden am Zeigerstand auf)'
+    # BL-217: phasengenau statt pauschal. Die alte Zeile versprach eine
+    # Semantik, die das Skript nicht hatte.
+    if (Test-Path -LiteralPath $phasenState) {
+        $vermerkt = @(Get-Content -LiteralPath $phasenState)[0]
+        Log ("Ganzen Lauf fortsetzen: .\vollautomatik.cmd (setzt bei " +
+             (Phasen-Name ([int]$vermerkt)) + " fort; --von-vorn beginnt bei Phase 1)")
+    } else {
+        Log 'Ganzen Lauf fortsetzen: .\vollautomatik.cmd (beginnt bei Phase 1)'
+    }
 }
 
+Phasen-Zeiger-Lesen
+
 # --- Phase 1: Ralph baut die Kaskade ------------------------------------------
+if (Phasen-Faellig 1) {
 Log '=== PHASE 1: Ralph (Bau der Kaskade) ==='
 $rc = Rolle-Starten './ralph.ps1'
 if ($rc -eq 42) {
@@ -241,10 +335,22 @@ if ($rc -ne 0) {
     Log "Ralph endete mit Fehler ($rc) — Vollautomatik stoppt, Mensch gefragt."
     exit 1
 }
+# Erst JETZT ist Phase 1 durch — der Zeiger nennt immer die naechste Phase,
+# nie die laufende. Ein Abbruch mittendrin faellt damit auf Phase 1 zurueck.
+Phasen-Naechste 2
 if (-not (Budget-Ok)) { Abbruch-Bericht 'Budget-Deckel'; exit 1 }
+} else {
+    Log '=== PHASE 1: Ralph — uebersprungen (Faden aufgenommen, BL-217) ==='
+}
 
 # --- Phase 2+3: Red-Team-Sweeps -----------------------------------------------
+$phaseNr = 1
 foreach ($rolle in @('harry', 'marv')) {
+    $phaseNr++
+    if (-not (Phasen-Faellig $phaseNr)) {
+        Log "=== PHASE Red Team: $rolle — uebersprungen (Faden aufgenommen, BL-217) ==="
+        continue
+    }
     Log "=== PHASE Red Team: $rolle ==="
     $rc = Rolle-Starten "./$rolle.ps1"
     switch ($rc) {
@@ -259,8 +365,10 @@ foreach ($rolle in @('harry', 'marv')) {
             exit 1
         }
     }
+    Phasen-Naechste ($phaseNr + 1)
     if (-not (Budget-Ok)) { Abbruch-Bericht 'Budget-Deckel'; exit 1 }
 }
+Phasen-Naechste 4
 
 # --- Phase 4: Fix-Runden (Frank <-> Axel) -------------------------------------
 # Auslauf-Bremse: Ein Fund kann ueber viele Runden hinweg IMMER WIEDER einen
@@ -333,6 +441,9 @@ if ($runde -ge $maxRunden) {
 }
 
 # --- Abschluss ----------------------------------------------------------------
+# Der Zeiger ueberlebt genau die Abbrueche: Hier, am regulaeren Ende, faellt er
+# weg, damit der naechste Aufruf wieder eine ganze Kaskadenrunde faehrt.
+Remove-Item -LiteralPath $phasenState -Force -ErrorAction SilentlyContinue
 Log '=== ABSCHLUSSBERICHT ==='
 Rolle-Starten './team-status.ps1' | Out-Null
 Log "Dieser Lauf: $(Lauf-Kosten) USD (Deckel $budgetUsd). Gesamt-Kontostand: $(Kontostand-Gesamt) USD."
