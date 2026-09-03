@@ -24,8 +24,9 @@
                              Durchsetzung misst nur die Kosten dieses einen
                              Laufs (A), nicht den lebenslangen Kontostand.
   Exit:    0 = Lauf durch · 1 = echter Fehler (inkl. Stagnation)
-           43 = Stufe fertig, Quittung fehlt (BL-41, von ralph.ps1
-                durchgereicht): kein Neubau — pruefen und von Hand quittieren
+           43 = Stufe/Fix fertig, Quittung fehlt (BL-41, von ralph.ps1 und —
+                seit BL-214 — von frank.ps1 durchgereicht): kein Neubau, kein
+                Neustart — pruefen und von Hand quittieren
            42 = Session-Limit — Lauf pausiert (kein Fehler, State steht)
 
   Sequenziell und sperrgesichert. Haelt die Sperre ueber den ganzen Lauf und
@@ -292,19 +293,48 @@ function Phasen-Zeiger-Lesen {
 # BL-23 (3): Ein Abbruch endet nie ohne Weiterweg. Der Bericht kostet nichts,
 # loest die Kostenfrage nicht — aber die Reibung, und er hilft bei JEDEM
 # Abbruchgrund, nicht nur beim Deckel.
+# BL-212: Die Kaskadennummer wird EINGESETZT statt als "<N>" gedruckt — der
+# Bericht war der Absender genau der Zahl, die der Mensch danach abtippt, und
+# BL-220 ist der Fund darueber, was ein Vertippen kostet. Findet sich nichts,
+# bleibt der Platzhalter stehen statt zu raten.
+function Kaskaden-Nummer {
+    if (-not (Test-Path -LiteralPath '.ralph-plan')) { return '<N>' }
+    $m = [regex]::Match((Get-Content -LiteralPath '.ralph-plan' -Raw), 'kaskade-(\d+)-')
+    if ($m.Success) { return $m.Groups[1].Value }
+    return '<N>'
+}
+
 function Abbruch-Bericht {
     param([string]$Grund)
+    $nr = Kaskaden-Nummer
     Log "--- WIE ES WEITERGEHT ($Grund) ---"
     $offen = @(Team-Werkzeug $TEAM_BEUTEBUCH_TOOL @('list') 2>$null |
                Where-Object { $_ -and $_ -notmatch 'erledigt|überholt' })
-    if ($offen.Count) {
+    # BL-212: Der Satz richtet sich am PHASENSTAND aus, nicht am Beutebuch.
+    # Ein leeres Beutebuch heisst "keine Funde", nicht "geprueft" — faellt der
+    # Deckel zwischen Ralphs Feierabend und der Red-Team-Phase, ist es leer,
+    # WEIL niemand gesucht hat. Der alte Satz schlug in genau diesem Zustand
+    # den Closeout einer UNGEPRUEFTEN Kaskade vor. Der Irrtum zeigt in Richtung
+    # `fertig`, und das ist die teure Richtung. Fehlt der Zeiger ganz, ist auch
+    # Phase 1 nicht durch — der Default 1 ist die sichere Seite.
+    $stand = 1
+    if (Test-Path -LiteralPath $phasenState) {
+        $roh = @(Get-Content -LiteralPath $phasenState)[0]
+        if ($roh -match '^\d+$') { $stand = [int]$roh }
+    }
+    if ($stand -lt 4) {
+        Log 'ACHTUNG: Die Phase Red Team wurde NICHT erreicht — diese Kaskade ist UNGEPRUEFT.'
+        Log "  Ein leeres Beutebuch heisst hier 'niemand hat gesucht', nicht 'nichts gefunden'."
+        Log ("  Kein Closeout, bevor der Sweep gelaufen ist:  .\vollautomatik.cmd (setzt bei " +
+             (Phasen-Name $stand) + " fort)")
+    } elseif ($offen.Count) {
         Log 'Offene Funde:'
         foreach ($z in $offen) { Log "    $z" }
         Log 'Fixphase fortsetzen:  .\frank.cmd   (ein Fund je Aufruf)'
-        Log 'Danach der Closeout:  .\team-status.cmd --rollen-abschluss <N> <domaene>'
+        Log "Danach der Closeout:  .\team-status.cmd --rollen-abschluss $nr <domaene>"
     } else {
         Log 'Keine offenen Funde — nur der Closeout fehlt:'
-        Log '  .\team-status.cmd --rollen-abschluss <N> <domaene>'
+        Log "  .\team-status.cmd --rollen-abschluss $nr <domaene>"
     }
     # BL-217: phasengenau statt pauschal. Die alte Zeile versprach eine
     # Semantik, die das Skript nicht hatte.
@@ -393,9 +423,21 @@ while ($runde -lt $maxRunden) {
     switch ($rc) {
         0 { $getan = 1; $fortschritt = 1; Log "Runde ${runde}: Frank hat einen Fund gefixt." }
         3 { }
+        # BL-210: Ein unbrauchbarer Auftrag ist NICHT dasselbe wie "nichts zu
+        # tun". Er zaehlt wie ein Fehlversuch (kein break) und laeuft in die
+        # Stagnations-Bremse, statt die Fix-Phase stumm zu beenden.
+        5 {
+            $getan = 1
+            Log "Runde ${runde}: Franks Auftrag am Kopf der Warteschlange ist unbrauchbar (BL-210) — der Fundblock gehoert nachgebessert. Dahinter liegende Funde bleiben ungesehen, solange er dort steht."
+        }
         42 {
             Log '⏸ Session-Limit erreicht — Lauf pausiert (Frank). Bitte später .\vollautomatik.cmd erneut starten. Kein Fehler, kein Datenverlust (State steht).'
             exit 42
+        }
+        # BL-214: derselbe vierte Ausgang wie bei Ralph, dieselbe Behandlung.
+        43 {
+            Log '⚠ Fix fertig, Quittung fehlt (BL-41/BL-214) — Lauf gestoppt. NICHT neu starten, bevor die von Frank genannten Prüfungen gelaufen sind.'
+            exit 43
         }
         default { $getan = 1; Log "Runde ${runde}: Frank-Fehlversuch (ggf. Eskalation an Axel)." }
     }
@@ -448,6 +490,18 @@ if ($runde -ge $maxRunden) {
 # --- Abschluss ----------------------------------------------------------------
 # Der Zeiger ueberlebt genau die Abbrueche: Hier, am regulaeren Ende, faellt er
 # weg, damit der naechste Aufruf wieder eine ganze Kaskadenrunde faehrt.
+# BL-210 (3): Der Bericht wird ehrlich. Endet die Fix-Phase mit Funden, die
+# weiter auf Frank warten, ist das eine ANDERE Aussage als "nichts mehr zu
+# tun" — im Feld hat sich der Lauf genau deshalb wie ein sauberer Abschluss
+# gelesen.
+$frankRest = @(Team-Werkzeug $TEAM_BEUTEBUCH_TOOL @('list') 2>$null |
+               Where-Object { $_ -match 'an Frank übergeben|Fix-Plan liegt vor' }).Count
+if ($frankRest -gt 0) {
+    Log "WARNUNG: $frankRest Fund(e) warten weiter auf Frank — die Fix-Phase ist NICHT leergelaufen."
+    Log '  Steht ein unbrauchbarer Fundblock am Kopf der Warteschlange, bleibt alles dahinter ungesehen (BL-210).'
+    Log '  Naechster Schritt:  .\frank.cmd   (nennt den Block, der nachgebessert gehoert)'
+}
+
 Remove-Item -LiteralPath $phasenState -Force -ErrorAction SilentlyContinue
 Log '=== ABSCHLUSSBERICHT ==='
 Rolle-Starten './team-status.ps1' | Out-Null

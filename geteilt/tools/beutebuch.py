@@ -354,6 +354,23 @@ def lint(hm_soll, pfad=BEUTEBUCH):
         maengel.append(
             "die `- **Reproducer-Test**:`-Zeile nennt keinen Pfad in "
             "Backticks — fuer ein Werkzeug ist sie damit leer.")
+    elif len(zeilen) > 1:
+        # BL-210, zweiter Befund: Der Lint prueft das VORHANDENSEIN der Zeile,
+        # nicht ihre EINDEUTIGKEIT. Im Feld hat ein zweiter Sweep die fehlende
+        # Zeile eines fremden Fundes bemerkt und nachgetragen — ans Ende
+        # SEINES EIGENEN Blocks. Der Block trug damit zwei Zeilen, eine davon
+        # mit dem Testnamen eines fremden Fundes, und der Lint meldete beide
+        # Funde folgerichtig falsch: sauber fuer den einen (er hat ja eine
+        # Zeile), unbrauchbar fuer den anderen (dort fehlt sie weiter).
+        #
+        # `reproducer_pfad` nimmt die ERSTE Zeile. Welche das ist, entscheidet
+        # damit die Reihenfolge im Block statt der Absicht — genau die Sorte
+        # stiller Zuordnung, die BL-216 an anderer Stelle teuer gemacht hat.
+        maengel.append(
+            f"{len(zeilen)} `- **Reproducer-Test**:`-Zeilen in EINEM Fundblock "
+            f"— es gilt die erste, die zweite ist unsichtbar. Haeufigster "
+            f"Fall: Die Zeile eines FREMDEN Fundes wurde hier nachgetragen "
+            f"(BL-210). Sie gehoert in den Block, zu dem sie gehoert.")
     return maengel
 
 

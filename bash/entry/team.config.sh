@@ -264,6 +264,32 @@ export TEAM_DOMAENEN   # die Python-Werkzeuge lesen sie aus der Umgebung
 # Committete Kostenbasis. NICHT in .gitignore aufnehmen.
 TEAM_LEDGER="${TEAM_LEDGER:-.budget-ledger}"
 
+# --- Preise (BL-211) ----------------------------------------------------------
+# Projektlokale Uebersteuerung der Preistabelle in team/tools/kosten.py.
+# Format: "<modell>=<usd je Mio Input-Token>", getrennt durch Leerzeichen oder
+# Komma:
+#
+#     TEAM_PREISE="claude-sonnet-5=3.00 claude-opus-5=5.00"
+#
+# WARUM ES DAS GIBT: Die Tabelle im Kit ist EINE Zahl je Modell fuer ALLE
+# Installationen — und im Feld war sie fuer zwei Projekte gleichzeitig nicht
+# richtig. Der mit BL-166 auf 2.00 gesenkte claude-sonnet-5-Satz traf das eine
+# Projekt genau; im anderen weichen damit 78 von 79 abgerechneten Laeufen um
+# 33,3 % ab, und die Selbsteichung verweigert regelkonform JEDE Buchung. Wer
+# den Satz zurueckdreht, dreht ihn dem ersten Projekt kaputt. Beide Felder
+# haben recht: Sie rechnen gegen verschiedene Vertraege ab.
+#
+# Leer lassen, solange `kosten.py sitzung-messen` "Preistabelle geeicht"
+# meldet. Meldet es einen durchgaengigen Versatz — JEDER Lauf desselben
+# Modells weicht um denselben Faktor ab —, gehoert der Satz hierher; ein
+# EINZELNER Ausreisser dagegen sagt nichts ueber die Tabelle (BL-213/BL-218)
+# und wird hier nicht ausgeglichen.
+#
+# Ein unlesbarer Eintrag wird beim naechsten Aufruf namentlich gemeldet und
+# uebersprungen — er gilt dann NICHT, still ist er nie.
+TEAM_PREISE="${TEAM_PREISE:-}"
+export TEAM_PREISE   # die Python-Werkzeuge lesen sie aus der Umgebung
+
 # --- Abgeleitet: Read-Only-Whitelist für Guard Linie 3 ------------------------
 # Regex der Pfade, die Harry/Marv schreiben dürfen. Axel bekommt nur den
 # Plan-Ordner (enger, siehe axel.sh).

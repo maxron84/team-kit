@@ -246,6 +246,25 @@ $TEAM_LEDGER = Team-Wert 'TEAM_LEDGER' '.budget-ledger'
 # Regex der Pfade, die Harry/Marv schreiben duerfen. Axel bekommt nur den
 # Plan-Ordner (enger, siehe axel.ps1). Die Muster nennen SCHRAEGSTRICHE, weil
 # git seine Pfade so ausgibt — auch unter Windows.
+# --- Preise (BL-211) ----------------------------------------------------------
+# Projektlokale Uebersteuerung der Preistabelle in team/tools/kosten.py.
+# Format: "<modell>=<usd je Mio Input-Token>", getrennt durch Leerzeichen oder
+# Komma:
+#
+#     $TEAM_PREISE = 'claude-sonnet-5=3.00 claude-opus-5=5.00'
+#
+# WARUM ES DAS GIBT: Die Tabelle im Kit ist EINE Zahl je Modell fuer ALLE
+# Installationen — und im Feld war sie fuer zwei Projekte gleichzeitig nicht
+# richtig (BL-211: 78 von 79 Laeufen 33,3 % daneben, jede Buchung blockiert,
+# waehrend derselbe Satz einem anderen Projekt genau passt). Beide Felder
+# haben recht: Sie rechnen gegen verschiedene Vertraege ab.
+#
+# Leer lassen, solange die Selbsteichung "Preistabelle geeicht" meldet. Erst
+# ein DURCHGAENGIGER Versatz gehoert hierher; ein einzelner Ausreisser sagt
+# nichts ueber die Tabelle (BL-213/BL-218).
+$TEAM_PREISE = Team-Wert 'TEAM_PREISE' ''
+$env:TEAM_PREISE = $TEAM_PREISE   # die Python-Werkzeuge lesen sie aus der Umgebung
+
 $TEAM_WHITELIST_REDTEAM = Team-Wert 'TEAM_WHITELIST_REDTEAM' `
     ("^(" + $TEAM_TEST_ORDNER.TrimEnd('/') + "/|" + $TEAM_PLAN_ORDNER.TrimEnd('/') + "/)")
 $TEAM_WHITELIST_AXEL = Team-Wert 'TEAM_WHITELIST_AXEL' `

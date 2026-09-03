@@ -143,6 +143,81 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Ein unbrauchbarer Fund am Kopf der Warteschlange beendet die Fix-Phase
+  nicht mehr** (`BL-210`, gemeldet von `Feld B`; beide Bahnen). `frank.*` holt
+  seinen Auftrag über `beutebuch first <status>` — immer den **ersten** Treffer
+  der Datei. Fiel der Lint darauf durch, endete die Rolle mit `exit 3`;
+  denselben Code benutzt sie für „nichts zu tun", und die Schleife konnte beide
+  nicht trennen. Im Feld blieb dahinter ein formal einwandfreier zweiter Fund
+  liegen, der sofort fixbar gewesen wäre — und beim nächsten Lauf wieder, denn
+  `first` liefert erneut denselben defekten Kopf. Wäre er kritisch gewesen,
+  hätte der Lauf ihn stillschweigend übersprungen und trotzdem „Fix-Phase
+  beendet" gemeldet.
+
+  Neu: **Exit 5** für den unbrauchbaren Auftrag. Die Vollautomatik behandelt
+  ihn wie einen Fehlversuch (kein `break`), zählt ihn in die
+  Stagnations-Bremse und **nennt den Fund**. Dazu wird der Abschlussbericht
+  ehrlich — endet die Fix-Phase mit Funden, die weiter auf Frank warten, steht
+  das als Warnung im Bericht. Und `beutebuch lint` prüft die
+  `Reproducer-Test`-Zeile jetzt auf **Eindeutigkeit**: Im Feld hatte ein Sweep
+  die fehlende Zeile eines *fremden* Fundes ans Ende seines eigenen Blocks
+  getragen, und der Lint meldete daraufhin beide Funde falsch.
+
+- **Der Abbruchbericht schlägt keinen Closeout einer ungeprüften Kaskade mehr
+  vor** (`BL-212`, gemeldet von `Feld B`; beide Bahnen). Fällt der Pro-Lauf-
+  Deckel zwischen Ralphs Feierabend und der Red-Team-Phase, ist das Beutebuch
+  leer — **weil niemand gesucht hat**. Der Bericht las das als „keine offenen
+  Funde" und schlug den Closeout vor. Das Feld ist dem Rat nicht gefolgt: Die
+  nachgeholte Phase brachte einen echten Fund. Bei Befolgung wäre er nie
+  gefunden und die Kaskade als `geprüft` protokolliert worden.
+
+  Der Satz richtet sich jetzt am **Phasenstand** aus (dem Zeiger aus `BL-217`)
+  statt am Beutebuch, und der Closeout-Befehl erscheint in diesem Zustand gar
+  nicht mehr. Fehlt der Zeiger ganz, ist auch Phase 1 nicht durch — der
+  Default ist „ungeprüft", nicht „fertig". Dazu setzt der Bericht die
+  **Kaskadennummer** ein, statt `<N>` zu drucken: Er war der Absender genau
+  der Zahl, die der Mensch danach abtippt (`BL-220`).
+
+- **Frank kennt den vierten Ausgang** (`BL-214`, gemeldet von `Feld B`).
+  `ralph.*` fängt ihn seit `BL-41` mit Exit 43 ab — das Log meldet sich selbst
+  als Erfolg, das Promise fehlt, die Sitzung hat auf einen Hintergrund-Task
+  gewartet, den es headless nicht gibt. Frank hatte für denselben Ausgang
+  keinen Pfad: Der Versuch wurde als **inhaltlicher** Fehlversuch gewertet,
+  zurückgerollt und gezählt — nach dreien steht der Fund auf `an Axel
+  übergeben`, also die teuerste Rolle des Teams für ein Problem, das die Rolle
+  inhaltlich nie hatte. Dritter Beleg derselben Bauform in einem Projekt,
+  zusammen **5,86 USD** reiner Werkzeugverlust.
+
+  **Die Prämisse des Eintrags ist dabei korrigiert:** Er nennt eine
+  Asymmetrie zwischen `frank.ps1` und `ralph.ps1`; nachgemessen fehlte der
+  Ausgang auch `frank.sh`. Es war keine Bahn-Asymmetrie, sondern eine
+  **Rollen**-Asymmetrie auf beiden Bahnen. Die Abgrenzung bleibt scharf: Liegt
+  das Promise vor und der Dreisatz ist trotzdem unvollständig, bleibt es ein
+  echter Fehlversuch.
+
+- **Ein Projekt darf die Preistabelle lokal überschreiben** (`BL-211`,
+  gemeldet von `Feld B`; beide Bahnen). `BL-166` hat den
+  `claude-sonnet-5`-Satz auf 2.00 gesenkt, weil die Eichung in einem Projekt
+  in 9 von 9 Läufen fehlschlug. In einem **zweiten** Projekt weichen damit
+  **78 von 79** abgerechneten Läufen um **33,3 %** ab, und die Eichung
+  verweigert dort regelkonform jede Buchung. Die Abweichung ist ein konstanter
+  Faktor, kein Rauschen: Beide Felder rechnen gegen verschiedene Verträge ab,
+  und beide haben recht. Wer den Satz zurückdreht, dreht ihn dem ersten
+  Projekt kaputt.
+
+  Neu ist `TEAM_PREISE` in `team.config.*`
+  (`"claude-sonnet-5=3.00 claude-opus-5=5.00"`). Es überschreibt einzelne
+  Einträge; der längste Präfix gewinnt weiterhin, über beide Quellen hinweg.
+  Ein unlesbarer Eintrag wird **namentlich gemeldet und übersprungen** — still
+  ignorieren wäre die Fehlerrichtung von `BL-160`. Und meldet die Eichung
+  einen Versatz, nennt sie jetzt die fertige `TEAM_PREISE`-Zeile zum
+  Eintragen. **Der Kit-Satz bleibt bei 2.00**: Er ist für das Feld richtig, das
+  `BL-166` ausgelöst hat — die zweite Wahrheit gehört ins zweite Projekt, nicht
+  in die Tabelle. Die Abgrenzung steht mit unter Test: `TEAM_PREISE` ist für
+  einen durchgängigen Versatz da, nicht für einen Ausreißer (`BL-213`/
+  `BL-218`), sonst wäre der Schalter ein leiser Weg, einen Wächter stumm zu
+  stellen.
+
 - **Jeder Einstiegspunkt beantwortet `--hilfe`, und die Rollen weisen alles
   andere zurück** (`BL-223`, Kit-eigener Fund beim Abtragen von `BL-222`;
   beide Bahnen). Von vierzehn Einstiegspunkten hatten **drei** eine Hilfe. Der

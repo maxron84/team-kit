@@ -1095,20 +1095,77 @@ PREIS_INPUT_USD_PRO_MTOK = {
 }
 
 
+def preis_uebersteuerung():
+    """Projektlokale Preise aus `TEAM_PREISE`, als {praefix: usd_pro_mtok}.
+
+    BL-211: Die Tabelle oben ist EINE Zahl je Modell fuer ALLE Installationen —
+    und im Feld war sie fuer zwei Projekte gleichzeitig nicht richtig. Der mit
+    BL-166 auf 2.00 gesenkte `claude-sonnet-5`-Satz traf das eine Projekt
+    genau; im anderen weichen damit 78 von 79 abgerechneten Laeufen um 33,3 %
+    ab, und die Selbsteichung verweigert regelkonform JEDE Buchung. Wer den
+    Satz zurueckdreht, dreht ihn dem ersten Projekt kaputt.
+
+    Beide Felder haben recht: Sie rechnen gegen verschiedene Vertraege ab. Eine
+    zentrale Zahl kann das nicht aufloesen — deshalb darf ein Projekt sie
+    ueberschreiben, ohne auf den naechsten Kit-Entscheid zu warten. Das ist die
+    einzige der drei vorgeschlagenen Richtungen, die beide Felder gleichzeitig
+    bedient.
+
+    Format (Umgebung, gesetzt aus `team.config.*`):
+
+        TEAM_PREISE="claude-sonnet-5=3.00 claude-opus-5=5.00"
+
+    Getrennt wird an Leerzeichen ODER Komma. Ein unlesbarer Eintrag wird
+    NAMENTLICH auf stderr gemeldet und uebersprungen — still ignorieren waere
+    hier die Fehlerrichtung von BL-160: Der Betreiber glaubt dann, sein Preis
+    gelte, und die Eichung sagt ihm etwas ueber eine Zahl, die nie ankam.
+    """
+    roh = os.environ.get("TEAM_PREISE", "").strip()
+    if not roh:
+        return {}
+    werte = {}
+    for stueck in roh.replace(",", " ").split():
+        name, _, zahl = stueck.partition("=")
+        name, zahl = name.strip(), zahl.strip()
+        if not name or not zahl:
+            print(f"Warnung: TEAM_PREISE-Eintrag '{stueck}' hat nicht die Form "
+                  f"<modell>=<usd> — uebersprungen.", file=sys.stderr)
+            continue
+        try:
+            wert = float(zahl)
+        except ValueError:
+            print(f"Warnung: TEAM_PREISE-Eintrag '{stueck}' nennt keine Zahl "
+                  f"— uebersprungen.", file=sys.stderr)
+            continue
+        if not math.isfinite(wert) or wert <= 0:
+            print(f"Warnung: TEAM_PREISE-Eintrag '{stueck}' ist kein positiver "
+                  f"endlicher Preis — uebersprungen.", file=sys.stderr)
+            continue
+        werte[name] = wert
+    return werte
+
+
 def modell_basispreis(modell_id):
     """Basispreis je Mio Input-Token, oder None bei unbekannter ID.
 
     None ist ein Ergebnis, kein Fehler: Der Aufrufer weist die unbekannte ID
     aus, statt einen Preis zu raten. Eine geratene Zahl waere hier genau der
     Fehler, den BL-141 abtraegt — sie sieht aus wie eine Messung.
+
+    BL-211: Eine projektlokale `TEAM_PREISE`-Uebersteuerung schlaegt die
+    Tabelle. Gewinnt weiterhin der LAENGSTE Praefix — und zwar ueber beide
+    Quellen hinweg, damit eine Uebersteuerung fuer `claude-sonnet-5` nicht von
+    einem laengeren Tabelleneintrag ueberholt wird und umgekehrt.
     """
     if not modell_id:
         return None
     kern = str(modell_id).split(".")[-1]        # Bedrock: anthropic.claude-...
-    treffer = [n for n in PREIS_INPUT_USD_PRO_MTOK if kern.startswith(n)]
+    tabelle = dict(PREIS_INPUT_USD_PRO_MTOK)
+    tabelle.update(preis_uebersteuerung())
+    treffer = [n for n in tabelle if kern.startswith(n)]
     if not treffer:
         return None
-    return PREIS_INPUT_USD_PRO_MTOK[max(treffer, key=len)]
+    return tabelle[max(treffer, key=len)]
 
 
 def _tokenkuebel():
@@ -2285,9 +2342,27 @@ def _main(argv):
                     print(f"      {modell}: Tabelle {tabelle:.2f}, "
                           f"abgerechnet entspricht {spanne} USD/Mio Input "
                           f"({weite:+.0f} %, aus {belege})", file=sys.stderr)
+                # BL-211, Richtung (3): den Satz NENNEN, den der Bestand
+                # trifft, statt nur "stimmt nicht mehr" zu melden. Ohne diese
+                # Zeile steht der Betreiber vor einer richtigen Diagnose und
+                # muss den Wert von Hand ausrechnen — und die Tabelle im Kit
+                # ist ohnehin die falsche Stelle, wenn zwei Projekte gegen
+                # verschiedene Vertraege abrechnen.
+                vorschlag = []
+                for modell, (lo, hi, tabelle, _n) in sorted(
+                        preis_diagnose(eich_logs).items()):
+                    if tabelle is None or lo <= tabelle <= hi:
+                        continue
+                    vorschlag.append(f"{modell}={(lo + hi) / 2:.2f}")
+                if vorschlag:
+                    print(f"    Projektlokal setzen (BL-211), ohne die "
+                          f"Kit-Tabelle anzufassen — in team.config.*:",
+                          file=sys.stderr)
+                    print(f'      TEAM_PREISE="{" ".join(vorschlag)}"',
+                          file=sys.stderr)
                 print("    Die Zahl unten ist damit UNGEEICHT. Preistabelle in "
-                      "kosten.py nachziehen, bevor du sie buchst.",
-                      file=sys.stderr)
+                      "kosten.py nachziehen (oder TEAM_PREISE setzen), bevor "
+                      "du sie buchst.", file=sys.stderr)
             elif abweichend:
                 # Streuung, kein Versatz: Die Tabelle traegt, einzelne Logs
                 # reproduzieren sich nicht. Das ist eine Aussage ueber DIESE

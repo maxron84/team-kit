@@ -11,6 +11,9 @@
   Versuchszaehler .frank-attempts (transient): ab TEAM_FRANK_MAX_VERSUCHE (3)
   Fehlversuchen wird der Fund auf 'an Axel übergeben' gesetzt.
   Exit: 0 = gefixt · 3 = kein offener Fund fuer Frank · 1 = Fehlversuch
+        5 = Auftrag am Kopf der Warteschlange unbrauchbar (BL-210)
+        43 = Fix fertig, Quittung fehlt (BL-41/BL-214) — kein Rollback,
+             kein Fehlversuch, keine Eskalation an Axel
         42 = Session-Limit (kein Fehlversuch)
 #>
 $ErrorActionPreference = 'Stop'
@@ -61,13 +64,19 @@ $hm = ([string]$hm).Trim()
 # Formfehler im Auftrag. Pruefungen VOR dem bezahlten Aufruf sind die einzigen,
 # die den Aufruf noch sparen koennen.
 #
-# Exit 3 statt 1: Das ist kein Fehlversuch der ROLLE. Der Zaehler bleibt
+# Exit 5 statt 1: Das ist kein Fehlversuch der ROLLE. Der Zaehler bleibt
 # unangetastet, der Fund behaelt seinen Status.
+#
+# BL-210: Und Exit 5 statt 3, weil 3 ZWEI Bedeutungen trug — "nichts zu tun"
+# und "Auftrag unbrauchbar". Die Schleife der Vollautomatik konnte sie nicht
+# trennen: Ein unbrauchbarer Fund am KOPF der Warteschlange beendete die ganze
+# Fix-Phase, und die Funde dahinter blieben ungesehen. Begruendung
+# ausfuehrlich in der bash-Fassung.
 Team-Werkzeug $TEAM_BEUTEBUCH_TOOL @('lint', $hm)
 if ($LASTEXITCODE -ne 0) {
     Team-Fehler "[frank] $hm ist als Auftrag unbrauchbar (siehe oben) — KEIN Aufruf, kein Fehlversuch."
     Team-Fehler '  Der Fundblock gehört nachgebessert (Harry/Marv/Architekt), dann erneut starten.'
-    exit 3
+    exit 5
 }
 
 # Versuchszaehler fuer genau diesen Fund fuehren (Format: "HM-N COUNT").
@@ -198,6 +207,40 @@ if ($budgetGesprengt -eq 0) {
     if (-not (team_reproducer_liegt_vor $hm)) {
         Team-Fehler "[frank] ${hm}: die im Fundblock reservierte Reproducer-Datei existiert nach dem Fix NICHT."
         Team-Fehler '  Ein quittierter Fund ohne wirksamen Regressionstest ist kein erledigter Fund (BL-28).'
+    }
+
+    # BL-214: Der VIERTE AUSGANG, jetzt auch bei Frank — genau der Fund, der
+    # diesen Eintrag ausgeloest hat. ralph.ps1 faengt ihn seit BL-41 mit Exit 43
+    # ab; frank.ps1 hatte fuer denselben Ausgang KEINEN Pfad und zaehlte ihn als
+    # inhaltlichen Fehlversuch, mit Rollback und einem Schritt Richtung Axel.
+    # Gemessen: dritter Beleg derselben Bauform in EINEM Projekt, zusammen
+    # 5,86 USD reiner Werkzeugverlust. Begruendung und Abgrenzung ausfuehrlich
+    # in der bash-Fassung.
+    $smokeHinweis = if ($TEAM_SMOKE_TEST) { $TEAM_SMOKE_TEST } else { '(kein Smoke-Test konfiguriert)' }
+    #
+    # DIE ABGRENZUNG WURDE BEIM BAUEN ENGER, UND ZWAR WEIL EIN TEST SIE
+    # ERZWUNGEN HAT (test_bl114_rollback_verschont_fremde_arbeit): "Log meldet
+    # Erfolg UND Promise fehlt" ist NICHT das Kennzeichen des vierten Ausgangs
+    # — es ist das Kennzeichen JEDES inhaltlichen Fehlversuchs. Ein Modell, das
+    # den Dreisatz nicht schafft, beendet seine Sitzung ebenfalls mit
+    # subtype=success und ohne Promise. Ein Riegel auf dieser Bedingung haette
+    # Franks GANZE Fehlerbehandlung stillgelegt: kein Rollback, kein Zaehler,
+    # keine Eskalation — nie mehr.
+    #
+    # Ralph darf sich das leisten, weil er zusaetzlich eine SELBSTPRUEFUNG
+    # fahren kann (Commit da, Smoke-Test gruen). Franks Entsprechung ist der
+    # Fix-Commit: Liegt einer im Bereich, ist bezahlte Arbeit GELANDET, und
+    # genau die wirft ein Rollback weg. Liegt keiner vor, hat die Rolle nichts
+    # hinterlassen — dann ist es ein gewoehnlicher Fehlversuch und bleibt einer.
+    if (-not (team_promise_in $TEAM_LAST_OUT 'FRANK_FIX_COMPLETE') -and
+        $headJetzt -ne $startHash -and $hatFixCommit -and
+        (team_quittung_fehlt_melden 'frank' $TEAM_LAST_OUT `
+            "$hm hat kein <promise>FRANK_FIX_COMPLETE</promise> gegeben." `
+            "git log $startHash..HEAD — liegt ein $TEAM_FIX_PRAEFIX-Commit vor?" `
+            "$smokeHinweis — ist der Baum grün?" `
+            "Beides ja: den Fund von Hand auf 'erledigt (Frank-Fix, <commit>)' setzen, dann weiter." `
+            'Nur eines davon: KEIN Neustart — erst nachsehen, was fehlt, sonst zahlst du den Lauf zweimal.')) {
+        exit 43
     }
 }
 

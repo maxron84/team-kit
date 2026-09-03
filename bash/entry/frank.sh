@@ -10,6 +10,12 @@
 # Versuchszähler .frank-attempts (transient): ab TEAM_FRANK_MAX_VERSUCHE (3)
 # Fehlversuchen wird der Fund auf 'an Axel übergeben' gesetzt.
 # Exit: 0 = gefixt · 3 = kein offener Fund für Frank · 1 = Fehlversuch
+#       43 = Fix fertig, Quittung fehlt (BL-41/BL-214) — der vierte
+#            Ausgang, den ralph.* seit langem kennt: kein Rollback,
+#            kein Fehlversuch, keine Eskalation an Axel
+#       5 = Auftrag am Kopf der Warteschlange unbrauchbar (BL-210) —
+#           kein Aufruf, kein Fehlversuch, aber auch NICHT dasselbe wie
+#           "nichts zu tun": Dahinter koennen brauchbare Funde liegen.
 set -euo pipefail
 cd "$(dirname "$0")"
 # shellcheck source=team/lib.sh
@@ -46,13 +52,23 @@ HM="$($TEAM_BEUTEBUCH_TOOL first 'Fix-Plan liegt vor' \
 # Formfehler im Auftrag. Prüfungen vor dem bezahlten Aufruf sind die einzigen,
 # die den Aufruf noch sparen können (dieselbe Kostenlogik wie BL-23).
 #
-# Exit 3 statt 1: Das ist kein Fehlversuch der ROLLE. Der Zähler bleibt
+# Exit 5 statt 1: Das ist kein Fehlversuch der ROLLE. Der Zähler bleibt
 # unangetastet, der Fund behält seinen Status, und die Meldung sagt, was am
 # Block fehlt — zu reparieren ist er von dem, der ihn geschrieben hat.
+#
+# BL-210: Und Exit 5 statt 3, weil 3 ZWEI Bedeutungen trug — "nichts zu tun"
+# (oben) und "Auftrag unbrauchbar" (hier). Die Schleife der Vollautomatik
+# konnte sie nicht trennen, weil sie denselben Code sah: Ein unbrauchbarer
+# Fund am KOPF der Warteschlange beendete damit die ganze Fix-Phase, und die
+# Funde dahinter wurden nie betrachtet — dauerhaft, denn `first` liefert bei
+# jedem weiteren Lauf wieder denselben Kopf. Im Feld blieb ein formal
+# einwandfreier zweiter Fund unangesehen liegen, und der Lauf las sich wie ein
+# sauberer Abschluss ("nichts mehr zu tun"). Waere der blockierte Fund
+# kritisch gewesen, haette der Lauf ihn stillschweigend uebersprungen.
 if ! $TEAM_BEUTEBUCH_TOOL lint "$HM"; then
     echo "[frank] $HM ist als Auftrag unbrauchbar (siehe oben) — KEIN Aufruf, kein Fehlversuch." >&2
     echo "  Der Fundblock gehört nachgebessert (Harry/Marv/Architekt), dann erneut starten." >&2
-    exit 3
+    exit 5
 fi
 
 # Versuchszähler für genau diesen Fund führen (Format: "HM-N COUNT").
@@ -184,6 +200,53 @@ if [ "$BUDGET_GESPRENGT" -eq 0 ]; then
     if ! team_reproducer_liegt_vor "$HM"; then
         echo "[frank] $HM: die im Fundblock reservierte Reproducer-Datei existiert nach dem Fix NICHT." >&2
         echo "  Ein quittierter Fund ohne wirksamen Regressionstest ist kein erledigter Fund (BL-28)." >&2
+    fi
+
+# BL-214: Der VIERTE AUSGANG, jetzt auch bei Frank. `ralph.*` faengt ihn seit
+# BL-41 mit einem eigenen Exit 43 ab; Frank hatte fuer denselben Ausgang KEINEN
+# Pfad — sein einziger Fehlerzweig ist generisch. Dieselbe Klasse wurde damit
+# bei der einen Rolle als eigener Ausgang behandelt und bei der anderen als
+# INHALTLICHER Fehlversuch gezaehlt und zurueckgerollt.
+#
+# Der Schaden ist doppelt und beide Haelften sind gemessen: die verworfene
+# bezahlte Arbeit UND ein Schritt Richtung Axel — nach drei solchen Versuchen
+# steht der Fund auf 'an Axel uebergeben', also die teuerste Rolle des Teams
+# fuer ein Problem, das die Rolle inhaltlich nie hatte. Dritter Beleg derselben
+# Bauform in EINEM Projekt: 2,5873 + 1,8437 + 1,4315 = 5,86 USD reiner
+# Werkzeugverlust.
+#
+# Die Abgrenzung ist scharf und muss es sein: Das Log meldet sich selbst als
+# Erfolg, UND das Promise fehlt. Liegt das Promise vor und der Dreisatz ist
+# trotzdem unvollstaendig, ist das ein echter inhaltlicher Fehlversuch und
+# bleibt einer. Ein sprengter Hard-Cap ebenso — der ist ein echter Ausreisser.
+#
+# Kein Rollback, kein Zaehler, keine Eskalation: Die Arbeit ist in diesem Fall
+# meist FERTIG, und ein Rollback wirft genau sie weg.
+    #
+    # DIE ABGRENZUNG WURDE BEIM BAUEN ENGER, UND ZWAR WEIL EIN TEST SIE
+    # ERZWUNGEN HAT (test_bl114_rollback_verschont_fremde_arbeit): "Log meldet
+    # Erfolg UND Promise fehlt" ist NICHT das Kennzeichen des vierten Ausgangs
+    # — es ist das Kennzeichen JEDES inhaltlichen Fehlversuchs. Ein Modell, das
+    # den Dreisatz nicht schafft, beendet seine Sitzung ebenfalls mit
+    # subtype=success und ohne Promise. Ein Riegel auf dieser Bedingung haette
+    # Franks GANZE Fehlerbehandlung stillgelegt: kein Rollback, kein Zaehler,
+    # keine Eskalation — nie mehr.
+    #
+    # Ralph darf sich das leisten, weil er zusaetzlich eine SELBSTPRUEFUNG
+    # fahren kann (Commit da, Smoke-Test gruen). Franks Entsprechung ist der
+    # Fix-Commit: Liegt einer im Bereich, ist bezahlte Arbeit GELANDET, und
+    # genau die wirft ein Rollback weg. Liegt keiner vor, hat die Rolle nichts
+    # hinterlassen — dann ist es ein gewoehnlicher Fehlversuch und bleibt einer.
+    if ! team_promise_in "$TEAM_LAST_OUT" "FRANK_FIX_COMPLETE" \
+       && [ "$(git rev-parse HEAD)" != "$START_HASH" ] \
+       && git log "$START_HASH..HEAD" --pretty=%s | grep -qF "$TEAM_FIX_PRAEFIX" \
+       && team_quittung_fehlt_melden frank "$TEAM_LAST_OUT" \
+            "$HM hat kein <promise>FRANK_FIX_COMPLETE</promise> gegeben." \
+            "git log $START_HASH..HEAD — liegt ein ${TEAM_FIX_PRAEFIX}-Commit vor?" \
+            "${TEAM_SMOKE_TEST:-(kein Smoke-Test konfiguriert)} — ist der Baum grün?" \
+            "Beides ja: den Fund von Hand auf 'erledigt (Frank-Fix, <commit>)' setzen, dann weiter." \
+            "Nur eines davon: KEIN Neustart — erst nachsehen, was fehlt, sonst zahlst du den Lauf zweimal."; then
+        exit 43
     fi
 fi
 

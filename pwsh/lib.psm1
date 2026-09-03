@@ -1888,7 +1888,7 @@ Export-ModuleMember -Function * -Variable @(
     'TEAM_BEUTEBUCH', 'TEAM_ERMITTLUNGSAKTEN', 'TEAM_ROADMAP', 'TEAM_BACKLOG',
     'TEAM_CHANGELOG', 'TEAM_SMOKE_TEST', 'TEAM_FIX_PRAEFIX', 'TEAM_FEAT_PRAEFIX',
     'TEAM_BEUTEBUCH_TOOL', 'TEAM_KOSTEN_TOOL', 'TEAM_MELDUNG_TOOL',
-    'TEAM_CLAUDE_BIN',
+    'TEAM_CLAUDE_BIN', 'TEAM_PREISE',
     # BL-182, zweite Haelfte: TEAM_KIT_PFAD stand in team.config.ps1 und kam
     # trotzdem nie an — die Konfiguration wird ins MODUL geladen, und was hier
     # nicht steht, sieht ein Entrypoint nicht. Auf der bash-Bahn gibt es diese

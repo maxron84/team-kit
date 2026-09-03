@@ -28,8 +28,9 @@
 #          TEAM_MODEL_LOOP / TEAM_MODEL_STRONG / AUTH_MODE  (siehe team/lib.sh)
 #          TEAM_VOLLAUTOMATIK_AB_PHASE  1 wirkt wie --von-vorn (BL-217).
 # Exit:    0 = Lauf durch · 1 = echter Fehler (Mensch gefragt; inkl. Stagnation)
-#          43 = Stufe fertig, Quittung fehlt (BL-41, durchgereicht von ralph.sh):
-#               kein Neubau — prüfen und von Hand quittieren
+#          43 = Stufe/Fix fertig, Quittung fehlt (BL-41, durchgereicht von
+#               ralph.sh und — seit BL-214 — von frank.sh): kein Neubau,
+#               kein Neustart — prüfen und von Hand quittieren
 #          42 = Session-Limit — Lauf pausiert (kein Fehler, kein
 #               Datenverlust, State steht; siehe Kaskade 9/Stufe 31,
 #               CLAUDE.md „Loop-Mechanik & Auth") — greift in Phase 4 jetzt auch
@@ -246,19 +247,50 @@ phasen_zeiger_lesen() {
 # BL-23 (3): Ein Abbruch endet nie ohne Weiterweg. Der Bericht kostet nichts,
 # loest die Kostenfrage nicht — aber die Reibung, und er hilft bei JEDEM
 # Abbruchgrund, nicht nur beim Deckel.
+# BL-212: Die Kaskadennummer wird EINGESETZT statt als "<N>" gedruckt. Der
+# Bericht war damit der Absender genau der Zahl, die der Mensch danach von
+# Hand abtippt — und BL-220 ist der Fund darueber, was passiert, wenn er sich
+# dabei vertut. `.ralph-plan` traegt sie; findet sich dort nichts, bleibt der
+# Platzhalter stehen statt zu raten.
+kaskaden_nummer() {
+    local n=""
+    [ -f .ralph-plan ] && n="$(sed -n 's/.*kaskade-\([0-9][0-9]*\)-.*/\1/p' .ralph-plan | head -1)"
+    printf '%s' "${n:-<N>}"
+}
+
 abbruch_bericht() {
-    local grund="$1" offen
+    local grund="$1" offen nr
+    nr="$(kaskaden_nummer)"
     log "--- WIE ES WEITERGEHT ($grund) ---"
     offen="$($TEAM_BEUTEBUCH_TOOL list 2>/dev/null \
              | grep -Ev 'erledigt|überholt' || true)"
-    if [ -n "$offen" ]; then
+    # BL-212: Der Satz richtet sich am PHASENSTAND aus, nicht am Beutebuch.
+    # Ein leeres Beutebuch heisst "keine Funde", nicht "geprueft" — faellt der
+    # Deckel zwischen Ralphs Feierabend und der Red-Team-Phase, ist das
+    # Beutebuch leer, WEIL niemand gesucht hat. Der alte Satz schlug in
+    # genau diesem Zustand den Closeout einer UNGEPRUEFTEN Kaskade vor.
+    # Der Irrtum zeigt in Richtung `fertig`, und das ist die teure Richtung:
+    # Ein Werkzeug, das falsch "noch nicht fertig" meldet, kostet eine
+    # Rueckfrage; eines, das falsch "fertig" meldet, beendet den Vorgang.
+    # Fehlt der Zeiger ganz, ist Phase 1 nicht einmal durchgelaufen — auch
+    # das ist "ungeprueft". Der Default 1 ist hier die sichere Seite.
+    local stand=1
+    if [ -f "$PHASEN_STATE" ]; then
+        stand="$(sed -n 1p "$PHASEN_STATE")"
+        case "$stand" in ''|*[!0-9]*) stand=1 ;; esac
+    fi
+    if [ "$stand" -lt 4 ]; then
+        log "ACHTUNG: Die Phase Red Team wurde NICHT erreicht — diese Kaskade ist UNGEPRUEFT."
+        log "  Ein leeres Beutebuch heisst hier 'niemand hat gesucht', nicht 'nichts gefunden'."
+        log "  Kein Closeout, bevor der Sweep gelaufen ist:  ./vollautomatik.sh (setzt bei $(phasen_name "$stand") fort)"
+    elif [ -n "$offen" ]; then
         log "Offene Funde:"
         printf '%s\n' "$offen" | sed 's/^/    /'
         log "Fixphase fortsetzen:  ./frank.sh   (ein Fund je Aufruf)"
-        log "Danach der Closeout:  ./team-status.sh --rollen-abschluss <N> <domaene>"
+        log "Danach der Closeout:  ./team-status.sh --rollen-abschluss $nr <domaene>"
     else
         log "Keine offenen Funde — nur der Closeout fehlt:"
-        log "  ./team-status.sh --rollen-abschluss <N> <domaene>"
+        log "  ./team-status.sh --rollen-abschluss $nr <domaene>"
     fi
     # BL-217: phasengenau statt pauschal. Die alte Zeile versprach eine
     # Semantik, die das Skript nicht hatte — und der Mensch handelt nach der
@@ -339,7 +371,19 @@ while [ "$runde" -lt "$MAX_RUNDEN" ]; do
     case "$rc" in
         0) getan=1; fortschritt=1; log "Runde $runde: Frank hat einen Fund gefixt." ;;
         3) : ;;  # kein Frank-Fund
+        # BL-210: Ein unbrauchbarer Auftrag ist NICHT dasselbe wie "nichts zu
+        # tun". Bis 2.13.1 trug Exit 3 beide Bedeutungen, die Schleife brach
+        # ab, und die Funde HINTER dem defekten Kopf wurden nie betrachtet.
+        # Jetzt zaehlt er wie ein Fehlversuch (kein break) und laeuft in die
+        # Stagnations-Bremse: Der Lauf dreht hoechstens STAGNATION_MAX Runden
+        # leer und meldet den Fund benannt, statt ihn zu verschweigen.
+        5) getan=1
+           log "Runde $runde: Franks Auftrag am Kopf der Warteschlange ist unbrauchbar (BL-210) — der Fundblock gehoert nachgebessert. Dahinter liegende Funde bleiben ungesehen, solange er dort steht." ;;
         42) log "⏸ Session-Limit erreicht — Lauf pausiert (Frank). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."; exit 42 ;;
+        # BL-214: derselbe vierte Ausgang wie bei Ralph, dieselbe Behandlung —
+        # NICHT als Fehlversuch zaehlen und den Lauf stoppen, statt bezahlte,
+        # wahrscheinlich fertige Arbeit wegzuwerfen.
+        43) log "⚠ Fix fertig, Quittung fehlt (BL-41/BL-214) — Lauf gestoppt. NICHT neu starten, bevor die von Frank genannten Pruefungen gelaufen sind."; exit 43 ;;
         *) getan=1; log "Runde $runde: Frank-Fehlversuch (ggf. Eskalation an Axel)." ;;
     esac
     budget_ok kulanz || { abbruch_bericht "Budget-Deckel"; exit 1; }
@@ -380,6 +424,19 @@ while [ "$runde" -lt "$MAX_RUNDEN" ]; do
     fi
 done
 [ "$runde" -ge "$MAX_RUNDEN" ] && log "WARNUNG: Rundenlimit ($MAX_RUNDEN) erreicht — evtl. offene Funde, Mensch prüfen."
+
+# BL-210 (3): Der Bericht wird ehrlich. Endet die Fix-Phase mit Funden, die
+# weiter auf Frank warten, ist das eine ANDERE Aussage als "nichts mehr zu
+# tun" — und im Feld hat sich der Lauf genau deshalb wie ein sauberer
+# Abschluss gelesen. Gezaehlt wird der Zustand NACH der Schleife, unabhaengig
+# davon, warum sie endete.
+FRANK_REST="$($TEAM_BEUTEBUCH_TOOL list 2>/dev/null \
+              | grep -cE 'an Frank übergeben|Fix-Plan liegt vor' || true)"
+if [ "${FRANK_REST:-0}" -gt 0 ]; then
+    log "WARNUNG: $FRANK_REST Fund(e) warten weiter auf Frank — die Fix-Phase ist NICHT leergelaufen."
+    log "  Steht ein unbrauchbarer Fundblock am Kopf der Warteschlange, bleibt alles dahinter ungesehen (BL-210)."
+    log "  Naechster Schritt:  ./frank.sh   (nennt den Block, der nachgebessert gehoert)"
+fi
 
 # --- Abschluss ---------------------------------------------------------------
 # Der Zeiger ueberlebt genau die Abbrueche: Hier, am regulaeren Ende, faellt er
