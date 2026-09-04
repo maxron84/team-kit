@@ -305,6 +305,51 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Zwei Gegenproben des pwsh-Selbsttests haben seit ihrem ersten Tag nichts
+  verfälscht** (`BL-230`, gefunden in `Feld B`). `kit-test.ps1` verfälscht in
+  Schritt 5 eine Zahl im README und verlangt, dass `kit-readme-pruefen.py` rot
+  wird. Geschrieben war das als `$readme -replace 'muster' + [char]0x5c +
+  'rest', 'ersatz'`. **PowerShell zieht die Ersetzung in die Verkettung:** Das
+  Muster wird zu `"<muster> <ersatz>"`, und `-replace` läuft in seiner
+  **einarmigen** Form — Treffer löschen statt ersetzen. Kein Treffer, keine
+  Änderung, kein Fehler. Die Kopie war identisch mit dem Original, der Prüfer
+  blieb zu Recht grün, und der Selbsttest las das als *„der Wächter wird nicht
+  rot"*.
+
+  **Das ist `BL-14` eine Ebene höher.** Dort ging es um einen Wächter, der nie
+  rot wird; hier um einen **Gegenbeweis**, der nie falsifiziert — und der
+  existiert genau dafür. Ein Wächter ohne wirksame Gegenprobe beschreibt nur,
+  was ohnehin gilt.
+
+  Betroffen ist **nur** die zweiarmige Form. Ohne Komma ist dieselbe
+  Verkettung korrekt, weil sie dann der ganze Operand ist — die
+  `-match`-Zeilen im selben Skript messen deshalb richtig, und die gemessene
+  Fallzahl war nie geraten. Der Wächter dazu sucht die **Bauart** in jeder
+  `.ps1`/`.psm1` und ist bewusst eng gefasst: Gegen die drei korrekten Formen
+  (Muster in einer Variablen, geklammertes Muster, nachträgliche Verkettung
+  des *Ergebnisses*) wird ausdrücklich geprüft, dass er stumm bleibt — eine
+  Regel mit Fehlalarmen wird abgeschaltet statt befolgt.
+
+- **Die Plausibilitätszahl des pwsh-Selbsttests war veraltet, und ihre Meldung
+  schickte den Leser an die falsche Stelle** (`BL-231`, gefunden in `Feld B`).
+  `kit-test.ps1` zählt seine Einzelprüfungen und hält sie gegen
+  `$script:PruefungenSoll`; der Kommentar darüber sagt ausdrücklich *„Wer eine
+  Prüfung ergänzt, zieht die Zahl nach"*. `BL-208` ergänzte eine und zog sie
+  nicht nach — **seither endete jeder vollständige Lauf rot**, aus
+  Buchhaltungsgründen, bei sonst einwandfreiem Ergebnis.
+
+  Dazu die Meldung: Sie lautete in **beiden** Richtungen „ein Schritt wurde
+  übersprungen", bei mehr Prüfungen also `Nur 65 von 64 … übersprungen`. Der
+  Leser sucht dann einen fehlenden Schritt, während in Wahrheit die Soll-Zahl
+  veraltet ist. Die Weiche unterscheidet jetzt beide Richtungen.
+
+  **Der eigentliche Ertrag ist aber, wo die Prüfung stattfindet.** Die
+  Abweichung fiel bisher erst am *Ende* eines Laufs von rund einer Stunde auf.
+  Sie steht jetzt zusätzlich in der pytest-Suite: Sie zählt die
+  `Pruefe`-Aufrufe im Quelltext und hält sie gegen die Zahl — das dauert
+  Millisekunden. Ein Wächter, der nur am Ende eines teuren Laufs greift, wird
+  beim Bauen nicht befragt.
+
 - **Ein zitiertes Kommentar-Endezeichen hat `pwsh/lib.psm1` zerlegt — und damit
   die ganze pwsh-Bahn** (`BL-229`, gefunden in `Feld B`). Der Kopfkommentar von
   `Team-HilfeKopf` (neu mit `BL-223`) nannte im Fließtext die beiden Zeichen,

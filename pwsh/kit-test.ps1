@@ -163,7 +163,7 @@ function Dateien-Mit-Endung {
 # BL-198 hat fuenf dazugelegt (README-Schritt 5/9), BL-196 eine (das
 # Aufraeumen der Abgleichsablage). Wer eine Pruefung ergaenzt, zieht die
 # Zahl nach — sonst meldet der Lauf am Ende, ein Schritt sei uebersprungen.
-$script:PruefungenSoll = 64
+$script:PruefungenSoll = 65
 
 # BL-195: Die Installer- und Update-Aufrufe ab Schritt 5 laufen mit
 # -OhneSelbsttest. Der Installer wuerde sonst jedes Mal die volle Suite
@@ -390,12 +390,21 @@ if ($tFaelle -eq 0 -or $tDateien -eq 0) {
     # BL-198, die zweite Haelfte: die BL-Spanne und die Archivzahl. Sie sind
     # der Grund fuer diesen Eintrag — am 2026-08-26 kam BL-196 dazu, das
     # README nannte weiter BL-195, und alle drei Doku-Waechter blieben gruen.
+    # BL-230: Das Muster steht in einer VARIABLEN, nicht inline verkettet.
+    # `-replace <verkettung>, <ersatz>` zieht die Ersetzung in die Verkettung
+    # hinein: Das Muster wird zu "<muster> <ersatz>", und `-replace` laeuft in
+    # seiner EINARMIGEN Form (Treffer loeschen). Kein Treffer, keine Aenderung,
+    # kein Fehler — die Gegenprobe verfaelschte nichts und meldete den Waechter
+    # als "wird nicht rot". Ohne Komma ist dieselbe Verkettung korrekt (siehe
+    # die -match-Zeilen oben); nur die zweiarmige Form ist betroffen.
+    $musterSpanne = '`BL-1`…`BL-(' + [char]0x5c + 'd+)`'
     Set-Content -LiteralPath $gegen -Encoding utf8 `
-        -Value ($readme -replace '`BL-1`…`BL-(' + [char]0x5c + 'd+)`', '`BL-1`…`BL-1`')
+        -Value ($readme -replace $musterSpanne, '`BL-1`…`BL-1`')
     & $pyKit $pruefer --readme $gegen --faelle $tFaelle --testdateien $tDateien 2>&1 | Out-Null
     Pruefe 'Gegenprobe: verfälschte BL-Spanne wird rot' ($LASTEXITCODE -ne 0) $true
+    $musterArchiv = '(' + [char]0x5c + 'd+) Einträge'
     Set-Content -LiteralPath $gegen -Encoding utf8 `
-        -Value ($readme -replace '(' + [char]0x5c + 'd+) Einträge', '1 Einträge')
+        -Value ($readme -replace $musterArchiv, '1 Einträge')
     & $pyKit $pruefer --readme $gegen --faelle $tFaelle --testdateien $tDateien 2>&1 | Out-Null
     Pruefe 'Gegenprobe: verfälschte Archivzahl wird rot' ($LASTEXITCODE -ne 0) $true
     # BL-208: die dritte Gattung, die dieser Bahn bis dahin fehlte. Ohne
@@ -944,8 +953,16 @@ if ($script:SuiteLaeufe -ne 4) {
     Zeile 'Suite-Durchgänge: 4 — die uebrigen Installer-Aufrufe liefen mit'
     Zeile '-OhneSelbsttest (BL-195); sie haetten nur wiederholt.'
 }
-if ($script:Gepruefte -ne $script:PruefungenSoll) {
+if ($script:Gepruefte -lt $script:PruefungenSoll) {
     Rot "Nur $($script:Gepruefte) von $($script:PruefungenSoll) Einzelprüfungen gefahren — ein Schritt wurde übersprungen."
+    $script:Fehler = 1
+} elseif ($script:Gepruefte -gt $script:PruefungenSoll) {
+    # BL-231: Beide Abweichungen sind Befunde, aber es sind VERSCHIEDENE. Die
+    # alte Fassung sagte in beiden Faellen "ein Schritt wurde uebersprungen" —
+    # bei "mehr als erwartet" also "Nur 65 von 64 … uebersprungen". Das schickt
+    # den Leser an die falsche Stelle: Er sucht einen fehlenden Schritt,
+    # waehrend die SOLL-ZAHL veraltet ist.
+    Rot "$($script:Gepruefte) Einzelprüfungen gefahren, erwartet waren $($script:PruefungenSoll) — es ist eine dazugekommen, ohne dass PruefungenSoll nachgezogen wurde."
     $script:Fehler = 1
 }
 if ($script:Fehler -ne 0) {
