@@ -7,6 +7,8 @@
 # Frank DARF Produktivcode ändern (kein Read-Only-Guard) — statt dessen
 # Dreisatz-Verifikation nach dem Aufruf.
 #
+# Ein Netzfehler VOR dem ersten Token (0 Turns, 0.0000 USD) endet mit 1 — aber
+# OHNE Zähler und ohne Eskalation an Axel (BL-228).
 # Versuchszähler .frank-attempts (transient): ab TEAM_FRANK_MAX_VERSUCHE (3)
 # Fehlversuchen wird der Fund auf 'an Axel übergeben' gesetzt.
 # Exit: 0 = gefixt · 3 = kein offener Fund für Frank · 1 = Fehlversuch
@@ -258,6 +260,20 @@ fi
 # jede nicht ignorierte davon — nur eben namentlich statt pauschal. Ein auf
 # "-- site/" verengter Cleanup ließ solche Altlasten früher einen gescheiterten
 # Versuch überleben.
+# BL-228, die VIERTE Klasse von Ausgängen, die die Rolle nicht zu verantworten
+# hat: Der Aufruf scheiterte, bevor ein Modell den Auftrag sah — 0 Turns,
+# 0.0000 USD, ein Netz- oder Proxyfehler. Rollback ja (der Baum soll sauber
+# sein), Zähler nein: Er misst sonst eine Rollenleistung, die es nicht gab, und
+# schiebt den Fund nach drei Netzaussetzern auf die teuerste Rolle des Teams.
+# Der Exit bleibt 1, damit die Stagnations-Bremse der Vollautomatik den
+# ergebnislosen Lauf weiter sieht — sonst dreht sich die Fix-Phase bei totem
+# Netz endlos.
+if [ "${TEAM_LAST_KEIN_ZUG:-0}" = "1" ]; then
+    echo "[frank] $HM — kein Modell kam zum Zug (0 Turns, 0.0000 USD): Netz/Proxy. Rollback, aber KEIN Fehlversuch — Zähler bleibt bei $((VERSUCH - 1)), keine Eskalation an Axel." >&2
+    team_rollback_rolle frank "$START_HASH" || true
+    exit 1
+fi
+
 echo "[frank] $HM Versuch $VERSUCH gescheitert (Budget/Promise/Commit/Dreisatz/Substanzbezug unvollständig) — Rollback." >&2
 team_rollback_rolle frank "$START_HASH" || true
 printf '%s %s\n' "$HM" "$VERSUCH" > "$ATTEMPTS_FILE"

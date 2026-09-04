@@ -12,6 +12,7 @@
   Aufruf:
     .\kit-melden.cmd neu --titel "…"     Entwurf nach Vorlage anlegen
     .\kit-melden.cmd pruefen             Redaktionspruefung (Exit 4 = Befunde)
+    .\kit-melden.cmd ablegen <datei>     ins lokal liegende Kit legen + committen
     .\kit-melden.cmd senden <datei>      Pull Request — fragt vorher
     .\kit-melden.cmd issue-link <datei>  nur den vorbefuellten Link
     .\kit-melden.cmd kit-pfad            wo liegt das Kit? (Diagnose)
@@ -20,6 +21,23 @@
   laesst sich nicht zurueckholen, und die Meldung schreibt eine Rolle, die
   gerade eine private Codebasis gelesen hat. `neu` und `pruefen` duerfen
   automatisch laufen, `senden` nicht — dieselbe Trennung wie "Finder != Fixer".
+
+  ABLEGEN ODER SENDEN (BL-227, der Rest von BL-187): Liegt das Kit geklont
+  daneben und zeigt TEAM_KIT_PFAD darauf, ist `ablegen` der Weg — es committet
+  PFADGENAU ins Kit und pusht NICHT. `senden` ist fuer Melder OHNE Kit-Repo.
+  Ein Owner, der einen Pull Request gegen sein eigenes Repo anlegt, reviewt und
+  merged seine eigene Meldung; BL-187 hat das festgestellt und Rollen-Briefing,
+  TEAM.md und CLAUDE.md.vorlage nachgezogen — dieser Hilfetext blieb stehen.
+  Wer das Werkzeug ueber seine eigene Hilfe erschliesst, fand deshalb weiter
+  nur `senden`, also genau den Weg, von dem BL-187 sagt, dass er hier der
+  falsche ist.
+
+  `ablegen` ist dabei nicht das lockerere `senden`, sondern das straffere: kein
+  Push (den macht ein Mensch, der den Text gelesen hat), keine BL-Nummer (die
+  vergibt der Maintainer beim Triage, sonst waere der Nummernraum ein Wettlauf
+  zwischen Meldern, die voneinander nichts wissen) und die Redaktionspruefung
+  als VORBEDINGUNG, nicht als Empfehlung — was hier durchgeht, liegt im
+  Eingangskorb eines oeffentlichen Repos.
 #>
 $ErrorActionPreference = 'Stop'
 # BL-122: Ein Exit-Code != 0 aus einem nativen Befehl soll ein WERT bleiben,

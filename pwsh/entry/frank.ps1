@@ -15,6 +15,8 @@
         43 = Fix fertig, Quittung fehlt (BL-41/BL-214) — kein Rollback,
              kein Fehlversuch, keine Eskalation an Axel
         42 = Session-Limit (kein Fehlversuch)
+  Ein Netzfehler VOR dem ersten Token (0 Turns, 0.0000 USD) endet mit 1 —
+  aber OHNE Zaehler und ohne Eskalation an Axel (BL-228).
 #>
 $ErrorActionPreference = 'Stop'
 # BL-122: Seit PowerShell 7.4 ist $PSNativeCommandUseErrorActionPreference
@@ -250,6 +252,20 @@ if ($budgetGesprengt -eq 0) {
 # bleibt erhalten: Frank laeuft mit bypassPermissions und legt auch AUSSERHALB
 # des Produktivcode-Ordners neue Dateien an, und `git status --porcelain` meldet
 # jede nicht ignorierte davon — nur eben namentlich statt pauschal.
+# BL-228, die VIERTE Klasse von Ausgaengen, die die Rolle nicht zu verantworten
+# hat: Der Aufruf scheiterte, bevor ein Modell den Auftrag sah — 0 Turns,
+# 0.0000 USD, ein Netz- oder Proxyfehler. Rollback ja (der Baum soll sauber
+# sein), Zaehler nein: Er misst sonst eine Rollenleistung, die es nicht gab,
+# und schiebt den Fund nach drei Netzaussetzern auf die teuerste Rolle des
+# Teams. Der Exit bleibt 1, damit die Stagnations-Bremse der Vollautomatik den
+# ergebnislosen Lauf weiter sieht — sonst dreht sich die Fix-Phase bei totem
+# Netz endlos.
+if ($TEAM_LAST_KEIN_ZUG -eq 1) {
+    Team-Fehler "[frank] $hm — kein Modell kam zum Zug (0 Turns, 0.0000 USD): Netz/Proxy. Rollback, aber KEIN Fehlversuch — Zähler bleibt bei $($versuch - 1), keine Eskalation an Axel."
+    team_rollback_rolle 'frank' $startHash | Out-Null
+    exit 1
+}
+
 Team-Fehler "[frank] $hm Versuch $versuch gescheitert (Budget/Promise/Commit/Dreisatz/Substanzbezug unvollständig) — Rollback."
 team_rollback_rolle 'frank' $startHash | Out-Null
 Set-Content -Path $attemptsFile -Value "$hm $versuch" -Encoding ascii

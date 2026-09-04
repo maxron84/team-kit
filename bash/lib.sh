@@ -507,6 +507,7 @@ team_claude() {
     shift 4
     TEAM_LAST_PAUSE=0
     TEAM_LAST_RESET=""
+    TEAM_LAST_KEIN_ZUG=0
 
     if [ "${TEAM_DRY_RUN:-0}" = "1" ]; then
         "$TEAM_PYTHON" - "$out" "${TEAM_DRY_RESULT:-}" <<'PY'
@@ -648,10 +649,66 @@ PY
     TEAM_LAST_COST="$(team_summe_cost_usd "${versuch_logs[@]}")"
     TEAM_LAST_OUT="$out"
     if [ "$fehler" -eq 1 ]; then
-        echo "[$rolle] Claude-Aufruf endgültig fehlgeschlagen, Log: $out" >&2
+        # BL-228: Kam überhaupt ein Modell zum Zug? Der Rückgabewert bleibt 1 —
+        # ein Lauf ohne Ergebnis ist ein Lauf ohne Ergebnis, und die
+        # Stagnations-Bremse der Vollautomatik muss ihn weiter sehen. Was sich
+        # ändert, ist die ZURECHNUNG: Der Aufrufer erfährt über
+        # TEAM_LAST_KEIN_ZUG, dass die Rolle nichts dafür kann.
+        if team_kein_zug "${versuch_logs[@]}"; then
+            TEAM_LAST_KEIN_ZUG=1
+            echo "[$rolle] Kein Modell kam zum Zug (0 Turns, 0.0000 USD) — Netz/Proxy vor dem ersten Token. Log: $out" >&2
+        else
+            echo "[$rolle] Claude-Aufruf endgültig fehlgeschlagen, Log: $out" >&2
+        fi
         return 1
     fi
     return 0
+}
+
+# team_kein_zug <json-datei>...
+# War in diesem Aufruf überhaupt ein Modell am Zug? (BL-228)
+#
+# Ein Netzfehler VOR dem ersten Token — Proxy nicht gesetzt, VPN-Aussetzer,
+# kurzer Abriss — endet mit `num_turns: 0` und `total_cost_usd: 0.0000`: Kein
+# Modell hat den Auftrag je gesehen. Für die Rolle ist das derselbe Fall wie
+# das Session-Limit (Exit 42, HM-24) — kein INHALTLICHER Fehlversuch, sondern
+# gar keiner. Im Feld standen nach zwei solchen Aussetzern zwei Fehlversuche
+# gegen einen Fund, den nie ein Modell gelesen hatte; nach dreien hätte der
+# Fund auf „an Axel übergeben" gestanden, also auf der teuersten Rolle.
+#
+# WARUM AN DEN ZAHLEN UND NICHT AM FEHLERTEXT: Der Text der CLI ist ihre Sache
+# und ändert sich ("Connection refused", "a firewall or proxy may be blocking
+# it"); die beiden Zahlen sind der Vertrag. Es ist zudem die dritte Variante
+# desselben Musters (Session-Limit, unquittierte Sitzung, Netzfehler) — ein
+# dritter Textzweig wäre genau die Bauform, die BL-214 beim Abtragen eng
+# ziehen musste. „0 Turns und 0.0000 USD" trifft alle drei und ist maschinell
+# prüfbar.
+#
+# BEWEISLAST STATT VERMUTUNG: Verlangt werden BEIDE Zahlen, in JEDEM Log dieses
+# Aufrufs (Abo-Versuch, API-Fallback, 429-Retries). Fehlt `num_turns` — etwa im
+# Ersatzzettel nach einem abgeschnittenen Log (BL-46) — oder fehlt die Datei,
+# sind die Kosten UNBEKANNT, und dann bleibt es ein gewöhnlicher Fehlversuch.
+# Die Fehlerrichtung ist gewollt: lieber einen Fehlversuch zu viel zählen als
+# einen echten verschlucken (BL-160).
+team_kein_zug() {
+    [ "$#" -gt 0 ] || return 1
+    "$TEAM_PYTHON" - "$@" <<'PY'
+import json, sys
+for pfad in sys.argv[1:]:
+    try:
+        daten = json.load(open(pfad))
+    except Exception:
+        sys.exit(1)
+    turns, kosten = daten.get("num_turns"), daten.get("total_cost_usd")
+    if turns is None or kosten is None:
+        sys.exit(1)
+    try:
+        if float(turns) != 0 or float(kosten) != 0:
+            sys.exit(1)
+    except (TypeError, ValueError):
+        sys.exit(1)
+sys.exit(0)
+PY
 }
 
 # team_promise_in <json-datei> <promise-text>

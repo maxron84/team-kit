@@ -12,6 +12,7 @@
 # Aufruf:
 #   ./kit-melden.sh neu --titel "…"     Entwurf nach Vorlage anlegen
 #   ./kit-melden.sh pruefen             Redaktionsprüfung (Exit 4 = Befunde)
+#   ./kit-melden.sh ablegen <datei>     ins lokal liegende Kit legen + committen
 #   ./kit-melden.sh senden <datei>      Pull Request — fragt vorher
 #   ./kit-melden.sh issue-link <datei>  nur den vorbefüllten Link
 #   ./kit-melden.sh kit-pfad            wo liegt das Kit? (Diagnose)
@@ -20,6 +21,23 @@
 # lässt sich nicht zurückholen, und die Meldung schreibt eine Rolle, die gerade
 # eine private Codebasis gelesen hat. `neu` und `pruefen` dürfen automatisch
 # laufen, `senden` nicht — dieselbe Trennung wie „Finder ≠ Fixer".
+#
+# ABLEGEN ODER SENDEN (BL-227, der Rest von BL-187): Liegt das Kit geklont
+# daneben und zeigt TEAM_KIT_PFAD darauf, ist `ablegen` der Weg — es committet
+# PFADGENAU ins Kit und pusht NICHT. `senden` ist für Melder OHNE Kit-Repo.
+# Ein Owner, der einen Pull Request gegen sein eigenes Repo anlegt, reviewt und
+# merged seine eigene Meldung; BL-187 hat das festgestellt und Rollen-Briefing,
+# TEAM.md und CLAUDE.md.vorlage nachgezogen — dieser Hilfetext blieb stehen.
+# Wer das Werkzeug über seine eigene Hilfe erschließt, fand deshalb weiter nur
+# `senden`, also genau den Weg, von dem BL-187 sagt, dass er hier der falsche
+# ist.
+#
+# `ablegen` ist dabei nicht das lockerere `senden`, sondern das straffere: kein
+# Push (den macht ein Mensch, der den Text gelesen hat), keine BL-Nummer (die
+# vergibt der Maintainer beim Triage, sonst wäre der Nummernraum ein Wettlauf
+# zwischen Meldern, die voneinander nichts wissen) und die Redaktionsprüfung
+# als VORBEDINGUNG, nicht als Empfehlung — was hier durchgeht, liegt im
+# Eingangskorb eines öffentlichen Repos.
 set -uo pipefail
 cd "$(dirname "$0")"
 # shellcheck source=team/lib.sh

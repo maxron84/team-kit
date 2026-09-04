@@ -305,6 +305,94 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Ein zitiertes Kommentar-Endezeichen hat `pwsh/lib.psm1` zerlegt — und damit
+  die ganze pwsh-Bahn** (`BL-229`, gefunden in `Feld B`). Der Kopfkommentar von
+  `Team-HilfeKopf` (neu mit `BL-223`) nannte im Fließtext die beiden Zeichen,
+  zwischen denen ein Block-Kommentar steht. PowerShell kennt darin **keine
+  Maskierung**: Das zitierte Endezeichen schließt den Kommentar an Ort und
+  Stelle. Alles darunter wurde Code, die nächste Prosazeile begann mit
+  `$PSCommandPath` — `Unexpected token 'auf'`, und `Import-Module` scheiterte.
+
+  **Der Schaden war total und trotzdem unsichtbar.** Jede Rolle, jeder
+  Entrypoint und jedes Werkzeug der pwsh-Bahn lädt dieses Modul als erste
+  Handlung; keines davon lief noch. Gesehen hat es niemand, weil der Fix zu
+  `BL-223` mit `bash bash/kit-test.sh` abgenommen wurde — die bash-Bahn ist von
+  einem kaputten `lib.psm1` nicht betroffen, und auf einem Wirt ohne pwsh
+  überspringen die pwsh-Fälle mit Begründung. **Rot wird nichts.** Erst die
+  Suite auf einer pwsh-Maschine zeigte es: **98 rote Fälle, alle auf einer
+  Bahn.**
+
+  Der Fix ist eine Wendung; der Ertrag ist der **Wächter**. Jede ausgelieferte
+  `.ps1`/`.psm1` muss vom PowerShell-**Parser** angenommen werden — gemessen
+  mit `[System.Management.Automation.Language.Parser]::ParseFile`, also mit
+  derselben Maschine, die die Datei später ausführt. Das ist die billigste
+  denkbare Zusicherung (kein Lauf, kein Repo, kein Modellaufruf) und fängt
+  **jeden** Syntaxbruch, nicht nur diesen.
+
+  **Beim Bauen bestätigt, und es ist die eigentliche Lehre:** Eine Zeile aus
+  lauter blanken Wörtern parst PowerShell klaglos als Kommandoaufruf. Erst die
+  Variable dahinter machte den Bruch zu einem Syntaxfehler — dasselbe Zitat an
+  einer anderen Stelle wäre still geblieben. Deshalb prüft der Wächter die
+  **Datei**, nicht das Zeichenpaar.
+
+- **Der Hilfetext von `kit-melden` kannte `ablegen` nicht — also genau den Weg,
+  den der Owner gehen soll** (`BL-227`, gemeldet von `Feld B`). Der
+  Kopfkommentar beider Bahnen zählte **fünf** Verben auf, `kit_meldung.py`
+  kennt **sechs**. `ablegen` war vorhanden, funktionierte und hatte einen
+  ausführlichen Docstring — nur die Hilfe, die ein Mensch zuerst liest, wusste
+  nichts davon.
+
+  **Es war der Rest einer bereits abgetragenen Aufgabe.** `BL-187` hatte
+  festgestellt, dass der Rückkanal nur einen Weg kannte (den Pull Request) und
+  dass der für den Owner der falsche ist: Er legt ihn gegen sein eigenes Repo
+  an, reviewt und merged seine eigene Meldung. Nachgezogen wurden damals
+  Rollen-Briefing, `bootstrap/TEAM.md` und `bootstrap/CLAUDE.md.vorlage`; der
+  Hilfetext des Werkzeugs blieb stehen. Wer sich das Werkzeug über seine
+  **eigene** Hilfe erschloss, fand deshalb weiter nur `senden`.
+
+  Beide Bahnen nennen `ablegen` jetzt in der Verbliste **und** sagen, woran der
+  Melder erkennt, dass es sein Weg ist (`TEAM_KIT_PFAD` gesetzt, Kit liegt
+  daneben) — samt der drei Grenzen, die `ablegen` **strenger** machen als
+  `senden`: kein Push, keine `BL-`Nummer, Redaktionsprüfung als Vorbedingung.
+
+  **Der Wächter prüft die Gattung, nicht die eine fehlende Zeile** (`BL-198`/
+  `BL-224`-Bauart): Die Verbliste jeder Bahn muss mit den Unterbefehlen von
+  `kit_meldung.py` deckungsgleich sein — in **beide** Richtungen, also fällt
+  auch ein Wrapper auf, der ein Verb nennt, das es nicht gibt.
+
+- **Ein Netzfehler VOR dem ersten Token zählte bei der Fixer-Rolle als
+  inhaltlicher Fehlversuch — und schob den Fund Richtung Axel** (`BL-228`,
+  gemeldet von `Feld B`). Abo-Aufruf und API-Fallback endeten beide mit
+  `Connection refused`, `num_turns: 0`, `total_cost_usd: 0.0000`: **Kein Modell
+  hat den Fund je gesehen.** Die Rolle rollte trotzdem zurück und schrieb den
+  Versuchszähler fort. Nach drei solchen Aussetzern stünde der Fund auf
+  `an Axel übergeben` — die teuerste Rolle des Teams, angesetzt auf ein
+  Problem, das nie ein Modell erreicht hat.
+
+  **Die Unterscheidung war da, nur zu eng gezogen.** Der Zweig für das
+  Session-Limit (Exit 42) nimmt den Zähler ausdrücklich aus, mit genau der
+  richtigen Begründung: „kein inhaltlicher Fehlversuch, die Rolle kam nie zum
+  Zug." Ein `ConnectionRefused` mit 0 Turns und 0.0000 USD ist dieselbe Klasse
+  — er fiel nur in den generischen Exit 1.
+
+  Statt eines dritten Textzweigs gibt es jetzt einen **Begriff**: `team_kein_zug`
+  in beiden Bibliotheken entscheidet an den beiden **Zahlen**, nicht am
+  Fehlertext der CLI. Der Text der CLI ist ihre Sache und ändert sich; die
+  Zahlen sind der Vertrag. Und es ist maschinell prüfbar — `0 Turns und
+  0.0000 USD` trifft alle Ausgänge dieser Klasse, statt sie einzeln am Wortlaut
+  zu erkennen (die Bauform, die `BL-214` beim Abtragen eng ziehen musste).
+
+  **Beweislast statt Vermutung:** Verlangt werden **beide** Zahlen, in **jedem**
+  Log des Aufrufs (Abo-Versuch, API-Fallback, 429-Retries). Fehlt `num_turns`
+  — etwa im Ersatzzettel eines abgeschnittenen Logs (`BL-46`) — sind die Kosten
+  **unbekannt**, und dann bleibt es ein gewöhnlicher Fehlversuch. Lieber einen
+  zu viel zählen als einen echten verschlucken (`BL-160`).
+
+  **Der Exit bleibt 1.** Ein eigener Ausgang, den die Vollautomatik nicht kennt,
+  nähme der Stagnations-Bremse ihren Griff — bei totem Netz drehte sich die
+  Fix-Phase dann endlos. Was sich ändert, ist die **Zurechnung**: Rollback ja,
+  Zähler nein, keine Eskalation an Axel.
+
 - **Ein unbrauchbarer Fund am Kopf der Warteschlange beendet die Fix-Phase
   nicht mehr** (`BL-210`, gemeldet von `Feld B`; beide Bahnen). `frank.*` holt
   seinen Auftrag über `beutebuch first <status>` — immer den **ersten** Treffer

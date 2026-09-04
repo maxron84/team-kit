@@ -142,7 +142,12 @@ function Team-HilfeKopf {
       Der DATEIKOPF ist der Hilfetext, keine zweite Fassung daneben (dieselbe
       Bauart wie `install.ps1 -Hilfe`, BL-154/BL-156): Eine Abschrift laeuft
       irgendwann auseinander, und dann sagt die Hilfe etwas anderes als die
-      Datei. Gelesen wird der `<# … #>`-Block am Dateianfang.
+      Datei. Gelesen wird der Block-Kommentar am Dateianfang.
+
+      SEIN ENDEZEICHEN STEHT HIER NICHT (BL-229): PowerShell kennt in einem
+      Block-Kommentar keine Maskierung. Ein zitiertes Endezeichen schliesst
+      den Kommentar an Ort und Stelle — alles danach wird Code, und das
+      ganze Modul parst nicht mehr. Genau so ist BL-229 entstanden.
 
       Der Pfad wird UEBERGEBEN und nicht erraten: In einer Modulfunktion zeigt
       $PSCommandPath auf das Modul, nicht auf das aufrufende Skript.
@@ -684,6 +689,54 @@ function team_summe_cost_usd {
         if ($null -ne $wert) { $gesamt += [double]$wert }
     }
     Write-Output ($gesamt.ToString('F10', [cultureinfo]::InvariantCulture))
+}
+
+function team_kein_zug {
+    <#
+      War in diesem Aufruf ueberhaupt ein Modell am Zug? (BL-228)
+
+      Ein Netzfehler VOR dem ersten Token — Proxy nicht gesetzt,
+      VPN-Aussetzer, kurzer Abriss — endet mit `num_turns: 0` und
+      `total_cost_usd: 0.0000`: Kein Modell hat den Auftrag je gesehen. Fuer
+      die Rolle ist das derselbe Fall wie das Session-Limit (Exit 42, HM-24) —
+      kein INHALTLICHER Fehlversuch, sondern gar keiner. Im Feld standen nach
+      zwei solchen Aussetzern zwei Fehlversuche gegen einen Fund, den nie ein
+      Modell gelesen hatte; nach dreien haette der Fund auf 'an Axel
+      uebergeben' gestanden, also auf der teuersten Rolle des Teams.
+
+      WARUM AN DEN ZAHLEN UND NICHT AM FEHLERTEXT: Der Text der CLI ist ihre
+      Sache und aendert sich ("Connection refused", "a firewall or proxy may
+      be blocking it"); die beiden Zahlen sind der Vertrag. Es ist ausserdem
+      die dritte Variante desselben Musters (Session-Limit, unquittierte
+      Sitzung, Netzfehler) — ein dritter Textzweig waere genau die Bauform,
+      die BL-214 beim Abtragen eng ziehen musste. `0 Turns und 0.0000 USD`
+      trifft alle drei und ist maschinell pruefbar.
+
+      BEWEISLAST STATT VERMUTUNG: Verlangt werden BEIDE Zahlen, in JEDEM Log
+      dieses Aufrufs (Abo-Versuch, API-Fallback, 429-Retries). Fehlt
+      `num_turns` — etwa im Ersatzzettel nach einem abgeschnittenen Log
+      (BL-46) — oder fehlt die Datei, sind die Kosten UNBEKANNT, und dann
+      bleibt es ein gewoehnlicher Fehlversuch. Die Fehlerrichtung ist gewollt:
+      lieber einen Fehlversuch zu viel zaehlen als einen echten verschlucken
+      (BL-160).
+    #>
+    # ValueFromRemainingArguments, nicht ein blankes [string[]]: Sonst bindet
+    # PowerShell nur das ERSTE positionale Argument, und `team_kein_zug a b`
+    # spraeche ueber a allein — der Rest landete still in $args. Die
+    # Doppelbahn hat genau das gemeldet: Auf der bash-Bahn ("$@") war der
+    # gemischte Fall rot, auf der pwsh-Bahn gruen. Ein Aufruf mit einem
+    # ARRAY (`team_kein_zug $versuchLogs`, so ruft team_claude) bleibt
+    # unveraendert moeglich.
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Dateien)
+    if ($null -eq $Dateien -or @($Dateien).Count -eq 0) { return $false }
+    foreach ($p in @($Dateien)) {
+        $daten = Team-JsonLesen $p
+        if ($null -eq $daten) { return $false }
+        if ($null -eq $daten.num_turns -or $null -eq $daten.total_cost_usd) { return $false }
+        if ([double]$daten.num_turns -ne 0) { return $false }
+        if ([double]$daten.total_cost_usd -ne 0) { return $false }
+    }
+    return $true
 }
 
 function team_extract_cost_usd {
@@ -1750,6 +1803,7 @@ function team_claude {
 
     $script:TEAM_LAST_PAUSE = 0
     $script:TEAM_LAST_RESET = ''
+    $script:TEAM_LAST_KEIN_ZUG = 0
 
     if ($env:TEAM_DRY_RUN -eq '1') {
         $stub = [ordered]@{ result = [string]$env:TEAM_DRY_RESULT
@@ -1861,7 +1915,17 @@ function team_claude {
     $script:TEAM_LAST_COST = team_summe_cost_usd $versuchLogs
     $script:TEAM_LAST_OUT = $Out
     if ($fehler) {
-        Team-Fehler "[$Rolle] Claude-Aufruf endgültig fehlgeschlagen, Log: $Out"
+        # BL-228: Kam ueberhaupt ein Modell zum Zug? Der Rueckgabewert bleibt
+        # 1 — ein Lauf ohne Ergebnis ist ein Lauf ohne Ergebnis, und die
+        # Stagnations-Bremse der Vollautomatik muss ihn weiter sehen. Was sich
+        # aendert, ist die ZURECHNUNG: Der Aufrufer erfaehrt ueber
+        # TEAM_LAST_KEIN_ZUG, dass die Rolle nichts dafuer kann.
+        $script:TEAM_LAST_KEIN_ZUG = if (team_kein_zug $versuchLogs) { 1 } else { 0 }
+        if ($script:TEAM_LAST_KEIN_ZUG -eq 1) {
+            Team-Fehler "[$Rolle] Kein Modell kam zum Zug (0 Turns, 0.0000 USD) — Netz/Proxy vor dem ersten Token. Log: $Out"
+        } else {
+            Team-Fehler "[$Rolle] Claude-Aufruf endgültig fehlgeschlagen, Log: $Out"
+        }
         return 1
     }
     return 0
@@ -1872,6 +1936,7 @@ $script:TEAM_LAST_COST = ''
 $script:TEAM_LAST_OUT = ''
 $script:TEAM_LAST_PAUSE = 0
 $script:TEAM_LAST_RESET = ''
+$script:TEAM_LAST_KEIN_ZUG = 0
 $script:TEAM_SMOKE_PARALLEL_ZEILE = ''
 
 Export-ModuleMember -Function * -Variable @(
@@ -1882,6 +1947,7 @@ Export-ModuleMember -Function * -Variable @(
     'TEAM_429_MAX_RETRIES', 'TEAM_429_MAX_WARTEN', 'TEAM_429_PUFFER',
     'TEAM_GUARD_LAUFZEIT', 'TEAM_LOCK_DATEI', 'TEAM_LOCK_ORDNER',
     'TEAM_LAST_COST', 'TEAM_LAST_OUT', 'TEAM_LAST_PAUSE', 'TEAM_LAST_RESET',
+    'TEAM_LAST_KEIN_ZUG',
     'TEAM_PROJEKT', 'TEAM_FELD_KUERZEL',
     'TEAM_PRODUKTIVCODE', 'TEAM_TEST_ORDNER', 'TEAM_PLAN_ORDNER',
     'TEAM_WEITERER_CODE', 'TEAM_TEST_ORDNER_BESTAND', 'TEAM_PLAN_ORDNER_BESTAND',
