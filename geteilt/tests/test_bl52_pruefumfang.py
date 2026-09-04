@@ -25,8 +25,8 @@ from pathlib import Path
 
 import pytest
 
-from conftest import (BASH, entrypoint_aufruf, kopiere_team_namensraum,
-                      pfad_voran)
+from conftest import (BASH, entrypoint_aufruf, entrypoint_pfad,
+                      kopiere_team_namensraum, pfad_voran)
 
 WURZEL = Path(__file__).resolve().parents[2]
 HARRY = WURZEL / "harry.sh"
@@ -36,7 +36,7 @@ def _konfig(schluessel):
     """Liest einen Wert aus der INSTALLIERTEN team.config.sh — die Ordnernamen
     bestimmt das Zielprojekt, nicht dieser Test."""
     return subprocess.run(
-        [BASH, "-c", f'source "{WURZEL}/team.config.sh"; printf "%s" "${schluessel}"'],
+        [BASH, "-c", f'source "{entrypoint_pfad("team.config.sh")}"; printf "%s" "${schluessel}"'],
         capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
 
 
@@ -45,7 +45,7 @@ def _neutrale_config():
     benutzt `${VAR:-default}`, eine leere Umgebungsvariable faellt also auf den
     Projektwert zurueck. Ohne das koennte die Gegenprobe fuer das frisch
     angelegte Projekt in einem Bestandsprojekt nicht hergestellt werden."""
-    text = (WURZEL / "team.config.sh").read_text(encoding="utf-8")
+    text = entrypoint_pfad("team.config.sh").read_text(encoding="utf-8")
     zeilen = []
     for zeile in text.splitlines(True):
         for name in ("TEAM_WEITERER_CODE", "TEAM_TEST_ORDNER_BESTAND",
@@ -161,7 +161,7 @@ def test_frank_darf_den_fund_dort_reparieren_wo_er_liegt():
 def test_config_erklaert_dass_der_wert_keine_rechte_gibt():
     """Die gefaehrlichste Fehllesung: 'mitgeprueft' als 'darf geschrieben
     werden'. Die Config muss das ausdruecklich ausschliessen."""
-    text = (WURZEL / "team.config.sh").read_text(encoding="utf-8")
+    text = entrypoint_pfad("team.config.sh").read_text(encoding="utf-8")
     assert "TEAM_WEITERER_CODE" in text
     assert "PRÜFUMFANG, nicht die Schreibrechte" in text, (
         "team.config.sh trennt Pruefumfang und Schreibrechte nicht ausdruecklich")

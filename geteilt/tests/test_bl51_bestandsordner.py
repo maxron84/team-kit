@@ -29,8 +29,8 @@ from pathlib import Path
 
 import pytest
 
-from conftest import (BASH, entrypoint_aufruf, kopiere_team_namensraum,
-                      pfad_voran)
+from conftest import (BASH, entrypoint_aufruf, entrypoint_pfad,
+                      kopiere_team_namensraum, pfad_voran)
 
 WURZEL = Path(__file__).resolve().parents[2]
 HARRY = WURZEL / "harry.sh"
@@ -52,7 +52,7 @@ def _neutrale_config():
     wirklich einen Bestand fuehrt, koennte die Gegenprobe 'ohne Bestand kein
     Block' sonst gar nicht hergestellt werden — sie wuerde dort rot, ohne dass
     etwas kaputt waere. Die Fixture setzt den Ausgangszustand selbst."""
-    text = (WURZEL / "team.config.sh").read_text(encoding="utf-8")
+    text = entrypoint_pfad("team.config.sh").read_text(encoding="utf-8")
     zeilen = []
     for zeile in text.splitlines(True):
         for name in ("TEAM_WEITERER_CODE", "TEAM_TEST_ORDNER_BESTAND",
@@ -168,7 +168,7 @@ def test_axel_bekommt_dieselbe_auflage():
 
 
 def test_config_traegt_beide_werte_und_nennt_die_harte_variante():
-    text = (WURZEL / "team.config.sh").read_text(encoding="utf-8")
+    text = entrypoint_pfad("team.config.sh").read_text(encoding="utf-8")
     assert "TEAM_PLAN_ORDNER_BESTAND" in text
     assert "TEAM_TEST_ORDNER_BESTAND" in text
     assert "PROMPT-Auflage, keine Mechanik" in text, (

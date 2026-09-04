@@ -18,7 +18,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-from conftest import BASH, entrypoint_aufruf, kit_pfad
+import pytest
+
+from conftest import (BASH, basis_umgebung, entrypoint_aufruf, kit_pfad,
+                      werkzeug_wert)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 KOSTEN_PY = kit_pfad("tools", "kosten.py")
@@ -114,11 +117,18 @@ def test_ledger_split_python_funktion_direkt(tmp_path):
     assert gemischt == 4.25
 
 
+# BL-133-Bauart: siehe test_stufe44 — ohne danebenliegende team.config.sh ist
+# $TEAM_KOSTEN_TOOL leer, und die Bibliothek ruft einen Befehl namens `ledger`.
+KOSTEN_WERT = werkzeug_wert(str(kit_pfad("tools", "kosten.py")
+                                .relative_to(REPO_ROOT)).replace("\\", "/"))
+
+
 def test_team_ledger_split_wrapper(tmp_path):
     ledger = _fixture_ledger(tmp_path)
     result = subprocess.run(
         [BASH, "-c", f'source "{TEAM_LIB}"; team_ledger_split "{ledger}"'],
         cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+        env=basis_umgebung(TEAM_KOSTEN_TOOL=KOSTEN_WERT),
     )
     assert result.returncode == 0, result.stderr
     abo, api, gemischt = (float(x) for x in result.stdout.strip().split("\t"))
@@ -129,6 +139,14 @@ def test_team_status_budget_kopfzeilen_summieren_sich_auf_gesamt():
     # Rechenprobe gegen das echte Repo (Regressionsschutz, wie in
     # test_stufe44_domaenen_status.py): die drei Kostenzeilen (API + Abo +
     # gemischt) muessen sich exakt auf die "Gesamt"-Zeile summieren.
+    #
+    # Das setzt ein installiertes PROJEKT voraus: `team-status.sh` wechselt in
+    # sein eigenes Verzeichnis und liest von dort Konfiguration und Ledger. In
+    # der Kit-Ablage liegt es unter `bash/entry/`, wo es beides nicht gibt.
+    # Abgedeckt ist der Fall in `bash/kit-test.sh`, das vorher installiert.
+    if not (REPO_ROOT / "team-status.sh").is_file():
+        pytest.skip("team-status.sh liegt nur in der INSTALLIERTEN Ablage "
+                    "(im Kit unter bash/entry/) — geprueft wird via kit-test.sh")
     result = subprocess.run(
         [*entrypoint_aufruf("./team-status.sh"), "--budget"],
         cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",

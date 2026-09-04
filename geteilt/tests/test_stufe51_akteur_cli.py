@@ -19,7 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from conftest import BASH, kit_pfad, werkzeug_wert
+from conftest import BASH, entrypoint_pfad, kit_pfad, werkzeug_wert
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 
@@ -45,7 +45,7 @@ def _fixture_repo(tmp_path):
     "$(dirname "$0")"`, daher muss team/tools/kosten.py als Geschwister-Unterordner
     mitkopiert werden."""
     (tmp_path / "team" / "tools").mkdir(parents=True)
-    shutil.copy(REPO_ROOT / "team-status.sh", tmp_path / "team-status.sh")
+    shutil.copy(entrypoint_pfad("team-status.sh"), tmp_path / "team-status.sh")
     shutil.copy(kit_pfad("lib.sh"), tmp_path / "team" / "lib.sh")
     shutil.copy(kit_pfad("tools", "kosten.py"),
                 tmp_path / "team" / "tools" / "kosten.py")

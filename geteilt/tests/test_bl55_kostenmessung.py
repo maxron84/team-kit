@@ -30,11 +30,25 @@ import subprocess
 import time
 from pathlib import Path
 
-from conftest import BASH, kit_pfad
+from conftest import BASH, basis_umgebung, entrypoint_pfad, kit_pfad, werkzeug_wert
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 TEAM_LIB = kit_pfad("lib.sh")
-VOLLAUTOMATIK = REPO_ROOT / "vollautomatik.sh"
+VOLLAUTOMATIK = entrypoint_pfad("vollautomatik.sh")
+
+# Die Regeldatei heisst in der INSTALLATION `CLAUDE.md`; im Kit liegt sie als
+# `bootstrap/CLAUDE.md.vorlage` — dieselbe Datei, einen Installationsschritt
+# frueher. Geprueft wird die Regel, nicht der Dateiname.
+REGELDATEI = (REPO_ROOT / "CLAUDE.md" if (REPO_ROOT / "CLAUDE.md").is_file()
+              else REPO_ROOT / "bootstrap" / "CLAUDE.md.vorlage")
+
+# BL-133-Bauart: Der Harnisch sagt der Bibliothek, wie das Werkzeug auf DIESER
+# Maschine und in DIESER Ablage heisst — im Feld tut das team.config.sh. Ohne
+# das stirbt jede Funktion, die $TEAM_KOSTEN_TOOL anfasst, unter `set -u` an
+# einer "unbound variable", sobald lib.sh ohne danebenliegende Konfiguration
+# gesourct wird (also immer in der Kit-Ablage).
+KOSTEN_WERT = werkzeug_wert(str(kit_pfad("tools", "kosten.py")
+                                .relative_to(REPO_ROOT)).replace("\\", "/"))
 
 
 def _bash(code):
@@ -44,6 +58,7 @@ def _bash(code):
         cwd=REPO_ROOT,
         capture_output=True,
         text=True, encoding="utf-8", errors="replace",
+        env=basis_umgebung(TEAM_KOSTEN_TOOL=KOSTEN_WERT),
     )
     assert result.returncode == 0, f"bash schlug fehl: {result.stderr}"
     return result.stdout.strip()
@@ -164,7 +179,7 @@ def test_kontostand_gesamt_zaehlt_das_archiv_nicht_mit():
 def test_kein_kostenabschluss_mehr_in_einer_ralph_stufe():
     """Die Regel, die den Fund ueberhaupt ausgeloest hat: der Kostenabschluss
     gehoert in den Architekten-Closeout nach dem Lauf."""
-    claude_md = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+    claude_md = REGELDATEI.read_text(encoding="utf-8")
     # T.E.A.M.-Starterkit: zusaetzlich Markdown-Hervorhebungen entfernen. Ohne
     # das scheitert die Pruefung an einem **nie** mitten im Satz, obwohl die
     # Regel woertlich dasteht — ein Fehlalarm, kein Regelverstoss.

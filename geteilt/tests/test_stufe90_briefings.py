@@ -14,7 +14,7 @@ import sys
 import re
 from pathlib import Path
 
-from conftest import BASH, basis_umgebung, kit_pfad
+from conftest import BASH, basis_umgebung, entrypoint_pfad, kit_pfad
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 TEAM_LIB = kit_pfad("lib.sh")
@@ -26,7 +26,7 @@ ROLLEN = ("ralph", "harry", "marv", "frank", "axel")
 def _produktivcode():
     """Liest TEAM_PRODUKTIVCODE aus team.config.sh — das Kit ist stackagnostisch,
     die Guard-Grenze heisst in jedem Projekt anders."""
-    cfg = REPO_ROOT / "team.config.sh"
+    cfg = entrypoint_pfad("team.config.sh")
     if cfg.exists():
         m = re.search(r'TEAM_PRODUKTIVCODE="\$\{TEAM_PRODUKTIVCODE:-([^}]*)\}"',
                       cfg.read_text(encoding="utf-8"))
@@ -55,6 +55,18 @@ EISERNE_REGEL_ZEILEN = {
     "frank.sh": ("Franks Dreisatz", "<promise>FRANK_FIX_COMPLETE</promise>"),
     "ralph.sh": ("<promise>STUFE_${STUFE}_COMPLETE</promise>",),
 }
+
+
+def _skriptpfad(name):
+    """Loest einen Rollen-Skriptnamen in BEIDER Ablage auf.
+
+    Die Namen hier sind die des ZIELPROJEKTS (`ralph.sh`, `team/redteam.sh`) —
+    dieselbe Sprache, die kit_pfad() spricht. Im Kit liegen die Entrypoints
+    nach Bahn getrennt unter `bash/entry/`, der Sweep unter `bash/`.
+    """
+    if name.startswith("team/"):
+        return kit_pfad(name.split("/", 1)[1])
+    return entrypoint_pfad(name)
 
 
 def _run(bash_script, cwd):
@@ -120,7 +132,7 @@ def test_team_briefing_fallback_bei_leerer_datei(tmp_path):
 
 def test_rollen_skripte_rufen_team_briefing_auf():
     for skript, aufruf in SKRIPTE.items():
-        text = (REPO_ROOT / skript).read_text(encoding="utf-8")
+        text = _skriptpfad(skript).read_text(encoding="utf-8")
         assert aufruf in text, f"{skript} ruft {aufruf!r} nicht (mehr) auf"
         assert "Rolle siehe CLAUDE.md — lies sie zuerst" not in text, (
             f"{skript} enthaelt noch die alte Inline-Zeile statt team_briefing"
@@ -129,7 +141,7 @@ def test_rollen_skripte_rufen_team_briefing_auf():
 
 def test_eiserne_regel_und_promise_zeilen_bleiben_erhalten():
     for skript, marker in EISERNE_REGEL_ZEILEN.items():
-        text = (REPO_ROOT / skript).read_text(encoding="utf-8")
+        text = _skriptpfad(skript).read_text(encoding="utf-8")
         for teil in marker:
             assert teil in text, f"{skript} hat {teil!r} verloren"
 

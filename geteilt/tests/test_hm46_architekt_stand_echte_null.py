@@ -20,7 +20,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from conftest import BASH, kit_pfad
+from conftest import BASH, basis_umgebung, kit_pfad, werkzeug_wert
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 TEAM_LIB = kit_pfad("lib.sh")
@@ -32,10 +32,17 @@ FIXTURE_LEDGER_ECHTE_NULL = """\
 """
 
 
+# BL-133-Bauart: siehe test_stufe44 — ohne danebenliegende team.config.sh ist
+# $TEAM_KOSTEN_TOOL leer, und die Bibliothek ruft einen Befehl namens `ledger`.
+KOSTEN_WERT = werkzeug_wert(str(kit_pfad("tools", "kosten.py")
+                                .relative_to(REPO_ROOT)).replace("\\", "/"))
+
+
 def _run(bash_script, cwd=REPO_ROOT):
     return subprocess.run(
         [BASH, "-c", bash_script],
         cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+        env=basis_umgebung(TEAM_KOSTEN_TOOL=KOSTEN_WERT),
     )
 
 
