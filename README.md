@@ -65,7 +65,9 @@ ausdauernd und teuer am Ziel vorbei.
 agnostisch gesagt: **Nutzen je Token**. Das ist der Unterschied zum Bauen über
 ein oder mehrere Chatfenster, und es ist derselbe Maßstab, der später für ein
 **lokales Modell offline** gilt. Ausgeführt unter
-[Der Antrieb](#der-antrieb-nutzen-je-token).
+[Der Antrieb](#der-antrieb-nutzen-je-token). Der zweite Grund steht daneben:
+weniger Weisung, ohne dass die Kontrolle mitgeht —
+[hier](#weniger-weisung-ohne-kontrollverlust).
 
 ## Schnellstart
 
@@ -152,6 +154,7 @@ Bauarbeit**: der eigene Einstieg in die Fixphase (`BL-204`). Alles in
 | [Was das ist — und für wen](#was-das-ist--und-für-wen) | Regiepult statt Autopilot — und die Betriebsbedingung dahinter |
 | [Was das T.E.A.M. ist](#was-das-team-ist) | Die sechs Rollen und das Prinzip *Finder ≠ Fixer* |
 | [Der Antrieb](#der-antrieb-nutzen-je-token) | Nutzen je Token: vier Hebel, die Gegenrechnung zum Chatfenster, die Rolle von Git |
+| [Weniger Weisung, ohne Kontrollverlust](#weniger-weisung-ohne-kontrollverlust) | Der Tausch: Weisungsdichte gegen Prüfdichte — mit dem Tag, an dem die Tore drei Fehler fingen, die niemand gesucht hat |
 | [Modelle](#modelle--agnostisch-aber-nicht-anspruchslos) | Zwei Stufen statt Modellnamen, sechs vorausgesetzte Fähigkeiten, Ziel lokal |
 | [Herkunft](#herkunft) | Woher der Code kommt und wo er scharf gelaufen ist |
 | [Installation](#installation) | `install.sh`, das Aufnahme-Interview, `--update` gegen `--force` |
@@ -281,6 +284,57 @@ werden** — durch enge Stufen, billige Rollen, abgebrochene Leerläufe und
 dadurch, dass doppelte Arbeit überhaupt sichtbar wird. Die 1265 USD aus
 `Feld A` sind der Beleg dafür, dass hier gearbeitet wurde, nicht dafür, dass es
 umsonst war.
+
+## Weniger Weisung, ohne Kontrollverlust
+
+**Der Kontrollverlust, den man beim agentischen Arbeiten fürchtet, ist nicht,
+dass die Maschine etwas Falsches tut — es ist, dass sie es tut und niemand es
+merkt.** Wer das ernst nimmt, hat zwei Auswege: über die Schulter schauen oder
+Tore bauen. Das Erste skaliert nicht und ist genau das Micromanagement, das man
+loswerden wollte. Das Zweite ist die Bauidee dieses Kits.
+
+**Weniger Weisung ist deshalb kein Nachlassen der Kontrolle, sondern ihre
+Verlagerung** — weg vom Zusehen, hin zum Abnehmen. Der Stakeholder sagt, **was**
+gilt, und urteilt am Ergebnis; das **Wie** setzt die Mechanik durch, an Stellen,
+an denen ohnehin niemand danebenstünde. Der Tausch heißt: **Weisungsdichte gegen
+Prüfdichte.** Und Prüfdichte arbeitet, während man etwas anderes tut.
+
+**Die Anekdote dazu ist der 2026-09-04 in `Feld B`**, und sie taugt, weil sie
+schlecht ausging und trotzdem gut endete. Ein Auftrag, ein Satz — *Merge-Konflikt
+lösen, danach die Neuigkeiten erfassen und abarbeiten* —, dann kein Zusehen mehr.
+Was die Tore in dieser einen Sitzung gefangen haben:
+
+- **Vier falsche Zahlen, bevor irgendetwas committet war.** Zwei Backlog-Einträge
+  mussten umnummeriert werden, weil dieselben Nummern anderswo schon vergeben
+  waren. Damit stimmten die Zahlen im README nicht mehr — `kit-readme-pruefen.py`
+  nannte alle vier Stellen sofort (`BL-224`).
+- **Einen Totalausfall, der vier Commits lang unbemerkt mitlief.** Die Suite fiel mit
+  **98 roten Fällen — alle auf der pwsh-Bahn, keiner auf der bash-Bahn.** Ein
+  zitiertes Kommentar-Endezeichen hatte `pwsh/lib.psm1` zerlegt: Dort lud kein
+  Modul mehr, also lief keine Rolle, kein Entrypoint, kein Werkzeug.
+  Eingeschleppt hatte es ein **Fix**, der auf der *anderen* Bahn grün abgenommen
+  worden war; danach liefen noch vier Commits darüber hinweg, drei davon selbst
+  Fixes mit eigenen Wächtern (`BL-229`).
+- **Einen Fehler im eigenen Fix, noch am selben Tag.** Die neu gebaute Erkennung
+  „kein Modell kam zum Zug" war auf der bash-Bahn rot und auf der pwsh-Bahn grün
+  — die pwsh-Fassung las nur das *erste* ihrer Argumente. Gesehen hat das kein
+  Mensch, sondern die **Doppelbahn**: dieselbe Zusicherung, zwei Shells
+  (`BL-228`).
+
+**Und die Gegenrichtung, damit daraus kein Werbetext wird.** Ein Wächter, der
+falsch meldet, ist schlechter als keiner: Ein zusätzlicher, rein textueller
+Prüfer für denselben Fund lieferte fünf Fehlalarme — er wurde **verworfen, nicht
+eingebaut**.
+Wo die Mechanik nicht sicher urteilen kann, urteilt sie gar nicht; dieselbe
+Fehlerrichtung wie bei `BL-160`. Und die 21 roten Fälle, die am Ende des Tages
+noch standen, sind **nicht** verschwunden — sie sind benannt, vorbestehend und
+unverändert.
+
+**Die Bilanz der Sitzung ist deshalb nicht „drei Funde behoben".** Sie ist: Jeder
+Fund brachte seinen eigenen Wächter mit, und jeder Wächter musste vorführen, dass
+er **ohne** den Fix rot wird. Genau das ist der Unterschied zwischen einem
+Menschen, der weniger hinsieht, und einem Menschen, der weniger hinsehen
+**muss**.
 
 ## Modelle — agnostisch, aber nicht anspruchslos
 
