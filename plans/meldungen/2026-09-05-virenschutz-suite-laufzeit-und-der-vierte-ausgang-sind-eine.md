@@ -137,9 +137,11 @@ Auflösung kostete einen Menschen drei Diagnoseläufe und eine Handquittung.
 
 - `TEAM_SMOKE_TEST_TIMEOUT` (Default 600 s, aus `Kit-BL-207`) verhindert, dass
   die Rolle die Suite als Hintergrundlauf startet. Es ist ein **Deckel**, keine
-  Bremse: Bei 493 s bleiben 107 s Puffer, und die Suite wuchs an einem einzigen
-  Tag um 198 s. Es gibt **keine Warnung**, wenn ein Lauf sich der Grenze nähert
-  — der Übergang von „läuft" zu „bricht ab" ist unangekündigt.
+  Bremse: Dieselbe Suite maß am selben Tag 378 s und 493 s — der Puffer zur
+  Grenze ist damit keine Konstante, sondern Tagesform (221 s oder 107 s). Es
+  gibt **keine Warnung**, wenn ein Lauf sich der Grenze nähert — der Übergang
+  von „läuft" zu „bricht ab" ist unangekündigt, und wegen der Streuung trifft
+  er ein Projekt nicht bei einem Wachstumsschritt, sondern zufällig.
 - Die Selbstprüfung des vierten Ausgangs erkennt den Ausgang zuverlässig, ist
   aber selbst der zweite Suitenlauf aus Glied 3.
 - Nichts im Kit adressiert Glied 1 und 2.
