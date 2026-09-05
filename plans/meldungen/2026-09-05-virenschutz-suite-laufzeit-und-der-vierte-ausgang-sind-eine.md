@@ -42,17 +42,32 @@ Die Prüfstände dieses Projekts starten je Test einen echten
 Oberflächen-Kindprozess (Electron) und teils zusätzlich einen echten
 Sprachlaufzeit-Kindprozess. Unter Windows gibt es kein `fork`; jeder Start ist
 ein vollständiger Prozessstart samt Abbildladen, und der Echtzeitschutz scannt
-dabei jedes Mal mit. **Gemessen wurde der Preis eines solchen Starts, nicht
-geschätzt:**
+dabei jedes Mal mit.
 
-| Lauf (gleiche Maschine, beide im Vordergrund, ohne Nebenlast) | Tests | Dauer |
+**Wie teuer ein Start ist, lässt sich auf dieser Maschine NICHT über die
+Differenz zweier Läufe bestimmen** — das ist selbst ein Befund. Drei
+Vordergrundläufe am selben Tag:
+
+| Lauf | Tests | Dauer |
 |---|---|---|
-| abends | 422 | **294,80 s** |
-| nachts, nach vier weiteren Baustufen | 451 | **492,79 s** |
+| erster | 422 | 294,80 s |
+| zweiter, am Ende eines dreistündigen Bau-Laufs | 451 | **492,79 s** |
+| dritter | 453 | **378,55 s** |
 
-Das sind **+198 s bei +29 Tests, also 6,8 s je zusätzlichem Test** — genau der
-Preis eines Kindprozessstarts auf dieser Maschine. Beide Zahlen stammen vom
-selben Messenden am selben Tag.
+Der dritte ist bei **mehr** Tests **114 s schneller** als der zweite: **Die
+Suite streut um rund 30 %**, je nachdem, was sonst auf der Maschine läuft. Aus
+den ersten beiden Läufen hatte ich zunächst „6,8 s je zusätzlichem Test"
+abgeleitet — **diese Zahl ist widerrufen**, sie war eine Gerade durch zwei
+Punkte.
+
+**Belastbar ist nur, was INNERHALB eines Laufs gemessen wird**, und das genügt
+für den Befund: `--durations=30` zeigt am selben Lauf eine Prüfstands-Datei mit
+fünf Tests und **fünf** Starts bei **42 s** gegen eine Datei mit **einem**
+Start und Messung in einer Fixture bei **13,75 s Setup** (Tests danach im
+Millisekundenbereich). Der Preis hängt an der Zahl der **Starts**, nicht an der
+Zahl der Tests — und die Streuung zwischen Läufen ist ein zweites Problem
+derselben Ursache: Wer 20 Prozessstarts je Lauf hat, hängt an der Tagesform des
+Virenscanners.
 
 ### Glied 2 — Die Suite wächst mit STARTS, nicht mit Tests
 
@@ -64,7 +79,7 @@ selben Messenden am selben Tag.
   Start misst (Messung in einer Fixture, Assertions danach): **13,75 s
   Setup**, die Tests selbst dann im Millisekundenbereich.
 
-Das ist auch die Erklärung für einen scheinbaren Widerspruch, an dem dieses
+Diese Gegenüberstellung stammt aus EINER Messung und ist damit streuungsfrei. Sie ist auch die Erklärung für einen scheinbaren Widerspruch, an dem dieses
 Projekt zwei Kaskaden lang falsch geplant hat: Eine Kaskade legte vier
 Prüfstands-Dateien nach und die Suite wurde **schneller**, was die lineare
 Prognose „N Dateien = N × Startzeit" zu widerlegen schien. Sie war nicht
