@@ -1371,6 +1371,16 @@ PY
         else
             rot "  ✗ Regressionstests NICHT grün — Log: /tmp/team-update-pytest.log"
             tail -3 /tmp/team-update-pytest.log
+            # BL-261: Wem gehoert der rote Fall? Die Suite prueft in einer
+            # INSTALLATION auch den Code des Projekts; ein roter Fall dort
+            # liest sich ohne diesen Hinweis wie ein gescheitertes Update.
+            gelb "    Die Dateien SIND installiert. Dieser Ausgang bewertet den"
+            gelb "    SUITENSTAND, nicht das Update (BL-261)."
+            gelb "    In einer Installation prüft die Suite auch DEINEN Code"
+            gelb "    (z. B. scripts/). Der Testname steht immer unter"
+            gelb "    team/tests/ — welche Datei gemeint ist, sagt die Meldung"
+            gelb "    im Log. Liegt sie außerhalb von team/, ist es ein Befund"
+            gelb "    an deinem Projekt, und das Update ist davon unberührt."
             FEHLER=1
         fi
     fi

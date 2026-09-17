@@ -451,6 +451,39 @@ log "Dieser Lauf: $(lauf_kosten) USD (Deckel $TEAM_BUDGET_USD). Gesamt-Kontostan
 # angesetzte Stufe mit 87 Turns in 13 Minuten auf das Doppelte ihres Ansatzes,
 # waehrend die teureren Nachbarstufen 47/57 Turns ueber 17 Minuten brauchten.
 $TEAM_KOSTEN_TOOL turns .ralph-logs 2>/dev/null | sed 's/^/  /' || true
+# BL-255 (c): Eine planmaessig ausgelassene Stufe wird GETRENNT gezaehlt.
+# "4 genommen, 1 planmaessig uebersprungen" ist eine andere Aussage als
+# "5 genommen" — und ohne diese Zeile stuende nirgends, dass eine Stufe
+# ueberhaupt ausgelassen wurde.
+if [ -s .ralph-uebersprungen ]; then
+    log "Planmäßig übersprungen: Stufe $(sort -n -u .ralph-uebersprungen | tr '\n' ' ' | sed 's/ $//; s/ /, /g') (BL-255) — Abbruchbedingung des Plans, jeweils committet. Der vierte Ausgang wurde dafür NICHT gemeldet."
+fi
+
 command -v notify-send >/dev/null && \
     notify-send "T.E.A.M. Vollautomatik fertig" "Kaskade durch. Dieser Lauf: $(lauf_kosten) USD · Gesamt: $(kontostand_gesamt) USD" 2>/dev/null || true
+
+# BL-256: Der Lauf darf sich nicht als fertig melden, solange das Gate aus ist.
+#
+# Im Feld hat jede beteiligte Rolle sich regelkonform verhalten — der Fix
+# scheiterte nicht an fremdem Flackern (BL-205), der Beifang wurde als eigener
+# Fund erfasst (Finder != Fixer), die Fixphase fragte nach 'an Frank
+# uebergeben' und fand nichts. Der Abschlussbericht meldete den Lauf als
+# fertig, waehrend der Baum seit einer Stunde rot war.
+#
+# Die Regel bleibt unangetastet; was fehlte, ist ihre GEGENRICHTUNG. Gelesen
+# wird hier, geschrieben haben es die Rollen (BL-256 im Prompt-Baustein).
+if GATE_ZEILE="$(team_gate_rot_seit)"; then
+    log "=== LAUF BEENDET — GATE ROT ==="
+    log "  Erste Meldung: $GATE_ZEILE"
+    while IFS= read -r zeile; do
+        [ -n "$zeile" ] && log "    $zeile"
+    done < "$TEAM_GATE_DATEI"
+    log "  Der Bau ist gelaufen, aber die Suite war es nicht — ein Lauf, der"
+    log "  sich hier als fertig meldete, hätte ein rotes Gate überdeckt (BL-256)."
+    log "  Nächster Schritt: den roten Baum reparieren. Ist er grün, gehört"
+    log "  $TEAM_GATE_DATEI gelöscht — dann meldet sich der nächste Lauf wieder normal."
+    log "Vollautomatik beendet — Gate ROT."
+    exit 44
+fi
+
 log "Vollautomatik beendet."

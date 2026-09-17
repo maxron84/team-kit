@@ -42,6 +42,28 @@ nichts, was ich nachlesen kann.
    sah richtig aus, Ralph stieg mit Exit 1 aus und der Status zeigte `Cap ?`.
    Die Leser dulden die Auszeichnung inzwischen — ich verlasse mich nicht
    darauf, sondern schreibe die Zeilen blank.
+
+   **Eine Stufe, die unter einer Bedingung gar nicht gebaut werden soll,
+   bekommt die Bedingung UND die zweite Quittungsform** (`Kit-BL-255`).
+   Schreibe ich nur die Bedingung hin, hat Ralph für den Eintrittsfall keine
+   Vokabel: Es gibt Promise oder kein Promise, und *kein Promise* ist mit dem
+   teuersten Bericht des Werkzeugs belegt (Exit 43, „Stufe fertig, Quittung
+   fehlt") — eine Diagnose, die dann nachweislich nicht zutrifft. Also:
+
+   ```
+   **Abbruchbedingung.** Ergibt die Messung, dass <Bedingung>, wird diese
+   Stufe NICHT gebaut: Befund in den [Unreleased]-Block, committen, fertig.
+
+   **Promise.** `<promise>STUFE_44_COMPLETE</promise>` — trifft die
+   Abbruchbedingung zu: `<promise>STUFE_44_UEBERSPRUNGEN</promise>`
+   ```
+
+   Die zweite Form gilt **nur**, wenn sie mit dieser Stufennummer im Plan
+   steht: Ralph prüft das, und ohne Commit lässt er sie ebenfalls nicht gelten.
+   Beides ist Absicht — sonst wäre sie ein Weg, eine Stufe ohne Arbeit
+   abzuhaken. Der Abschlussbericht zählt solche Stufen **getrennt** aus
+   (*planmäßig übersprungen*), damit ein Lauf mit ausgelassener Stufe nicht wie
+   ein vollständiger aussieht.
    **Vor jedem Stufenschnitt beantworte ich eine Frage:** *Mit welchem Befehl
    wird diese Zusicherung ROT — und läuft dieser Befehl in der Umgebung, in der
    wir prüfen?* Kann unsere Prüfumgebung die Eigenschaft prinzipiell nicht

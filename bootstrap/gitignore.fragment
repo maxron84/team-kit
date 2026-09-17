@@ -11,6 +11,10 @@
 .harry-state
 .marv-state
 .vollautomatik-state
+# BL-255: welche Stufen planmaessig ausgelassen wurden (Lauf-Zustand).
+.ralph-uebersprungen
+# BL-256: der Ort, an dem 'das Gate ist seit HH:MM rot' stehen kann.
+.team-gate-rot
 .team-focus-harry
 .team-focus-marv
 .frank-attempts

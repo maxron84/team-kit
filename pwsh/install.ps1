@@ -1612,6 +1612,16 @@ if ($Update) {
             } else {
                 Rot "  [x] Regressionstests NICHT gruen — Log: $log"
                 Get-Content -Tail 3 $log | ForEach-Object { Write-Host "      $_" }
+                # BL-261: Wem gehoert der rote Fall? Die Suite prueft in einer
+                # INSTALLATION auch den Code des Projekts; ein roter Fall dort
+                # liest sich ohne diesen Hinweis wie ein gescheitertes Update.
+                Gelb "    Die Dateien SIND installiert. Dieser Ausgang bewertet den"
+                Gelb "    SUITENSTAND, nicht das Update (BL-261)."
+                Gelb "    In einer Installation prüft die Suite auch DEINEN Code"
+                Gelb "    (z. B. scripts\). Der Testname steht immer unter"
+                Gelb "    team\tests\ — welche Datei gemeint ist, sagt die Meldung"
+                Gelb "    im Log. Liegt sie außerhalb von team\, ist es ein Befund"
+                Gelb "    an deinem Projekt, und das Update ist davon unberührt."
                 $fehler = 1
             }
         } finally {

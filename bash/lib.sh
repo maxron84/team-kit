@@ -64,6 +64,32 @@ esac
 # noch eine Grenze. Wer laenger braucht, traegt es in team.config.sh ein.
 TEAM_SMOKE_TEST_TIMEOUT="${TEAM_SMOKE_TEST_TIMEOUT:-600}"
 
+# --- Der Suitenstand ueberlebt die Rolle, die ihn gemessen hat (BL-256) -------
+# WARUM ES DIESE DATEI GIBT. Im Feld aktivierte ein KORREKTER Frank-Fix einen
+# latenten Defekt in einem aelteren Waechter. Frank trug den Beifang als
+# eigenen Fund ein und belegte regelkonform, dass SEIN Fix keinen NEUEN
+# Fehlschlag erzeugt (BL-205). Der Fund bekam Status `offen`; die Fixphase
+# fragt nach `an Frank uebergeben` und meldete folgerichtig *nichts zu tun*.
+# Der Abschlussbericht meldete den Lauf als fertig, waehrend der Baum seit
+# einer Stunde rot war.
+#
+# JEDE ROLLE HAT SICH REGELKONFORM VERHALTEN. Strukturell fehlte ein ORT: Jede
+# Rolle misst den Suitenstand einzeln und keine gibt ihn weiter - und was
+# nirgends steht, kann keine Zusammenfassung lesen. Die Regel *ein Fix
+# scheitert nicht an fremdem Flackern* bleibt unangetastet; was hier entsteht,
+# ist ihre GEGENRICHTUNG: Der Lauf darf weiterlaufen, aber er darf sich nicht
+# als fertig melden.
+#
+# WARUM DIE FUND-EBENE NICHT REICHT: Ein rotes Gate kann ohne Fundeintrag
+# entstehen, und ein offener Fund heisst umgekehrt nicht, dass die Suite rot
+# ist. Der Suitenstand gehoert an den Suitenstand gebunden.
+#
+# STEHT HIER und nicht bei den Funktionen weiter unten: Der Prompt-Baustein
+# gleich darunter NENNT die Datei. Auf der bash-Bahn faellt eine spaetere
+# Definition unter `set -u` sofort auf; auf der pwsh-Bahn waere sie still zu
+# einem Leerstring geworden - eine Auflage ohne Ziel.
+TEAM_GATE_DATEI="${TEAM_GATE_DATEI:-.team-gate-rot}"
+
 # --- Abgeleitete Prompt-Bausteine (Starterkit) --------------------------------
 # Smoke-Test-Zeile für die bauenden Rollen. Ist kein Befehl konfiguriert, wird
 # der Schritt AUSDRÜCKLICH als offener Punkt benannt, statt still zu
@@ -88,7 +114,12 @@ if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
    Zeitlimit deines Werkzeugs entsprechend, statt in den Hintergrund
    auszuweichen — viele Werkzeuge erwarten MILLISEKUNDEN, das wären
    ${TEAM_SMOKE_TEST_TIMEOUT}000 (BL-258). Läuft er länger, ist das ein Befund
-   für den Menschen — melde ihn, weiche nicht aus."
+   für den Menschen — melde ihn, weiche nicht aus.
+   War der Baum schon VOR deiner Arbeit rot, hänge eine Zeile
+   '<ISO-Zeit> | <deine Rolle> | <Namen der roten Tests>' an
+   ${TEAM_GATE_DATEI} an (BL-256). Dein Auftrag scheitert daran NICHT — aber
+   ohne diese Zeile meldet sich der Lauf am Ende als fertig, während das Gate
+   aus ist. Ist der Baum am Ende grün, lösche die Datei wieder."
     # BL-207: Frank bekommt NUR diesen Nachsatz, nicht SMOKE_ZEILE — und er
     # faehrt den Smoke-Test oefter als Ralph. Im Feld endeten 10 von 28
     # Frank-Laeufen ohne Promise, bei 9 davon stand das Warten auf einen
@@ -97,7 +128,7 @@ if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
     # Fehlversuch (.frank-attempts) und eskaliert ab dem dritten an Axel —
     # das teure Modell wird also fuer einen Formfehler gerufen. Deshalb
     # steht die Auflage hier ausgeschrieben statt nur bei Ralph.
-    SMOKE_SUFFIX=" Smoke-Test grün: ${TEAM_SMOKE_TEST}. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu ${TEAM_SMOKE_TEST_TIMEOUT} Sekunden brauchen, erhöhe das Zeitlimit deines Werkzeugs entsprechend (viele Werkzeuge erwarten MILLISEKUNDEN — das wären ${TEAM_SMOKE_TEST_TIMEOUT}000, BL-258). NIEMALS als Hintergrund-Task und kein Wakeup darauf: Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (BL-41). War die Suite schon VOR deinem Fix rot, brich nicht ab: Miss beide Staende und belege, dass durch DEINEN Fix kein NEUER Fehlschlag entsteht (BL-205)."
+    SMOKE_SUFFIX=" Smoke-Test grün: ${TEAM_SMOKE_TEST}. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu ${TEAM_SMOKE_TEST_TIMEOUT} Sekunden brauchen, erhöhe das Zeitlimit deines Werkzeugs entsprechend (viele Werkzeuge erwarten MILLISEKUNDEN — das wären ${TEAM_SMOKE_TEST_TIMEOUT}000, BL-258). NIEMALS als Hintergrund-Task und kein Wakeup darauf: Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (BL-41). War die Suite schon VOR deinem Fix rot, brich nicht ab: Miss beide Staende und belege, dass durch DEINEN Fix kein NEUER Fehlschlag entsteht (BL-205) — und haenge die Zeile '<ISO-Zeit> | frank | <Namen der roten Tests>' an ${TEAM_GATE_DATEI} an, sonst meldet sich der Lauf am Ende als fertig, waehrend das Gate aus ist (BL-256). Ist der Baum am Ende gruen, loesche die Datei wieder."
 else
     SMOKE_ZEILE="(Kein Smoke-Test konfiguriert — Schritt entfällt. Das Team arbeitet ohne Sicherheitsnetz; TEAM_SMOKE_TEST in team.config.sh nachtragen.)"
     SMOKE_SUFFIX=""
@@ -724,6 +755,48 @@ except Exception:
 result = data.get("result", "") or ""
 sys.exit(0 if f"<promise>{sys.argv[2]}</promise>" in result else 1)
 ' "$1" "$2"
+}
+
+# --- Planmaessig uebersprungene Stufe (BL-255) ---------------------------------
+# WARUM ES DIE ZWEITE QUITTUNGSFORM GIBT. Eine Stufe mit im Plan
+# ausgeschriebener ABBRUCHBEDINGUNG trat im Feld ein: Die Rolle hat gemessen,
+# die Konfiguration unangetastet gelassen, den Befund in den [Unreleased]-Block
+# eingetragen, committet — und REGELKONFORM kein Promise gegeben, weil die
+# Stufe nicht abgeschlossen, sondern abgebrochen wurde.
+#
+# Fuer diese Lage gab es keine Vokabel. Es gab Promise oder kein Promise, und
+# *kein Promise* ist mit dem teuersten Bericht des Werkzeugs belegt (BL-41,
+# Exit 43). Die Selbstpruefung machte es nicht besser, sondern zweideutig:
+# Pruefung 1 (*hat die Sitzung Arbeit hinterlassen*) trifft zu, Pruefung 2
+# (*gibt es eine beruehrte Testdatei*) in der Regel nicht — also faellt sie
+# durch, und der Lauf landet im Exit 43 mit der Begruendung *Produktivcode ohne
+# Zusicherung*, die ebenfalls nicht zutrifft. Der Mensch bekommt in BEIDEN
+# Zweigen eine falsche Diagnose; eine abgebrochene Stufe, die zufaellig doch
+# eine Testdatei angefasst hat, wuerde sogar still als abgeschlossen
+# durchgewunken.
+#
+# WARUM DAS MEHR IST ALS KOSMETIK: Der vierte Ausgang ist die teuerste Meldung
+# des Werkzeugs. Wird sie bei einem GEORDNETEN Abschluss gedruckt, stumpft sie
+# ab und wird beim naechsten echten Fall weggeklickt.
+#
+# team_plan_erlaubt_uebersprung <stufe> [plan-datei]
+# Rueckgabe 0, wenn der PLAN die zweite Quittungsform fuer genau diese Stufe
+# ausschreibt. Das ist der Riegel (a) gegen ein Schlupfloch: Die Vokabel gilt
+# nur dort, wo der Architekt die Abbruchbedingung vorher hingeschrieben hat.
+# Geprueft wird die Zeichenkette selbst — sie traegt die Stufennummer, kann
+# also nicht aus dem Block einer anderen Stufe stammen.
+team_plan_erlaubt_uebersprung() {
+    local stufe="$1" plan="${2:-$(team_plan_datei)}"
+    [ -n "$plan" ] && [ -f "$plan" ] || return 1
+    grep -q "STUFE_${stufe}_UEBERSPRUNGEN" "$plan"
+}
+
+
+# team_gate_rot_seit: erste Zeile der Gate-Datei, oder leer. Der Aufrufer
+# entscheidet, was er damit tut — gelesen wird an genau einer Stelle.
+team_gate_rot_seit() {
+    [ -s "$TEAM_GATE_DATEI" ] || return 1
+    head -n1 "$TEAM_GATE_DATEI"
 }
 
 # --- Vierte Fehlerklasse: Sitzung beendet, Auftrag unquittiert (BL-41) --------

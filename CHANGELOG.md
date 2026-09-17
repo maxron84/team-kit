@@ -305,6 +305,81 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Eine planmäßig abgebrochene Stufe war vom vierten Ausgang nicht zu
+  unterscheiden** (`BL-255`, gemeldet von `Feld B`, beide Bahnen). Eine Stufe
+  mit im Plan ausgeschriebener **Abbruchbedingung** trat ein: Ralph hat
+  gemessen, die Konfiguration unangetastet gelassen, den Befund in den
+  `[Unreleased]`-Block eingetragen, committet — und **regelkonform kein
+  Promise** gegeben, weil die Stufe nicht abgeschlossen, sondern abgebrochen
+  wurde. Für diese Lage gab es keine Vokabel: Es gibt Promise oder kein
+  Promise, und *kein Promise* ist mit dem teuersten Bericht des Werkzeugs
+  belegt.
+
+  **Die Selbstprüfung aus `BL-110` machte es nicht besser, sondern
+  zweideutig:** Prüfung 1 (*hat die Sitzung Arbeit hinterlassen*) trifft zu,
+  Prüfung 2 (*gibt es eine berührte Testdatei*) in der Regel nicht — also fällt
+  sie durch, und der Lauf landet im Exit 43 mit der Begründung *Produktivcode
+  ohne Zusicherung*, die ebenfalls nicht zutrifft. Der Mensch bekam in **beiden
+  Zweigen** eine falsche Diagnose.
+
+  Es gibt jetzt eine zweite Quittungsform,
+  `<promise>STUFE_N_UEBERSPRUNGEN</promise>`. Sie schaltet den Zustand weiter
+  wie die erste und druckt einen eigenen, **ruhigen** Abschlusstext. Damit sie
+  kein Schlupfloch wird, gilt sie nur, wenn **der Plan sie für genau diese
+  Stufe ausschreibt**, und nur **mit Commit**; der Abschlussbericht zählt
+  solche Stufen **getrennt**. Mit abgetragen ist der Nebenbefund: Die
+  Abhilfe-Zeile kennt jetzt den Cap, statt eine Stufennummer vorzuschlagen, die
+  einen stillen No-Op erzeugt.
+
+  **Warum das mehr als Kosmetik ist:** Der vierte Ausgang ist die teuerste
+  Meldung des Werkzeugs. Wird sie bei einem geordneten Abschluss gedruckt,
+  stumpft sie ab und wird beim nächsten echten Fall weggeklickt.
+
+- **Nichts hielt fest, dass das Gate AUS ist — ein Lauf meldete sich als
+  fertig, während der Baum seit einer Stunde rot war** (`BL-256`, gemeldet von
+  `Feld B`, beide Bahnen). Im Feld aktivierte ein **korrekter** Frank-Fix einen
+  latenten Defekt in einem älteren Wächter. Frank trug den Beifang als eigenen
+  Fund ein (Finder ≠ Fixer) und belegte regelkonform, dass **sein** Fix keinen
+  **neuen** Fehlschlag erzeugt. Der Fund bekam Status `offen`; die Fixphase
+  fragt nach `an Frank übergeben` und meldete folgerichtig *nichts zu tun*. Die
+  zwei folgenden Frank-Läufe maßen denselben roten Baum gegen denselben roten
+  Ausgangszustand und kamen jeweils korrekt zu dem Schluss, nichts
+  verschlimmert zu haben.
+
+  **Der Regelapparat funktioniert wie gebaut, und das Ergebnis ist trotzdem
+  falsch.** Strukturell: Jede Rolle misst den Suitenstand einzeln und **keine
+  gibt ihn weiter** — es gibt keinen Ort, an dem *das Gate ist seit HH:MM rot*
+  stehen könnte, also kann keine Zusammenfassung ihn lesen.
+
+  Den Ort gibt es jetzt (`.team-gate-rot`): Die Rollen **schreiben** einen schon
+  vorher roten Baum mit Zeitpunkt, Rolle und Testnamen hinein — ein
+  zusätzliches Schreiben, keine zusätzliche Messung —, der Abschlussbericht
+  **liest** ihn und endet mit eigenem Code statt mit *fertig*, und eine Rolle,
+  die grün meldet, **löscht** ihn wieder. **Die Regel aus `BL-205` bleibt
+  unangetastet:** Ein Fix scheitert weiterhin nicht an fremdem Flackern.
+  Ergänzt ist ihre Gegenrichtung — der Lauf darf weiterlaufen, aber er darf
+  sich nicht als fertig melden.
+
+- **Der rote Ausgang des Updates sagte nicht, wessen Datei gescheitert ist**
+  (`BL-261`, aufgefallen beim `--update` in `Feld B`). Das Update lief durch,
+  die Infrastruktur kam an — und am Ende stand `Regressionstests NICHT grün`
+  plus drei Zeilen Log. Der rote Fall war `test_bl135…`; gemeint war ein
+  **Messwerkzeug des Projekts**, das das Update nie angefasst hat.
+
+  **Die Meldung konnte die Unterscheidung nicht treffen:** Sie nennt einen
+  Testnamen, und Testnamen liegen immer unter `team/tests/` — also sieht jeder
+  rote Fall wie ein Fehler des Kits aus. Der Schaden ist ein Fehlschluss an der
+  teuersten Stelle: Wer glaubt, das Update sei gescheitert, fährt es erneut
+  oder nimmt es zurück. Beides ist falsch, und das Zurücknehmen ist gefährlich
+  — die Dateien liegen uncommittet, und genau davor warnt der nächste Absatz
+  derselben Ausgabe (`BL-10`).
+
+  Der Ausgang sagt jetzt, dass die Dateien **liegen**, dass er den
+  **Suitenstand** bewertet und nicht das Update, und dass die Suite in einer
+  Installation auch **den Code des Projekts** prüft. **Rot bleibt er**: Aus
+  einer unklaren Meldung eine folgenlose zu machen wäre der teurere Fehler
+  (`BL-14`) — ein eigener Testfall hält das fest.
+
 - **`sitzung-messen --projekt` traf im Closeout mit hoher Wahrscheinlichkeit
   einen bereits gebuchten Rollen-Lauf und bot ihn als Architektenarbeit zum
   zweiten Mal an** (`BL-251`, gemeldet von `Feld B`). `--projekt` wählt das
