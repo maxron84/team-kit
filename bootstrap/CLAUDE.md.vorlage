@@ -102,6 +102,13 @@ Problem **nicht erneut**.
   [`{{TEST_ORDNER}}`]({{TEST_ORDNER}}) oder Wegwerf-Skripte) und **präzise
   dokumentieren**.
 - Ein Fund wird sauber dokumentiert und **an Frank übergeben** (Finder ≠ Fixer).
+- **Ein neuer Fundblock geht ans ENDE des Beutebuchs, nie zwischen zwei
+  bestehende** (`Kit-BL-254`). Das gilt für jede Rolle, die etwas einträgt —
+  auch für Franks Beifang. Ein Anhang mitten in einem fremden Block schneidet
+  dessen Pflichtzeilen ab: kein Zeichen geht verloren, der Diff sieht aus wie
+  Routine, und **kein Guard kann es sehen** (er urteilt über Schreibzonen, die
+  Lage eines Anhangs ist eine Frage der Struktur). Gegenprobe: `beutebuch.py
+  lint` ohne Fundnummer prüft jeden Block, `--alle` auch das Archiv.
 
 **Der Prüfumfang ist nicht automatisch ein einzelner Ordner** (`Kit-BL-52`). Liegt
 Code außerhalb von `{{PRODUKTIVCODE}}` — Einstiegspunkt in der Wurzel,

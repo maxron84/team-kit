@@ -54,6 +54,29 @@ Nutzung:
                                         "kein Treffer" zu unterscheiden — nur
                                         die Trefferanzahl beantwortet
                                         "existiert eine Zeile?" zuverlaessig.
+    kosten.py turns [DIR...]            Turn-Profil der Laeufe in DIR
+                                        (Default ".ralph-logs"): Anzahl,
+                                        Schnitt und je Lauf Turns plus Kosten
+                                        (BL-37c). Die Diagnose, ob der
+                                        Stufenschnitt stimmte — viele kurze
+                                        Turns heissen Nacharbeit, wenige lange
+                                        Urteilsarbeit.
+    kosten.py ledger-pruefen [--pfad P] [--kaskade N]
+                                        Haelt den committeten Ledger gegen die
+                                        Rohlogs und meldet, was sich nicht
+                                        deckt. Die Gegenprobe VOR dem Buchen —
+                                        ohne Rohlog schweigt sie (BL-13).
+    kosten.py sitzung-messen (--projekt PFAD [--alle] | TRANSKRIPT...)
+                                        Misst die Kosten EINER interaktiven
+                                        Sitzung aus ihrem Transkript (BL-141) —
+                                        der Weg, den das Architekten-Briefing
+                                        verlangt. Eicht sich vorher an den
+                                        abgerechneten Laeufen des Projekts und
+                                        sagt es, wenn die Preistabelle nicht
+                                        mehr traegt. --projekt waehlt das
+                                        zuletzt geaenderte Transkript der
+                                        Ablage und warnt, wenn das ein
+                                        ROLLEN-Lauf ist (BL-251).
     kosten.py architekt-schaetzung --since REF [--repo DIR] [PFAD...]
                                         A2-Live-Schaetzung (BL-28, Kaskade 13/
                                         Stufe 42) fuer die Architekt-Rolle, die
@@ -1253,6 +1276,59 @@ def sitzung_messen(pfade):
     return je_modell, antworten, doppelt
 
 
+# BL-251: Ein ROLLEN-Lauf ist von einer interaktiven Sitzung maschinell zu
+# unterscheiden, und zwar trennscharf — im Feld an 379 Transkripten
+# nachgezaehlt: Ein headless gefahrener Rollen-Lauf hat genau EINEN echten
+# Nutzer-Prompt (seinen Auftrag), eine interaktive Sitzung mehrere. Ueber den
+# ganzen Bestand lagen die Zahlen zwischen 1 und 7, und die 1 gehoerte
+# ausschliesslich Rollen-Laeufen — kein Grenzfall.
+#
+# Der Abzug ist der ganze Trick: Die Agenten-CLI schreibt JEDE Werkzeug-Antwort
+# als Satz mit `type: user`. Ohne ihn zaehlt dieselbe Messung 26 bis 194 statt
+# 1 bis 7 — und die Trennung verschwindet vollstaendig.
+ZAEHLT_ALS_ROLLENLAUF = 1
+
+# BL-252: Ab wann eine Sitzung so gross ist, dass sie mehrere Kaskaden
+# umspannt haben duerfte. Beide Werte sind aus den vier gemessenen Faellen
+# gegriffen (539 Antworten / 152,3 Mio. Cache-Read im groessten) und bewusst
+# GROB: Sie sollen den Normalfall nicht anfassen und den Ausreisser nennen.
+LANGE_SITZUNG_ANTWORTEN = 300
+LANGE_SITZUNG_CACHE_READ = 50_000_000
+
+
+def _ist_werkzeug_antwort(content):
+    """Ein `type: user`-Satz, den kein Mensch getippt hat."""
+    if isinstance(content, list):
+        return any(isinstance(b, dict) and b.get("type") == "tool_result"
+                   for b in content)
+    return False
+
+
+def echte_nutzer_prompts(pfade):
+    """Wie viele Saetze in diesen Transkripten hat ein MENSCH getippt?"""
+    n = 0
+    for pfad in pfade:
+        try:
+            f = open(pfad, encoding="utf-8")
+        except OSError:
+            continue
+        with f:
+            for zeile in f:
+                try:
+                    d = json.loads(zeile)
+                except ValueError:
+                    continue                     # halbe Zeile am Dateiende
+                if d.get("type") != "user" or d.get("isMeta"):
+                    continue
+                nachricht = d.get("message")
+                if not isinstance(nachricht, dict):
+                    continue
+                if _ist_werkzeug_antwort(nachricht.get("content")):
+                    continue
+                n += 1
+    return n
+
+
 def kosten_aus_tokens(kuebel, basispreis):
     """USD fuer einen Token-Kuebel bei gegebenem Basispreis je Mio Input."""
     gesamt = kuebel["input"] / 1_000_000 * basispreis
@@ -2068,14 +2144,71 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     return _ledger_zeile_setzen(zeile_neu, match_fn, pfad, merge_fn=merge_fn)
 
 
+# BL-253: Die Nutzungszeile nannte 3 von 10 Verben — und die sieben
+# verschwiegenen waren genau die BUCHENDEN. Die drei genannten (`summe`,
+# `ledger`, `ledger-pruefen`) sind Abfragen; jedes Verb, das ein Closeout
+# braucht, fehlte. Die einzige andere Quelle dafuer sind die Rollen-Briefings —
+# wer ohne geladenes Briefing arbeitet, findet den Kostenabschluss nicht und
+# haelt ihn fuer nicht vorhanden.
+#
+# Die Bauform war die Ursache, nicht die Nachlaessigkeit: Der Dispatch
+# verzweigt ueber eine `if befehl ==`-Kette, die Nutzungszeile stand als
+# Zeichenkette DANEBEN. Zwei Listen, die niemand gegeneinander haelt, driften
+# — dieselbe Gattung wie `BL-227` (`kit-melden` kannte sein eigenes `ablegen`
+# nicht). Deshalb speisen sich Nutzungszeile UND Dispatch jetzt aus DIESER
+# Quelle: Ein Verb, das hier nicht steht, ist nicht erreichbar, der Fehler wird
+# also laut statt still.
+VERBEN = {
+    "summe": "summe [--split] [--since EPOCH] DIR...",
+    "turns": "turns [DIR...]   (Default .ralph-logs)",
+    "ledger": ("ledger [PFAD] [--domaene D] [--rolle R] [--kaskade N] "
+               "[--split] [--anzahl]"),
+    "ledger-pruefen": "ledger-pruefen [--pfad P] [--kaskade N]",
+    "sitzung-messen": "sitzung-messen (--projekt PFAD [--alle] | TRANSKRIPT...)",
+    "architekt-schaetzung": ("architekt-schaetzung --since REF [--repo DIR] "
+                             "[PFAD...]"),
+    "architekt-abschluss": ("architekt-abschluss --usd USD --domaene D "
+                            "--kaskade N [--pfad P] [--notiz T]"),
+    "akteur-abschluss": ("akteur-abschluss --rolle R --usd USD --domaene D "
+                         "--kaskade N [--auth abo|api] [--pfad P] [--notiz T]"),
+    "rollen-abschluss": ("rollen-abschluss --kaskade N --domaene D "
+                         "[--logs DIR] [--pfad P] [--archivieren] [--notiz T]"),
+    "ralph-abschluss": "ralph-abschluss  … (Argumente wie rollen-abschluss)",
+}
+
+# Welche Verben etwas in den Ledger SCHREIBEN. Sie stehen in der Nutzungszeile
+# unter eigener Ueberschrift: Der Fund von BL-253 ist nicht, dass Verben
+# fehlten, sondern dass ausgerechnet diese fehlten.
+BUCHENDE_VERBEN = ("architekt-abschluss", "akteur-abschluss",
+                   "rollen-abschluss", "ralph-abschluss")
+
+
+def nutzung(strom=None):
+    """Druckt JEDES Verb — abfragende zuerst, buchende darunter benannt."""
+    strom = strom or sys.stderr
+    print("Nutzung: kosten.py <verb> [argumente]", file=strom)
+    for verb, zeile in VERBEN.items():
+        if verb in BUCHENDE_VERBEN:
+            continue
+        print(f"    kosten.py {zeile}", file=strom)
+    print("  Bucht in den Ledger (das Closeout):", file=strom)
+    for verb in BUCHENDE_VERBEN:
+        print(f"    kosten.py {VERBEN[verb]}", file=strom)
+
+
 def _main(argv):
     if not argv:
-        print("Nutzung: kosten.py summe [--split] DIR... | ledger [PFAD] | "
-              "ledger-pruefen [--pfad P] [--kaskade N]",
-              file=sys.stderr)
+        nutzung()
         return 1
 
     befehl, rest = argv[0], argv[1:]
+
+    # Der Riegel aus BL-253: Erreichbar ist nur, was in VERBEN steht. Ohne ihn
+    # koennte ein elftes Verb wieder unterhalb der Hilfe existieren.
+    if befehl not in VERBEN:
+        print(f"Unbekannter Befehl: {befehl}", file=sys.stderr)
+        nutzung()
+        return 1
 
     if befehl == "summe":
         split = False
@@ -2297,11 +2430,39 @@ def _main(argv):
                           f"{len(gefunden) - 1} davon — dann --alle nehmen "
                           f"oder die Transkripte einzeln benennen.",
                           file=sys.stderr)
+                # BL-251, Richtung (3): Die Auswahl NENNEN. Bis hierher stand
+                # bei genau einem Kandidaten gar nichts da — und der Mensch
+                # konnte nicht wissen, dass ueberhaupt gewaehlt wurde.
+                print(f"  gewaehlt: 1 von {len(gefunden)} Transkript(en) der "
+                      f"Ablage (das zuletzt geaenderte).", file=sys.stderr)
         if not pfade:
-            print("Nutzung: kosten.py sitzung-messen "
-                  "(--projekt PFAD [--alle] | TRANSKRIPT...)",
+            print(f"Nutzung: kosten.py {VERBEN['sitzung-messen']}",
                   file=sys.stderr)
             return 1
+
+        # BL-251: Der teuerste Fall dieses Befehls ist nicht die falsche Zahl,
+        # sondern die RICHTIGE Zahl eines fremden Laufs. `--projekt` waehlt das
+        # zuletzt geaenderte Transkript der Ablage — dorthin schreibt aber
+        # JEDER headless-Rollen-Lauf, und die sind unmittelbar davor ueber
+        # `--rollen-abschluss` schon gebucht worden. Im Feld: 324 Rollen-Laeufe
+        # gegen 55 interaktive Sitzungen, im Fenster einer Kaskade 14 zu 2.
+        # Auffallen kann es nirgends — es entstehen zwei fuer sich plausible
+        # Zeilen mit VERSCHIEDENER Rolle, der Kollisionsschutz von
+        # `--akteur-abschluss` schlaegt nur bei derselben Rolle plus Kaskade an.
+        rollenlauf = (projekt and not alle
+                      and echte_nutzer_prompts(pfade) <= ZAEHLT_ALS_ROLLENLAUF)
+        if rollenlauf:
+            print(f"  ! Dieses Transkript hat genau EINEN echten "
+                  f"Nutzer-Prompt — das ist die Signatur eines headless "
+                  f"gefahrenen ROLLEN-Laufs, nicht die einer interaktiven "
+                  f"Sitzung.", file=sys.stderr)
+            print("    Rollen-Laeufe sind ueber `--rollen-abschluss` in aller "
+                  "Regel BEREITS gebucht; wer diese Zahl noch einmal bucht, "
+                  "schreibt denselben Lauf ein zweites Mal in den Ledger "
+                  "(BL-251).", file=sys.stderr)
+            print("    Gemeint war vermutlich die Architekten-Sitzung — dann "
+                  "das Transkript ausdruecklich benennen statt --projekt zu "
+                  "nehmen.", file=sys.stderr)
 
         # ZUERST die Gegenprobe, dann die Zahl. Andersherum liest der Mensch
         # die Summe und ueberblaettert die Warnung darunter.
@@ -2409,10 +2570,45 @@ def _main(argv):
                   file=sys.stderr)
         print(f"  GESAMT: {gesamt:.4f} USD")
         print("  Im Abo ist das ein Abo-Gegenwert, kein abgerechneter Betrag.")
-        print(f"  Buchen: team-status --akteur-abschluss architekt abo "
-              f"{gesamt:.4f} <domaene> \"<notiz>\"")
+
+        # BL-252, Richtung (2): Die teuersten Sitzungen des Projekts sind die,
+        # die nach ihrer Buchung WEITERLIEFEN — im Feld eine einzelne ueber
+        # 118,99 USD bei 539 Antworten und 152,3 Mio. Cache-Read-Token. Beide
+        # Zahlen liegen hier ohnehin vor; sie kosten nichts und sie sind das
+        # einzige Signal, das eine zu lang gewordene Sitzung ueberhaupt gibt.
+        cache_read = sum(k["cache_read"] for k in je_modell.values())
+        if antworten >= LANGE_SITZUNG_ANTWORTEN or                 cache_read >= LANGE_SITZUNG_CACHE_READ:
+            print(f"  ! Lange Sitzung: {antworten} Antworten, "
+                  f"{cache_read / 1_000_000:.1f} Mio. Cache-Read-Token. "
+                  f"Gemessene Faelle dieser Groesse waren regelmaessig "
+                  f"MEHRERE Kaskaden in EINEM Fenster (BL-252).",
+                  file=sys.stderr)
+            print("    Ist hier schon einmal gebucht worden, deckt diese Zahl "
+                  "den Zuwachs SEIT der Buchung nicht ab — sie ist die Summe "
+                  "des ganzen Transkripts.", file=sys.stderr)
+
+        if rollenlauf:
+            # Die Buchungszeile eines fremden Laufs ist der teuerste Satz, den
+            # dieses Werkzeug drucken kann — er wird kopiert und ausgefuehrt.
+            print("  NICHT buchen: Dieser Lauf traegt die Signatur eines "
+                  "Rollen-Laufs (siehe oben) und ist ueber "
+                  "`--rollen-abschluss` sehr wahrscheinlich schon im Ledger "
+                  "(BL-251).", file=sys.stderr)
+        else:
+            print(f"  Buchen: team-status --akteur-abschluss architekt abo "
+                  f"{gesamt:.4f} <domaene> \"<notiz>\"")
         print("  Erst NACH dem letzten Schritt messen — mittendrin gemessen "
               "untertreibt der Wert systematisch.")
+        # BL-252, Richtung (1): Der Satz, der die Lage ueberhaupt erst
+        # entstehen laesst, steht nirgends im Werkzeug — nur als Regel im
+        # Architekten-Briefing. Eine Regel ohne Ausloeser greift nicht: Im Feld
+        # hat sie an EINEM Tag zweimal nicht gegriffen, bei jemandem, der sie
+        # zitieren konnte. Das Closeout hat einen Ausloeser, das Weiterarbeiten
+        # hat keinen — also bekommt es hier einen.
+        print("  Was du in DIESER Sitzung weiterarbeitest, waechst im selben "
+              "Transkript weiter und ist nach der Buchung nicht mehr "
+              "erfassbar: fuer die naechste Kaskade eine NEUE Sitzung "
+              "oeffnen (BL-252).")
         return 2 if (schief or unbekannt) else 0
 
     if befehl == "architekt-schaetzung":
@@ -2578,6 +2774,18 @@ def _main(argv):
         # ("abo 4.5571 / api 0.0000"); ausgerechnet diese nicht.
         print(f"{rolle.capitalize()}-Zeile Kaskade {kaskade} ({domaene}) "
               f"{aktion}: {usd:.4f} USD ({auth})")
+        # BL-252, Richtung (1): Die Buchung ist der EINZIGE Zeitpunkt, an dem
+        # sicher jemand hinsieht — also sagt sie selbst, was jetzt gilt. Die
+        # Regel dazu steht seit langem im Architekten-Briefing und hat im Feld
+        # trotzdem an einem Tag zweimal nicht gegriffen: Ein Closeout hat einen
+        # Ausloeser, das Weiterarbeiten in derselben Sitzung hat keinen.
+        # Gemessener Preis der vier bekannten Faelle: 66,84 / 26,65 / 3,27 /
+        # 43,90 USD, die nach der Buchung entstanden und nie gebucht wurden.
+        if rolle == "architekt":
+            print("  Diese Sitzung ist abgerechnet. Fuer die naechste Kaskade "
+                  "eine NEUE Sitzung oeffnen — was in dieser hier noch "
+                  "entsteht, waechst im gebuchten Transkript weiter und faellt "
+                  "aus der Abrechnung (BL-252).")
         return 0
 
     # BL-4: ralph-abschluss ist derselbe Mechanismus mit anderer Quelle und
@@ -2855,7 +3063,11 @@ def _main(argv):
               f"{archiv_hinweis}")
         return 0
 
-    print(f"Unbekannter Befehl: {befehl}", file=sys.stderr)
+    # Unerreichbar, seit der Riegel oben jedes unbekannte Verb abfaengt — und
+    # genau deshalb ist ein Verb, das in VERBEN steht und keinen Zweig hat, hier
+    # sichtbar statt still erfolgreich (BL-253).
+    print(f"Befehl '{befehl}' ist angekuendigt, aber nicht gebaut.",
+          file=sys.stderr)
     return 1
 
 

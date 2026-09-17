@@ -307,10 +307,11 @@ Smoke-Test ausführen: $TEAM_SMOKE_TEST — muss grün sein.
    NIEMALS als Hintergrund-Task und plane keinen Wakeup darauf: Diese Sitzung
    ist headless, es kommt keine Benachrichtigung, und du wartest bis zum
    Zeitlimit auf ein Ereignis, das nicht eintreten kann.
-   Er darf dafür bis zu $TEAM_SMOKE_TEST_TIMEOUT Sekunden brauchen: Setze das
-   Zeitlimit deines Werkzeugs auf diesen Wert, statt in den Hintergrund
-   auszuweichen. Läuft er länger, ist das ein Befund für den Menschen —
-   melde ihn, weiche nicht aus.
+   Er darf dafür bis zu $TEAM_SMOKE_TEST_TIMEOUT Sekunden brauchen: Erhöhe das
+   Zeitlimit deines Werkzeugs entsprechend, statt in den Hintergrund
+   auszuweichen — viele Werkzeuge erwarten MILLISEKUNDEN, das wären
+   ${TEAM_SMOKE_TEST_TIMEOUT}000 (BL-258). Läuft er länger, ist das ein Befund
+   für den Menschen — melde ihn, weiche nicht aus.
 "@.TrimEnd()
     # BL-207: Frank bekommt NUR diesen Nachsatz, nicht SMOKE_ZEILE — und er
     # faehrt den Smoke-Test oefter als Ralph. Im Feld endeten 10 von 28
@@ -320,7 +321,7 @@ Smoke-Test ausführen: $TEAM_SMOKE_TEST — muss grün sein.
     # Fehlversuch (.frank-attempts) und eskaliert ab dem dritten an Axel —
     # das teure Modell wird also fuer einen Formfehler gerufen. Deshalb
     # steht die Auflage hier ausgeschrieben statt nur bei Ralph.
-    $SMOKE_SUFFIX = " Smoke-Test grün: $TEAM_SMOKE_TEST. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu $TEAM_SMOKE_TEST_TIMEOUT Sekunden brauchen, setze das Zeitlimit deines Werkzeugs auf diesen Wert. NIEMALS als Hintergrund-Task und kein Wakeup darauf: Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (BL-41). War die Suite schon VOR deinem Fix rot, brich nicht ab: Miss beide Staende und belege, dass durch DEINEN Fix kein NEUER Fehlschlag entsteht (BL-205)."
+    $SMOKE_SUFFIX = " Smoke-Test grün: $TEAM_SMOKE_TEST. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu $TEAM_SMOKE_TEST_TIMEOUT Sekunden brauchen, erhöhe das Zeitlimit deines Werkzeugs entsprechend (viele Werkzeuge erwarten MILLISEKUNDEN — das wären ${TEAM_SMOKE_TEST_TIMEOUT}000, BL-258). NIEMALS als Hintergrund-Task und kein Wakeup darauf: Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (BL-41). War die Suite schon VOR deinem Fix rot, brich nicht ab: Miss beide Staende und belege, dass durch DEINEN Fix kein NEUER Fehlschlag entsteht (BL-205)."
 } else {
     $SMOKE_ZEILE = "(Kein Smoke-Test konfiguriert — Schritt entfällt. Das Team arbeitet ohne Sicherheitsnetz; TEAM_SMOKE_TEST in team.config.ps1 nachtragen.)"
     $SMOKE_SUFFIX = ""

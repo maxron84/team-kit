@@ -305,6 +305,131 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **`sitzung-messen --projekt` traf im Closeout mit hoher Wahrscheinlichkeit
+  einen bereits gebuchten Rollen-Lauf und bot ihn als Architektenarbeit zum
+  zweiten Mal an** (`BL-251`, gemeldet von `Feld B`). `--projekt` wählt das
+  **zuletzt geänderte** Transkript der Projektablage — dorthin schreibt aber
+  **jeder** headless gefahrene Rollen-Lauf, und die sind unmittelbar davor über
+  `--rollen-abschluss` schon gebucht worden. Ausgezählt im Feld: **379
+  Transkripte, davon 324 Rollen-Läufe gegen 55 interaktive** — 85 % der
+  Kandidaten sind die falschen, und im Fenster der letzten Kaskade stand es 14
+  zu 2.
+
+  **Auffallen konnte es nirgends.** Es entstehen zwei für sich plausible Zeilen
+  mit *verschiedener* Rolle; der Kollisionsschutz von `--akteur-abschluss`
+  schlägt nur bei derselben Rolle plus Kaskade an, `--ledger-pruefen` schweigt
+  mangels Rohlog, `--budget` zeigt eine plausible Summe.
+
+  Die Unterscheidung ist maschinell trivial und an denselben 379 Transkripten
+  gemessen: **Ein Rollen-Lauf hat genau einen echten Nutzer-Prompt, eine
+  interaktive Sitzung mehrere.** Der Abzug ist der ganze Trick — die
+  `type: user`-Sätze überspringen, deren `content` ein `tool_result` trägt;
+  ohne ihn zählt dieselbe Messung 26 bis 194 statt 1 bis 7, und die Trennung
+  verschwindet. Trifft `--projekt` ein Ein-Prompt-Transkript, **wird die
+  Buchungszeile nicht mehr gedruckt**, sondern durch die Begründung ersetzt:
+  Sie ist der teuerste Satz, den dieses Werkzeug ausgeben kann, weil sie
+  kopiert und ausgeführt wird. Dazu nennt der Befehl jetzt, **unter wie vielen
+  Kandidaten** gewählt wurde — auch bei genau einem, wo bis hierher gar nichts
+  dastand.
+
+- **Eine gebuchte Sitzung, die weiterläuft, verlor ihren Zuwachs lautlos**
+  (`BL-252`, gemeldet von `Feld B`, **teilweise**). Der Kostenabschluss misst
+  eine Sitzung an ihrem Transkript, und das kennt keinen Schnitt: Es wächst
+  weiter, solange das Fenster offen ist. Vier gemessene Fälle: **76,3394 gegen
+  9,4989 gebucht** (Differenz 66,84 — die komplette Aushärtung einer Kaskade),
+  39,4740 gegen 12,8224, 20,7386 gegen 17,4638, dazu der Ursprungsfall aus
+  `BL-165` mit 43,90 über zwei Sitzungen. Nichts zeigte darauf hin: Ledger in
+  sich stimmig, `--ledger-pruefen` still, `--budget` plausibel.
+
+  Die Regel im Architekten-Briefing (*nach einem gebuchten Closeout eine neue
+  Sitzung*) ist richtig und reicht nicht — sie hat im Feld **an einem Tag
+  zweimal** nicht gegriffen, bei jemandem, der sie zitieren konnte. **Ein
+  Closeout hat einen Auslöser, das Weiterarbeiten hatte keinen.** Jetzt hat es
+  einen: Die Architekten-Buchung druckt den Satz selbst (und nur sie — an einer
+  Rollenzeile wäre er falsch, die Rolle hat kein Fenster), und
+  `sitzung-messen` nennt eine lange Sitzung beim Namen, sobald sie 300
+  Antworten oder 50 Mio. Cache-Read-Token reißt. Beide Zahlen lagen ohnehin
+  vor. **Offen bleibt der eigentliche Fix** — die Transkript-Kennung als Feld
+  in der Ledger-Zeile; das ist eine Formatänderung und gehört mit `BL-247` in
+  **einen** Schritt.
+
+- **Der Hilfetext von `kosten.py` nannte 3 von 10 Verben — und die sieben
+  verschwiegenen waren genau die buchenden** (`BL-253`, gemeldet von `Feld B`).
+  Genannt wurden `summe`, `ledger` und `ledger-pruefen`, also **Abfragen**;
+  gefehlt hat jedes Verb, das ein Closeout braucht. Die einzige andere Quelle
+  dafür sind die Rollen-Briefings — wer ohne geladenes Briefing arbeitet,
+  findet den Kostenabschluss nicht und hält ihn für nicht vorhanden.
+
+  **Das ist `BL-227` eine Datei weiter** (`kit-melden` kannte sein eigenes
+  `ablegen` nicht) und damit ein Muster, kein Einzelfall: Ein Verb wird
+  ergänzt, die Nutzungszeile nicht. Die Bauform war die Ursache — der Dispatch
+  verzweigt über eine `if befehl ==`-Kette, die Nutzungszeile stand als
+  Zeichenkette daneben. Beide speisen sich jetzt aus **einer** Konstante
+  `VERBEN`, und ein Riegel macht ein nicht eingetragenes Verb **unerreichbar**:
+  Der Fehler wird laut statt still. Die vier buchenden Verben stehen unter
+  eigener Überschrift, weil nicht das Fehlen der Punkt war, sondern *welche*
+  fehlten. Der Regressionstest liest die Verben aus dem Dispatch — ein Test,
+  der die heutigen zehn Namen aufzählte, wäre beim elften wieder grün.
+
+- **`beutebuch.py lint` erreichte 11 % des Bestands — und konnte den Fund, für
+  den es gebaut ist, prinzipiell nicht finden** (`BL-254`, gemeldet von
+  `Feld B`, **teilweise**). Im Feld schrieb Frank einen regelkonformen
+  Beifang-Fund **mitten in den Block seines Vorgängers**, zwischen dessen
+  vorletzten Absatz und seine `Reproducer-Test`-Zeile. Danach endete der fremde
+  Fund **ohne** Pflichtzeile, der neue trug am Ende eine **fremde**, kein
+  Zeichen ging verloren, und der Diff sah aus wie Routine. **Der
+  Read-Only-Guard kann das nicht sehen** — er urteilt über Schreibzonen, und
+  die Lage eines Anhangs ist eine Frage der *Struktur*, nicht des Pfades.
+
+  Die Prüfung dagegen gab es seit `BL-29`. Sie verlangte nur eine
+  **Fundnummer** — also prüft man den Fund, an den man gerade denkt; der
+  zerschnittene ist der andere. `lint` prüft deshalb ohne Nummer **jeden**
+  Block und nennt den geprüften Umfang. Dazu der Nebenbefund, über 141 Funde
+  gemessen: `lint` kannte als einziges der lesenden Verben kein `--alle`, 126
+  archivierte Funde meldeten `nicht im Beutebuch gefunden` — und `archiviere`
+  verschiebt Blöcke **wörtlich**, also auch einen bereits zerschnittenen.
+
+  Billiger als jede Prüfung ist der fehlende Satz: **Ein neuer Fundblock geht
+  ans ENDE, nie zwischen zwei bestehende.** Er steht jetzt in der
+  Beutebuch-Vorlage (also in der Datei selbst), im Regel-Inventar und —
+  zeilenneutral umformuliert — in den Briefings von Harry und Marv. In
+  `rolle-frank.md` steht er **nicht**: Die Briefings liegen exakt auf dem
+  harten 45-Zeilen-Limit, und ein Zusatz, der eine andere Zusicherung bricht,
+  ist keiner (dieselbe Abwägung wie bei `BL-201`/`BL-207`).
+
+- **Die Vordergrund-Regel nannte Sekunden, das Werkzeug der Rolle rechnet in
+  Millisekunden** (`BL-258`, gemeldet von `Feld E`, beide Bahnen). Der Bau-Loop
+  brach mit **Exit 43** ab; Ralphs `result`-Feld nennt wörtlich das Warten auf
+  einen Hintergrundlauf. **Bemerkenswert ist nicht der Fehler, sondern wo er
+  auftrat:** Der `BL-201`-Absatz stand in diesem Briefing vorhanden und
+  wörtlich — die Rolle hat die Regel *gelesen*, ihre erste Hälfte übernommen
+  (*er darf lange brauchen*) und die zweite gebrochen (*niemals im
+  Hintergrund*).
+
+  Der Satz lautete *„er darf bis zu `${TEAM_SMOKE_TEST_TIMEOUT}` Sekunden
+  brauchen, setze das Zeitlimit deines Werkzeugs auf diesen Wert"*. Der Wert
+  ist in Sekunden gemeint und geht an `timeout(1)`; das Werkzeug der Rolle
+  nimmt **Millisekunden**. Wer wörtlich folgt, setzt 0,6 Sekunden statt 600 —
+  und der naheliegende Ausweg aus dem sofortigen Fehlschlag ist genau der, den
+  derselbe Satz zwei Zeilen später verbietet. Beide Stellen nennen jetzt
+  **beide** Einheiten und binden den erlaubten Weg an die Handlungsanweisung,
+  statt das Verbot danebenzustellen. Bewusst als Text und nicht als Rechnung:
+  Eine Arithmetik über einen nicht-numerischen Konfigurationswert wäre ein
+  Abbruch an einer Stelle, die nur einen Prompt baut.
+
+- **Der README-Wächter las eine korrekt maskierte Pipe als Spaltentrenner**
+  (`BL-260`, beim Abtragen von `BL-253` gefunden). `BL-246` zitiert den
+  PowerShell-Ausdruck `2>&1 \| Out-Null`; Markdown schreibt für eine Pipe in
+  einer Tabellenzelle genau diese Maskierung vor. `backlog_offen()` zerlegte
+  die Zeile trotzdem mit einem blanken `rsplit("|")` und meldete den Eintrag
+  als **unentscheidbar** — und bei einer unentscheidbaren Zelle behauptet der
+  Wächter bewusst **gar keine** Offen-Zahl mehr (`BL-224`). Ein einziger
+  zitierter Befehl schaltete damit die Prüfung ab, die das README ehrlich
+  hält; der einzige Ausweg wäre gewesen, den Befehl im Backlog falsch zu
+  schreiben. Der Zerleger kennt die Maskierung jetzt. **Die gewollte Richtung
+  aus `BL-160` bleibt:** Ein *rohes* `|` in der Statuszelle ist weiter
+  unentscheidbar und wird namentlich gemeldet.
+
 - **Zwei Gegenproben des pwsh-Selbsttests haben seit ihrem ersten Tag nichts
   verfälscht** (`BL-230`, gefunden in `Feld B`). `kit-test.ps1` verfälscht in
   Schritt 5 eine Zahl im README und verlangt, dass `kit-readme-pruefen.py` rot

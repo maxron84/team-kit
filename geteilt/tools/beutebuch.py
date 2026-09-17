@@ -23,11 +23,15 @@ Aufrufe:
                                        --alle sucht bei Nicht-Fund auch im Archiv
   beutebuch.py reproducer <HM-Nr> [--alle]
                                      → Pfad aus der Reproducer-Test-Zeile
-  beutebuch.py lint <HM-Nr>         → prueft den Fundblock auf das, was die
+  beutebuch.py lint [<HM-Nr>] [--alle]
+                                     → prueft den Fundblock auf das, was die
                                        Fixphase gleich auswertet: Statuszeile
                                        parsbar UND ein Wert der Status-Kette,
                                        Dateipfad in Backticks, Reproducer-Zeile
-                                       (Exit 3 = Maengel, auf stderr)
+                                       (Exit 3 = Maengel, auf stderr).
+                                       OHNE Fundnummer wird JEDER Block
+                                       geprueft, --alle bezieht das Archiv
+                                       mit ein (BL-254)
   beutebuch.py archiviere [--dry-run]
                                      → verschiebt jeden Block mit Status
                                        'erledigt'/'überholt' wörtlich ans Ende
@@ -118,7 +122,7 @@ NUTZUNG = {
     "first": "beutebuch.py first <status>",
     "dateien": "beutebuch.py dateien <HM-Nr> [--alle]",
     "reproducer": "beutebuch.py reproducer <HM-Nr> [--alle]",
-    "lint": "beutebuch.py lint <HM-Nr>",
+    "lint": "beutebuch.py lint [<HM-Nr>] [--alle]",
     "set": "beutebuch.py set <HM-Nr> <status>",
 }
 
@@ -322,6 +326,15 @@ def lint(hm_soll, pfad=BEUTEBUCH):
     text = block_text(hm_soll, pfad)
     if text is None:
         return None
+    return lint_text(text)
+
+
+def lint_text(text):
+    """Derselbe Pruefkatalog, auf einen bereits herausgeschnittenen Block.
+
+    BL-254: Gebaut, damit `lint` ohne Fundnummer JEDEN Block pruefen kann, ohne
+    die Datei je Fund erneut zu lesen. Der Katalog selbst ist unveraendert —
+    was hier steht, hat die Fixphase gleich auszuwerten."""
     maengel = []
     status_treffer = [STATUS_RE.match(z) for z in text.splitlines()]
     status_treffer = [m for m in status_treffer if m]
@@ -372,6 +385,33 @@ def lint(hm_soll, pfad=BEUTEBUCH):
             f"Fall: Die Zeile eines FREMDEN Fundes wurde hier nachgetragen "
             f"(BL-210). Sie gehoert in den Block, zu dem sie gehoert.")
     return maengel
+
+
+def lint_alle(pfade):
+    """Prueft JEDEN Fundblock der angegebenen Dateien. Liefert [(hm, maengel)].
+
+    BL-254, der Fund: Im Feld schrieb Frank einen regelkonformen Beifang-Fund
+    MITTEN in den Block seines Vorgaengers — zwischen dessen vorletzten Absatz
+    und seine `Reproducer-Test`-Zeile. Danach endete der fremde Fund ohne
+    Pflichtzeile und der neue trug am Ende eine fremde. KEIN Zeichen ging
+    verloren, der Diff sah aus wie Routine, und der Read-Only-Guard kann das
+    prinzipiell nicht sehen: Er urteilt ueber SCHREIBZONEN, das Beutebuch ist
+    fuer Frank eine erlaubte Datei, und die Lage eines Anhangs ist eine Frage
+    der STRUKTUR, nicht des Pfades.
+
+    Die Pruefung dagegen gab es laengst — sie war nur nicht ueber den Bestand
+    zu fahren: `lint` verlangte eine Fundnummer, also prueft man den Fund, an
+    den man gerade denkt. Der zerschnittene ist der andere.
+
+    Nebenbefund derselben Meldung, gemessen an 141 Funden: `lint` kannte kein
+    `--alle` und suchte nie im Archiv — 126 der 141 Funde (89 Prozent) waren
+    damit unerreichbar, obwohl `archiviere` Bloecke WOERTLICH verschiebt, also
+    auch einen bereits zerschnittenen."""
+    ergebnis = []
+    for pfad in pfade:
+        for block in _blockbereiche(_lies_zeilen(pfad)):
+            ergebnis.append((block["hm"], lint_text("\n".join(block["core"]))))
+    return ergebnis
 
 
 def status_bekannt(wert: str) -> bool:
@@ -484,8 +524,37 @@ def main() -> int:
     if cmd == "lint":
         # BL-29: Was die Fixphase gleich auswerten wird, wird VOR dem ersten
         # bezahlten Frank-Aufruf geprueft.
+        #
+        # BL-254: Ohne Fundnummer wird JEDER Block geprueft. Der Grund ist der
+        # Fund selbst — ein Anhang, der einen FREMDEN Block zerschneidet,
+        # hinterlaesst einen Mangel an einem Fund, an den gerade niemand denkt.
+        # Wer eine Nummer nennen muss, prueft den Fund, den er im Sinn hat.
+        alle = "--alle" in rest
+        rest = [a for a in rest if a != "--alle"]
+        if not rest:
+            pfade = [aktiv_pfad] + ([archiv_pfad] if alle else [])
+            ergebnis = lint_alle(pfade)
+            befunde = [(hm, maengel) for hm, maengel in ergebnis if maengel]
+            geprueft = len(ergebnis)
+            for hm, maengel in befunde:
+                for mangel in maengel:
+                    print(f"[{hm}] {mangel}", file=sys.stderr)
+            umfang = "Beutebuch und Archiv" if alle else "Beutebuch"
+            if not alle:
+                print(f"  ({geprueft} Fundbloecke aus dem {umfang} geprueft; "
+                      f"--alle bezieht das Archiv mit ein)", file=sys.stderr)
+            else:
+                print(f"  ({geprueft} Fundbloecke aus {umfang} geprueft)",
+                      file=sys.stderr)
+            return 3 if befunde else 0
         hm_soll = _arg(rest, 0, "lint")
         maengel = lint(hm_soll, aktiv_pfad)
+        # BL-254, Nebenbefund: `lint` kannte als einziges der lesenden Verben
+        # kein `--alle` — gemessen an 141 Funden waren damit 126 (89 Prozent
+        # des Bestands) unerreichbar, und `archiviere` verschiebt Bloecke
+        # WOERTLICH, also auch einen bereits zerschnittenen.
+        if maengel is None and alle:
+            maengel = lint(hm_soll, archiv_pfad)
         if maengel is None:
             print(f"FEHLER: {hm_soll} nicht im Beutebuch gefunden.", file=sys.stderr)
             return 1

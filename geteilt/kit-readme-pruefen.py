@@ -324,8 +324,13 @@ def backlog_zahlen():
     return archiv, hoechste
 
 
+# Ein Spaltentrenner ist nur ein UNMASKIERTES `|`; `\\|` ist ein Zeichen im
+# Zellentext (Markdown-Schreibweise fuer eine Pipe in einer Tabelle).
+SPALTE_TRENNER = re.compile(r"(?<!\\)\|")
+
+
 def backlog_offen():
-    """Wie viele Eintraege in `plans/backlog.md` offen sind (BL-224).
+    r"""Wie viele Eintraege in `plans/backlog.md` offen sind (BL-224).
 
     Gelesen wird das MERKWORT am Anfang der Statusspalte, nicht die Prosa
     dahinter — `offen`, `teilweise`, `erledigt`. Alles andere ist
@@ -335,9 +340,18 @@ def backlog_offen():
     verlaesst, zaehlt jede Zelle mit, die das Wort irgendwo erwaehnt.
 
     Die Statuszelle ist die LETZTE der Zeile. Steht ausgerechnet in ihr ein
-    `|`, faellt der Eintrag in den unentscheidbaren Zweig — laut und mit Namen.
-    Das ist die gewollte Richtung: lieber eine Meldung zu viel als eine Zahl,
-    die aus einer verrutschten Spalte stammt (BL-160).
+    ROHES `|`, faellt der Eintrag in den unentscheidbaren Zweig — laut und mit
+    Namen. Das ist die gewollte Richtung: lieber eine Meldung zu viel als eine
+    Zahl, die aus einer verrutschten Spalte stammt (BL-160).
+
+    Ein MASKIERTES `\|` ist dagegen kein Spaltentrenner, sondern ein Zeichen im
+    Text — Markdown schreibt genau diese Schreibweise vor, und ein Backlog, das
+    Werkzeuge beschreibt, zitiert regelmaessig Befehle mit Pipe (bei `BL-246`
+    woertlich `2>&1 \| Out-Null`). Bis hierher las der Zaehler auch die
+    maskierte Form als Trenner: Der Eintrag hiess dann unentscheidbar, die
+    Offen-Zahl war nicht mehr pruefbar, und der einzige Ausweg waere gewesen,
+    den Befehl im Backlog falsch zu schreiben. Beim Zerlegen zaehlt deshalb nur
+    ein unmaskiertes Zeichen.
 
     Rueckgabe: (offen, unentscheidbar) — (None, []), wenn die Datei fehlt.
     """
@@ -349,7 +363,10 @@ def backlog_offen():
         m = re.match(r"^\|\s*(BL-\d+)\s*\|", zeile)
         if not m:
             continue
-        zelle = zeile.rstrip().rstrip("|").rsplit("|", 1)[-1]
+        felder = SPALTE_TRENNER.split(zeile.rstrip())
+        while felder and not felder[-1].strip():
+            felder.pop()
+        zelle = felder[-1].replace("\\|", "|") if felder else ""
         wort = zelle.strip().lstrip("*_ ").split(" ")[0].strip("*.,;:—–-").lower()
         if wort in STATUS_OFFEN:
             offen += 1

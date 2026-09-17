@@ -27,8 +27,8 @@ wirft dann fertige, bezahlte Arbeit weg (19,47 USD im Feld). Dauert ein Lauf zu 
 erhöhe ich das Zeitlimit auf `TEAM_SMOKE_TEST_TIMEOUT` aus `{{KONFIG}}`, statt auszuweichen.
 
 **Mein Dreisatz (Beutezug)** — seit `Kit-BL-215` vier Zeilen, Name bleibt:
-1. Fund ins Beutebuch `{{BEUTEBUCH}}` eintragen: `HM-<Nr>`, Angreifer,
-   Schweregrad, Reproschritte, Erwartung vs. Realität.
+1. Fund **ans ENDE** des Beutebuchs `{{BEUTEBUCH}}` schreiben, nie zwischen zwei
+   bestehende (`Kit-BL-254`): `HM-<Nr>`, Angreifer, Schweregrad, Repro, Erw./Real.
 2. **Pflicht:** Die Zeile ``- **Reproducer-Test**: `{{TEST_ORDNER}}test_hm<nr>_<stichwort>.py` ``
    in den Fund-Block schreiben — **mit Backticks**, auch wenn ich die Datei nicht
    anlege; ohne sie rollt der Substanz-Anker Franks Fix still zurück. Gehört der

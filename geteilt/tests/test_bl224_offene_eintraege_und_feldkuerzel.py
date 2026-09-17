@@ -58,14 +58,23 @@ def _lauf(pruefer, readme=None, *argumente):
 
 def _offen_von_hand():
     """Die Zahl NOCH EINMAL unabhängig gerechnet. Ein Test, der dieselbe
-    Funktion fragt, prüft nur, dass sie sich selbst gleicht."""
+    Funktion fragt, prüft nur, dass sie sich selbst gleicht.
+
+    BL-260: Auch diese Nachrechnung muss die Maskierung kennen — ein `\\|` im
+    Zellentext ist ein Zeichen und kein Spaltentrenner. Sie tut es hier
+    ABSICHTLICH anders als der Prüfer (Platzhalter statt Lookbehind): Der Wert
+    dieser Funktion liegt darin, dass sie denselben Sollwert auf einem anderen
+    Weg erreicht. Würde sie `SPALTE_TRENNER` importieren, prüfte der Test nur
+    noch, dass der Prüfer sich selbst gleicht."""
     if not BACKLOG.is_file():
         pytest.skip("der Backlog des Kits liegt hier nicht")
     offen = 0
     for zeile in BACKLOG.read_text(encoding="utf-8").splitlines():
         if not re.match(r"^\|\s*BL-\d+\s*\|", zeile):
             continue
-        zelle = zeile.rstrip().rstrip("|").rsplit("|", 1)[-1]
+        geschuetzt = zeile.replace("\\|", "\x00")
+        zelle = geschuetzt.rstrip().rstrip("|").rsplit("|", 1)[-1]
+        zelle = zelle.replace("\x00", "|")
         wort = zelle.strip().lstrip("* ").split(" ")[0].strip("*.,;:—–-").lower()
         assert wort in ("offen", "teilweise", "erledigt", "abgetragen",
                         "verworfen", "zurückgestellt"), (
@@ -254,6 +263,42 @@ def test_bei_unentscheidbarer_zelle_wird_keine_zahl_behauptet(tmp_path):
     assert "offene Einträge" not in ergebnis.stdout, (
         "Die Erfolgszeile führt die Offen-Zahl als »gemessen« auf, obwohl eine "
         f"Zelle nicht einzuordnen war.\n{ergebnis.stdout}")
+
+
+def test_ein_maskierter_pipe_in_der_statuszelle_ist_ein_zeichen(tmp_path):
+    """Gefunden beim Abtragen von `BL-253`, nicht im Feld.
+
+    `BL-246` beschreibt woertlich den PowerShell-Ausdruck `2>&1 \\| Out-Null`.
+    Markdown schreibt fuer eine Pipe in einer Tabelle genau diese Maskierung
+    vor — der Zaehler las sie trotzdem als Spaltentrenner, erklaerte die Zelle
+    fuer unentscheidbar und gab damit die GANZE Offen-Zahl auf. Der einzige
+    Ausweg waere gewesen, den Befehl im Backlog falsch zu schreiben.
+
+    Ein ROHES `|` bleibt unentscheidbar (naechster Fall) — das ist die
+    gewollte Richtung aus `BL-160`."""
+    pruefer = _mini_kit(tmp_path, _mini_readme(2, 8), [
+        _zeile(7, "**offen.**"),
+        _zeile(8, "**offen.** Vorschlag: `2>&1 \\| Out-Null` herausnehmen."),
+    ])
+    ergebnis = _lauf(pruefer)
+    assert ergebnis.returncode == 0, (
+        "Eine korrekt maskierte Pipe im Zellentext macht die Zelle "
+        f"unlesbar:\n{ergebnis.stderr}")
+    assert "2 offene Einträge" in ergebnis.stdout, ergebnis.stdout
+
+
+def test_ein_rohes_pipe_bleibt_unentscheidbar(tmp_path):
+    """Die Gegenrichtung, damit die Lockerung nicht die Zusicherung frisst:
+    Eine wirklich verrutschte Spalte wird weiter namentlich gemeldet."""
+    pruefer = _mini_kit(tmp_path, _mini_readme(1, 8), [
+        _zeile(7, "**offen.**"),
+        _zeile(8, "**offen.** Vorschlag: 2>&1 | Out-Null herausnehmen."),
+    ])
+    ergebnis = _lauf(pruefer)
+    assert ergebnis.returncode != 0, (
+        "Ein rohes `|` in der Statuszelle verschiebt die Spalte — das muss "
+        f"laut bleiben (BL-160).\n{ergebnis.stdout}")
+    assert "BL-8" in ergebnis.stderr, ergebnis.stderr
 
 
 # --- (5) Wo die Zahl eingefordert werden darf (die BL-180-Lockerung) --------

@@ -127,15 +127,23 @@ und ein Gleichstands-Prüfer, der **an seinem eigenen Befund starb**, weil `diff
 mit 1 endet, wenn es etwas findet. Keiner der fallenden Fälle wurde grün
 gedreht.
 
-**Offen sind 5 Einträge**, und keiner davon ist ein Rest dieser Version.
-**Vier warten auf eine Entscheidung**, die die Einträge selbst dem Owner
+**Offen sind 29 Einträge**, und keiner davon ist ein Rest dieser Version.
+**Fünf warten auf eine Entscheidung**, die die Einträge selbst dem Owner
 vorbehalten — welche der beiden Bauformen gefahren wird (`BL-194`), ob der
 Lückenfinder eine Formatänderung am Ledger wert ist (`BL-193`), wie der
 Rollback mit Pfaden umgeht, die es beim Rollenstart noch nicht gab (`BL-206`,
-Befund 2), und wie ein Abnahme-Gate zugeschnitten wird (`BL-219`). **Einer ist
-Bauarbeit**: der eigene Einstieg in die Fixphase (`BL-204`). Alles in
-[plans/backlog.md](plans/backlog.md). Abgetragenes steht in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (163 Einträge).
+Befund 2), wie ein Abnahme-Gate zugeschnitten wird (`BL-219`), und der eigene
+Einstieg in die Fixphase (`BL-204`).
+
+**Die übrigen 24 sind eine einzige Welle aus dem Feld**, gemeldet zwischen dem
+2026-09-03 und dem 2026-09-16, überwiegend aus dem Betrieb einer gewachsenen
+Installation: Kostenabschluss, Fixphase, Vollautomatik. Dass sie offen
+*dastehen*, ist die Absicht des Rückkanals — sie sind erfasst, begründet und
+nach Wirkung sortiert, statt in Sitzungsprotokollen zu verschwinden. Der
+Engpass ist nicht das Melden.
+
+Alles in [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (168 Einträge).
 
 ---
 
@@ -427,9 +435,9 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 | **`Feld E`** | Greenfield, Linux, bash-Bahn: Dart/Flutter + SQLite für ein **Android-Tablet** — Neubau, dessen Python/tkinter-Vorgänger (~25.500 LOC, 17 Spec-Dokumente) als reine Lesereferenz danebenliegt | **Zwei Kaskaden geplant, gebaut und abgeschlossen** (2026-08-24): Datenfundament und Einrichtungs-Wizard, zusammen 10 Stufen ohne Fehlversuch, 86 Tests in `Feld E`, 5 Red-Team-Funde, rund 50 USD Abo-Gegenwert — vollständig geledgert. `BL-158`…`BL-168` — **elf Funde**: die ersten acht vor der ersten gebauten Stufe, aus dem Lesen der Kopplungen zwischen Konfiguration, Testläufer und Rollen-Prompt; die letzten drei aus dem Betrieb (Preistabelle, Zeitpunkt der Gegenprobe, Rückkanal). Der erste Stack ohne pytest: Was das Kit an Python-Annahmen mitträgt, wird hier zum ersten Mal sichtbar. Zugleich der erste Beleg für den Rückkanal als Werkzeug statt als Handarbeit |
 
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen sechs Quellen
-kommen die Backlog-Einträge `BL-1`…`BL-231`; was davon behoben ist, steht im
+kommen die Backlog-Einträge `BL-1`…`BL-260`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (163 Einträge), der Rest in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (168 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors
@@ -740,6 +748,7 @@ Grund für den eigenen Plan-Ordner — siehe `BL-51` oben.
 | `bash <kit>/bash/install.sh . --update` | `pwsh -File <kit>\pwsh\install.ps1 . -Update` | Auf eine neue Kit-Version heben, ohne Projektdaten anzufassen — und ohne die Bahn zu wechseln (`BL-147`) |
 | `bash <kit>/bash/install.sh . --update --beide-bahnen` | `pwsh -File <kit>\pwsh\install.ps1 . -Update -BeideBahnen` | Eine abgewählte Bahn zurückholen (`BL-119`) |
 | `python3 team/tools/beutebuch.py list` | `python team\tools\beutebuch.py list` | Alle Funde mit Status |
+| `python3 team/tools/beutebuch.py lint` | `python team\tools\beutebuch.py lint` | Prüft **jeden** Fundblock auf das, was die Fixphase auswertet; `--alle` bezieht das Archiv mit ein. Findet auch den Block, den ein fremder Anhang zerschnitten hat (`BL-254`) |
 | `./kit-melden.sh neu --titel "…"` | `.\kit-melden.cmd neu --titel "…"` | Fund **am Kit** melden: legt einen Entwurf nach Vorlage an (`BL-153`) |
 | `./kit-melden.sh pruefen` | `.\kit-melden.cmd pruefen` | Redaktionsprüfung vor dem Senden — absolute Pfade, Konto-, Rechner- und Projektnamen, Schlüssel (Exit `4` = Befunde) |
 | `./kit-melden.sh senden <datei>` | `.\kit-melden.cmd senden <datei>` | Pull Request ans Kit-Repo über `gh` — **fragt vorher**. Ohne `gh`: vorbefüllter Issue-Link |
@@ -776,7 +785,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 ## Der Rückkanal Feld → Kit
 
 **Jeder Lauf in einem echten Projekt fördert Kit-Fehler zutage** — `BL-1` bis
-`BL-231` sind fast alle so entstanden. Damit das nicht von der Disziplin
+`BL-260` sind fast alle so entstanden. Damit das nicht von der Disziplin
 einzelner abhängt, ist der Weg zurück ein Befehl aus dem installierten Projekt
 heraus:
 
@@ -829,7 +838,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   `Feld D` **eine** und `Feld E` **zwei** auf der bash-Bahn — `Feld C` gar
   keine. Zwei Plattformen und zwei Bahnen sind damit berührt, aber nur **eine**
   Kombination ist eingelaufen. Jeder Lauf hat Kit-Fehler zutage gefördert —
-  `BL-1`…`BL-231`, von der toten Fixphase über zwei Löcher in der
+  `BL-1`…`BL-260`, von der toten Fixphase über zwei Löcher in der
   Kostenerfassung und die Zeilenenden bis zur vierten Fehlerklasse „Stufe
   fertig, Quittung fehlt". Die Erwartung ist nicht, dass das aufhört; die
   Mechanik dafür ist der [Rückkanal Feld → Kit](#der-rückkanal-feld--kit) —

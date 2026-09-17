@@ -24,6 +24,24 @@ Jeder Fund des Read-Only Red Teams landet hier (Beutezug-Dreisatz, siehe
 > daran aus; ohne ihn divergieren die Formate ab dem zweiten Sweep und die
 > Zustandsmaschine findet die Status-Zeilen nicht mehr.
 
+> **Ein neuer Fundblock wird ans ENDE geschrieben, nie zwischen zwei
+> bestehende** (`Kit-BL-254`). Im Feld landete ein regelkonformer Beifang-Fund
+> mitten im Block seines Vorgängers — zwischen dessen vorletztem Absatz und
+> seiner `Reproducer-Test`-Zeile. Danach endete der fremde Fund **ohne**
+> Pflichtzeile, der neue trug am Ende eine **fremde**, kein Zeichen ging
+> verloren, und der Diff sah aus wie Routine.
+>
+> **Kein Guard kann das sehen** — er urteilt über Schreibzonen, und die Lage
+> eines Anhangs ist eine Frage der *Struktur*, nicht des Pfades. Die Folge ist
+> dieselbe wie bei einer fehlenden `Reproducer-Test`-Zeile: Der Substanz-Anker
+> bricht, und Franks regelkonformer Fix wird still zurückgerollt.
+>
+> **Gegenprobe, wenn doch etwas verrutscht ist:**
+> `python3 team/tools/beutebuch.py lint` **ohne Fundnummer** prüft jeden Block,
+> `--alle` bezieht das Archiv mit ein. Nach einer Reparatur die **Multimenge** der
+> Zeilen vorher/nachher vergleichen, nicht den Diff — der zeigt einen
+> verschobenen Block als gelöscht plus neu.
+
 > **Die `Reproducer-Test`-Zeile ist Pflicht — und der Pfad gehört in Backticks.**
 > Zwei Regeln, die zusammen gelten müssen, sonst wirkt keine von beiden:
 >

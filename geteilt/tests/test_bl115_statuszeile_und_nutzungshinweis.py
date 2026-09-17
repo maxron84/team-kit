@@ -116,11 +116,15 @@ def test_die_status_kette_bleibt_als_kette_lesbar():
 
 
 # ------------------------------------------------- (2) Nutzungshinweis statt Traceback
+# `lint` steht seit BL-254 NICHT mehr in dieser Liste: Ohne Fundnummer ist es
+# kein Bedienfehler mehr, sondern der Lauf ueber JEDEN Block — das war der
+# eigentliche Fund dort (ein Anhang, der einen fremden Block zerschneidet,
+# hinterlaesst den Mangel an einem Fund, an den gerade niemand denkt). Der
+# Nachweis dafuer steht in `test_bl254_lint_ueber_den_ganzen_bestand.py`.
 @pytest.mark.parametrize("argv,erwartet", [
     (["first"], "beutebuch.py first <status>"),
     (["dateien"], "beutebuch.py dateien <HM-Nr>"),
     (["reproducer"], "beutebuch.py reproducer <HM-Nr>"),
-    (["lint"], "beutebuch.py lint <HM-Nr>"),
     (["set"], "beutebuch.py set <HM-Nr> <status>"),
     (["set", "HM-1"], "beutebuch.py set <HM-Nr> <status>"),
 ])
