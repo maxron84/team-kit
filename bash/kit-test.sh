@@ -22,7 +22,7 @@
 # Tests gelten: in einer echten Installation. Das prüft den Installer gleich mit.
 #
 # Die Suite läuft dabei ZWEIMAL: einmal im Auslieferungszustand (Schritt 4) und
-# einmal mit angepasster team.config.sh (Schritt 5). Der zweite Lauf ist die
+# einmal mit angepasster Konfiguration (Schritt 5). Der zweite Lauf ist die
 # Lehre aus BL-58 — eine frische Installation trägt dieselben Werte wie die
 # Bibliothek, dort fällt eine falsch gesetzte Messstelle nie auf.
 #
@@ -457,27 +457,46 @@ gruen "  ✓ Gegenprobe: verfaelschte Zahl und toter Pfad werden beide rot"
 # Caps ("lieber großzügig ansetzen"), Commit-Präfixe, mehrere Domänen. Pfade
 # und Ordner bleiben unangetastet: Die sind die Ablage, gegen die die Tests
 # gelten dürfen, nicht der Regler, an dem ein Projekt dreht.
-kopf "5/11 — Regressionstests unter angepasster team.config.sh (BL-58)"
-sed -i \
-    -e 's|^TEAM_ROLE_BUDGET_USD=.*|TEAM_ROLE_BUDGET_USD="${TEAM_ROLE_BUDGET_USD:-10}"|' \
-    -e 's|^TEAM_ROLE_HARDCAP_USD=.*|TEAM_ROLE_HARDCAP_USD="${TEAM_ROLE_HARDCAP_USD:-20}"|' \
-    -e 's|^TEAM_FIX_PRAEFIX=.*|TEAM_FIX_PRAEFIX="${TEAM_FIX_PRAEFIX:-fix(qa)}"|' \
-    -e 's|^TEAM_FEAT_PRAEFIX=.*|TEAM_FEAT_PRAEFIX="${TEAM_FEAT_PRAEFIX:-feature}"|' \
-    -e 's|^TEAM_DOMAENEN=.*|TEAM_DOMAENEN="${TEAM_DOMAENEN:-backend frontend}"|' \
-    "$ZIEL/team.config.sh"
+#
+# BL-262: Verstellt werden BEIDE Konfigurationen, mit denselben Paaren wie
+# kit-test.ps1 Schritt 6. Bis dahin verstellte diese Stufe nur team.config.sh —
+# ein Rest aus der Zeit mit einer Bahn. Seit dem Gleichstandstest aus BL-117
+# (2026-08-26) vergleicht die Suite die Prompts BEIDER Bahnen am Lauf: Wo pwsh
+# liegt, stand dann `fix(qa)` gegen `fix(uat)`, der Fall wurde rot, und der
+# Selbsttest brach hier ab, bevor die Stufen 6–11 liefen. Auf einem Wirt ohne
+# pwsh ueberspringt sich der Fall — die Luecke war genau dort unsichtbar, wo
+# sie nicht zuschlug. Die pwsh-Fassung hatte sie am selben Tag geschlossen.
+kopf "5/11 — Regressionstests unter angepasster Konfiguration (BL-58)"
+KONFIG_PAARE=(
+    "TEAM_ROLE_BUDGET_USD=10"
+    "TEAM_ROLE_HARDCAP_USD=20"
+    "TEAM_FIX_PRAEFIX=fix(qa)"
+    "TEAM_FEAT_PRAEFIX=feature"
+    "TEAM_DOMAENEN=backend frontend"
+)
+for paar in "${KONFIG_PAARE[@]}"; do
+    name="${paar%%=*}"; neu="${paar#*=}"
+    sed -i -e "s|^${name}=.*|${name}=\"\${${name}:-${neu}}\"|" "$ZIEL/team.config.sh"
+    sed -i -e "s|^\\\$${name}[[:space:]]*=.*|\$${name} = Team-Wert '${name}' '${neu}'|" \
+        "$ZIEL/team.config.ps1"
+done
 # Ein `sed`, das nichts trifft, meldet sich nicht — die Suite liefe dann gegen
 # die unveränderte Config und wäre grün, ohne irgendetwas geprüft zu haben.
 # Das wäre dieselbe Bauart wie der Fund selbst, nur eine Etage höher.
-for erwartet in 'TEAM_ROLE_BUDGET_USD:-10' 'TEAM_ROLE_HARDCAP_USD:-20' \
-                'TEAM_FIX_PRAEFIX:-fix(qa)' 'TEAM_FEAT_PRAEFIX:-feature' \
-                'TEAM_DOMAENEN:-backend frontend'; do
-    if ! grep -qF -- "$erwartet" "$ZIEL/team.config.sh"; then
-        rot "  ✗ '$erwartet' steht nicht in team.config.sh — die Anpassung hat nicht gegriffen."
+for paar in "${KONFIG_PAARE[@]}"; do
+    name="${paar%%=*}"; neu="${paar#*=}"
+    if ! grep -qF -- "${name}:-${neu}" "$ZIEL/team.config.sh"; then
+        rot "  ✗ '${name}:-${neu}' steht nicht in team.config.sh — die Anpassung hat nicht gegriffen."
+        echo "      Variable umbenannt oder Zeile umgebaut? Dann prüft dieser Schritt nichts mehr." >&2
+        exit 1
+    fi
+    if ! grep -qF -- "\$${name} = Team-Wert '${name}' '${neu}'" "$ZIEL/team.config.ps1"; then
+        rot "  ✗ '${name}' ist in team.config.ps1 nicht auf '${neu}' gesetzt — die Anpassung hat nicht gegriffen (BL-262)."
         echo "      Variable umbenannt oder Zeile umgebaut? Dann prüft dieser Schritt nichts mehr." >&2
         exit 1
     fi
 done
-gruen "  ✓ Caps 10/20, Präfixe fix(qa)/feature, zwei Domänen gesetzt"
+gruen "  ✓ Caps 10/20, Präfixe fix(qa)/feature, zwei Domänen — in BEIDEN Konfigurationen"
 
 RC=0
 ./team-test.sh "${PYTEST_ARGS[@]}" || RC=$?

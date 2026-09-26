@@ -1094,6 +1094,10 @@ team_guard_begin() {
         echo "[guard] Diese Pfade werden der Rolle nicht angelastet, solange sie unverändert bleiben." >&2
         echo "[guard] Zwei schreibende Instanzen auf einem Arbeitsbaum sind trotzdem unzulässig — bitte committen." >&2
     fi
+    # BL-263: Git sieht die Rohmaterial-Zone nicht, also braucht sie ihren
+    # eigenen Startstand. Hier statt in jedem Aufrufer: Wer den Guard beginnt,
+    # hat damit auch die Zone erfasst.
+    team_raw_begin
 }
 
 # Pfade aus dem Schnappschuss, die sich seit dem Rollenstart NICHT verändert
@@ -1128,6 +1132,119 @@ team_guard_fremdpfade() {
 # Kostenhistorie), ausgelöst ausgerechnet vom Wächter. Vorher scheiterte das
 # `rm -f` an ihnen still; dass das gut ging, war Zufall, kein Entwurf.
 TEAM_GUARD_LAUFZEIT='^(\.team-logs/|\.ralph-logs/|\.team-loop\.lock$|\.ralph-state$|\.harry-state$|\.marv-state$|\.frank-attempts$|\.team-focus-[a-z]+$)'
+
+# Werkzeug-Ordner des Stakeholders, die das T.E.A.M. KOMPLETT ignoriert
+# (BL-263): weder angelastet noch zurueckgesetzt, weder gelesen noch
+# ueberwacht. Heute `.obsidian/` — Obsidian schreibt dort bei jedem Klick
+# (workspace.json). Das gitignore-Fragment nimmt den Ordner aus Git; diese
+# Ausnahme haelt, wenn die Zeile im Projekt fehlt (vor dem Update angelegt, von
+# Hand entfernt). Ohne sie haette der Guard die Arbeitsflaeche des Menschen
+# einer Rolle angelastet und zurueckgerollt. Angelegt wird der Ordner vom Kit
+# nie — er taucht auf, sobald der Stakeholder das Projekt als Vault oeffnet.
+TEAM_GUARD_IGNORIERT='^\.obsidian(/|$)'
+
+# --- Rohmaterial-Zonen des Stakeholders (BL-263) ------------------------------
+# TEAM_ROHMATERIAL_ORDNER ist der Eingang des Menschen — eine Leerliste von
+# Ordnern (Default `raw/ Clippings/`), in die NUR er ablegt; jede Rolle liest
+# dort nur. `raw/` legt der Installer an, `Clippings/` taucht auf, sobald der
+# Stakeholder Web-Clippings ablegt. Beide stehen im gitignore-Fragment — Git
+# und damit Guard und Rollback sehen sie nicht. Zwei Dinge sichern sie trotzdem:
+#
+#   * team_pfade_zuruecksetzen fasst keinen Pfad darunter an. Das deckt die
+#     Wege, auf denen eine Zone doch in eine Pfadliste geraet: Eine Rolle hat
+#     Material mit `git add -f` committet, oder das Fragment fehlt im Projekt.
+#     Wie knapp das ist, zeigt BL-24: Dort ueberlebte ein manueller
+#     Input-Ordner namens `raw/` nur, weil der Rollback an Verzeichnissen
+#     scheiterte. Seit dem Fix haette er ihn geloescht.
+#   * Ein Schnappschuss (Pfad, Groesse, Zeitstempel) beim Rollenstart und der
+#     Abgleich danach machen jeden Schreibzugriff sichtbar. Gemeldet wird er
+#     als Uebergriff; geloescht oder zurueckgesetzt wird NICHTS. Ob eine
+#     Aenderung von der Rolle oder vom Stakeholder stammt, ist nicht zu
+#     unterscheiden — und fremdes Material wegzuraeumen waere schlimmer als
+#     jeder Rest (dieselbe Abwaegung wie in team_fremd_ausfiltern).
+#
+# Der Wert bleibt, wie die Konfiguration ihn gesetzt hat — normalisiert wird
+# nur beim Gebrauch (team_raw_zonen). Die Bibliothek reicht
+# Konfigurationswerte unveraendert durch; auf der pwsh-Bahn prueft BL-182 genau
+# das, und beide Bahnen sollen hier dasselbe tun.
+TEAM_ROHMATERIAL_ORDNER="${TEAM_ROHMATERIAL_ORDNER:-raw/ Clippings/}"
+
+# team_raw_zonen — die Zonen einzeln, je Zeile eine, ohne abschliessenden
+# Schraegstrich (so nennen Git-Pfade sie). Ordnernamen mit Leerzeichen werden
+# nicht unterstuetzt — dieselbe Grenze wie bei TEAM_WEITERER_CODE.
+team_raw_zonen() {
+    local -a zonen=()
+    local zone
+    read -r -a zonen <<< "${TEAM_ROHMATERIAL_ORDNER:-}" || true
+    for zone in "${zonen[@]+"${zonen[@]}"}"; do
+        zone="${zone%/}"
+        if [ -n "$zone" ]; then printf '%s\n' "$zone"; fi
+    done
+    return 0
+}
+
+# team_raw_pfad <pfad> — Exit 0, wenn <pfad> in einer Rohmaterial-Zone liegt;
+# auch der Ordner selbst, wie `git status` ihn als EINEN Eintrag meldet.
+team_raw_pfad() {
+    local zone
+    while IFS= read -r zone; do
+        case "$1" in
+            "$zone"|"$zone"/*) return 0 ;;
+        esac
+    done < <(team_raw_zonen)
+    return 1
+}
+
+# team_raw_stand — je Eintrag unter den Zonen eine Zeile, sortiert:
+#   "d<TAB><pfad>" fuer Ordner, "f<TAB><pfad><TAB><bytes><TAB><mtime>" sonst,
+#   Pfade ab der Repo-Wurzel — wie Git und jede andere Guard-Meldung sie nennen.
+# Eine Zone, die es (noch) nicht gibt, traegt nichts bei. Scheitert `find` an
+# einem Eintrag, bleibt der Rest gueltig: Eine Pruefung darf den Rollenlauf
+# nicht abbrechen.
+team_raw_stand() {
+    local zone
+    while IFS= read -r zone; do
+        [ -d "$zone" ] || continue
+        find "$zone" -mindepth 1 \( -type d -printf 'd\t%p\n' \) \
+            -o \( -printf 'f\t%p\t%s\t%T@\n' \) 2>/dev/null || true
+    done < <(team_raw_zonen) | LC_ALL=C sort
+    return 0
+}
+
+team_raw_begin() {
+    TEAM_RAW_VORHER="$(team_raw_stand)"
+    TEAM_RAW_ERFASST=1
+}
+
+# team_raw_pruefen <rolle>
+#   Exit 0 = die Zonen sind unveraendert · 1 = Uebergriff, laut gemeldet.
+#   Faengt nie etwas an: kein Loeschen, kein Zuruecksetzen, kein Commit.
+team_raw_pruefen() {
+    local rolle="$1" nachher abweichung
+    if [ "${TEAM_RAW_ERFASST:-0}" != 1 ]; then
+        echo "[$rolle] Rohmaterial-Zone (${TEAM_ROHMATERIAL_ORDNER}): kein Startstand erfasst — NICHT geprüft." >&2
+        return 0
+    fi
+    nachher="$(team_raw_stand)"
+    if [ "$nachher" = "$TEAM_RAW_VORHER" ]; then
+        return 0
+    fi
+    abweichung="$( { awk -F'\t' '
+        NR == FNR { if ($0 != "") vorher[$2] = $0; next }
+        $0 != "" { jetzt[$2] = $0 }
+        END {
+            for (p in jetzt)
+                if (!(p in vorher)) print "neu:       " p
+                else if (vorher[p] != jetzt[p]) print "geändert:  " p
+            for (p in vorher)
+                if (!(p in jetzt)) print "entfernt:  " p
+        }' <(printf '%s\n' "$TEAM_RAW_VORHER") <(printf '%s\n' "$nachher") || true; } \
+        | LC_ALL=C sort -k2)"
+    echo "[$rolle] ÜBERGRIFF in der Rohmaterial-Zone (${TEAM_ROHMATERIAL_ORDNER}) — sie gehört dem Stakeholder, jede Rolle liest dort nur:" >&2
+    printf '%s\n' "$abweichung" | sed 's/^/  /' >&2
+    echo "  Nichts davon wurde angefasst (BL-263). Stammt eine Änderung nicht vom Stakeholder, hat die Rolle die Zone verletzt — von Hand prüfen." >&2
+    return 1
+}
 
 # team_fremd_ausfiltern <pfadliste>
 #   Entfernt aus <pfadliste> alles, was team_guard_fremdpfade als fremd
@@ -1230,6 +1347,17 @@ team_pfade_zuruecksetzen() {
     [ -z "$liste" ] && return 0
     while IFS= read -r pfad; do
         [ -z "$pfad" ] && continue
+        if team_raw_pfad "$pfad"; then
+            # BL-263: Die Rohmaterial-Zone gehoert dem Stakeholder — nie
+            # zuruecksetzen, nie loeschen. Hoechstens aus dem INDEX nehmen, was
+            # eine Rolle dort neu eingetragen hat (`git add -f`): Die Datei
+            # bleibt liegen, der Ordner bleibt unversioniert.
+            if ! git cat-file -e "$hash:$pfad" 2>/dev/null; then
+                git rm -r --cached --quiet -- "$pfad" >/dev/null 2>&1 || true
+            fi
+            echo "[$rolle] Guard: '$pfad' liegt in der Rohmaterial-Zone — Stakeholder-Eigentum, NICHT angefasst (BL-263)." >&2
+            continue
+        fi
         if git cat-file -e "$hash:$pfad" 2>/dev/null; then
             # War beim Start getrackt → auf Startstand zurückholen.
             git checkout "$hash" -- "$pfad" 2>/dev/null || true
@@ -1290,7 +1418,8 @@ team_rollback_rolle() {
     local rolle="$1" start="$2" pfade rest
     pfade="$( { git diff --name-only "$start" HEAD 2>/dev/null;
                 git status --porcelain | cut -c4-; } | sort -u \
-              | grep -Ev "$TEAM_GUARD_LAUFZEIT" || true)"
+              | grep -Ev "$TEAM_GUARD_LAUFZEIT" \
+              | grep -Ev "$TEAM_GUARD_IGNORIERT" || true)"
     pfade="$(team_fremd_ausfiltern "$pfade")"
     if [ "$(git rev-parse HEAD)" != "$start" ]; then
         git reset --soft "$start" >/dev/null 2>&1 || true
@@ -1306,12 +1435,16 @@ team_rollback_rolle() {
 }
 
 team_guard_verify() {
-    local rolle="$1" whitelist="$2" roh nicht_angelastet verletzungen
+    local rolle="$1" whitelist="$2" roh nicht_angelastet verletzungen raw_rc=0
+    # BL-263: Die Rohmaterial-Zone prueft ihr eigener Schnappschuss — Git sieht
+    # sie nicht. Ein Uebergriff dort zaehlt wie jeder andere, nur ohne Rollback.
+    team_raw_pruefen "$rolle" || raw_rc=1
     roh="$( { git diff --name-only "$TEAM_GUARD_HASH" HEAD 2>/dev/null;
               git status --porcelain | cut -c4-; } | sort -u \
             | grep -Ev "$whitelist" \
-            | grep -Ev "$TEAM_GUARD_LAUFZEIT" || true)"
-    [ -z "$roh" ] && return 0
+            | grep -Ev "$TEAM_GUARD_LAUFZEIT" \
+            | grep -Ev "$TEAM_GUARD_IGNORIERT" || true)"
+    [ -z "$roh" ] && return "$raw_rc"
 
     # BL-114: derselbe Filter wie im Rollback — er kennt auch den Fall, dass
     # eine fremde Datei aus einem untracked ORDNER mitcommittet wurde und
@@ -1329,7 +1462,7 @@ team_guard_verify() {
         # Rolle angelastet, die ihn nicht verursacht hatte.
         echo "[$rolle] Guard: Pfade außerhalb der Whitelist geändert, aber ALLE waren beim Rollenstart bereits geändert und sind es unverändert — nicht dieser Rolle zugeschrieben, kein Rollback:" >&2
         printf '%s\n' "$nicht_angelastet" | sed 's/^/  /' >&2
-        return 0
+        return "$raw_rc"
     fi
 
     # Die Meldung trennt die beiden Fälle ausdrücklich sprachlich. Im Feld wurde
@@ -1352,12 +1485,19 @@ team_guard_verify() {
         echo "[$rolle] NICHT angelastet (beim Rollenstart bereits geändert, seither unverändert):" >&2
         printf '%s\n' "$nicht_angelastet" | sed 's/^/  /' >&2
     fi
-    local rest
+    local rest p raw_ausgenommen=0
     rest="$(team_pfade_zuruecksetzen "$rolle" "$TEAM_GUARD_HASH" "$verletzungen")"
+    while IFS= read -r p; do
+        if [ -n "$p" ] && team_raw_pfad "$p"; then raw_ausgenommen=1; fi
+    done <<< "$verletzungen"
     if [ -n "$rest" ]; then
         echo "[$rolle] Guard: ROLLBACK UNVOLLSTÄNDIG — diese Pfade stehen weiterhin abweichend im Baum:" >&2
         printf '%s' "$rest" | sed 's/^/  /' >&2
         echo "  Von Hand prüfen und zurücknehmen; der Lauf gilt als Übergriff." >&2
+    elif [ "$raw_ausgenommen" -eq 1 ]; then
+        # BL-24-Lehre: Die Vollzugsmeldung darf nicht mehr behaupten, als
+        # geschehen ist. Die Zone blieb bewusst stehen — das steht hier.
+        echo "[$rolle] Guard: chirurgischer Rollback vollzogen — AUSGENOMMEN die Rohmaterial-Zone (siehe oben, von Hand prüfen)." >&2
     else
         echo "[$rolle] Guard: chirurgischer Rollback vollzogen." >&2
     fi

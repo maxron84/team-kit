@@ -155,6 +155,10 @@ Sonst gib das Promise NICHT aus und beschreibe das Hindernis.
 "@.TrimEnd()
 
 $rcClaude = team_claude 'frank' $TEAM_MODEL_LOOP $out $prompt '--permission-mode' 'bypassPermissions'
+# BL-263: Frank hat keinen Guard-Abgleich, nur den Schnappschuss aus
+# team_guard_begin — die Rohmaterial-Zone wird deshalb hier geprueft. Gemeldet,
+# nicht gewertet: Das Urteil ueber den Fix bleibt beim Dreisatz.
+team_raw_pruefen 'frank' | Out-Null
 
 [Console]::Out.WriteLine("Frank: $hm Versuch $versuch kostete $TEAM_LAST_COST USD.")
 

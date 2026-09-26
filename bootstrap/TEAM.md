@@ -42,6 +42,15 @@ Der Abschnitt darüber regelt den Zeitpunkt **davor** und deckt diesen Fall
 nicht ab: Ein Commit schützt nur, was **vor** dem Rollenstart lag. Wirksam ist
 *vorher*, nicht *sofort*.
 
+**Für `raw/` und `Clippings/` gilt dasselbe, nur ohne Verlust.** Dort legst du
+Rohmaterial für das T.E.A.M. ab — **vor** dem Lauf. Die Ordner sind nicht
+versioniert, und kein Guard, kein Rollback fasst sie an: Dein Material geht nie
+verloren. Aber jeder Rollenlauf vergleicht sie mit seinem Startstand und meldet
+jede Änderung als Übergriff. Was du währenddessen ablegst — auch ein
+Web-Clipping —, steht dann in dieser Meldung (`Kit-BL-263`). Nur `.obsidian/`
+ist davon ausgenommen: Obsidian darf dort jederzeit schreiben, das T.E.A.M.
+ignoriert den Ordner komplett.
+
 ---
 
 ## Worum es überhaupt geht
@@ -479,6 +488,8 @@ nennt die zwei Prüfungen, die vorher zu machen sind.
 {{KONFIG}}          ALLE Projektwerte — der einzige Ort zum Ändern
 CLAUDE.md               Regeln für die KI-Rollen (geltendes Recht)
 {{PLAN_ORDNER}}/        Kaskaden-Pläne, Beutebuch, Ermittlungsakten, Roadmap
+raw/ Clippings/         Dein Rohmaterial — nur du legst ab, das T.E.A.M. liest nur
+.obsidian/              Obsidians Arbeitsfläche — das T.E.A.M. ignoriert sie komplett
 team/                   Team-Infrastruktur (lib, tools, prompts, tests)
 .budget-ledger          Kostenbasis — committet, nicht ignorieren
 .ralph-plan             Zeiger auf den aktiven Plan

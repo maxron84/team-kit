@@ -1695,7 +1695,8 @@ function Kandidaten-Ausserhalb {
     # einfaellt, was er hat.
     param([string]$Prod, [string]$Test, [string]$Plan)
     $ignorieren = @('team', 'node_modules', '__pycache__', 'venv', '.venv', 'dist',
-                    'build', 'target', 'docs', 'doku', 'data', 'assets', 'static', 'media')
+                    'build', 'target', 'docs', 'doku', 'data', 'assets', 'static', 'media',
+                    'raw', 'Clippings')
     $namen = @()
     foreach ($e in (Get-ChildItem $Ziel -Force -ErrorAction SilentlyContinue)) {
         $n = $e.Name
@@ -2012,7 +2013,12 @@ Schreibe "${PlanOrdner}ermittlungsakten/.gitkeep" ""
 Schreibe '.budget-ledger' ""
 Schreibe '.ralph-state' "1`n"
 New-Item -ItemType Directory -Force -Path (Join-Path $Ziel $TestOrdner) | Out-Null
+# BL-263: der Eingang des Stakeholders. Nur der Ordner — sein Inhalt gehoert
+# dem Menschen, und ein vorhandener bleibt, wie er ist (-Force legt nur an).
+# Nicht versioniert: Das gitignore-Fragment unten nimmt ihn heraus.
+New-Item -ItemType Directory -Force -Path (Join-Path $Ziel 'raw') | Out-Null
 Gruen "  [ok] CLAUDE.md, CHANGELOG, Beutebuch, Roadmap, Backlog, Ledger, State"
+Gruen "  [ok] raw/ — Rohmaterial des Stakeholders, das T.E.A.M. liest dort nur (nicht versioniert)"
 
 # Platzhalter fuellen — auch in den Briefings: sie sind selbst Prompts und
 # nennen sonst die Pfade des Ursprungsprojekts (falsche Guard-Grenze!).

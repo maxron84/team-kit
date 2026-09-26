@@ -61,6 +61,11 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Das Team (Rollen) | NORM | Regeldatei | Out-of-Loop-Fixes sind **Franks** Aufgabe. |
 | Das Team (Rollen) | NORM | Regeldatei | Der Architekt greift **nur im Ausnahmefall** selbst zum Produktivcode |
 | Das Team (Rollen) | NORM | Regeldatei | jede Rolle einen sauber definierten Übergabepunkt |
+| Rohmaterial des Stakeholders — nur lesen | NORM | Regeldatei | **Jede Rolle liest dort nur.** |
+| Rohmaterial des Stakeholders — nur lesen | NORM | Regeldatei | **Was aus dem Rohmaterial entsteht, gehört an seinen Platz im Projekt** |
+| Rohmaterial des Stakeholders — nur lesen | NORM | Regeldatei | Wer Rohmaterial braucht, listet die Ordner ausdrücklich auf und liest jede Datei über ihren Pfad. |
+| Rohmaterial des Stakeholders — nur lesen | NORM | Regeldatei | **`.obsidian/` ist tabu.** |
+| Rohmaterial des Stakeholders — nur lesen | HERLEITUNG | Regeldatei | Ob eine Änderung von der Rolle oder vom Stakeholder stammt, ist nicht zu unterscheiden |
 | Franks Dreisatz — Out-of-Loop-Fixes  ✅ erprobt | NORM | Regeldatei | **Code-Fix committen** mit klarem Präfix |
 | Franks Dreisatz — Out-of-Loop-Fixes  ✅ erprobt | NORM | Regeldatei | Dieser Block ist die **Single Source of Truth** für alle Out-of-Loop-Fixes. |
 | Franks Dreisatz — Out-of-Loop-Fixes  ✅ erprobt | NORM | Regeldatei | Ralph liest den `[Unreleased]`-Block vor jeder Stufe und baut ein dort gelistetes Problem **nicht erneut**. |

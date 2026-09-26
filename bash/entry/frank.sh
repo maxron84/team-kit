@@ -147,6 +147,10 @@ Sonst gib das Promise NICHT aus und beschreibe das Hindernis."
 RC_CLAUDE=0
 team_claude frank "$TEAM_MODEL_LOOP" "$OUT" "$PROMPT" \
     --permission-mode bypassPermissions || RC_CLAUDE=$?
+# BL-263: Frank hat keinen Guard-Abgleich, nur den Schnappschuss aus
+# team_guard_begin — die Rohmaterial-Zone wird deshalb hier geprueft. Gemeldet,
+# nicht gewertet: Das Urteil ueber den Fix bleibt beim Dreisatz.
+team_raw_pruefen frank || true
 
 echo "Frank: $HM Versuch $VERSUCH kostete $TEAM_LAST_COST USD."
 

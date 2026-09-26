@@ -16,6 +16,12 @@ Pfad), bleibt es samt Inhalt liegen, waehrend der Lauf Vollzug protokolliert.
 
 Bauart BL-15/BL-17 ("Pfad existiert, wird aber nie wirklich ausgefuehrt") in der
 Variante "Meldung existiert, deckt aber die Ausfuehrung nicht".
+
+Die Faelle unten legen seit BL-263 `wegwerf/` an statt `raw/`: `raw/` ist
+inzwischen die Rohmaterial-Zone des Stakeholders, die der Rollback bewusst NIE
+anfasst — also genau der Ordner, dessen Ueberleben hier ein Gluecksfall war,
+ist jetzt geschuetzt (test_bl263_rohmaterial_zone.py). Die Zusicherung dieser
+Datei gilt unveraendert fuer jedes Verzeichnis, das eine Rolle selbst anlegt.
 """
 import subprocess
 from pathlib import Path
@@ -73,16 +79,16 @@ def test_neu_angelegtes_verzeichnis_wird_wirklich_entfernt(tmp_path, schale):
     """Der Fund selbst: Die Rolle legt ein Verzeichnis ausserhalb ihrer
     Whitelist an."""
     repo = _repo(tmp_path, schale)
-    ergebnis = _guard(schale, repo, [Ordner("raw/unter"),
-                                     Schreib("raw/unter/a.txt", "daten\n")])
+    ergebnis = _guard(schale, repo, [Ordner("wegwerf/unter"),
+                                     Schreib("wegwerf/unter/a.txt", "daten\n")])
     assert "GUARD_OK" not in ergebnis.stdout, "der Uebergriff muss gemeldet werden"
-    assert not (repo / "raw").exists(), \
+    assert not (repo / "wegwerf").exists(), \
         "das Verzeichnis liegt nach dem 'chirurgischen Rollback' immer noch da"
 
 
 def test_vollzug_wird_erst_nach_dem_aufraeumen_gemeldet(tmp_path, schale):
     repo = _repo(tmp_path, schale)
-    ergebnis = _guard(schale, repo, [Schreib("raw/a.txt", "daten\n")])
+    ergebnis = _guard(schale, repo, [Schreib("wegwerf/a.txt", "daten\n")])
     assert "chirurgischer Rollback vollzogen" in ergebnis.stderr
     assert "ROLLBACK UNVOLLSTÄNDIG" not in ergebnis.stderr
 

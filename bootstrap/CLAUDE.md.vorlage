@@ -75,6 +75,37 @@ Senior-Entwicklers** (des **Stakeholders**). Jede Instanz sollte wissen,
 
 ---
 
+## Rohmaterial des Stakeholders — nur lesen
+
+Die Rohmaterial-Ordner — `TEAM_ROHMATERIAL_ORDNER` in
+[`{{KONFIG}}`]({{KONFIG}}), ausgeliefert als `raw/` und `Clippings/` — sind
+der **Eingang des Stakeholders**. Dort legt er ab, woraus das T.E.A.M.
+arbeiten soll: Notizen, Vorlagen, Datenauszüge und Screenshots in `raw/`,
+Web-Clippings in `Clippings/`. Nicht jeder dieser Ordner muss existieren; was
+fehlt, hat der Stakeholder (noch) nicht angelegt.
+
+- **Jede Rolle liest dort nur.** Keine Rolle — auch Ralph, Frank und der
+  Architekt nicht — legt dort etwas an, ändert, verschiebt, löscht oder
+  committet es.
+- **Was aus dem Rohmaterial entsteht, gehört an seinen Platz im Projekt**
+  (Produktivcode, Tests, Pläne), nicht zurück in den Eingang.
+- **Die Ordner sind bewusst nicht versioniert** (sie stehen im `.gitignore`),
+  und Such-Werkzeuge überspringen ignorierte Dateien oft. Wer Rohmaterial
+  braucht, listet die Ordner ausdrücklich auf und liest jede Datei über ihren
+  Pfad.
+- **`.obsidian/` ist tabu.** Dort liegt die Arbeitsfläche des Notizwerkzeugs
+  des Stakeholders (Obsidian); keine Rolle liest oder schreibt dort. Auch
+  dieser Ordner steht im `.gitignore`, und der Guard übergeht ihn.
+
+Die Mechanik dahinter (`Kit-BL-263`): Guard und Rollback fassen die
+Rohmaterial-Ordner nie an — auch dann nicht, wenn eine Rolle dort geschrieben
+hat. Stattdessen hält jeder Rollenlauf fest, was darin liegt, und meldet am
+Ende jede Abweichung als Übergriff. Rückgängig gemacht wird nichts: Ob eine
+Änderung von der Rolle oder vom Stakeholder stammt, ist nicht zu
+unterscheiden, und sein Material wegzuräumen wäre schlimmer als jeder Rest.
+
+---
+
 ## Franks Dreisatz — Out-of-Loop-Fixes  ✅ erprobt
 
 Damit weder Ralph noch der Architekt dasselbe Problem doppelt behandeln, gilt für

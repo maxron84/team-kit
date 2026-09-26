@@ -103,6 +103,21 @@ TEAM_WEITERER_CODE="${TEAM_WEITERER_CODE:-{{WEITERER_CODE}}}"
 TEAM_TEST_ORDNER_BESTAND="${TEAM_TEST_ORDNER_BESTAND:-{{TEST_BESTAND}}}"
 TEAM_PLAN_ORDNER_BESTAND="${TEAM_PLAN_ORDNER_BESTAND:-{{PLAN_BESTAND}}}"
 
+# --- Rohmaterial des Stakeholders (BL-263) ------------------------------------
+# Der Eingang des Menschen: Leerliste von Ordnern, in die NUR der Stakeholder
+# ablegt — Notizen, Vorlagen, Datenauszüge (`raw/`), Web-Clippings
+# (`Clippings/`). Für JEDE Rolle nur lesbar, auch für Ralph und Frank. `raw/`
+# legt der Installer an; `Clippings/` taucht auf, sobald dort abgelegt wird.
+#
+# Nicht versioniert (gitignore-Fragment): Git, der Guard und jeder Rollback
+# sehen die Ordner nicht. Zusätzlich fasst der Rücksetzweg
+# (team_pfade_zuruecksetzen) keinen Pfad darunter an, und ein Schnappschuss beim
+# Rollenstart macht jeden Schreibzugriff sichtbar — gemeldet, nie rückgängig
+# gemacht, weil nicht zu unterscheiden ist, ob die Rolle oder der Mensch ihn
+# verändert hat. Wer einen Ordner umbenennt oder ergänzt, zieht die Zeile im
+# .gitignore mit. Ordnernamen mit Leerzeichen werden nicht unterstützt.
+TEAM_ROHMATERIAL_ORDNER="${TEAM_ROHMATERIAL_ORDNER:-raw/ Clippings/}"
+
 # Abgeleitete Pfade — nur ändern, wenn die Struktur wirklich abweicht.
 TEAM_BEUTEBUCH="${TEAM_BEUTEBUCH:-${TEAM_PLAN_ORDNER}beutebuch.md}"
 TEAM_ERMITTLUNGSAKTEN="${TEAM_ERMITTLUNGSAKTEN:-${TEAM_PLAN_ORDNER}ermittlungsakten}"

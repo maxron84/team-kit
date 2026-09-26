@@ -11,6 +11,35 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **Die Ordner des Stakeholders: `raw/` und `Clippings/` nur lesen,
+  `.obsidian/` gar nicht** (`BL-263`, beide Bahnen). In allen Projekten des
+  Owners lagen von Hand angelegte Ordner, in die nur der Mensch ablegt:
+  Rohmaterial in `raw/`, Web-Clippings in `Clippings/`, daneben die
+  Arbeitsfläche seines Notizwerkzeugs in `.obsidian/`. Das Kit kannte keinen
+  davon — und hätte `raw/` seit `BL-24` gelöscht: Genau an so einem Ordner ist
+  `BL-24` entstanden, und dass er damals überlebte, lag nur daran, dass der
+  Rollback an Verzeichnissen scheiterte.
+
+  `TEAM_ROHMATERIAL_ORDNER` (Default `raw/ Clippings/`) steht in beiden
+  `team.config.*` und als Bibliotheks-Default. Beide Installer legen `raw/`
+  an; `Clippings/` und `.obsidian/` erzeugt das Kit nicht, sie tauchen auf,
+  sobald sie benutzt werden. Das gitignore-Fragment nimmt alle drei aus der
+  Versionierung. **Nie löschen:** Der Rücksetzweg fasst keinen Pfad der
+  Rohmaterial-Zonen an — auch nicht, wenn eine Rolle Material mit `git add -f`
+  committet hat. **Trotzdem sichtbar:** Ein Schnappschuss beim Rollenstart
+  meldet jede Änderung als Übergriff, auch in einer Zone, die erst während des
+  Laufs entsteht; im Guard fließt das ins Urteil, Ralph und Frank prüfen
+  ausdrücklich. **`.obsidian/` komplett ignoriert:** Der Guard übergeht den
+  Ordner auch dann, wenn die Zeile im `.gitignore` fehlt — sonst hätte er
+  Obsidians Arbeitsfläche einer Rolle angelastet und zurückgerollt. Die
+  Regeldatei hat dafür einen eigenen Abschnitt, und `TEAM.md` sagt dem
+  Stakeholder, wann er ablegt: vor dem Lauf.
+
+  **Für bestehende Projekte:** `--update` bringt Mechanik und Default mit.
+  Drei Dinge meldet es, statt sie anzufassen: den neuen Schlüssel in
+  `team.config.*`, die Zeilen im `.gitignore` und den neuen Abschnitt der
+  Regeldatei.
+
 - **`kit-melden ablegen` — der Weg für alle, die das Kit daneben liegen haben**
   (`BL-168`, gemeldet von `Feld E`). Bis hierher gab es ein Werkzeug für den
   Weg, den niemand geht (Pull Request über `gh`), und keins für den, den alle
@@ -304,6 +333,17 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   die Umgebungsvariable nicht.* Still bleibt es, wo nichts abweicht.
 
 ### Fixed
+
+- **`kit-test.sh` verstellte in Stufe 5 nur `team.config.sh`** (`BL-262`).
+  Wo neben bash auch pwsh 7 liegt, verglich der Gleichstandstest aus `BL-117`
+  dort `fix(qa)` gegen `fix(uat)`, wurde rot, und der Selbsttest brach ab,
+  bevor die Stufen 6–11 liefen — seit dem 2026-08-26, ab dem 2026-09-17
+  zusätzlich verdeckt durch die README-Drift, die schon nach Stufe 2 abbrach.
+  Ohne pwsh übersprang sich der Fall; die Lücke war genau dort unsichtbar, wo
+  sie nicht zuschlug. Stufe 5 wendet jetzt eine Werteliste auf **beide**
+  Konfigurationen an und prüft beide nach, wie `kit-test.ps1` Schritt 6 es
+  seit demselben Tag tut. Ein Gleichstandstest hält die Wertelisten beider
+  Selbsttests gleich (Bauart `BL-208`).
 
 - **Eine planmäßig abgebrochene Stufe war vom vierten Ausgang nicht zu
   unterscheiden** (`BL-255`, gemeldet von `Feld B`, beide Bahnen). Eine Stufe

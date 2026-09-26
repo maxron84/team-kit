@@ -102,6 +102,15 @@ $TEAM_WEITERER_CODE = Team-Wert 'TEAM_WEITERER_CODE' '{{WEITERER_CODE}}'
 $TEAM_TEST_ORDNER_BESTAND = Team-Wert 'TEAM_TEST_ORDNER_BESTAND' '{{TEST_BESTAND}}'
 $TEAM_PLAN_ORDNER_BESTAND = Team-Wert 'TEAM_PLAN_ORDNER_BESTAND' '{{PLAN_BESTAND}}'
 
+# --- Rohmaterial des Stakeholders (BL-263) ------------------------------------
+# Der Eingang des Menschen: Leerliste von Ordnern, in die NUR der Stakeholder
+# ablegt (`raw/`, Web-Clippings in `Clippings/`). Fuer JEDE Rolle nur lesbar,
+# auch fuer Ralph und Frank. Nicht versioniert (gitignore-Fragment); der
+# Ruecksetzweg fasst die Ordner nie an, ein Schnappschuss beim Rollenstart
+# meldet jeden Schreibzugriff — siehe die bash-Fassung. Wer einen Ordner
+# umbenennt oder ergaenzt, zieht die Zeile im .gitignore mit.
+$TEAM_ROHMATERIAL_ORDNER = Team-Wert 'TEAM_ROHMATERIAL_ORDNER' 'raw/ Clippings/'
+
 # Abgeleitete Pfade — nur aendern, wenn die Struktur wirklich abweicht.
 $TEAM_BEUTEBUCH       = Team-Wert 'TEAM_BEUTEBUCH'       "${TEAM_PLAN_ORDNER}beutebuch.md"
 $TEAM_ERMITTLUNGSAKTEN = Team-Wert 'TEAM_ERMITTLUNGSAKTEN' "${TEAM_PLAN_ORDNER}ermittlungsakten"

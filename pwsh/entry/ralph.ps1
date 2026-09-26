@@ -125,7 +125,12 @@ Regeln:
     # Begruendung. Gemessen wird er am Stand VOR der Stufe - danach ist nicht
     # mehr zu unterscheiden, ob die Stufe committet hat oder jemand anders.
     $headVorher = (& git rev-parse HEAD 2>$null)
+    # BL-263: Ralph hat keinen Guard — die Rohmaterial-Zone des Stakeholders
+    # bekommt ihren Schnappschuss hier ausdruecklich. Der Abgleich steht VOR den
+    # Ausstiegen unten, damit auch eine abgebrochene Stufe gemeldet wird.
+    team_raw_begin
     $rc = team_claude 'ralph' $TEAM_MODEL_LOOP $out $prompt '--permission-mode' 'bypassPermissions'
+    team_raw_pruefen 'ralph' | Out-Null
     if ($rc -eq 42) {
         Team-Fehler "Ralph: Session-Limit — Stufe $stufe pausiert (Reset: $(if ($TEAM_LAST_RESET) { $TEAM_LAST_RESET } else { 'unbekannt' })). Kein Fehler, $stateFile bleibt auf $stufe. Bitte später erneut starten."
         exit 42

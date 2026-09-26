@@ -1264,6 +1264,109 @@ $TEAM_GUARD_LAUFZEIT = '^(\.team-logs/|\.ralph-logs/|\.team-loop\.lock$|\.ralph-
 $script:TEAM_GUARD_HASH = ''
 $script:TEAM_GUARD_VORHER = @()
 
+# Werkzeug-Ordner des Stakeholders, die das T.E.A.M. KOMPLETT ignoriert
+# (BL-263): weder angelastet noch zurueckgesetzt, weder gelesen noch
+# ueberwacht. Heute `.obsidian/` — Obsidian schreibt dort bei jedem Klick. Das
+# gitignore-Fragment nimmt den Ordner aus Git; diese Ausnahme haelt, wenn die
+# Zeile im Projekt fehlt. Angelegt wird der Ordner vom Kit nie. Ausfuehrlich in
+# der bash-Fassung.
+$TEAM_GUARD_IGNORIERT = '^\.obsidian(/|$)'
+
+# --- Rohmaterial-Zonen des Stakeholders (BL-263) ------------------------------
+# TEAM_ROHMATERIAL_ORDNER ist der Eingang des Menschen — eine Leerliste von
+# Ordnern (Default `raw/ Clippings/`), in die NUR er ablegt; jede Rolle liest
+# dort nur. Nicht versioniert (gitignore-Fragment) — Git und damit Guard und
+# Rollback sehen sie nicht. Gesichert werden sie trotzdem doppelt:
+# team_pfade_zuruecksetzen fasst keinen Pfad darunter an (auch nicht nach einem
+# `git add -f`; BL-24 zeigt, wie knapp das ist), und ein Schnappschuss beim
+# Rollenstart meldet jeden Schreibzugriff. Geloescht oder zurueckgesetzt wird
+# dabei NICHTS: Ob die Rolle oder der Mensch geschrieben hat, ist nicht zu
+# unterscheiden. Ausfuehrlich in der bash-Fassung.
+#
+# Der Wert bleibt, wie die Konfiguration ihn gesetzt hat — normalisiert wird
+# nur beim Gebrauch (team_raw_zonen). BL-182: Was die Konfiguration setzt, muss
+# an der Aufrufstelle unveraendert ankommen.
+$TEAM_ROHMATERIAL_ORDNER = Team-Default 'TEAM_ROHMATERIAL_ORDNER' 'raw/ Clippings/'
+$script:TEAM_RAW_VORHER = @()
+$script:TEAM_RAW_ERFASST = $false
+
+function team_raw_zonen {
+    # Die Zonen einzeln, ohne abschliessenden Schraegstrich (so nennen
+    # Git-Pfade sie). Ordnernamen mit Leerzeichen werden nicht unterstuetzt —
+    # dieselbe Grenze wie bei TEAM_WEITERER_CODE.
+    return @("$TEAM_ROHMATERIAL_ORDNER" -split '\s+' |
+             ForEach-Object { $_.TrimEnd('/', '\') } | Where-Object { $_ })
+}
+
+function team_raw_pfad {
+    # $true, wenn der Pfad in einer Rohmaterial-Zone liegt — auch der Ordner
+    # selbst, wie `git status` ihn als EINEN Eintrag meldet.
+    param([string]$Pfad)
+    if (-not $Pfad) { return $false }
+    foreach ($zone in @(team_raw_zonen)) {
+        if ($Pfad -ceq $zone -or $Pfad -ceq "$zone/" -or
+            $Pfad.StartsWith("$zone/", [StringComparison]::Ordinal)) { return $true }
+    }
+    return $false
+}
+
+function team_raw_stand {
+    <#
+      Je Eintrag unter den Zonen eine Zeile: "d`t<pfad>" fuer Ordner,
+      "f`t<pfad>`t<bytes>`t<ticks>" sonst — Pfade ab der Repo-Wurzel und mit
+      Schraegstrich, wie Git und jede andere Guard-Meldung sie nennen. Eine
+      Zone, die es (noch) nicht gibt, traegt nichts bei. Ein unlesbarer Eintrag
+      bricht nichts ab: Eine Pruefung darf den Rollenlauf nicht beenden.
+    #>
+    $zeilen = @(foreach ($ordner in @(team_raw_zonen)) {
+        if (-not (Test-Path -LiteralPath $ordner -PathType Container)) { continue }
+        $basis = (Resolve-Path -LiteralPath $ordner).ProviderPath.TrimEnd('\', '/')
+        foreach ($e in @(Get-ChildItem -LiteralPath $ordner -Recurse -Force -ErrorAction SilentlyContinue)) {
+            $rel = $ordner + '/' + $e.FullName.Substring($basis.Length + 1).Replace('\', '/')
+            if ($e.PSIsContainer) { "d`t$rel" }
+            else { "f`t$rel`t$($e.Length)`t$($e.LastWriteTimeUtc.Ticks)" }
+        }
+    })
+    [Array]::Sort($zeilen, [StringComparer]::Ordinal)
+    return $zeilen
+}
+
+function team_raw_begin {
+    $script:TEAM_RAW_VORHER = @(team_raw_stand)
+    $script:TEAM_RAW_ERFASST = $true
+}
+
+function team_raw_pruefen {
+    <#
+      $true = die Zonen sind unveraendert · $false = Uebergriff, laut gemeldet.
+      Faengt nie etwas an: kein Loeschen, kein Zuruecksetzen, kein Commit.
+    #>
+    param([string]$Rolle)
+    if (-not $script:TEAM_RAW_ERFASST) {
+        Team-Fehler "[$Rolle] Rohmaterial-Zone ($TEAM_ROHMATERIAL_ORDNER): kein Startstand erfasst — NICHT geprüft."
+        return $true
+    }
+    # Ordinal statt der PowerShell-Hashtable: Die vergleicht Schluessel ohne
+    # Ruecksicht auf Gross-/Kleinschreibung, Git-Pfade tun das nicht.
+    $vorher = [System.Collections.Generic.Dictionary[string, string]]::new([StringComparer]::Ordinal)
+    $jetzt  = [System.Collections.Generic.Dictionary[string, string]]::new([StringComparer]::Ordinal)
+    foreach ($z in @($script:TEAM_RAW_VORHER)) { if ($z) { $vorher[$z.Split("`t")[1]] = $z } }
+    foreach ($z in @(team_raw_stand))           { if ($z) { $jetzt[$z.Split("`t")[1]] = $z } }
+    $abweichung = @()
+    foreach ($p in $jetzt.Keys) {
+        if (-not $vorher.ContainsKey($p))   { $abweichung += "neu:       $p" }
+        elseif ($vorher[$p] -cne $jetzt[$p]) { $abweichung += "geändert:  $p" }
+    }
+    foreach ($p in $vorher.Keys) {
+        if (-not $jetzt.ContainsKey($p)) { $abweichung += "entfernt:  $p" }
+    }
+    if (-not $abweichung.Count) { return $true }
+    Team-Fehler "[$Rolle] ÜBERGRIFF in der Rohmaterial-Zone ($TEAM_ROHMATERIAL_ORDNER) — sie gehört dem Stakeholder, jede Rolle liest dort nur:"
+    foreach ($z in @($abweichung | Sort-Object { $_.Substring(11) })) { Team-Fehler "  $z" }
+    Team-Fehler "  Nichts davon wurde angefasst (BL-263). Stammt eine Änderung nicht vom Stakeholder, hat die Rolle die Zone verletzt — von Hand prüfen."
+    return $false
+}
+
 function team_guard_schnappschuss {
     # Je schmutzigem Pfad eine Zeile "<blob-hash> <pfad>". Was sich nicht als
     # Datei lesen laesst (Loeschung, Umbenennung, untracked Verzeichnis)
@@ -1312,6 +1415,10 @@ function team_guard_begin {
         Team-Fehler "[guard] Diese Pfade werden der Rolle nicht angelastet, solange sie unverändert bleiben."
         Team-Fehler "[guard] Zwei schreibende Instanzen auf einem Arbeitsbaum sind trotzdem unzulässig — bitte committen."
     }
+    # BL-263: Git sieht die Rohmaterial-Zone nicht, also braucht sie ihren
+    # eigenen Startstand. Hier statt in jedem Aufrufer: Wer den Guard beginnt,
+    # hat damit auch die Zone erfasst.
+    team_raw_begin
     return $true
 }
 
@@ -1428,6 +1535,16 @@ function team_pfade_zuruecksetzen {
     $rest = @()
     foreach ($pfad in @($Pfade)) {
         if (-not $pfad) { continue }
+        if (team_raw_pfad $pfad) {
+            # BL-263: Die Rohmaterial-Zone gehoert dem Stakeholder — nie
+            # zuruecksetzen, nie loeschen. Hoechstens aus dem INDEX nehmen, was
+            # eine Rolle dort neu eingetragen hat (`git add -f`): Die Datei
+            # bleibt liegen, der Ordner bleibt unversioniert.
+            & git cat-file -e "$($Hash):$pfad" 2>$null | Out-Null
+            if ($LASTEXITCODE -ne 0) { & git rm -r --cached --quiet -- $pfad 2>$null | Out-Null }
+            Team-Fehler "[$Rolle] Guard: '$pfad' liegt in der Rohmaterial-Zone — Stakeholder-Eigentum, NICHT angefasst (BL-263)."
+            continue
+        }
         & git cat-file -e "$($Hash):$pfad" 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0) {
             # War beim Start getrackt -> auf Startstand zurueckholen.
@@ -1499,7 +1616,7 @@ function team_rollback_rolle {
         if ($z -and $z.Length -ge 4) { $pfade += $z.Substring(3) }
     }
     $pfade = @($pfade | Sort-Object -Unique |
-               Where-Object { $_ -notmatch $TEAM_GUARD_LAUFZEIT })
+               Where-Object { $_ -notmatch $TEAM_GUARD_LAUFZEIT -and $_ -notmatch $TEAM_GUARD_IGNORIERT })
     $pfade = @(team_fremd_ausfiltern $pfade)
     if ((& git rev-parse HEAD 2>$null) -ne $StartHash) {
         & git reset --soft $StartHash 2>$null | Out-Null
@@ -1527,6 +1644,10 @@ function team_guard_verify {
     #>
     param([string]$Rolle, [string]$Whitelist)
 
+    # BL-263: Die Rohmaterial-Zone prueft ihr eigener Schnappschuss — Git sieht
+    # sie nicht. Ein Uebergriff dort zaehlt wie jeder andere, nur ohne Rollback.
+    $rawSauber = [bool](team_raw_pruefen $Rolle)
+
     $roh = @()
     foreach ($p in @(& git diff --name-only $script:TEAM_GUARD_HASH HEAD 2>$null)) {
         if ($p) { $roh += $p }
@@ -1535,8 +1656,9 @@ function team_guard_verify {
         if ($z -and $z.Length -ge 4) { $roh += $z.Substring(3) }
     }
     $roh = @($roh | Sort-Object -Unique |
-             Where-Object { $_ -notmatch $Whitelist -and $_ -notmatch $TEAM_GUARD_LAUFZEIT })
-    if (-not $roh.Count) { return $true }
+             Where-Object { $_ -notmatch $Whitelist -and $_ -notmatch $TEAM_GUARD_LAUFZEIT -and
+                            $_ -notmatch $TEAM_GUARD_IGNORIERT })
+    if (-not $roh.Count) { return $rawSauber }
 
     # BL-114: derselbe Filter wie im Rollback — er kennt auch den Fall, dass
     # eine fremde Datei aus einem untracked ORDNER mitcommittet wurde und
@@ -1549,7 +1671,7 @@ function team_guard_verify {
         # Rolle angelastet, die ihn nicht verursacht hatte.
         Team-Fehler "[$Rolle] Guard: Pfade außerhalb der Whitelist geändert, aber ALLE waren beim Rollenstart bereits geändert und sind es unverändert — nicht dieser Rolle zugeschrieben, kein Rollback:"
         foreach ($p in $nichtAngelastet) { Team-Fehler "  $p" }
-        return $true
+        return $rawSauber
     }
 
     # Die Meldung trennt die beiden Faelle ausdruecklich sprachlich. Im Feld
@@ -1563,11 +1685,16 @@ function team_guard_verify {
     }
 
     $rest = @(team_pfade_zuruecksetzen $Rolle $script:TEAM_GUARD_HASH $verletzungen)
+    $rawAusgenommen = @($verletzungen | Where-Object { team_raw_pfad $_ }).Count -gt 0
 
     if ($rest.Count) {
         Team-Fehler "[$Rolle] Guard: ROLLBACK UNVOLLSTÄNDIG — diese Pfade stehen weiterhin abweichend im Baum:"
         foreach ($p in $rest) { Team-Fehler "  $p" }
         Team-Fehler "  Von Hand prüfen und zurücknehmen; der Lauf gilt als Übergriff."
+    } elseif ($rawAusgenommen) {
+        # BL-24-Lehre: Die Vollzugsmeldung darf nicht mehr behaupten, als
+        # geschehen ist. Die Zone blieb bewusst stehen — das steht hier.
+        Team-Fehler "[$Rolle] Guard: chirurgischer Rollback vollzogen — AUSGENOMMEN die Rohmaterial-Zone (siehe oben, von Hand prüfen)."
     } else {
         Team-Fehler "[$Rolle] Guard: chirurgischer Rollback vollzogen."
     }
@@ -2017,6 +2144,7 @@ Export-ModuleMember -Function * -Variable @(
     'TEAM_PROJEKT', 'TEAM_FELD_KUERZEL',
     'TEAM_PRODUKTIVCODE', 'TEAM_TEST_ORDNER', 'TEAM_PLAN_ORDNER',
     'TEAM_WEITERER_CODE', 'TEAM_TEST_ORDNER_BESTAND', 'TEAM_PLAN_ORDNER_BESTAND',
+    'TEAM_ROHMATERIAL_ORDNER', 'TEAM_GUARD_IGNORIERT',
     'TEAM_BEUTEBUCH', 'TEAM_ERMITTLUNGSAKTEN', 'TEAM_ROADMAP', 'TEAM_BACKLOG',
     'TEAM_CHANGELOG', 'TEAM_SMOKE_TEST', 'TEAM_FIX_PRAEFIX', 'TEAM_FEAT_PRAEFIX',
     'TEAM_BEUTEBUCH_TOOL', 'TEAM_KOSTEN_TOOL', 'TEAM_MELDUNG_TOOL',

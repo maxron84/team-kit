@@ -1463,7 +1463,7 @@ kandidaten_ausserhalb() {
         case "$name" in
             "${PRODUKTIVCODE%/}"|"${TEST_ORDNER%/}"|"${PLAN_ORDNER%/}") continue ;;
             team|node_modules|__pycache__|venv|.venv|dist|build|target) continue ;;
-            docs|doku|data|assets|static|media|.*)                      continue ;;
+            docs|doku|data|assets|static|media|raw|clippings|Clippings|.*) continue ;;
             ralph.sh|frank.sh|harry.sh|marv.sh|axel.sh|install.sh)      continue ;;
             vollautomatik.sh|halbautomatik.sh|team-*.sh|team.config.sh) continue ;;
             ralph.ps1|frank.ps1|harry.ps1|marv.ps1|axel.ps1)            continue ;;
@@ -1948,7 +1948,12 @@ schreibe ".budget-ledger" ""
 schreibe ".ralph-state" "1
 "
 mkdir -p "$ZIEL/${TEST_ORDNER}"
+# BL-263: der Eingang des Stakeholders. Nur der Ordner — sein Inhalt gehoert
+# dem Menschen, und ein vorhandener bleibt, wie er ist (mkdir -p). Nicht
+# versioniert: Das gitignore-Fragment unten nimmt ihn heraus.
+mkdir -p "$ZIEL/raw"
 gruen "  ✓ CLAUDE.md, CHANGELOG, Beutebuch (mit Vorlage-Block), Roadmap, Backlog, Ledger, State"
+gruen "  ✓ raw/ — Rohmaterial des Stakeholders, das T.E.A.M. liest dort nur (nicht versioniert)"
 
 # Platzhalter füllen — auch in den Briefings: sie sind selbst Prompts und
 # nennen sonst die Pfade des Ursprungsprojekts (falsche Guard-Grenze!).

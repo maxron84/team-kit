@@ -24,3 +24,15 @@ backups/
 # Laufzeitartefakte der Team-Werkzeuge (Python) — NUR unter team/.
 team/**/__pycache__/
 team/**/.pytest_cache/
+
+# --- Ordner des Stakeholders (BL-263) -----------------------------------------
+# Rohmaterial (TEAM_ROHMATERIAL_ORDNER): Hier legt NUR der Mensch ab, das
+# T.E.A.M. liest nur. Bewusst NICHT versioniert — so kann kein Guard und kein
+# Rollback dort etwas loeschen. Heissen die Ordner in team.config.* anders,
+# diese Zeilen mitziehen. Clippings/ legt das Kit nicht an; es taucht auf,
+# sobald dort Web-Clippings landen.
+/raw/
+/Clippings/
+# Die Arbeitsflaeche des Notizwerkzeugs (Obsidian) — fuer das T.E.A.M.
+# komplett ignoriert: nicht lesen, nicht schreiben, nicht ueberwachen.
+/.obsidian/
