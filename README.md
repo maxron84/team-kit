@@ -127,7 +127,7 @@ und ein Gleichstands-Prüfer, der **an seinem eigenen Befund starb**, weil `diff
 mit 1 endet, wenn es etwas findet. Keiner der fallenden Fälle wurde grün
 gedreht.
 
-**Offen sind 27 Einträge**, und keiner davon ist ein Rest dieser Version.
+**Offen sind 28 Einträge**, und keiner davon ist ein Rest dieser Version.
 **Fünf warten auf eine Entscheidung**, die die Einträge selbst dem Owner
 vorbehalten — welche der beiden Bauformen gefahren wird (`BL-194`), ob der
 Lückenfinder eine Formatänderung am Ledger wert ist (`BL-193`), wie der
@@ -435,7 +435,7 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 | **`Feld E`** | Greenfield, Linux, bash-Bahn: Dart/Flutter + SQLite für ein **Android-Tablet** — Neubau, dessen Python/tkinter-Vorgänger (~25.500 LOC, 17 Spec-Dokumente) als reine Lesereferenz danebenliegt | **Zwei Kaskaden geplant, gebaut und abgeschlossen** (2026-08-24): Datenfundament und Einrichtungs-Wizard, zusammen 10 Stufen ohne Fehlversuch, 86 Tests in `Feld E`, 5 Red-Team-Funde, rund 50 USD Abo-Gegenwert — vollständig geledgert. `BL-158`…`BL-168` — **elf Funde**: die ersten acht vor der ersten gebauten Stufe, aus dem Lesen der Kopplungen zwischen Konfiguration, Testläufer und Rollen-Prompt; die letzten drei aus dem Betrieb (Preistabelle, Zeitpunkt der Gegenprobe, Rückkanal). Der erste Stack ohne pytest: Was das Kit an Python-Annahmen mitträgt, wird hier zum ersten Mal sichtbar. Zugleich der erste Beleg für den Rückkanal als Werkzeug statt als Handarbeit |
 
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen sechs Quellen
-kommen die Backlog-Einträge `BL-1`…`BL-263`; was davon behoben ist, steht im
+kommen die Backlog-Einträge `BL-1`…`BL-264`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
 [plans/backlog-archiv.md](plans/backlog-archiv.md) (173 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
@@ -793,7 +793,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 ## Der Rückkanal Feld → Kit
 
 **Jeder Lauf in einem echten Projekt fördert Kit-Fehler zutage** — `BL-1` bis
-`BL-263` sind fast alle so entstanden. Damit das nicht von der Disziplin
+`BL-264` sind fast alle so entstanden. Damit das nicht von der Disziplin
 einzelner abhängt, ist der Weg zurück ein Befehl aus dem installierten Projekt
 heraus:
 
@@ -846,7 +846,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   `Feld D` **eine** und `Feld E` **zwei** auf der bash-Bahn — `Feld C` gar
   keine. Zwei Plattformen und zwei Bahnen sind damit berührt, aber nur **eine**
   Kombination ist eingelaufen. Jeder Lauf hat Kit-Fehler zutage gefördert —
-  `BL-1`…`BL-263`, von der toten Fixphase über zwei Löcher in der
+  `BL-1`…`BL-264`, von der toten Fixphase über zwei Löcher in der
   Kostenerfassung und die Zeilenenden bis zur vierten Fehlerklasse „Stufe
   fertig, Quittung fehlt". Die Erwartung ist nicht, dass das aufhört; die
   Mechanik dafür ist der [Rückkanal Feld → Kit](#der-rückkanal-feld--kit) —
