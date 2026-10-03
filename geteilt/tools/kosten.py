@@ -54,6 +54,15 @@ Nutzung:
                                         "kein Treffer" zu unterscheiden — nur
                                         die Trefferanzahl beantwortet
                                         "existiert eine Zeile?" zuverlaessig.
+    kosten.py modelle [DIR...] [--cli BEFEHL]
+                                        BL-264: je Rolle das Modell, das
+                                        die Logs in DIR tragen (Default
+                                        .ralph-logs .team-logs), und eine
+                                        WARNUNG, wenn die Preistabelle eine
+                                        neuere Version derselben Familie
+                                        kennt. Mit --cli die Version der
+                                        CLI des Loops neben der IDE-
+                                        gebuendelten. Exit 3 = Warnung.
     kosten.py turns [DIR...]            Turn-Profil der Laeufe in DIR
                                         (Default ".ralph-logs"): Anzahl,
                                         Schnitt und je Lauf Turns plus Kosten
@@ -241,6 +250,7 @@ import json
 import math
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -965,6 +975,202 @@ def turn_profil(dirs, files=None):
     return len(zeilen), sum(z[1] for z in zeilen), zeilen
 
 
+# --- BL-264: Welches Modell lief — und welche CLI hat es ausgewaehlt? --------
+#
+# Das Kit setzt die Modelle als ALIAS (`TEAM_MODEL_LOOP=sonnet`,
+# `TEAM_MODEL_STRONG=opus`) und nahm still an, die CLI loese ihn auf das
+# neueste Modell der Familie auf. Im Feld (`Feld F`) liefen alle 126
+# Rollenlaeufe ueber fuenf Kaskaden auf `claude-sonnet-5`, waehrend das Abo
+# `claude-sonnet-5-5` hatte: Die Alias-Tabelle haengt an der CLI-VERSION —
+# 2.1.283 im PATH loeste `sonnet` anders auf als 2.1.285 daneben. Nichts im
+# Kit zeigte es an: Das Modell stand nur in den Rohlogs, die Kosten sahen
+# plausibel aus. Die Daten dafuer liegen in jedem Log (`modelUsage`).
+
+MODELL_ID = re.compile(
+    r"^claude-(?P<familie>[a-z]+)-(?P<major>\d+)(?:-(?P<minor>\d{1,2}))?(?![0-9])")
+
+
+def modell_version(modell_id):
+    """(familie, (major, minor)) aus einer Modell-ID, oder None.
+
+    `claude-sonnet-5-5` -> ('sonnet', (5, 5)); `claude-opus-5-20260101` ->
+    ('opus', (5, 0)) — eine Datumsendung ist keine Unterversion. Plattform-
+    Praefixe (`anthropic.` auf Bedrock) fallen weg wie beim Preis."""
+    kern = str(modell_id or "").split(".")[-1]
+    m = MODELL_ID.match(kern)
+    if not m:
+        return None
+    return m.group("familie"), (int(m.group("major")), int(m.group("minor") or 0))
+
+
+def neueste_bekannte_version(familie):
+    """(modell_id, version) der hoechsten Version dieser Familie, die die
+    Preistabelle (samt `TEAM_PREISE`) kennt — oder None.
+
+    Die Preistabelle ist die eine Stelle, die das Kit fuer neue Modelle
+    ohnehin nachzieht (sonst rechnet es falsch, BL-302). Eine zweite Liste
+    nur fuer diese Frage wuerde lautlos veralten."""
+    tabelle = dict(PREIS_INPUT_USD_PRO_MTOK)
+    tabelle.update(preis_uebersteuerung())
+    beste = None
+    for name in tabelle:
+        v = modell_version(name)
+        if v and v[0] == familie and (beste is None or v[1] > beste[1]):
+            beste = (name, v[1])
+    return beste
+
+
+def hauptmodell(nutzung):
+    """Das Modell, das in einem Log die Arbeit trug: die meisten Kosten, sonst
+    die meisten Output-Token. Die CLI ruft fuer Nebenarbeit ein kleines Modell
+    mit — das ist nicht das Modell der Rolle."""
+    if not isinstance(nutzung, dict) or not nutzung:
+        return None
+
+    def gewicht(eintrag):
+        u = eintrag[1] if isinstance(eintrag[1], dict) else {}
+        return (u.get("costUSD") or 0.0, u.get("outputTokens") or 0)
+
+    return max(nutzung.items(), key=gewicht)[0]
+
+
+def rolle_des_logs(pfad):
+    """`stufe-*.json` ist Ralph; sonst steht die Rolle vorn im Dateinamen
+    (`frank-HM-12-v1-….json`, `harry-….json`)."""
+    name = os.path.basename(pfad)
+    if name.startswith("stufe-"):
+        return "ralph"
+    return name.split("-", 1)[0] or "?"
+
+
+def modell_profil(files):
+    """{rolle: {modell: anzahl}} aus den Hauptmodellen der Logs."""
+    profil = {}
+    for datei in files:
+        try:
+            with open(datei, encoding="utf-8-sig") as f:
+                data = json.load(f)
+        except (OSError, ValueError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        modell = hauptmodell(data.get("modelUsage"))
+        if not modell:
+            continue
+        je = profil.setdefault(rolle_des_logs(datei), {})
+        je[modell] = je.get(modell, 0) + 1
+    return profil
+
+
+def veraltete_modelle(profil):
+    """[(rolle, modell, anzahl, neuere_id)] — wo die Preistabelle eine NEUERE
+    Version derselben Familie kennt als die, die gelaufen ist."""
+    befunde = []
+    for rolle, modelle in sorted(profil.items()):
+        for modell, anzahl in sorted(modelle.items()):
+            v = modell_version(modell)
+            if not v:
+                continue
+            neueste = neueste_bekannte_version(v[0])
+            if neueste and neueste[1] > v[1]:
+                befunde.append((rolle, modell, anzahl, neueste[0]))
+    return befunde
+
+
+VERSION_IN_TEXT = re.compile(r"(\d+)\.(\d+)\.(\d+)")
+IDE_ERWEITERUNGEN = (".vscode", ".vscode-server", ".vscode-insiders",
+                     ".vscodium", ".cursor", ".windsurf")
+
+
+def cli_version(befehl, timeout=20):
+    """Version der Agenten-CLI als (a, b, c), oder None. Ruft nur `--version`
+    — kein Modellaufruf, keine Kosten."""
+    if not befehl:
+        return None
+    pfad = shutil.which(befehl) or (befehl if os.path.isfile(befehl) else None)
+    if not pfad:
+        return None
+    try:
+        r = subprocess.run([pfad, "--version"], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    m = VERSION_IN_TEXT.search((r.stdout or "") + (r.stderr or ""))
+    return tuple(int(x) for x in m.groups()) if m else None
+
+
+def ide_cli_version(heim=None):
+    """((a, b, c), pfad) der neuesten IDE-gebuendelten CLI, oder None.
+
+    Dieselben Ablagen wie die Suche der Installer (BL-173); die Version steht
+    im Ordnernamen der Erweiterung. Verglichen wird NUMERISCH — `2.1.99` vor
+    `2.1.288` ist lexikalisch falsch herum."""
+    heim = heim or os.environ.get("HOME") or os.environ.get("USERPROFILE")
+    if not heim:
+        return None
+    beste = None
+    for wurzel in IDE_ERWEITERUNGEN:
+        muster = os.path.join(heim, wurzel, "extensions", "*claude-code*",
+                              "resources", "native-binary", "claude*")
+        for pfad in glob.glob(muster):
+            m = VERSION_IN_TEXT.search(
+                os.path.basename(os.path.dirname(os.path.dirname(
+                    os.path.dirname(pfad)))))
+            if not m:
+                continue
+            v = tuple(int(x) for x in m.groups())
+            if beste is None or v > beste[0]:
+                beste = (v, pfad)
+    return beste
+
+
+def _v(version):
+    return ".".join(str(x) for x in version)
+
+
+def modell_bericht(files, cli=None, heim=None):
+    """(zeilen, warnungen) fuer `kosten.py modelle`."""
+    zeilen, warnungen = [], []
+    profil = modell_profil(files)
+    if profil:
+        teile = []
+        for rolle, modelle in sorted(profil.items()):
+            liste = ", ".join(f"{m} ({n})" for m, n in sorted(modelle.items()))
+            teile.append(f"{rolle} {liste}")
+        zeilen.append("Modelle: " + " · ".join(teile))
+    else:
+        zeilen.append("Modelle: (keine Logs mit modelUsage)")
+    for rolle, modell, anzahl, neuer in veraltete_modelle(profil):
+        familie = modell_version(modell)[0]
+        warnungen.append(
+            f"WARNUNG: {rolle} lief auf {modell} ({anzahl} Lauf/Laeufe), die "
+            f"Preistabelle kennt mit {neuer} eine neuere Version derselben "
+            f"Familie. Den Alias (`{familie}`) loest die VERSION der CLI auf, "
+            f"nicht das Abo: `claude update` fuer die CLI, die der Loop ruft "
+            f"(TEAM_CLAUDE_BIN), oder das Modell festnageln (TEAM_MODEL_* = "
+            f"{neuer}). Ist die aeltere Version Absicht, ist nichts zu tun "
+            f"(BL-264).")
+    if cli:
+        eigene = cli_version(cli)
+        ide = ide_cli_version(heim)
+        if eigene:
+            zeile = f"Agenten-CLI des Loops: {_v(eigene)} ({cli})"
+            if ide:
+                zeile += f" · IDE-gebuendelt: {_v(ide[0])}"
+            zeilen.append(zeile)
+            if ide and ide[0] > eigene:
+                warnungen.append(
+                    f"WARNUNG: Die CLI des Loops ({_v(eigene)}) ist aelter als "
+                    f"die IDE-gebuendelte ({_v(ide[0])}). Welches Modell ein "
+                    f"Alias meint, entscheidet die CLI-Version — im Feld liefen "
+                    f"damit alle Rollen auf einer aelteren Sonnet-Version "
+                    f"(BL-264). Abhilfe: `claude update`, oder TEAM_CLAUDE_BIN "
+                    f"auf die neuere CLI setzen.")
+        else:
+            zeilen.append(f"Agenten-CLI des Loops: Version nicht lesbar ({cli})")
+    return zeilen, warnungen
+
+
 def kaskade_beginn(kaskade, repo="."):
     """Epoch-Zeitstempel des Commits, der die PLANDATEI der Kaskade angelegt
     hat — der maschinell verfuegbare Beginn eines Laufs. None, wenn keine
@@ -1217,8 +1423,17 @@ PREIS_VIELFACHE = {
 # (anthropic.claude-opus-5 auf Bedrock) mitlaufen, ohne die Tabelle zu
 # verdoppeln.
 PREIS_INPUT_USD_PRO_MTOK = {
+    # BL-302: Die 5.5er-Generation (und Fable/Mythos 5.1) fehlten hier. Ueber
+    # den laengsten Praefix liefen sie trotzdem mit — `claude-opus-5-5` als
+    # `claude-opus-5` zu 5,00 statt 4,00, und mit dem falschen
+    # Cache-Read-Satz (siehe CACHE_READ_FAKTOR_JE_MODELL). Eingetragen sind
+    # sie auch deshalb, weil `modelle` (BL-264) an dieser Tabelle abliest,
+    # welche Version einer Familie die neueste ist.
+    "claude-fable-5-1":  10.00,
+    "claude-mythos-5-1": 10.00,
     "claude-fable-5":   10.00,
     "claude-mythos-5":  10.00,
+    "claude-opus-5-5":   4.00,
     "claude-opus-5":     5.00,
     "claude-opus-4-8":   5.00,
     "claude-opus-4-7":   5.00,
@@ -1231,6 +1446,7 @@ PREIS_INPUT_USD_PRO_MTOK = {
     # in 9 von 9 abgerechneten Laeufen fehl, 25–33 % daneben, und das Werkzeug
     # verweigerte regelkonform jede Buchung. Kein stiller Fehler — die Eichung
     # tat genau, was sie soll; der Schaden war die Blockade.
+    "claude-sonnet-5-5": 2.00,
     "claude-sonnet-5":   2.00,
     "claude-sonnet-4-6": 3.00,
     "claude-sonnet-4-5": 3.00,
@@ -1449,10 +1665,42 @@ def echte_nutzer_prompts(pfade):
     return n
 
 
-def kosten_aus_tokens(kuebel, basispreis):
-    """USD fuer einen Token-Kuebel bei gegebenem Basispreis je Mio Input."""
+# BL-302: Der Cache-Read-Satz ist NICHT mehr modelluebergreifend. Bis zur
+# 5er-Generation kostete ein Cache-Read das 0,1-Fache des Inputs; Claude Opus
+# 5.5 liest zum 0,05-Fachen (0,20 USD je Mio bei 4,00 Input), Claude Fable
+# 5.1 und Mythos 5.1 zum 0,025-Fachen (0,25 bei 10,00). Weil Cache-Reads in
+# einer langen interaktiven Sitzung die mit Abstand groesste Menge sind
+# (`BL-252`: 152,3 Mio in EINER Sitzung), rechnete `sitzung-messen` eine
+# Architekten-Sitzung auf Opus 5.5 damit um ein Mehrfaches zu teuer — und
+# fuer interaktive Sitzungen gibt es kein abgerechnetes Log, an dem die
+# Selbsteichung den Fehler haette sehen koennen.
+CACHE_READ_FAKTOR_JE_MODELL = {
+    "claude-opus-5-5":   0.05,
+    "claude-fable-5-1":  0.025,
+    "claude-mythos-5-1": 0.025,
+}
+
+
+def preis_vielfache(modell_id=None):
+    """Die vier Verhaeltnisse zum Basispreis — mit dem Cache-Read-Satz des
+    Modells, wo er von 0,1 abweicht (laengster Praefix, wie beim Preis)."""
+    faktoren = dict(PREIS_VIELFACHE)
+    if modell_id:
+        kern = str(modell_id).split(".")[-1]
+        treffer = [n for n in CACHE_READ_FAKTOR_JE_MODELL if kern.startswith(n)]
+        if treffer:
+            faktoren["cache_read"] = CACHE_READ_FAKTOR_JE_MODELL[
+                max(treffer, key=len)]
+    return faktoren
+
+
+def kosten_aus_tokens(kuebel, basispreis, modell_id=None):
+    """USD fuer einen Token-Kuebel bei gegebenem Basispreis je Mio Input.
+
+    Ohne `modell_id` gelten die allgemeinen Verhaeltnisse; mit ihr der
+    Cache-Read-Satz des Modells (BL-302)."""
     gesamt = kuebel["input"] / 1_000_000 * basispreis
-    for art, faktor in PREIS_VIELFACHE.items():
+    for art, faktor in preis_vielfache(modell_id).items():
         gesamt += kuebel[art] / 1_000_000 * basispreis * faktor
     return gesamt
 
@@ -1472,7 +1720,7 @@ def sitzung_kosten(je_modell):
         if preis is None:
             unbekannt.append(modell)
             continue
-        usd = kosten_aus_tokens(kuebel, preis)
+        usd = kosten_aus_tokens(kuebel, preis, modell)
         gesamt += usd
         zeilen.append((modell, preis, kuebel, usd))
     return gesamt, zeilen, unbekannt
@@ -1620,7 +1868,8 @@ def preise_nachrechnen(logs):
                 if preis is None:
                     vollstaendig = False
                     break
-                gerechnet += kosten_aus_tokens(_modelusage_kuebel(u, art), preis)
+                gerechnet += kosten_aus_tokens(_modelusage_kuebel(u, art), preis,
+                                               modell)
             if not vollstaendig:
                 break
             grenzen.append(gerechnet)
@@ -1770,7 +2019,8 @@ def preis_diagnose(logs):
         modell, u = next(iter(nutzung.items()))
         saetze = []
         for art in ("cache_write_1h", "cache_write_5m"):
-            einheiten = kosten_aus_tokens(_modelusage_kuebel(u, art), 1.0)
+            einheiten = kosten_aus_tokens(_modelusage_kuebel(u, art), 1.0,
+                                          modell)
             if einheiten > 0:
                 saetze.append(gemeldet / einheiten)
         if saetze:
@@ -2281,6 +2531,8 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
 VERBEN = {
     "summe": "summe [--split] [--since EPOCH] DIR...",
     "turns": "turns [DIR...]   (Default .ralph-logs)",
+    "modelle": ("modelle [DIR...] [--cli BEFEHL]   (Default .ralph-logs "
+                ".team-logs)"),
     "ledger": ("ledger [PFAD] [--domaene D] [--rolle R] [--kaskade N] "
                "[--split] [--anzahl]"),
     "ledger-pruefen": "ledger-pruefen [--pfad P] [--kaskade N]",
@@ -2366,6 +2618,33 @@ def _main(argv):
         if hinweis:
             print(hinweis, file=sys.stderr)
         return 0
+
+    if befehl == "modelle":
+        # BL-264: Welches Modell lief je Rolle, und ist es das neueste seiner
+        # Familie, das die Preistabelle kennt? Mit --cli zusaetzlich die
+        # Version der CLI, die der Loop ruft, neben der IDE-gebuendelten.
+        # Exit 3 = es gibt eine WARNUNG; der Bericht laeuft trotzdem durch.
+        cli = None
+        dirs = []
+        i = 0
+        while i < len(rest):
+            if rest[i] == "--cli":
+                if i + 1 >= len(rest):
+                    print("Fehler: --cli braucht einen Befehl", file=sys.stderr)
+                    return 1
+                cli = rest[i + 1]
+                i += 2
+            elif rest[i].startswith("--"):
+                print(f"Fehler: unbekanntes Argument '{rest[i]}'", file=sys.stderr)
+                return 1
+            else:
+                dirs.append(rest[i])
+                i += 1
+        zeilen, warnungen = modell_bericht(
+            team_log_dateien(dirs or [".ralph-logs", ".team-logs"]), cli=cli)
+        for z in zeilen + warnungen:
+            print(z)
+        return 3 if warnungen else 0
 
     if befehl == "turns":
         # BL-37 (c): Turn-Profil des Laufs — die Diagnose, ob der Stufenschnitt

@@ -8,8 +8,9 @@ und blockierte den Fund (realer Auslöser: HM-32, Frank Versuch 2 kostete
 1,44 USD >= 1 USD → Fehlversuch trotz plausiblem Fix).
 
 Neues Modell in team/lib.sh:
-  - Zentrale Basiszahlen TEAM_ROLE_BUDGET_USD=5 (Soft, alle Rollen) und
-    TEAM_ROLE_HARDCAP_USD=10 (Hard, Frank/Axel).
+  - Zentrale Basiszahlen TEAM_ROLE_BUDGET_USD (Soft, alle Rollen) und
+    TEAM_ROLE_HARDCAP_USD (Hard, Frank/Axel) — anfangs 5/10, seit BL-286
+    20/40.
   - team_budget_check <kosten> <soft> <label> [hard] gibt vier Zustände zurück:
       0 = ok, 1 = Warnschwelle (80 % soft), 2 = Soft-Cap überschritten,
       3 = Hard-Cap überschritten (nur mit hard>soft).
@@ -67,8 +68,10 @@ def _lib_default(schale, name):
 # --- Zentrale Defaults --------------------------------------------------------
 
 def test_zentrale_defaults(schale):
-    assert _lib_default(schale, "TEAM_ROLE_BUDGET_USD") == "5", "Soft-Cap-Default muss 5 sein"
-    assert _lib_default(schale, "TEAM_ROLE_HARDCAP_USD") == "10", "Hard-Cap-Default muss 10 sein"
+    # BL-286: 20/40 statt 5/10 (Entscheid des Owners). Der Fall laeuft je
+    # Bahn — stellt nur eine um, wird die andere rot.
+    assert _lib_default(schale, "TEAM_ROLE_BUDGET_USD") == "20", "Soft-Cap-Default muss 20 sein"
+    assert _lib_default(schale, "TEAM_ROLE_HARDCAP_USD") == "40", "Hard-Cap-Default muss 40 sein"
 
 
 def test_projektwert_haelt_das_hard_groesser_soft_verhaeltnis(schale):

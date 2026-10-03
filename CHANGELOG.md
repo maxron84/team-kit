@@ -11,6 +11,24 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **Welches Modell die Rollen fahren — und welche CLI es auswählt** (`BL-264`,
+  Prio 1, gemeldet aus `Feld F`). Das Kit setzt die Modelle als Alias
+  (`sonnet`, `opus`) und nahm an, die CLI wähle damit das neueste Modell der
+  Familie. Im Feld liefen **alle 126 Rollenläufe über fünf Kaskaden** auf
+  `claude-sonnet-5`, obwohl das Abo `claude-sonnet-5-5` hatte: Die CLI im
+  `PATH` (2.1.283) löste den Alias anders auf als die IDE-gebündelte daneben
+  (2.1.285). Das Modell stand nur in den Rohlogs.
+
+  `kosten.py modelle` nennt je Rolle das Hauptmodell der Logs und warnt, wenn
+  die Preistabelle eine neuere Version derselben Familie kennt; mit `--cli`
+  vergleicht es die Version der CLI des Loops mit der neuesten
+  IDE-gebündelten (nur `--version`, kein Modellaufruf). `team-status` zeigt
+  beides auf beiden Bahnen im Abschnitt „Modell & CLI" — und damit auch der
+  Abschlussbericht der Vollautomatik. Konfiguration und Regeldatei-Vorlage
+  sagen jetzt, dass ein Alias der CLI-Version folgt und eine volle ID in
+  `TEAM_MODEL_*` das Modell festnagelt. Auf der Maschine, auf der das gebaut
+  wurde, schlug die Warnung sofort an: CLI des Loops 2.1.285, IDE 2.1.288.
+
 - **Die Ordner des Stakeholders: `raw/` und `Clippings/` nur lesen,
   `.obsidian/` gar nicht** (`BL-263`, beide Bahnen). In allen Projekten des
   Owners lagen von Hand angelegte Ordner, in die nur der Mensch ablegt:
@@ -69,6 +87,16 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Installation, die es nennen müsste.
 
 ### Changed
+
+- **Budget-Defaults der Rollen 20/40 statt 5/10 USD** (`BL-286`, Entscheid
+  des Owners). Soft-Cap `TEAM_ROLE_BUDGET_USD` 20, Hard-Cap
+  `TEAM_ROLE_HARDCAP_USD` 40 — in beiden Bibliotheken, beiden
+  Konfigurationsvorlagen und der Regeldatei-Vorlage. Zu tiefe Caps werfen
+  bezahlte Arbeit weg (`HM-32`). **Die Folge ist benannt:** Der Soft-Cap
+  liegt jetzt über dem Default des Lauf-Deckels (`TEAM_BUDGET_USD`, 15); ohne
+  Budget-Empfehlung im Plan stoppt einen teuren Aufruf von Ralph, Harry oder
+  Marv in der Regel der Lauf-Deckel. Bestehende Projekte behalten ihre Werte
+  in `team.config.*`.
 
 - **Die Plan-Gegenprobe aus `BL-220` hielt die Kaskadennummer gegen den Plan
   des ARBEITSVERZEICHNISSES statt gegen den des Projekts, dessen Ledger
@@ -333,6 +361,52 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   die Umgebungsvariable nicht.* Still bleibt es, wo nichts abweicht.
 
 ### Fixed
+
+- **Die Preistabelle kannte die 5.5er-Generation nicht, und der
+  Cache-Read-Satz galt als modellübergreifend** (`BL-302`, Kit-intern, beim
+  Bauen von `BL-264` gefunden). `claude-opus-5-5` lief als `claude-opus-5`:
+  Input 5,00 statt 4,00 USD je Mio, Cache-Reads 0,50 statt 0,20. Claude Opus
+  5.5 liest zum 0,05-Fachen, Fable 5.1 und Mythos 5.1 zum 0,025-Fachen. Weil
+  Cache-Reads in langen interaktiven Sitzungen die größte Menge sind, maß
+  `sitzung-messen` eine Architekten-Sitzung auf Opus 5.5 rund doppelt so
+  teuer — und keine Eichung konnte es sehen, denn interaktive Sitzungen haben
+  kein abgerechnetes Log. Bereits gebuchte Zeilen bucht das Kit nicht von
+  sich aus um.
+
+- **Der Bericht über ein rotes Gate stürzte auf der pwsh-Bahn genau dann ab,
+  wenn er gebraucht wurde** (`BL-275`, gemeldet aus `Feld B`, dreimal
+  eingetreten). `TEAM_GATE_DATEI` fehlte in der Exportliste von `lib.psm1` —
+  dieselbe Bauform wie `BL-182`. Behoben, und der Wunsch der Meldung ist
+  mitgebaut: Ein Wächter hält jede `$TEAM_*`-Variable, die eine Datei liest,
+  die das Modul importiert, gegen die Exportliste.
+
+- **Zwei Laufzeitartefakte fehlten in der Guard-Liste** (`BL-269`, gemeldet
+  aus `Feld B`). Franks Rollback räumte die Gate-Datei weg — danach meldete
+  sich der Lauf als fertig, während das Gate aus war —, und die erste
+  `.ralph-uebersprungen` blockierte den zweiten planmäßigen Übersprung an
+  Ralphs eigenem Sauberkeits-Riegel. `TEAM_GUARD_LAUFZEIT` kennt jetzt alle
+  Laufzeitartefakte (die Gate-Datei unter ihrem konfigurierten Namen), der
+  Riegel zählt sie nicht mehr als liegengelassene Arbeit, und ein Wächter
+  hält Code, gitignore-Fragment und Guard-Muster beider Bahnen gegeneinander.
+
+- **bash-Bahn: Der Grundauftrag des Red Teams aus `team.config.sh` kam nie
+  an** (`BL-285`, gemeldet aus `Feld F`). `harry.sh` und `marv.sh` lasen
+  `TEAM_REDTEAM_AUFTRAG_*` vor dem Laden der Konfiguration. Nachgewiesen am
+  Lauf beider Bahnen mit einer Attrappe der CLI. **Beifang:** Die pwsh-Bahn
+  las `TEAM_CLAUDE_BIN` nur aus der Konfiguration, nicht aus der Umgebung —
+  beim Bauen des Tests startete deshalb dreimal die echte CLI (rund 0,31 USD
+  Abo-Gegenwert). Behoben.
+
+- **Eine Änderung nur in der Rohmaterial-Zone meldete „zurückgerollt wurde
+  nur der Grenzübertritt" — zurückgerollt wurde nichts** (`BL-287`, gemeldet
+  aus `Feld F`). Der Guard merkt sich jetzt, was er gefunden hat, und das
+  Urteil sagt bei einer Änderung nur in der Zone, dass nichts zurückgerollt
+  wurde und für den Stakeholder nichts zu tun ist; die Runde zählt.
+
+- **Der Team-Test zu fremden Backlog-Nummern wurde nach jedem Archivieren des
+  Beutebuchs rot** (`BL-290`, gemeldet aus `Feld F`). Er liest die Archive
+  jetzt mit und zählt als eigen nur, was definiert ist (Backlog-Zeile,
+  Fundblock, Akte) — nicht jede Erwähnung im Fließtext eines anderen Funds.
 
 - **Die Vordergrund-Auflage erreichte Frank nur in einer Fassung, die
   ausgerechnet seine Bauform nicht verbot** (`BL-265`, gemeldet von `Feld E`

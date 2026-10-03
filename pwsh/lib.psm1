@@ -376,8 +376,9 @@ $TEAM_MODEL_LOOP = Team-Default 'TEAM_MODEL_LOOP' 'sonnet'
 $TEAM_MODEL_STRONG = Team-Default 'TEAM_MODEL_STRONG' 'opus'
 
 # --- Budget -------------------------------------------------------------------
-$TEAM_ROLE_BUDGET_USD = Team-Default 'TEAM_ROLE_BUDGET_USD' '5'
-$TEAM_ROLE_HARDCAP_USD = Team-Default 'TEAM_ROLE_HARDCAP_USD' '10'
+# BL-286: bis hierher 5/10 — angehoben auf Entscheid des Owners.
+$TEAM_ROLE_BUDGET_USD = Team-Default 'TEAM_ROLE_BUDGET_USD' '20'
+$TEAM_ROLE_HARDCAP_USD = Team-Default 'TEAM_ROLE_HARDCAP_USD' '40'
 
 # --- Auth ---------------------------------------------------------------------
 function Team-CfgDir {
@@ -483,6 +484,15 @@ function team_resolve_auth_mode {
     [Console]::Out.WriteLine("Auth-Modus: $($env:AUTH_MODE)")
     return $true
 }
+
+# BL-285 (Beifang): Dieselbe Regel wie auf der bash-Bahn
+# (`TEAM_CLAUDE_BIN="${TEAM_CLAUDE_BIN:-claude}"`) — die Konfiguration
+# gewinnt, sonst die UMGEBUNG. Ohne diese Zeile las die pwsh-Bahn die Variable
+# NUR aus team.config.ps1; fehlte dort die Zeile (eine Konfiguration von vor
+# BL-173, oder eine Testablage), ging ein gesetztes $env:TEAM_CLAUDE_BIN
+# verloren, und es lief das `claude` aus dem PATH. Gemessen beim Bauen des
+# BL-285-Tests: Statt der Attrappe startete dreimal die ECHTE CLI.
+$TEAM_CLAUDE_BIN = Team-Default 'TEAM_CLAUDE_BIN' ''
 
 function Team-ClaudeBefehl {
     <#
@@ -1259,7 +1269,16 @@ function team_briefing {
 # Rollback Verzeichnisse wirklich entfernen kann, wuerde er hier die Kostenlogs
 # DES LAUFENDEN AUFRUFS loeschen — ein selbstverschuldeter BL-4, ausgeloest
 # ausgerechnet vom Waechter.
-$TEAM_GUARD_LAUFZEIT = '^(\.team-logs/|\.ralph-logs/|\.team-loop\.lock$|\.ralph-state$|\.harry-state$|\.marv-state$|\.frank-attempts$|\.team-focus-[a-z]+$)'
+#
+# BL-269: Zwei Dateien fehlten hier, beide mit eigenem Schaden. Die Gate-Datei
+# (BL-256) raeumte Franks Rollback mit weg — danach meldete sich der Lauf als
+# fertig, waehrend das Gate aus war. `.ralph-uebersprungen` (BL-255) blockierte
+# den ZWEITEN planmaessigen Uebersprung an Ralphs eigenem Sauberkeits-Riegel.
+# Die Gate-Datei ist konfigurierbar, also steht hier ihr Name, nicht der
+# Default. Welche Datei hierher gehoert, haelt
+# test_bl269_laufzeitartefakte_an_allen_stellen.py gegen das gitignore-Fragment
+# und gegen die Namen, die der Code schreibt.
+$TEAM_GUARD_LAUFZEIT = '^(\.team-logs/|\.ralph-logs/|\.team-loop\.lock$|\.team-loop\.lock\.d/|\.ralph-state$|\.harry-state$|\.marv-state$|\.vollautomatik-state$|\.ralph-uebersprungen$|\.frank-attempts$|\.team-focus-[a-z]+$|\.budget-ledger\.lock$|' + [regex]::Escape($TEAM_GATE_DATEI) + '$)'
 
 $script:TEAM_GUARD_HASH = ''
 $script:TEAM_GUARD_VORHER = @()
@@ -1646,7 +1665,12 @@ function team_guard_verify {
 
     # BL-263: Die Rohmaterial-Zone prueft ihr eigener Schnappschuss — Git sieht
     # sie nicht. Ein Uebergriff dort zaehlt wie jeder andere, nur ohne Rollback.
+    # BL-287: WAS gefunden wurde, fuer team_guard_urteil. Der Rueckgabewert
+    # allein trennte "Pfad zurueckgerollt" nicht von "nur die Rohmaterial-Zone
+    # hat sich geaendert" — und das Urteil meldete fuer beides einen Rollback.
+    $script:TEAM_GUARD_BEFUND = ''
     $rawSauber = [bool](team_raw_pruefen $Rolle)
+    if (-not $rawSauber) { $script:TEAM_GUARD_BEFUND = 'rohmaterial' }
 
     $roh = @()
     foreach ($p in @(& git diff --name-only $script:TEAM_GUARD_HASH HEAD 2>$null)) {
@@ -1698,6 +1722,7 @@ function team_guard_verify {
     } else {
         Team-Fehler "[$Rolle] Guard: chirurgischer Rollback vollzogen."
     }
+    $script:TEAM_GUARD_BEFUND = 'rollback'
     return $false
 }
 
@@ -1713,6 +1738,14 @@ function team_guard_urteil {
     #>
     param([string]$Rolle, [int]$Uebergriff, [int]$Ergebnis)
     if ($Uebergriff -eq 0) { return $true }
+    # BL-287: Hat sich NUR die Rohmaterial-Zone geaendert, wurde nichts
+    # zurueckgerollt — und meistens war es der Stakeholder selbst, der dort
+    # waehrend des Laufs ablegt, wie vorgesehen. Die Meldung sagt, was war,
+    # und die Runde zaehlt.
+    if ($script:TEAM_GUARD_BEFUND -eq 'rohmaterial') {
+        Team-Fehler "[$Rolle] Rohmaterial-Zone verändert (siehe oben), zurückgerollt wurde nichts. Stammt die Änderung vom Stakeholder, ist nichts zu tun."
+        return $true
+    }
     if ($Ergebnis -eq 1) {
         Team-Fehler "[$Rolle] Guard-Übergriff kassiert, Ergebnis zählt — die Arbeit ist geleistet, zurückgerollt wurde nur der Grenzübertritt."
         return $true
@@ -2158,6 +2191,14 @@ Export-ModuleMember -Function * -Variable @(
     # dann, wenn der Wert eingetragen war. Das ist der Fund, den BL-153
     # abstellen wollte, einmal um die Modulgrenze herum wiedergekehrt.
     'TEAM_KIT_PFAD',
+    # BL-275: Dieselbe Bauform ein zweites Mal — BL-256 fuehrte die Gate-Datei
+    # ein, schrieb und pruefte sie IM Modul und vergass sie hier. Gelesen wird
+    # sie aber in vollautomatik.ps1, also draussen: Dort war sie $null, und
+    # der Bericht ueber ein rotes Gate stuerzte genau dann ab, wenn er
+    # gebraucht wurde (im Feld dreimal). Die Gattung haelt jetzt
+    # test_bl275_modulvariablen_sind_exportiert.py: Jede $TEAM_*-Variable, die
+    # ein Entrypoint liest, muss in dieser Liste stehen.
+    'TEAM_GATE_DATEI',
     'TEAM_DOMAENEN', 'TEAM_LEDGER',
     'TEAM_REDTEAM_AUFTRAG_HARRY', 'TEAM_REDTEAM_AUFTRAG_MARV',
     'TEAM_WHITELIST_REDTEAM', 'TEAM_WHITELIST_AXEL'

@@ -18,6 +18,13 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 export ROLLE="marv"
+# BL-285: Die Konfiguration ZUERST laden. Der Grundauftrag steht in
+# team.config.sh — und die Zeile darunter las ihn, bevor redteam.sh die
+# Bibliothek und damit die Konfiguration lud. Ein Wert aus der Datei kam so
+# NIE an, nur einer aus der Umgebung, und das ohne jedes Signal. Die
+# pwsh-Bahn importiert das Modul vor dem Lesen und war nie betroffen.
+# shellcheck source=team.config.sh disable=SC1091
+[ -f ./team.config.sh ] && source ./team.config.sh
 # BL-172: Hier steht nur noch der GRUNDAUFTRAG (oder der stackneutrale
 # Default). Den Fokus haengt team/redteam.sh an — dort liegt die
 # Bibliothek, und dort steht auch die Scope-Zeile, bei der Ersetzen

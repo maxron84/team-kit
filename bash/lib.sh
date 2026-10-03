@@ -217,9 +217,11 @@ TEAM_MODEL_STRONG="${TEAM_MODEL_STRONG:-opus}"
 # "sparte" nichts, er vervielfachte die Kosten und blockierte obendrein den Fund.
 #
 # Neues Modell — EINE zentrale Basiszahl statt drei divergierender Defaults:
-#   TEAM_ROLE_BUDGET_USD   (Default 5) — Soft-Cap, gilt für ALLE Rollen.
-#   TEAM_ROLE_HARDCAP_USD  (Default 10) — Hard-Cap für die iterierenden
+#   TEAM_ROLE_BUDGET_USD   (Default 20) — Soft-Cap, gilt für ALLE Rollen.
+#   TEAM_ROLE_HARDCAP_USD  (Default 40) — Hard-Cap für die iterierenden
 #                          "Sorgenkinder" Frank & Axel (2× Soft).
+#   BL-286: bis hierher 5/10 — angehoben auf Entscheid des Owners. Zu tiefe
+#   Caps werfen bezahlte Arbeit weg (HM-32), und die Rollen wurden teurer.
 #
 # Zwei Schwellen (siehe team_budget_check):
 #   - Frank & Axel: SOFT-Cap = nur deutlicher Hinweis, KEIN Rollback, der Fix
@@ -239,8 +241,8 @@ TEAM_MODEL_STRONG="${TEAM_MODEL_STRONG:-opus}"
 # unter POSIX richtig ist; der Installer traegt in team.config.sh ein, was er
 # auf der Maschine wirklich gefunden hat.
 TEAM_PYTHON="${TEAM_PYTHON:-python3}"
-TEAM_ROLE_BUDGET_USD="${TEAM_ROLE_BUDGET_USD:-5}"
-TEAM_ROLE_HARDCAP_USD="${TEAM_ROLE_HARDCAP_USD:-10}"
+TEAM_ROLE_BUDGET_USD="${TEAM_ROLE_BUDGET_USD:-20}"
+TEAM_ROLE_HARDCAP_USD="${TEAM_ROLE_HARDCAP_USD:-40}"
 
 # --- Auth-Modus --------------------------------------------------------------
 # team_resolve_auth_mode [rollen-default]
@@ -1131,7 +1133,16 @@ team_guard_fremdpfade() {
 # LAUFENDEN AUFRUFS löschen — ein selbstverschuldeter BL-4 (verlorene
 # Kostenhistorie), ausgelöst ausgerechnet vom Wächter. Vorher scheiterte das
 # `rm -f` an ihnen still; dass das gut ging, war Zufall, kein Entwurf.
-TEAM_GUARD_LAUFZEIT='^(\.team-logs/|\.ralph-logs/|\.team-loop\.lock$|\.ralph-state$|\.harry-state$|\.marv-state$|\.frank-attempts$|\.team-focus-[a-z]+$)'
+#
+# BL-269: Zwei Dateien fehlten hier, beide mit eigenem Schaden. Die Gate-Datei
+# (BL-256) räumte Franks Rollback mit weg — danach meldete sich der Lauf als
+# fertig, während das Gate aus war. `.ralph-uebersprungen` (BL-255) blockierte
+# den ZWEITEN planmäßigen Übersprung an Ralphs eigenem Sauberkeits-Riegel. Die
+# Gate-Datei ist konfigurierbar, also steht hier ihr Name, nicht der Default.
+# Welche Datei hierher gehört, hält test_bl269_laufzeitartefakte_an_allen_stellen.py
+# gegen das gitignore-Fragment und gegen die Namen, die der Code schreibt.
+_team_gate_re="$(printf '%s' "$TEAM_GATE_DATEI" | sed 's/[][\\.*^$(){}?+|]/\\&/g')"
+TEAM_GUARD_LAUFZEIT='^(\.team-logs/|\.ralph-logs/|\.team-loop\.lock$|\.team-loop\.lock\.d/|\.ralph-state$|\.harry-state$|\.marv-state$|\.vollautomatik-state$|\.ralph-uebersprungen$|\.frank-attempts$|\.team-focus-[a-z]+$|\.budget-ledger\.lock$|'"$_team_gate_re"'$)'
 
 # Werkzeug-Ordner des Stakeholders, die das T.E.A.M. KOMPLETT ignoriert
 # (BL-263): weder angelastet noch zurueckgesetzt, weder gelesen noch
@@ -1436,9 +1447,13 @@ team_rollback_rolle() {
 
 team_guard_verify() {
     local rolle="$1" whitelist="$2" roh nicht_angelastet verletzungen raw_rc=0
+    # BL-287: WAS gefunden wurde, fuer team_guard_urteil. Der Rueckgabewert
+    # allein trennte "Pfad zurueckgerollt" nicht von "nur die Rohmaterial-Zone
+    # hat sich geaendert" — und das Urteil meldete fuer beides einen Rollback.
+    TEAM_GUARD_BEFUND=""
     # BL-263: Die Rohmaterial-Zone prueft ihr eigener Schnappschuss — Git sieht
     # sie nicht. Ein Uebergriff dort zaehlt wie jeder andere, nur ohne Rollback.
-    team_raw_pruefen "$rolle" || raw_rc=1
+    team_raw_pruefen "$rolle" || { raw_rc=1; TEAM_GUARD_BEFUND="rohmaterial"; }
     roh="$( { git diff --name-only "$TEAM_GUARD_HASH" HEAD 2>/dev/null;
               git status --porcelain | cut -c4-; } | sort -u \
             | grep -Ev "$whitelist" \
@@ -1501,6 +1516,7 @@ team_guard_verify() {
     else
         echo "[$rolle] Guard: chirurgischer Rollback vollzogen." >&2
     fi
+    TEAM_GUARD_BEFUND="rollback"
     return 1
 }
 
@@ -1517,6 +1533,15 @@ team_guard_verify() {
 team_guard_urteil() {
     local rolle="$1" uebergriff="$2" ergebnis="$3"
     [ "$uebergriff" -eq 0 ] && return 0
+    # BL-287: Hat sich NUR die Rohmaterial-Zone geaendert, wurde nichts
+    # zurueckgerollt — und meistens war es der Stakeholder selbst, der dort
+    # waehrend des Laufs ablegt, wie vorgesehen. Die Meldung sagt, was war,
+    # und die Runde zaehlt: Die Notiz des Stakeholders darf nicht zur Haelfte
+    # der Begruendung fuer einen gescheiterten Aufruf werden (Axel).
+    if [ "${TEAM_GUARD_BEFUND:-}" = "rohmaterial" ]; then
+        echo "[$rolle] Rohmaterial-Zone verändert (siehe oben), zurückgerollt wurde nichts. Stammt die Änderung vom Stakeholder, ist nichts zu tun." >&2
+        return 0
+    fi
     if [ "$ergebnis" -eq 1 ]; then
         echo "[$rolle] Guard-Übergriff kassiert, Ergebnis zählt — die Arbeit ist geleistet, zurückgerollt wurde nur der Grenzübertritt." >&2
         return 0

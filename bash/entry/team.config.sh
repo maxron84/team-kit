@@ -242,6 +242,14 @@ TEAM_REDTEAM_AUFTRAG_MARV="${TEAM_REDTEAM_AUFTRAG_MARV:-}"
 # Für einen einzelnen Lauf reicht die Umgebung:
 #   TEAM_MODEL_LOOP=opus ./vollautomatik.sh
 #
+# ALIAS ODER ID (BL-264): `sonnet`/`opus` loest die CLI auf — nach der
+# Alias-Tabelle IHRER VERSION, nicht nach dem Abo. Im Feld fuhr eine aeltere
+# CLI im PATH mit `sonnet` ein Modell hinter dem neuesten, 126 Rollenlaeufe
+# lang. Wer ein Modell festnageln will, traegt die volle ID ein
+# (`claude-sonnet-5-5`); eine CLI, die die ID noch nicht kennt, reicht sie mit
+# einer Warnung durch. Welches Modell wirklich lief und welche CLI der Loop
+# ruft, zeigt team-status (Abschnitt "Modell & CLI").
+#
 # Die Stufen sind Absicht, nicht Zufall: Die schwache trägt die Masse der
 # Aufrufe und damit der Kosten. Sie ist zugleich die Stelle, an der ein anderes
 # Modell — künftig auch ein lokales — zuerst eingewechselt wird. Vorausgesetzt
@@ -254,8 +262,8 @@ TEAM_REDTEAM_AUFTRAG_MARV="${TEAM_REDTEAM_AUFTRAG_MARV:-}"
 # Soft-Cap gilt für alle Rollen (nur Hinweis bei Frank/Axel), Hard-Cap bricht ab.
 # Zu tiefe Pro-Fall-Caps VERVIELFACHEN die Kosten, statt zu sparen — sie werfen
 # teure, aber plausible Fixes per Rollback weg. Lieber großzügig ansetzen.
-TEAM_ROLE_BUDGET_USD="${TEAM_ROLE_BUDGET_USD:-5}"
-TEAM_ROLE_HARDCAP_USD="${TEAM_ROLE_HARDCAP_USD:-10}"
+TEAM_ROLE_BUDGET_USD="${TEAM_ROLE_BUDGET_USD:-20}"
+TEAM_ROLE_HARDCAP_USD="${TEAM_ROLE_HARDCAP_USD:-40}"
 
 # --- Domänen ------------------------------------------------------------------
 # Kostenkonten: Unter welchen Namen die Ausgaben im Ledger gebucht werden.

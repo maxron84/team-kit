@@ -4,7 +4,7 @@
 # Arbeitet den aktiven Kaskaden-Plan Stufe für Stufe ab, ein Commit pro Stufe.
 #
 # Aufruf:   ./ralph.sh            (oder über ./vollautomatik.sh als Phase 1)
-# Env:      RALPH_BUDGET_USD  Budget pro Stufe (Default TEAM_ROLE_BUDGET_USD=5,
+# Env:      RALPH_BUDGET_USD  Budget pro Stufe (Default TEAM_ROLE_BUDGET_USD=20,
 #                             sofortiger Hard-Cap — Ralph committet als letzten
 #                             Schritt und hat danach ohnehin Feierabend, ein
 #                             gesprengtes Budget stoppt VOR dem State-Weiterschalten)
@@ -193,7 +193,11 @@ Regeln:
             echo "  Weiterweg: Plan prüfen. Gehört die Bedingung hinein, trägt der Architekt sie nach; sonst ist die Stufe zu bauen." >&2
             exit 1
         fi
-        if [ -n "$(git status --porcelain)" ]; then
+        # BL-269: Laufzeitartefakte zaehlen nicht als liegengelassene Arbeit —
+        # sonst blockierte die erste `.ralph-uebersprungen` den ZWEITEN
+        # Uebersprung desselben Laufs, in jedem Projekt, dessen .gitignore die
+        # Datei nicht kennt (das Update fasst die Projektdatei nicht an).
+        if [ -n "$(git status --porcelain | cut -c4- | grep -Ev "$TEAM_GUARD_LAUFZEIT" | grep -Ev "$TEAM_GUARD_IGNORIERT" || true)" ]; then
             echo "Ralph: Stufe $STUFE meldet sich als planmäßig übersprungen, lässt aber Uncommittetes liegen (BL-255)." >&2
             echo "  Ein Übersprung verlangt einen Commit mit Begründung — sonst ist nicht festgehalten, WARUM die Stufe nicht gebaut wurde." >&2
             echo "  Weiterweg: git status ansehen, von Hand committen, dann \`echo $((STUFE + 1)) > $STATE_FILE\`." >&2

@@ -337,8 +337,9 @@ An der **real installierten** CLI verifizieren — **nicht raten**:
    Sonst müsste man bei jeder Kaskade den Pro-Lauf-Deckel hochdrehen, nur um
    eine Lebenszeit-Summe zu überbieten.
 6. **Zwei-Schwellen-Budget statt divergierender Defaults ✅ gebaut (`BL-30`).**
-   Ein zentraler **Soft-Cap** (`TEAM_ROLE_BUDGET_USD`, Default 5 USD) für alle
-   Rollen plus ein **Hard-Cap** (`TEAM_ROLE_HARDCAP_USD`, Default 10 USD) für
+   Ein zentraler **Soft-Cap** (`TEAM_ROLE_BUDGET_USD`, Default 20 USD, bis
+   `BL-286` 5) für alle Rollen plus ein **Hard-Cap** (`TEAM_ROLE_HARDCAP_USD`,
+   Default 40 USD, bis `BL-286` 10) für
    Frank & Axel. **Kernlehre (realer Auslöser `HM-32`):** Ein Pro-Fall-Cap
    greift **nach** dem bereits bezahlten Aufruf — ist er zu tief, wird ein
    teurer, aber plausibler Fix als „Fehlversuch" per Rollback weggeworfen und

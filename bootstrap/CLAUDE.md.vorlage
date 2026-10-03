@@ -272,8 +272,8 @@ zugeordnet, ohne dass es dafür eine Extra-Liste braucht.
 
 **Nie im Dauer-Loop** (ein Fall pro Aufruf). Budget pro Fall im
 **Zwei-Schwellen-Modell** (`Kit-BL-30`, siehe `## Kostenkontrolle`): **Soft-Cap**
-(`5`, Default 5 USD — **nur Hinweis**, kein Rollback) und
-**Hard-Cap** (`10`, Default 10 USD — Abbruch mit Rollback als
+(`20`, Default 20 USD — **nur Hinweis**, kein Rollback) und
+**Hard-Cap** (`40`, Default 40 USD — Abbruch mit Rollback als
 Airbag). Nur bei nachgewiesenem Bedarf.
 
 **Der Ermittlungs-Dreisatz:**
@@ -555,10 +555,16 @@ Loop-Rollen, `TEAM_MODEL_STRONG` (Default `opus`) für Axel und Den Architekten
 — beide in [`{{LIB}}`]({{LIB}}). **Modell** und **Auth** sind zwei
 getrennte Achsen: starkes Modell heißt **nicht** API — auch Axel und Der
 Architekt laufen Abo-first, siehe „Loop-Mechanik & Auth".
+**Ein Alias wählt nicht das neueste Modell, sondern das, was die CLI-Version
+darunter versteht** (`Kit-BL-264`): Eine ältere CLI im `PATH` fährt mit
+`sonnet` ein älteres Modell, ohne dass es irgendwo auffällt. Welches Modell
+lief und welche CLI der Loop ruft, zeigt `team-status` (Abschnitt „Modell &
+CLI", mit WARNUNG bei einer älteren Version); festnageln lässt sich ein Modell
+über die volle ID in `TEAM_MODEL_*`.
 
 **Budget-Modell (Zwei-Schwellen, ✅ erprobt, `Kit-BL-30`)**: Ein zentraler
-**Soft-Cap** (`TEAM_ROLE_BUDGET_USD`, Default **5 USD**) gilt für **alle**
-Rollen; ein **Hard-Cap** (`TEAM_ROLE_HARDCAP_USD`, Default **10 USD**) nur für
+**Soft-Cap** (`TEAM_ROLE_BUDGET_USD`, Default **20 USD**) gilt für **alle**
+Rollen; ein **Hard-Cap** (`TEAM_ROLE_HARDCAP_USD`, Default **40 USD**) nur für
 die iterierenden „Sorgenkinder" **Frank & Axel**. Beide zentral in
 [`{{KONFIG}}`]({{KONFIG}}) — **eine** Zahl statt mehrerer
 divergierender Defaults.
@@ -580,6 +586,10 @@ divergierender Defaults.
 
 Übersteuerung je Lauf/Rolle bleibt möglich (`TEAM_BUDGET_USD` für den Lauf,
 `TEAM_ROLE_BUDGET_USD`/`TEAM_ROLE_HARDCAP_USD` für die Schwellen).
+**Der Soft-Cap liegt über dem Default des Lauf-Deckels** (`TEAM_BUDGET_USD`,
+15 USD, `Kit-BL-286`): Ohne Budget-Empfehlung im Plan stoppt einen teuren
+Aufruf von Ralph, Harry oder Marv deshalb in der Regel der **Lauf-Deckel**,
+nicht der Rollen-Cap — gemessen wird beides erst nach dem Aufruf.
 
 **Grundregeln (stets aktiv):**
 

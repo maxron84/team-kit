@@ -155,6 +155,19 @@ function Status-Einmal {
     [Console]::Out.WriteLine(('    {0,-30}: {1,9} USD' -f $az[0], $az[1]))
     [Console]::Out.WriteLine('    Gesamt-Kontostand (inkl. Ledger): {0,9} USD' -f $kGesamt)
 
+    # BL-264: Welches Modell die Rollen fuhren, stand bis hierher NUR in den
+    # Rohlogs — im Feld liefen 126 Rollenlaeufe auf einer aelteren
+    # Sonnet-Version, weil die CLI im PATH aelter war als die der IDE. Nur
+    # `--version`, kein Modellaufruf. Ausfall des Werkzeugs bricht den Status
+    # nicht ab.
+    [Console]::Out.WriteLine('  ──────── Modell & CLI ────────')
+    $cliBefehl = if ($TEAM_CLAUDE_BIN) { $TEAM_CLAUDE_BIN } else { 'claude' }
+    try {
+        foreach ($z in @(Team-Werkzeug $TEAM_KOSTEN_TOOL @('modelle', '.ralph-logs', '.team-logs', '--cli', $cliBefehl) 2>$null)) {
+            [Console]::Out.WriteLine("    $z")
+        }
+    } catch { }
+
     # Letzte Aktivitaet
     [Console]::Out.WriteLine('  ──────── Letzte Commits ────────')
     $log = @(& git log --oneline -5 2>$null)

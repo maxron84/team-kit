@@ -164,6 +164,15 @@ status_einmal() {
     printf "    %-30s: %9s USD\n" "$k_architekt_label" "$k_architekt"
     printf "    Gesamt-Kontostand (inkl. Ledger): %9s USD\n" "$k_gesamt"
 
+    # BL-264: Welches Modell die Rollen fuhren, stand bis hierher NUR in den
+    # Rohlogs — im Feld liefen 126 Rollenlaeufe auf einer aelteren
+    # Sonnet-Version, weil die CLI im PATH aelter war als die der IDE. Nur
+    # `--version`, kein Modellaufruf. Ausfall des Werkzeugs bricht den Status
+    # nicht ab.
+    echo "  ──────── Modell & CLI ────────"
+    { $TEAM_KOSTEN_TOOL modelle .ralph-logs .team-logs --cli "$TEAM_CLAUDE_BIN" 2>/dev/null || true; } \
+        | sed 's/^/    /'
+
     # Letzte Aktivität
     echo "  ──────── Letzte Commits ────────"
     git log --oneline -5 2>/dev/null | sed 's/^/    /' || echo "    (kein Git-Log)"

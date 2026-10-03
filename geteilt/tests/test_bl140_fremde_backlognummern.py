@@ -161,13 +161,38 @@ def _ist_vorlage(datei):
     return "bootstrap" in teile or "prompts" in teile
 
 
+# BL-290: Eine Nummer ist EIGEN, wo sie DEFINIERT wird — nicht, wo sie
+# erwaehnt wird. Ein Backlog-Eintrag ist eine Tabellenzeile mit der Nummer in
+# der ersten Spalte, ein Fund ein Block unter `### HM-<N>`, eine Akte eine
+# Datei bzw. Ueberschrift `AX-<N>`. Vorher zaehlte JEDE Erwaehnung: Im Feld
+# blieb ein archivierter Fund nur deshalb gruen, weil zwei aktive Funde ihn im
+# Fliesstext nannten — das Urteil hing an fremdem Text, und es kippte, sobald
+# die beiden ebenfalls archiviert wurden.
+DEFINITION = (re.compile(r"^\|\s*(BL-\d+)\s*\|", re.M),
+              re.compile(r"^#{2,4}\s+((?:HM|AX)-\d+)\b", re.M))
+AKTE_IM_NAMEN = re.compile(r"\b(AX-\d+)\b")
+
+
+def _archiv_von(datei):
+    """`plans/beutebuch.md` -> `plans/beutebuch-archiv.md` — dieselbe
+    Benennung wie `beutebuch.py archiviere` und das Kit-eigene Backlog-Archiv."""
+    return datei.with_name(f"{datei.stem}-archiv{datei.suffix}")
+
+
 def _eigene_nummern(wurzel=None):
-    """Alle Nummern, die im EIGENEN Backlog/Beutebuch des Projekts stehen.
+    """Alle Nummern, die das Projekt SELBST vergeben hat.
 
     Gelesen wird aus der Konfiguration, nicht geraten: `team.config.sh` bzw.
     `team.config.ps1` nennen TEAM_BACKLOG und TEAM_BEUTEBUCH. Fehlt beides
-    (Kit-Ablage), bleibt die Menge leer — und dann ist Sorte (a) wirkungslos,
-    genau wie beabsichtigt.
+    (Kit-Ablage), gelten die dokumentierten Vorgabewerte.
+
+    BL-290: Dazu gehoeren die ARCHIVE. `beutebuch.py archiviere` verschiebt
+    jeden erledigten Block woertlich nach `<beutebuch>-archiv.md` — genau die
+    Nummern, die zitierfaehig bleiben sollen. Ohne das Archiv wurde der Test
+    nach dem ersten Archivieren rot, obwohl kein Verweis falsch war, und der
+    Druck zeigte in die falsche Richtung: ein `Kit-` vor einen richtigen
+    eigenen Verweis setzen. Die Nummernvergabe (`_next_id`) liest das Archiv
+    seit jeher mit; der Test jetzt auch.
     """
     wurzel = wurzel or REPO_ROOT
     kandidaten = []
@@ -183,12 +208,24 @@ def _eigene_nummern(wurzel=None):
     if not kandidaten:
         # Kein team.config in dieser Ablage — die dokumentierten Vorgabewerte.
         kandidaten = ["plans/backlog.md", "plans/beutebuch.md"]
-    nummern = set()
+    dateien = []
     for rel in kandidaten:
         datei = wurzel / rel
+        dateien += [datei, _archiv_von(datei)]
+    nummern = set()
+    for datei in dateien:
         if datei.is_file():
-            nummern.update(m.group(0) for m in
-                           BLANK.finditer(datei.read_text(encoding="utf-8-sig")))
+            text = datei.read_text(encoding="utf-8-sig")
+            for muster in DEFINITION:
+                nummern.update(muster.findall(text))
+    # Ermittlungsakten liegen als eigene Dateien neben dem Beutebuch.
+    for rel in kandidaten:
+        akten = (wurzel / rel).parent / "ermittlungsakten"
+        if akten.is_dir():
+            for akte in akten.rglob("*.md"):
+                nummern.update(AKTE_IM_NAMEN.findall(akte.name))
+                nummern.update(DEFINITION[1].findall(
+                    akte.read_text(encoding="utf-8-sig", errors="replace")))
     return nummern
 
 
@@ -304,6 +341,66 @@ def test_eigene_nummer_im_projekttext_ist_kein_fund(tmp_path):
         "Die Lehre ist hier als `BL-115` entstanden, siehe `BL-1`.\n",
         EIGENER_BACKLOG)
     assert _funde([datei], _eigene_nummern(tmp_path)) == []
+
+
+# --- BL-290: das Archiv zaehlt, die blosse Erwaehnung nicht --------------------
+
+BEUTEBUCH_AKTIV = """# Beutebuch
+
+### HM-21 — ein offener Fund
+- **Status**: offen
+- **Reproschritte**: siehe auch HM-9, dort war es aehnlich.
+"""
+
+BEUTEBUCH_ARCHIV = """# Beutebuch-Archiv
+
+### HM-9 — ein erledigter Fund
+- **Status**: erledigt
+
+### HM-18 — noch einer
+- **Status**: erledigt
+"""
+
+
+def _mit_beutebuch(tmp_path, claude_text, archiv=True):
+    datei = _installation(tmp_path, claude_text, EIGENER_BACKLOG)
+    (tmp_path / "plans" / "beutebuch.md").write_text(BEUTEBUCH_AKTIV,
+                                                     encoding="utf-8")
+    if archiv:
+        (tmp_path / "plans" / "beutebuch-archiv.md").write_text(
+            BEUTEBUCH_ARCHIV, encoding="utf-8")
+    return datei
+
+
+def test_ein_archivierter_eigener_fund_ist_kein_fund(tmp_path):
+    """Der Feldfall: Nach dem ersten `beutebuch.py archiviere` meldete der
+    Test zwei RICHTIGE Verweise in CLAUDE.md als „zeigen ins Leere"."""
+    datei = _mit_beutebuch(
+        tmp_path, "Gelernt an `HM-9` und an `HM-18`, beide erledigt.\n")
+    assert _funde([datei], _eigene_nummern(tmp_path)) == []
+
+
+def test_eine_nummer_die_nirgends_steht_bleibt_rot(tmp_path):
+    datei = _mit_beutebuch(tmp_path, "Siehe `HM-77`.\n")
+    funde = _funde([datei], _eigene_nummern(tmp_path))
+    assert len(funde) == 1 and "HM-77" in funde[0], funde
+
+
+def test_eine_nur_ERWAEHNTE_nummer_ist_nicht_eigen(tmp_path):
+    """Der leise zweite Effekt der Meldung: `HM-9` steht im Fliesstext von
+    HM-21. Ohne Archiv ist HM-9 NICHT definiert — und darf nicht deshalb als
+    eigen gelten, weil ein anderer Fund ihn zufaellig nennt."""
+    datei = _mit_beutebuch(tmp_path, "Siehe `HM-9`.\n", archiv=False)
+    funde = _funde([datei], _eigene_nummern(tmp_path))
+    assert len(funde) == 1 and "HM-9" in funde[0], (
+        "HM-9 galt als eigen, nur weil HM-21 ihn erwaehnt (BL-290).")
+
+
+def test_eine_backlog_nummer_im_fliesstext_definiert_nichts(tmp_path):
+    datei = _installation(tmp_path, "Siehe `BL-40`.\n",
+                          EIGENER_BACKLOG + "\nBL-40 wurde hier nur erwaehnt.\n")
+    funde = _funde([datei], _eigene_nummern(tmp_path))
+    assert len(funde) == 1 and "BL-40" in funde[0], funde
 
 
 def test_eine_nummer_die_es_im_eigenen_backlog_NICHT_gibt_bleibt_rot(tmp_path):
