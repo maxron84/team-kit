@@ -163,6 +163,10 @@ def _fixture_repo(tmp_path, stub_json):
 
 def _ralph(tmp_path, stub_json):
     repo, bin_dir = _fixture_repo(tmp_path, stub_json)
+    # Die Stufe hat GEBAUT, die Arbeit liegt uncommittet da — so war es im
+    # Feld. Eine Sitzung OHNE jede Arbeit ist seit BL-301 ein eigener Ausgang
+    # (Exit 1), nicht der vierte.
+    (repo / "werk.txt").write_text("gebaut\n", encoding="utf-8")
     env = dict(os.environ)
     env.update({"PATH": pfad_voran(bin_dir, env), "AUTH_MODE": "api",
                 "ANTHROPIC_API_KEY": "sk-ant-dummy", "TEAM_LOCK_HELD": "1"})
