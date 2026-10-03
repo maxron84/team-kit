@@ -11,7 +11,14 @@
                                          beginnt bei Phase 1)
            .\vollautomatik.cmd --hilfe    (diesen Kopf ausgeben; auch --help, -h)
   Env:     TEAM_MAX_RUNDEN   Fix-Runden Frank/Axel (Default 12).
-           TEAM_VOLLAUTOMATIK_AB_PHASE  1 wirkt wie --von-vorn (BL-217).
+           TEAM_REDTEAM_FOCUS_2  bestellt einen ZWEITEN Sweep-Durchgang je
+                                        Angreifer mit eigenem Fokus ueber
+                                        denselben Bau (BL-296) — fuer eine
+                                        grosse Kaskade; ohne ihn ein Durchgang.
+           TEAM_VOLLAUTOMATIK_AB_PHASE  1 wirkt wie --von-vorn (BL-217);
+                                        2, 3 oder 4 startet dort (4 = nur die
+                                        Fix-Phase, wie fixphase); alles andere
+                                        bricht ab (BL-241).
            TEAM_FIX_MAX_STAGNATION  Auslauf-Bremse (Default =
                              TEAM_FRANK_MAX_VERSUCHE, sonst 3): bricht Phase 4
                              ab, sobald so viele Runden IN FOLGE weder einen
@@ -67,7 +74,21 @@ foreach ($arg in $args) {
         exit 2
     }
 }
-if ($env:TEAM_VOLLAUTOMATIK_AB_PHASE -eq '1') { $vonVorn = $true }
+# BL-241: Der Name verspricht "ab Phase N" — bis hierher galt nur '1', und
+# '4' wurde STILL ignoriert: Der naheliegende Griff fuer "nur fixen" fuehrte
+# lautlos zum teuersten Ergebnis, einem vollen Lauf samt zwei Sweeps. Jetzt
+# gelten 1 bis 4 (4 = nur die Fix-Phase, so startet fixphase.ps1), und ein
+# unbekannter Wert bricht ab, statt bei Phase 1 zu beginnen.
+$abPhaseAnsage = 0
+switch ("$env:TEAM_VOLLAUTOMATIK_AB_PHASE") {
+    '' { break }
+    '1' { $vonVorn = $true; break }
+    { $_ -in @('2', '3', '4') } { $abPhaseAnsage = [int]$_; break }
+    default {
+        [Console]::Error.WriteLine("TEAM_VOLLAUTOMATIK_AB_PHASE='$env:TEAM_VOLLAUTOMATIK_AB_PHASE' — erlaubt sind 1 bis 4 (1 = von vorn, 4 = nur die Fix-Phase, wie .\fixphase.cmd). Kein Lauf gestartet (Kit-BL-241).")
+        exit 2
+    }
+}
 
 $maxRunden = if ($env:TEAM_MAX_RUNDEN) { [int]$env:TEAM_MAX_RUNDEN } else { 12 }
 # HM-31: Default an TEAM_FRANK_MAX_VERSUCHE koppeln (statt fest 2), sonst
@@ -143,15 +164,75 @@ function Rolle-Starten {
     # aufruft, und zeigte dabei keinen Fehler, sondern eine stundenalte Zeile,
     # die aussah wie die aktuelle.
     #
-    # `$LASTEXITCODE` bleibt hinter einer Pipeline gueltig — der Rueckgabewert
-    # dieser Funktion haengt daran, und ein spaeterer Rueckbau wuerde genau
-    # daran scheitern. Deshalb steht es unter Test.
-    & pwsh -NoProfile -File $Skript @Argumente 2>&1 | ForEach-Object {
-        $text = [string]$_
+    # BL-248: Auf das KIND warten, nicht auf die Leitung. Die Fassung davor
+    # streamte ueber eine Pipeline — und eine Pipeline endet erst bei EOF, also
+    # wenn JEDER Prozess das geerbte Schreibende losgelassen hat, auch Enkel.
+    # Im Feld hinterliess eine Bau-Rolle ein electron.exe mit modalem
+    # Fehlerdialog: Ralph loggte "Feierabend", danach stand der Orchestrator
+    # NEUN STUNDEN ohne einen einzigen Kindprozess, hielt die Sperre, und
+    # team-status zeigte "Feierabend" — die Anzeige log in Richtung "laeuft".
+    # Der Zustand hatte als einziger keinen Ausgang.
+    #
+    # Jetzt liest diese Funktion beide Stroeme zeilenweise und asynchron mit
+    # (gestreamt wie seit BL-181) und misst, was gesucht ist: ob das KIND
+    # fertig ist. Liefert die Leitung nach dem Ende des Kindes drei Sekunden
+    # lang nichts mehr und ist doch nicht zu, haelt ein Nachfahre sie offen —
+    # dann wird das gemeldet und NICHT weiter gewartet.
+    $psi = [System.Diagnostics.ProcessStartInfo]::new([System.Environment]::ProcessPath)
+    foreach ($a in @('-NoProfile', '-File', $Skript) + @($Argumente)) {
+        $psi.ArgumentList.Add([string]$a)
+    }
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $utf8 = [System.Text.UTF8Encoding]::new($false)
+    $psi.StandardOutputEncoding = $utf8
+    $psi.StandardErrorEncoding = $utf8
+    $psi.WorkingDirectory = (Get-Location).ProviderPath
+    $kind = [System.Diagnostics.Process]::Start($psi)
+    $leser = @($kind.StandardOutput, $kind.StandardError)
+    $offen = @($leser[0].ReadLineAsync(), $leser[1].ReadLineAsync())
+    $kindEnde = $null
+    $leitungHaengt = $false
+    while ($offen[0] -or $offen[1]) {
+        $etwas = $false
+        for ($k = 0; $k -lt 2; $k++) {
+            $aufgabe = $offen[$k]
+            if ($aufgabe -and ($aufgabe.IsFaulted -or $aufgabe.IsCanceled)) {
+                $offen[$k] = $null      # Leitung abgerissen: wie EOF behandeln
+                $etwas = $true
+                continue
+            }
+            if ($aufgabe -and $aufgabe.IsCompleted) {
+                $text = $aufgabe.Result
+                if ($null -eq $text) {
+                    $offen[$k] = $null
+                } else {
+                    [Console]::Out.WriteLine($text)
+                    Add-Content -LiteralPath $laufLog -Value $text -Encoding utf8
+                    $offen[$k] = $leser[$k].ReadLineAsync()
+                }
+                $etwas = $true
+            }
+        }
+        if ($etwas) { continue }
+        if ($kind.HasExited) {
+            if (-not $kindEnde) { $kindEnde = [DateTime]::UtcNow }
+            elseif (([DateTime]::UtcNow - $kindEnde).TotalSeconds -ge 3) {
+                $leitungHaengt = $true
+                break
+            }
+        }
+        Start-Sleep -Milliseconds 50
+    }
+    $kind.WaitForExit()
+    $code = $kind.ExitCode
+    if ($leitungHaengt) {
+        $text = "[vollautomatik] $(Split-Path -Leaf $Skript) ist beendet (Exit $code), aber ein Prozess, den die Rolle gestartet hat, haelt ihre Ausgabe noch offen — etwa ein Fenster mit Fehlerdialog. Der Lauf wartet NICHT darauf (Kit-BL-248); den Prozess bitte von Hand pruefen."
         [Console]::Out.WriteLine($text)
         Add-Content -LiteralPath $laufLog -Value $text -Encoding utf8
     }
-    return $LASTEXITCODE
+    return $code
 }
 
 # --- Zwei bewusst getrennte Kennzahlen (BL-18) --------------------------------
@@ -268,6 +349,11 @@ function Phasen-Faellig {
 }
 
 function Phasen-Zeiger-Lesen {
+    if ($abPhaseAnsage -gt 0) {
+        $script:abPhase = $abPhaseAnsage
+        Log ("Start bei " + (Phasen-Name $script:abPhase) + " auf Ansage (TEAM_VOLLAUTOMATIK_AB_PHASE=$abPhaseAnsage, Kit-BL-241) — die Phasen davor laufen NICHT.")
+        return
+    }
     if (-not (Test-Path -LiteralPath $phasenState)) { return }
     if ($vonVorn) {
         Log 'Phasen-Zeiger verworfen (--von-vorn) — der Lauf beginnt bei Phase 1.'
@@ -304,6 +390,51 @@ function Kaskaden-Nummer {
     return '<N>'
 }
 
+# BL-259 (3): Ein Fund auf `offen` ist fuer die Fix-Phase unsichtbar — sie
+# fragt nach 'an Frank übergeben'. Im Feld trug Frank regelkonform einen
+# Beifang ein (Finder ≠ Fixer), der Lauf endete mit "nichts zu tun", und der
+# Bericht meldete fertig. Am Ablauf aendert das nichts; die Luecke wird
+# sichtbar, wo der Mensch hinsieht.
+function Offene-Funde-Melden {
+    $n = @(Team-Werkzeug $TEAM_BEUTEBUCH_TOOL @('list') 2>$null |
+           Where-Object { ($_ -split "`t", 2)[1] -match '^offen' }).Count
+    if ($n -gt 0) {
+        Log "⚠ $n Fund(e) stehen auf 'offen' und sind NIEMANDEM übergeben — die Fix-Phase sieht sie nicht (Kit-BL-259). Sichten, dann übergeben: $TEAM_BEUTEBUCH_TOOL set <HM-Nr> 'an Frank übergeben'"
+    }
+}
+
+# BL-254 (3): Nach jedem Rollenlauf, der das Beutebuch anfassen durfte, wird
+# es geprueft — OHNE Abbruch, der Befund landet im Abschlussbericht. Ein
+# Anhang, der einen fremden Fundblock zerschneidet, ist fuer keinen Guard
+# sichtbar (er urteilt ueber Schreibzonen, nicht ueber Struktur).
+$script:lintBefunde = @()
+function Beutebuch-Lint-Nach {
+    param([string]$Rolle)
+    $aus = @(Team-Werkzeug $TEAM_BEUTEBUCH_TOOL @('lint') 2>&1 | ForEach-Object { [string]$_ })
+    if ($LASTEXITCODE -ne 3) { return }
+    $erste = @($aus | Where-Object { $_ -match '^\[HM-' } | Select-Object -First 1)
+    $text = if ($erste.Count) { $erste[0] } else { 'siehe beutebuch.py lint' }
+    Log "⚠ Beutebuch nach ${Rolle}: Mängel gefunden (Kit-BL-254) — $text"
+    $script:lintBefunde += "nach ${Rolle}: $text"
+}
+
+# BL-232 (2): Die volle Suite am Phasenende — verbindlich, sobald die Stufen
+# mit dem schnellen Befehl (TEAM_SMOKE_TEST_SCHNELL) verifiziert haben. Rot
+# setzt sie das Gate (BL-256), und der Lauf endet mit Exit 44.
+function Voller-Smoke-Am-Phasenende {
+    param([string]$Phase)
+    if (-not $TEAM_SMOKE_TEST_SCHNELL -or -not $TEAM_SMOKE_TEST) { return }
+    $ausgabe = Join-Path $logDir "volle-suite-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+    Log "Volle Suite am Ende der ${Phase}: $TEAM_SMOKE_TEST (die Stufen liefen mit $TEAM_SMOKE_TEST_SCHNELL, Kit-BL-232) …"
+    Team-Werkzeug $TEAM_SMOKE_TEST @() *> $ausgabe
+    if ($LASTEXITCODE -eq 0) {
+        Log '✓ Volle Suite grün.'
+    } else {
+        Log "✗ Volle Suite ROT am Ende der $Phase — das Gate wird gesetzt (Kit-BL-232, Kit-BL-256). Ausgabe: $ausgabe"
+        Add-Content -LiteralPath $TEAM_GATE_DATEI -Encoding utf8 -Value ("$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ss') | vollautomatik | volle Suite rot am Ende der $Phase ($TEAM_SMOKE_TEST)")
+    }
+}
+
 function Abbruch-Bericht {
     param([string]$Grund)
     $nr = Kaskaden-Nummer
@@ -330,7 +461,7 @@ function Abbruch-Bericht {
     } elseif ($offen.Count) {
         Log 'Offene Funde:'
         foreach ($z in $offen) { Log "    $z" }
-        Log 'Fixphase fortsetzen:  .\frank.cmd   (ein Fund je Aufruf)'
+        Log 'Fixphase fortsetzen:  .\fixphase.cmd   (Frank und Axel, mit Deckel und Bremse — Kit-BL-204)'
         Log "Danach der Closeout:  .\team-status.cmd --rollen-abschluss $nr <domaene>"
     } else {
         Log 'Keine offenen Funde — nur der Closeout fehlt:'
@@ -373,12 +504,20 @@ if ($rc -ne 0) {
 # Erst JETZT ist Phase 1 durch — der Zeiger nennt immer die naechste Phase,
 # nie die laufende. Ein Abbruch mittendrin faellt damit auf Phase 1 zurueck.
 Phasen-Naechste 2
+Voller-Smoke-Am-Phasenende 'Bauphase'
 if (-not (Budget-Ok)) { Abbruch-Bericht 'Budget-Deckel'; exit 1 }
 } else {
     Log '=== PHASE 1: Ralph — uebersprungen (Faden aufgenommen, Kit-BL-217) ==='
 }
 
 # --- Phase 2+3: Red-Team-Sweeps -----------------------------------------------
+# BL-296: Der Stand VOR dem ersten Durchgang — ein zweiter Durchgang mit
+# eigenem Fokus prueft denselben Bereich (siehe unten).
+$vorherStand = @{}
+foreach ($rolle in @('harry', 'marv')) {
+    $vorherStand[$rolle] = if (Test-Path ".$rolle-state") { ((Get-Content -Raw ".$rolle-state") -replace '\s', '') } else { '-' }
+    if (-not $vorherStand[$rolle]) { $vorherStand[$rolle] = '-' }
+}
 $phaseNr = 1
 foreach ($rolle in @('harry', 'marv')) {
     $phaseNr++
@@ -389,7 +528,7 @@ foreach ($rolle in @('harry', 'marv')) {
     Log "=== PHASE Red Team: $rolle ==="
     $rc = Rolle-Starten "./$rolle.ps1"
     switch ($rc) {
-        0 { Log "$rolle hat einen Sweep abgeschlossen." }
+        0 { Log "$rolle hat einen Sweep abgeschlossen."; Beutebuch-Lint-Nach $rolle }
         3 { Log "${rolle}: nichts Neues zu prüfen." }
         42 {
             Log "⏸ Session-Limit erreicht — Lauf pausiert ($rolle). Bitte später .\vollautomatik.cmd erneut starten. Kein Fehler, kein Datenverlust (State steht)."
@@ -402,6 +541,37 @@ foreach ($rolle in @('harry', 'marv')) {
     }
     Phasen-Naechste ($phaseNr + 1)
     if (-not (Budget-Ok)) { Abbruch-Bericht 'Budget-Deckel'; exit 1 }
+}
+
+# BL-296: Die Pruefdichte an das Bauvolumen koppeln. Ein zweiter Durchgang je
+# Angreifer, mit EIGENEM Fokus (TEAM_REDTEAM_FOCUS_2) ueber denselben Bereich
+# — nur auf Ansage, und nur wenn die Sweeps in DIESEM Lauf gelaufen sind.
+if ($env:TEAM_REDTEAM_FOCUS_2 -and (Phasen-Faellig 3)) {
+    $fokusErst = $env:TEAM_REDTEAM_FOCUS
+    foreach ($rolle in @('harry', 'marv')) {
+        Log "=== PHASE Red Team: $rolle — zweiter Durchgang (eigener Fokus, Kit-BL-296) ==="
+        $env:TEAM_REDTEAM_FOCUS = $env:TEAM_REDTEAM_FOCUS_2
+        $env:TEAM_REDTEAM_ZWEITER_DURCHGANG = $vorherStand[$rolle]
+        try {
+            $rc = Rolle-Starten "./$rolle.ps1"
+        } finally {
+            $env:TEAM_REDTEAM_FOCUS = $fokusErst
+            Remove-Item Env:TEAM_REDTEAM_ZWEITER_DURCHGANG -ErrorAction SilentlyContinue
+        }
+        switch ($rc) {
+            0 { Log "$rolle hat den zweiten Durchgang abgeschlossen."; Beutebuch-Lint-Nach "$rolle (2. Durchgang)" }
+            3 { Log "${rolle}: im zweiten Durchgang nichts zu prüfen." }
+            42 {
+                Log "⏸ Session-Limit erreicht — Lauf pausiert ($rolle, 2. Durchgang). Bitte später .\vollautomatik.cmd erneut starten."
+                exit 42
+            }
+            default {
+                Log "$rolle endete im zweiten Durchgang mit ECHTEM Fehler ($rc) — Vollautomatik stoppt."
+                exit 1
+            }
+        }
+        if (-not (Budget-Ok)) { Abbruch-Bericht 'Budget-Deckel'; exit 1 }
+    }
 }
 Phasen-Naechste 4
 
@@ -441,6 +611,7 @@ while ($runde -lt $maxRunden) {
         }
         default { $getan = 1; Log "Runde ${runde}: Frank-Fehlversuch (ggf. Eskalation an Axel)." }
     }
+    if ($getan -eq 1) { Beutebuch-Lint-Nach "Frank (Runde $runde)" }
     if (-not (Budget-Ok -Kulanz)) { Abbruch-Bericht 'Budget-Deckel'; exit 1 }
 
     # Axel nur rufen, wenn ein Fall auf ihn wartet.
@@ -456,11 +627,13 @@ while ($runde -lt $maxRunden) {
             }
             default { $getan = 1; Log "Runde ${runde}: Axel-Fehler ($rc) — Fall bleibt offen." }
         }
+        Beutebuch-Lint-Nach "Axel (Runde $runde)"
         if (-not (Budget-Ok -Kulanz)) { Abbruch-Bericht 'Budget-Deckel'; exit 1 }
     }
 
     if ($getan -eq 0) {
         Log "Runde ${runde}: nichts mehr zu tun — Fix-Phase beendet."
+        Offene-Funde-Melden
         break
     }
 
@@ -502,18 +675,55 @@ if ($frankRest -gt 0) {
     Log '  Naechster Schritt:  .\frank.cmd   (nennt den Block, der nachgebessert gehoert)'
 }
 
+Voller-Smoke-Am-Phasenende 'Fix-Phase'
 Remove-Item -LiteralPath $phasenState -Force -ErrorAction SilentlyContinue
 Log '=== ABSCHLUSSBERICHT ==='
 Rolle-Starten './team-status.ps1' | Out-Null
-Log "Dieser Lauf: $(Lauf-Kosten) USD (Deckel $budgetUsd). Gesamt-Kontostand: $(Kontostand-Gesamt) USD."
+# BL-240: Betrag und Aufzaehlung darunter beschreiben jetzt DIESELBE Menge —
+# alle Rollen dieses Laufs. Vorher stand ueber einer Liste aus dem Ralph-
+# Ordner (egal aus welchem Lauf) ein Betrag ueber alle Rollen dieses Laufs; im
+# Feld 18,86 USD ueber Logs, die 15,40 ergaben, waehrend die Kaskade 21,91
+# gekostet hatte. Wer die falsche Zahl nahm, buchte falsch.
+Log "Dieser Lauf: $(Lauf-Kosten) USD — alle Rollen DIESES Laufs (Deckel $budgetUsd). Gesamt-Kontostand: $(Kontostand-Gesamt) USD."
 # BL-37: Das Turn-Profil ist die Diagnose des Stufenschnitts und steht bereits
 # in jedem Log — viele kurze Turns heissen Nacharbeit (Planfehler), wenige lange
 # Urteilsarbeit (richtig geschnitten). Im Feld lief eine als "einfacher"
 # angesetzte Stufe mit 87 Turns in 13 Minuten auf das Doppelte ihres Ansatzes,
 # waehrend die teureren Nachbarstufen 47/57 Turns ueber 17 Minuten brauchten.
-foreach ($z in @(Team-Werkzeug $TEAM_KOSTEN_TOOL @('turns', '.ralph-logs') 2>$null)) {
+foreach ($z in @(Team-Werkzeug $TEAM_KOSTEN_TOOL @('turns', '.ralph-logs', '.team-logs', '.ralph-logs/archiv', '.team-logs/archiv', '--since', "$laufStart") 2>$null)) {
     if ($z) { Log "  $z" }
 }
+# BL-240 (c): Eine Kaskade kann ueber ZWEI Laeufe gebaut sein (vierter
+# Ausgang, Deckel) — dann ist keine der Zahlen oben die ganze Kaskade.
+if (Test-Path .ralph-plan) {
+    $planPfad = ((Get-Content -Raw .ralph-plan) -replace '\s+$', '')
+    $beginn = @(& git log --diff-filter=A --format=%ct -- $planPfad 2>$null | Where-Object { $_ }) | Select-Object -Last 1
+    if ($beginn) {
+        $bisher = team_kosten_seit $beginn @('.ralph-logs', '.team-logs', '.ralph-logs/archiv', '.team-logs/archiv')
+        Log "Kaskade $(Kaskaden-Nummer) bisher: $bisher USD — alle Rohlogs seit ihrem Beginn, über alle Läufe (Kit-BL-240)."
+    }
+}
+# BL-250: Mit welchem Auftrag die Sweeps liefen. Ein verfallener Fokus war bis
+# hierher eine Logzeile mitten im Lauf — und ein Sweep ohne Auftrag sieht aus
+# wie ein gegluekter.
+foreach ($rolle in @('harry', 'marv')) {
+    $datei = ".team-logs/fokus-$rolle.txt"
+    if (-not (Test-Path $datei)) { continue }
+    $mtime = [DateTimeOffset]::new((Get-Item $datei).LastWriteTimeUtc).ToUnixTimeSeconds()
+    if ($mtime -lt $laufStart) { continue }
+    Log "Red Team: $rolle — Fokus $(@(Get-Content $datei)[0])"
+}
+# BL-299: Die Abdeckungszeilen der Sweeps — was geprueft wurde, auch ohne Fund.
+$abdeckung = @(Team-Werkzeug $TEAM_KOSTEN_TOOL @('abdeckung', '.team-logs', '--since', "$laufStart") 2>$null | Where-Object { $_ })
+if ($abdeckung.Count) {
+    Log 'Red Team — Abdeckung je Fokus-Punkt (Kit-BL-299):'
+    foreach ($z in $abdeckung) { Log "  $z" }
+}
+if ($script:lintBefunde.Count) {
+    Log "Beutebuch-Lint meldete im Lauf Mängel (Kit-BL-254) — vor dem Closeout ansehen: $TEAM_BEUTEBUCH_TOOL lint"
+    foreach ($z in $script:lintBefunde) { Log "  $z" }
+}
+Offene-Funde-Melden
 # BL-255 (c): Eine planmaessig ausgelassene Stufe wird GETRENNT gezaehlt.
 # "4 genommen, 1 planmaessig uebersprungen" ist eine andere Aussage als
 # "5 genommen" - und ohne diese Zeile stuende nirgends, dass eine Stufe

@@ -70,6 +70,7 @@ Ablage-Konvention stammt aus dem Feld (Ursprungsprojekt, 2026-07-11):
 
 ```
 ./vollautomatik.sh ./halbautomatik.sh ./team-status.sh ./team-test.sh
+./fixphase.sh                                           nur die Fix-Phase
 ./ralph.sh ./frank.sh ./axel.sh ./harry.sh ./marv.sh    Entrypoints (Wurzel)
 ./team.config.sh                                        ALLE Projektwerte
 team/lib.sh  team/redteam.sh                            Bibliothek

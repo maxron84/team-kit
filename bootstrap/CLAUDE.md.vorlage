@@ -551,6 +551,18 @@ Guard/Read-Only-Regeln **nicht** auf.
   Zeitlimit ihres Werkzeugs auf diesen Wert in **Sekunden** — erwartet das
   Werkzeug Millisekunden, ist es das Tausendfache (`Kit-BL-258`) —, statt
   auszuweichen.
+  **Die Frist des Werkzeugs ist aber eine Obergrenze** (`Kit-BL-273`): darüber
+  schiebt das Werkzeug den Befehl selbst in den Hintergrund. Reicht sie nicht,
+  gilt der **Zwei-Schritt-Weg**: `team/tools/smoke_warten.py start` startet den
+  Testlauf im Hintergrund, danach ruft die Rolle `smoke_warten.py warten` **im
+  Vordergrund** auf, so oft, bis es nicht mehr mit 75 endet — sein Exit-Code
+  ist der des Smoke-Tests. **Nur der Testlauf gehört in den Hintergrund;** „ich
+  warte, bis sich der Warteruf meldet" ist derselbe Fehler eine Ebene höher
+  (`Kit-BL-281`, im Feld 2,01 USD für null Fortschritt).
+  **Zweistufig, wenn die Suite wächst** (`Kit-BL-232`): `TEAM_SMOKE_TEST_SCHNELL`
+  ist der schnelle Befehl je Stufe; die Vollautomatik fährt dann den vollen
+  `TEAM_SMOKE_TEST` verbindlich am Ende der Bauphase und der Fix-Phase, und
+  rot setzt er das Gate.
 - **Auslauf-Bremse gegen Leerlaufkosten (`TEAM_FIX_MAX_STAGNATION`, `Kit-BL-25`).**
   Bleibt in der Frank↔Axel-Fixphase **weder** ein Fix **noch** eine neue Akte
   **noch** ein Statuswechsel, bricht die Phase nach N Runden ab, statt teuer
@@ -645,6 +657,7 @@ Installiert mit dem **T.E.A.M.-Starterkit**. Ablage:
 
 ```
 ./vollautomatik.sh ./halbautomatik.sh ./team-status.sh ./team-test.sh
+./fixphase.sh                                           nur die Fix-Phase
 ./ralph.sh ./frank.sh ./axel.sh ./harry.sh ./marv.sh    Entrypoints (Bash-Bahn)
 ./kit-melden.sh                                         Rueckkanal ans Kit
 ./*.ps1 + ./*.cmd, gleiche Namen                        dieselben, pwsh-Bahn

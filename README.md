@@ -127,7 +127,7 @@ und ein Gleichstands-Prüfer, der **an seinem eigenen Befund starb**, weil `diff
 mit 1 endet, wenn es etwas findet. Keiner der fallenden Fälle wurde grün
 gedreht.
 
-**Offen sind 32 Einträge**, und keiner davon ist ein Rest dieser Version.
+**Offen sind 19 Einträge**, und keiner davon ist ein Rest dieser Version.
 **Fünf warten auf eine Entscheidung**, die die Einträge selbst dem Owner
 vorbehalten — welche der beiden Bauformen gefahren wird (`BL-194`), ob der
 Lückenfinder eine Formatänderung am Ledger wert ist (`BL-193`), wie der
@@ -147,7 +147,7 @@ nach Wirkung sortiert, statt in Sitzungsprotokollen zu verschwinden. Der
 Engpass ist nicht das Melden.
 
 Alles in [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (209 Einträge).
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (222 Einträge).
 
 ---
 
@@ -442,7 +442,7 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen sieben Quellen
 kommen die Backlog-Einträge `BL-1`…`BL-304`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (209 Einträge), der Rest in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (222 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors
@@ -652,6 +652,7 @@ bash/                   ALLES, was die Bash-Bahn ausmacht
 ├── entry/              Entrypoints — landen in der WURZEL des Zielprojekts
 │   ├── vollautomatik.sh    Orchestrator: Ralph → Red Team → Frank → Axel
 │   ├── halbautomatik.sh    Schrittweise, mit Halt beim Menschen
+│   ├── fixphase.sh         Nur die Fix-Phase: Frank ↔ Axel, mit Deckel und Bremse
 │   ├── team-status.sh      Kontostand, Pipeline, Beutebuch-Übersicht
 │   ├── team-test.sh        Regressionstests der Team-Infrastruktur
 │   ├── kit-melden.sh       Rückkanal: Fund AM KIT melden (`BL-153`)
@@ -753,6 +754,7 @@ nur `raw/`; die anderen beiden tauchen auf, sobald du sie benutzt.
 |---|---|---|
 | `./vollautomatik.sh` | `.\vollautomatik.cmd` | Ganze Kaskade automatisch durchfahren |
 | `./halbautomatik.sh <rolle>` | `.\halbautomatik.cmd <rolle>` | Einzelnen Schritt, Entscheidung beim Menschen |
+| `./fixphase.sh` | `.\fixphase.cmd` | Nur die Fix-Phase (Frank ↔ Axel) mit Lauf-Deckel, Auslauf-Bremse und Bericht — für Funde außerhalb einer Kaskade (`BL-241`) |
 | `./team-status.sh` | `.\team-status.cmd` | Pipeline, Beutebuch, Kaskadenstand |
 | `./team-status.sh --budget` | `.\team-status.cmd --budget` | Kontostand, API vs. Abo getrennt |
 | `./team-status.sh --ledger-pruefen` | `.\team-status.cmd --ledger-pruefen` | Ist für jede Kaskade alles gebucht? Gegenprobe gegen die archivierten Rohlogs (Exit `4` = Warnbefunde) |

@@ -105,35 +105,35 @@ def test_die_rolle_wird_nicht_mehr_eingesammelt():
     assert VOLL_PS1.is_file(), f"vollautomatik.ps1 nicht gefunden ({VOLL_PS1})"
     ohne_kommentar = [z for z in _quelltext().splitlines()
                       if not z.lstrip().startswith("#")]
-    starts = [z for z in ohne_kommentar if re.search(r"&\s*pwsh\b.*-File\s+\$Skript", z)]
-    assert starts, (
-        "Der Start der Rolle ist nicht mehr zu finden — wurde er umbenannt, "
-        "gehoert dieser Riegel nachgezogen, nicht geloescht.")
-    for zeile in starts:
-        assert not re.match(r"\s*\$\w+\s*=", zeile), (
-            "BL-181: Die Ausgabe der Rolle wird wieder in eine Variable "
-            "gesammelt. Das haelt den KOMPLETTEN Kindprozess zurueck, bevor "
-            "die erste Zeile herauskommt — Konsole und Lauf-Log schweigen "
-            f"beide, bis die Rolle fertig ist:\n    {zeile.strip()}")
-        assert "|" in zeile, (
-            "Der Start der Rolle fuehrt nicht mehr in eine Pipeline — dann "
-            f"wird wieder gesammelt statt gestreamt:\n    {zeile.strip()}")
+    sammeln = [z for z in ohne_kommentar
+               if re.search(r"^\s*\$\w+\s*=\s*&\s*pwsh\b.*-File\s+\$Skript", z)]
+    assert not sammeln, (
+        "BL-181: Die Ausgabe der Rolle wird wieder in eine Variable "
+        "gesammelt. Das haelt den KOMPLETTEN Kindprozess zurueck, bevor "
+        "die erste Zeile herauskommt — Konsole und Lauf-Log schweigen "
+        f"beide, bis die Rolle fertig ist:\n    {sammeln[0].strip()}")
+    # BL-248: Gestreamt wird seither zeilenweise und asynchron mit — die
+    # Pipeline davor wartete auf EOF, und das kam bei einem ueberlebenden
+    # GUI-Enkel nie. Die Verhaltensprobe dafuer steht in test_bl248.
+    block = _quelltext()[_quelltext().index("function Rolle-Starten"):]
+    assert "ReadLineAsync" in block, (
+        "Rolle-Starten liest die Ausgabe der Rolle nicht mehr zeilenweise "
+        "mit — gestreamt wird dann nicht mehr (BL-181).")
 
 
-def test_der_rueckgabewert_kommt_aus_lastexitcode():
-    """Hinter einer Pipeline ist `$LASTEXITCODE` der einzige Weg zum Code.
-
-    Ein Rueckbau auf eine Zwischenvariable VOR der Schleife wuerde genau hier
-    scheitern — deshalb steht die Zeile unter Test und nicht nur im Kommentar.
+def test_der_rueckgabewert_kommt_aus_dem_kind():
+    """Seit BL-248 wartet die Funktion auf den Kindprozess selbst — der
+    Exit-Code kommt von ihm, nicht aus `$LASTEXITCODE` hinter einer Pipeline.
+    An ihm haengt die gesamte Fehlerbehandlung der Vollautomatik; die
+    Verhaltensprobe dazu ist `test_der_exitcode_ueberlebt_die_pipeline`.
     """
     ueberspringe_ohne_bahn("pwsh")
     text = _quelltext()
     block = text[text.index("function Rolle-Starten"):]
     block = block[:block.index("\n}\n") + 3]
-    assert "return $LASTEXITCODE" in block, (
-        "Rolle-Starten gibt nicht mehr $LASTEXITCODE zurueck. Hinter einer "
-        "Pipeline gibt es keinen anderen Weg an den Exit-Code der Rolle — "
-        "und an ihm haengt die gesamte Fehlerbehandlung der Vollautomatik.")
+    assert "WaitForExit()" in block and ".ExitCode" in block, (
+        "Rolle-Starten wartet nicht mehr auf das Kind oder gibt dessen "
+        "Exit-Code nicht zurueck (BL-248).")
 
 
 # --- Die Sonde: die ECHTE Funktion gegen eine Wegwerf-Rolle ------------------

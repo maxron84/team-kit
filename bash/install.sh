@@ -1466,6 +1466,7 @@ kandidaten_ausserhalb() {
             docs|doku|data|assets|static|media|raw|clippings|Clippings|.*) continue ;;
             ralph.sh|frank.sh|harry.sh|marv.sh|axel.sh|install.sh)      continue ;;
             vollautomatik.sh|halbautomatik.sh|team-*.sh|team.config.sh) continue ;;
+            fixphase.sh|fixphase.ps1|fixphase.cmd)                      continue ;;
             ralph.ps1|frank.ps1|harry.ps1|marv.ps1|axel.ps1)            continue ;;
             vollautomatik.ps1|halbautomatik.ps1|team-*.ps1|team.config.ps1) continue ;;
             ralph.cmd|frank.cmd|harry.cmd|marv.cmd|axel.cmd|team-*.cmd) continue ;;

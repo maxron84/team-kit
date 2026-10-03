@@ -289,6 +289,10 @@ if ($TEAM_SMOKE_TEST -cmatch '^TODO') { $TEAM_SMOKE_TEST = '' }
 # Default 600 s: grosszuegig gegenueber der 120-s-Wand des Werkzeugs und immer
 # noch eine Grenze. Wer laenger braucht, traegt es in team.config.ps1 ein.
 $TEAM_SMOKE_TEST_TIMEOUT = Team-Default 'TEAM_SMOKE_TEST_TIMEOUT' '600'
+# BL-232 (2): Der schnelle STUFEN-Befehl. Leer = die Stufen verifizieren mit
+# TEAM_SMOKE_TEST selbst (wie bisher). Gesetzt = je Stufe dieser Befehl, und
+# die Vollautomatik faehrt den vollen Smoke-Test verbindlich am Phasenende.
+$TEAM_SMOKE_TEST_SCHNELL = Team-Default 'TEAM_SMOKE_TEST_SCHNELL' ''
 
 # --- Der Suitenstand ueberlebt die Rolle, die ihn gemessen hat (BL-256) -------
 # WARUM ES DIESE DATEI GIBT. Im Feld aktivierte ein KORREKTER Frank-Fix einen
@@ -327,6 +331,18 @@ $TEAM_GATE_DATEI = Team-Default 'TEAM_GATE_DATEI' '.team-gate-rot'
 # er sieht den neuen Wert ohne neuen Import.
 function team_smoke_bausteine {
 if ($TEAM_SMOKE_TEST) {
+    # BL-232 (2): Zweistufige Verifikation als Kit-Begriff. Ist ein schneller
+    # Stufen-Befehl konfiguriert, verifizieren die Rollen JE STUFE mit ihm, und
+    # die Vollautomatik faehrt den vollen Smoke-Test verbindlich am Phasenende.
+    $stufe = if ($TEAM_SMOKE_TEST_SCHNELL) { $TEAM_SMOKE_TEST_SCHNELL } else { $TEAM_SMOKE_TEST }
+    $stufeHinweis = if ($TEAM_SMOKE_TEST_SCHNELL) { " (die schnelle Stufen-Fassung; den vollen Smoke-Test $TEAM_SMOKE_TEST fährt die Vollautomatik am Phasenende, Kit-BL-232)" } else { '' }
+    # BL-273/BL-281: Die Frist des Werkzeugs ist eine OBERGRENZE — darueber
+    # schiebt es den Befehl selbst in den Hintergrund. Der Ausweg wird
+    # mitgeliefert, samt der Falle eine Ebene hoeher. Der Interpreter wie beim
+    # Kosten-Werkzeug — beide Bahnen nennen damit dieselbe Zeile (BL-117).
+    $py = @(($TEAM_KOSTEN_TOOL -split '\s+') | Where-Object { $_ })[0]
+    if (-not $py) { $py = 'python' }
+    $zweiSchritte = "Reicht die Höchstfrist deines Werkzeugs nicht (oft 600000 Millisekunden), gilt der Zwei-Schritt-Weg (Kit-BL-273): '$py team/tools/smoke_warten.py start --befehl `"$stufe`"' startet den Testlauf im Hintergrund; danach rufst du '$py team/tools/smoke_warten.py warten' IM VORDERGRUND auf, so oft, bis es nicht mehr mit 75 endet — sein Exit-Code ist der des Smoke-Tests. Nur der Testlauf gehört in den Hintergrund: 'Ich warte, bis sich der Warteruf meldet' ist derselbe Fehler eine Ebene höher (Kit-BL-281)."
     # Der Nachsatz ist eine Notbremse gegen einen teuren Fehlermodus, nicht
     # Ausschmueckung (BL-41, Feld A K27/K28): Eine bauende Rolle
     # startete den Smoke-Test als HINTERGRUND-Task und wartete danach auf eine
@@ -337,16 +353,17 @@ if ($TEAM_SMOKE_TEST) {
     # war. Der Satz steht hier statt in den Rollen-Briefings, weil er hier
     # JEDE bauende Rolle trifft statt nur eine.
     $SMOKE_ZEILE = @"
-Smoke-Test ausführen: $TEAM_SMOKE_TEST — muss grün sein.
+Smoke-Test ausführen: $stufe$stufeHinweis — muss grün sein.
    Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe. Starte ihn
    NIEMALS als Hintergrund-Task oder Monitor und plane keinen Wakeup darauf:
    Diese Sitzung ist headless, es kommt keine Benachrichtigung, und du wartest
    bis zum Zeitlimit auf ein Ereignis, das nicht eintreten kann (Kit-BL-265).
    Er darf dafür bis zu $TEAM_SMOKE_TEST_TIMEOUT Sekunden brauchen: Erhöhe das
-   Zeitlimit deines Werkzeugs entsprechend, statt in den Hintergrund
-   auszuweichen — viele Werkzeuge erwarten MILLISEKUNDEN, das wären
-   ${TEAM_SMOKE_TEST_TIMEOUT}000 (Kit-BL-258). Läuft er länger, ist das ein Befund
-   für den Menschen — melde ihn, weiche nicht aus.
+   Zeitlimit deines Werkzeugs entsprechend, soweit es das zulässt,
+   statt in den Hintergrund auszuweichen — viele Werkzeuge erwarten MILLISEKUNDEN, das
+   wären ${TEAM_SMOKE_TEST_TIMEOUT}000 (Kit-BL-258). $zweiSchritte
+   Läuft er länger als diese Frist, ist das ein Befund für den Menschen —
+   melde ihn, weiche nicht aus.
    War der Baum schon VOR deiner Arbeit rot, hänge eine Zeile
    '<ISO-Zeit> | <deine Rolle> | <Namen der roten Tests>' an
    $TEAM_GATE_DATEI an (Kit-BL-256). Dein Auftrag scheitert daran NICHT — aber
@@ -361,7 +378,7 @@ Smoke-Test ausführen: $TEAM_SMOKE_TEST — muss grün sein.
     # Fehlversuch (.frank-attempts) und eskaliert ab dem dritten an Axel —
     # das teure Modell wird also fuer einen Formfehler gerufen. Deshalb
     # steht die Auflage hier ausgeschrieben statt nur bei Ralph.
-    $SMOKE_SUFFIX = " Smoke-Test grün: $TEAM_SMOKE_TEST. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu $TEAM_SMOKE_TEST_TIMEOUT Sekunden brauchen, erhöhe das Zeitlimit deines Werkzeugs entsprechend (viele Werkzeuge erwarten MILLISEKUNDEN — das wären ${TEAM_SMOKE_TEST_TIMEOUT}000, Kit-BL-258). NIEMALS als Hintergrund-Task, als Monitor oder mit einem Wakeup darauf (Kit-BL-265): Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (Kit-BL-41). War die Suite schon VOR deinem Fix rot, brich nicht ab: Miss beide Staende und belege, dass durch DEINEN Fix kein NEUER Fehlschlag entsteht (Kit-BL-205) — und haenge die Zeile '<ISO-Zeit> | frank | <Namen der roten Tests>' an $TEAM_GATE_DATEI an, sonst meldet sich der Lauf am Ende als fertig, waehrend das Gate aus ist (Kit-BL-256). Ist der Baum am Ende gruen, loesche die Datei wieder."
+    $SMOKE_SUFFIX = " Smoke-Test grün: $stufe$stufeHinweis. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu $TEAM_SMOKE_TEST_TIMEOUT Sekunden brauchen, erhöhe das Zeitlimit deines Werkzeugs entsprechend, soweit es das zulässt (viele Werkzeuge erwarten MILLISEKUNDEN — das wären ${TEAM_SMOKE_TEST_TIMEOUT}000, Kit-BL-258). $zweiSchritte NIEMALS als Hintergrund-Task, als Monitor oder mit einem Wakeup darauf (Kit-BL-265): Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (Kit-BL-41). War die Suite schon VOR deinem Fix rot, brich nicht ab: Miss beide Staende und belege, dass durch DEINEN Fix kein NEUER Fehlschlag entsteht (Kit-BL-205) — und haenge die Zeile '<ISO-Zeit> | frank | <Namen der roten Tests>' an $TEAM_GATE_DATEI an, sonst meldet sich der Lauf am Ende als fertig, waehrend das Gate aus ist (Kit-BL-256). Ist der Baum am Ende gruen, loesche die Datei wieder."
 } else {
     $SMOKE_ZEILE = "(Kein Smoke-Test konfiguriert — Schritt entfällt. Das Team arbeitet ohne Sicherheitsnetz; TEAM_SMOKE_TEST in team.config.ps1 nachtragen.)"
     $SMOKE_SUFFIX = ""
@@ -407,6 +424,13 @@ function team_allowed_tools {
     param([string]$Rolle)
     $basis = "Read Grep Glob Bash(${TEAM_BEUTEBUCH_TOOL}:*) Bash(git log:*) Bash(git diff:*) Bash(git show:*)"
     if ($TEAM_SMOKE_TEST) { $basis = "$basis Bash($TEAM_SMOKE_TEST)" }
+    # BL-232/BL-273: der schnelle Stufen-Befehl und der Zwei-Schritt-Weg.
+    if ($TEAM_SMOKE_TEST_SCHNELL) { $basis = "$basis Bash($TEAM_SMOKE_TEST_SCHNELL)" }
+    if ($TEAM_SMOKE_TEST) {
+        $py = @(($TEAM_KOSTEN_TOOL -split ' ') | Where-Object { $_ })[0]
+        if (-not $py) { $py = 'python' }
+        $basis = "$basis Bash($py team/tools/smoke_warten.py:*)"
+    }
     $wurzel = (Get-Location).ProviderPath -replace '\\', '/'
     if ($wurzel -match '^([A-Za-z]):/(.*)$') {
         $wurzel = "$($Matches[1].ToLowerInvariant())/$($Matches[2])"
@@ -2091,10 +2115,25 @@ function team_quittung_selbstpruefung {
         Team-Fehler "      Miss von Hand nach, wenn der laufende Test fertig ist: $TEAM_SMOKE_TEST"
         return $false
     }
-    Team-Fehler "    … Smoke-Test läuft ($TEAM_SMOKE_TEST) …"
-    Team-Werkzeug $TEAM_SMOKE_TEST @() 2>&1 | Out-Null
+    # BL-232: Verifiziert wird mit dem STUFEN-Befehl (schnell, wenn
+    # konfiguriert). Die Messung ist die ZWEITE desselben Stands — die Rolle
+    # hat ihn selbst gefahren; sie bleibt, wird aber BENANNT und gemessen.
+    $smoke = if ($TEAM_SMOKE_TEST_SCHNELL) { $TEAM_SMOKE_TEST_SCHNELL } else { $TEAM_SMOKE_TEST }
+    Team-Fehler "    … Smoke-Test läuft ($smoke) — zweite Messung desselben Stands, die Rolle hat ihn schon gefahren (Kit-BL-232) …"
+    $t0 = [DateTime]::UtcNow
+    Team-Werkzeug $smoke @() 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        Team-Fehler "    ✗ $TEAM_SMOKE_TEST ist ROT."
+        $dauer = [int]([DateTime]::UtcNow - $t0).TotalSeconds
+        # BL-232 (3): Flackern vom Regress trennen, BEVOR der Mensch geweckt
+        # wird — genau diese Handbewegung loeste den Feldfall auf.
+        Team-Fehler "    … ROT nach $dauer s — ein zweiter Lauf trennt Flackern vom Regress (Kit-BL-232) …"
+        Team-Werkzeug $smoke @() 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Team-Fehler "    ? Der zweite Lauf ist GRÜN — das Rot war flackernd oder lastbedingt, nicht reproduzierbar (Kit-BL-232)."
+            Team-Fehler "      Nicht automatisch quittiert: Ein flackernder Baum ist ein Befund für den Menschen, kein grüner."
+            return $false
+        }
+        Team-Fehler "    ✗ $smoke ist ROT. Auch der zweite Lauf war rot — kein Flackern."
         Team-Fehler "      Das gehört an den Menschen: Erst prüfen, WO — sind ausschließlich die von"
         Team-Fehler "      DIESER Stufe neu angelegten Testdateien rot, ist der Testaufbau der"
         Team-Fehler "      wahrscheinlichere Schuldige als der Produktivcode (Kit-BL-61)."
@@ -2106,7 +2145,13 @@ function team_quittung_selbstpruefung {
         Team-Fehler "      Befund verwendest — und lies das Feld ``result`` im Lauf-Log (Kit-BL-201)."
         return $false
     }
-    Team-Fehler "    ✓ $TEAM_SMOKE_TEST ist grün."
+    $dauer = [int]([DateTime]::UtcNow - $t0).TotalSeconds
+    Team-Fehler "    ✓ $smoke ist grün ($dauer s)."
+    # BL-232 (4): Fruehwarnung statt Deckel.
+    $frist = 0
+    if ([int]::TryParse("$TEAM_SMOKE_TEST_TIMEOUT", [ref]$frist) -and $frist -gt 0 -and ($dauer * 100) -ge ($frist * 75)) {
+        Team-Fehler "    ⚠ Die Suite braucht $dauer s — mehr als 75 % von TEAM_SMOKE_TEST_TIMEOUT ($frist s). Wächst sie weiter, reißt sie die Frist (Kit-BL-232). Jetzt planen: TEAM_SMOKE_TEST_SCHNELL für die Stufen oder die Frist anheben."
+    }
     Team-Fehler "[$Rolle] Alle drei Prüfungen bestanden — Stufe $Stufe wird automatisch quittiert."
     return $true
 }
@@ -2301,7 +2346,7 @@ $script:TEAM_LAST_KEIN_ZUG = 0
 $script:TEAM_SMOKE_PARALLEL_ZEILE = ''
 
 Export-ModuleMember -Function * -Variable @(
-    'SMOKE_ZEILE', 'SMOKE_SUFFIX', 'TEAM_SMOKE_TEST_TIMEOUT',
+    'SMOKE_ZEILE', 'SMOKE_SUFFIX', 'TEAM_SMOKE_TEST_TIMEOUT', 'TEAM_SMOKE_TEST_SCHNELL',
     'TEAM_SMOKE_PARALLEL_ZEILE',
     'TEAM_MODEL_LOOP', 'TEAM_MODEL_STRONG',
     'TEAM_ROLE_BUDGET_USD', 'TEAM_ROLE_HARDCAP_USD',

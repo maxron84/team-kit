@@ -89,6 +89,8 @@ def test_auch_die_stagnationsbremse_druckt_ihn(text):
 def test_bericht_nennt_die_offenen_funde_und_den_befehl(text):
     bericht = text[text.index("abbruch_bericht() {"):]
     bericht = bericht[:bericht.index("\n}\n")]
-    assert "./frank.sh" in bericht, "der Fortsetzungsbefehl fehlt"
+    # Seit BL-204 nennt der Bericht den eigenen Einstieg der Fix-Phase statt
+    # der Handkurbel (`./frank.sh`, ein Fund je Aufruf, ohne Axel).
+    assert "./fixphase.sh" in bericht, "der Fortsetzungsbefehl fehlt"
     assert "rollen-abschluss" in bericht, "der Closeout-Hinweis fehlt"
     assert "list" in bericht, "die offenen Funde werden nicht aufgezaehlt"

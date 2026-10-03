@@ -59,6 +59,10 @@ Nutzung:
                                         IM erlaubten Bereich aus dem Log
                                         einer Rolle (permission_denials).
                                         Exit 3 = es gibt welche.
+    kosten.py abdeckung [DIR...] [--since EPOCH]
+                                        BL-299: die Abdeckungszeilen
+                                        (`ABDECKUNG <Nr>: …`) aus dem result
+                                        der Sweep-Logs, fuer den Bericht.
     kosten.py modelle [DIR...] [--cli BEFEHL]
                                         BL-264: je Rolle das Modell, das
                                         die Logs in DIR tragen (Default
@@ -2805,10 +2809,11 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
 # also laut statt still.
 VERBEN = {
     "summe": "summe [--split] [--since EPOCH] DIR...",
-    "turns": "turns [DIR...]   (Default .ralph-logs)",
+    "turns": "turns [DIR...] [--since EPOCH]   (Default .ralph-logs)",
     "modelle": ("modelle [DIR...] [--cli BEFEHL]   (Default .ralph-logs "
                 ".team-logs)"),
     "verweigert": "verweigert LOG --ordner ORDNER...   (Kit-BL-292)",
+    "abdeckung": "abdeckung [DIR...] [--since EPOCH]   (Kit-BL-299)",
     "ledger": ("ledger [PFAD] [--domaene D] [--rolle R] [--kaskade N] "
                "[--split] [--anzahl]"),
     "ledger-pruefen": "ledger-pruefen [--pfad P] [--kaskade N]",
@@ -2957,8 +2962,27 @@ def _main(argv):
     if befehl == "turns":
         # BL-37 (c): Turn-Profil des Laufs — die Diagnose, ob der Stufenschnitt
         # stimmte. Viele kurze Turns = Nacharbeit, wenige lange = Urteilsarbeit.
+        # BL-240: `--since EPOCH` schneidet auf die Logs EINES Laufs zu. Ohne
+        # ihn listete der Abschlussbericht, was im Ralph-Ordner lag — aus
+        # welchem Lauf auch immer —, zwei Zeilen unter einem Betrag, der eine
+        # andere Menge meinte (alle Rollen dieses Laufs).
+        since = None
+        if "--since" in rest:
+            stelle = rest.index("--since")
+            if stelle + 1 >= len(rest):
+                print("Fehler: --since braucht einen Zeitstempel (Epoch)",
+                      file=sys.stderr)
+                return 1
+            try:
+                since = float(rest[stelle + 1])
+            except ValueError:
+                print(f"Fehler: --since-Wert '{rest[stelle + 1]}' ist keine Zahl",
+                      file=sys.stderr)
+                return 1
+            rest = rest[:stelle] + rest[stelle + 2:]
         dirs = [a for a in rest if not a.startswith("--")] or [".ralph-logs"]
-        anzahl, gesamt, zeilen = turn_profil(dirs)
+        anzahl, gesamt, zeilen = turn_profil(
+            dirs, files=team_log_dateien(dirs, since=since))
         if not anzahl:
             print("Keine Logs mit num_turns gefunden.")
             return 0
@@ -2967,6 +2991,40 @@ def _main(argv):
         for datei, turns, usd in zeilen:
             betrag = f"{usd:.4f} USD" if usd is not None else "Kosten unbekannt"
             print(f"  {turns:4d} Turns  {betrag:>18}  {os.path.basename(datei)}")
+        return 0
+
+    if befehl == "abdeckung":
+        # BL-299: Die Abdeckungszeilen der Sweeps (`ABDECKUNG <Nr>: …`) aus dem
+        # `result` ihrer Logs — fuer den Abschlussbericht. Ohne sie hinterliess
+        # ein Fokus-Punkt ohne Fund keine Spur, und „nichts gefunden" war von
+        # „zu vage gefragt" nicht zu unterscheiden.
+        since = None
+        if "--since" in rest:
+            stelle = rest.index("--since")
+            try:
+                since = float(rest[stelle + 1])
+            except (IndexError, ValueError):
+                print("Fehler: --since braucht einen Zeitstempel (Epoch)",
+                      file=sys.stderr)
+                return 1
+            rest = rest[:stelle] + rest[stelle + 2:]
+        dirs = [a for a in rest if not a.startswith("--")] or [".team-logs"]
+        for datei in sorted(team_log_dateien(dirs, since=since)):
+            name = os.path.basename(datei)
+            if not name.startswith(("harry-", "marv-")):
+                continue
+            try:
+                with open(datei, encoding="utf-8-sig") as fh:
+                    data = json.load(fh)
+            except (OSError, ValueError):
+                continue
+            ergebnis = data.get("result") if isinstance(data, dict) else None
+            zeilen = [z.strip() for z in str(ergebnis or "").splitlines()
+                      if z.strip().upper().startswith("ABDECKUNG")]
+            if zeilen:
+                print(f"{name}:")
+                for z in zeilen:
+                    print(f"  {z}")
         return 0
 
     if befehl == "ledger":

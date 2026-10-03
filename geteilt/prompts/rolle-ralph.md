@@ -15,9 +15,9 @@ nicht mehr, nicht weniger.
 
 **Lange Befehle laufen im VORDERGRUND** (`Kit-BL-201`): nie als Hintergrund-Task, kein
 Wakeup, kein Monitor — headless kommt keine Benachrichtigung, wer wartet endet ohne
-Quittung, und das Log meldet trotzdem `subtype: success`; der Neustart wirft bezahlte
-Arbeit weg (19,47 USD im Feld). Läuft mein Werkzeug in sein Zeitlimit, erhöhe ich es auf
-`TEAM_SMOKE_TEST_TIMEOUT` **Sekunden** aus `{{KONFIG}}` — in Millisekunden ×1000, nie ausweichen.
+Quittung, das Log meldet trotzdem `subtype: success` (19,47 USD im Feld). Zeitlimit:
+`TEAM_SMOKE_TEST_TIMEOUT` **Sekunden** aus `{{KONFIG}}` (Millisekunden ×1000), soweit es
+geht; sonst `smoke_warten.py start`, dann `… warten` im VORDERGRUND bis nicht 75 (`Kit-BL-273`).
 
 **Mein Dreisatz:** Umsetzung laut Plan → Verifikation laut Plan → genau
 **ein** Commit `{{FEAT_PRAEFIX}}(stufeN): <kurzbeschreibung>`.

@@ -201,6 +201,11 @@ Vorsichtiger, Schritt für Schritt mit Halt bei dir:
 {{RUF}}halbautomatik{{ENDUNG}} ralph    # nur diesen einen Schritt
 ```
 
+Liegen nur Funde an — nach einer Handabnahme, zwischen zwei Kaskaden —,
+fährt `{{RUF}}fixphase{{ENDUNG}}` allein die Fix-Phase: Frank fixt, Axel
+übernimmt die harten Fälle, mit demselben Deckel und derselben Bremse wie
+die Vollautomatik, aber ohne Bau und ohne bezahlte Sweeps (`Kit-BL-241`).
+
 ### 4. Closeout — Pflicht, nicht Kür
 
 ```bash
@@ -346,6 +351,7 @@ Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 |---|---|---|
 | `./vollautomatik.sh` | `.\vollautomatik.cmd` | ganze Kaskade automatisch |
 | `./halbautomatik.sh [rolle]` | `.\halbautomatik.cmd [rolle]` | ein Schritt, Entscheidung bei dir |
+| `./fixphase.sh` | `.\fixphase.cmd` | nur die Fix-Phase (Frank ↔ Axel) mit Deckel, Bremse und Bericht |
 | `./team-status.sh` | `.\team-status.cmd` | Pipeline, Beutebuch, Kaskadenstand |
 | `./team-status.sh --watch` | `.\team-status.cmd --watch` | **dasselbe live**, Refresh alle 5 s · `Strg+C` beendet |
 | `./team-status.sh --budget` | `.\team-status.cmd --budget` | Kontostand, API vs. Abo getrennt |

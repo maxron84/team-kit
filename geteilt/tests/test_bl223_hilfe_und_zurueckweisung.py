@@ -44,7 +44,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Die Rollen kennen KEINE Argumente — bei ihnen ist jedes uebergebene Wort ein
 # Irrtum, und der Irrtum kostet einen Modellaufruf.
-OHNE_ARGUMENTE = ["ralph", "harry", "marv", "frank", "axel"]
+OHNE_ARGUMENTE = ["ralph", "harry", "marv", "frank", "axel", "fixphase"]
 # Diese kennen Argumente, brauchen aber dieselbe Hilfe.
 MIT_ARGUMENTEN = ["vollautomatik", "halbautomatik", "team-status"]
 # Diese reichen an pytest durch: nur `--hilfe`, kein Riegel.

@@ -15,8 +15,19 @@ if not defined TEAM_PWSH if exist "%ProgramFiles%\PowerShell\7\pwsh.exe" set "TE
 if not defined TEAM_PWSH if exist "%ProgramW6432%\PowerShell\7\pwsh.exe" set "TEAM_PWSH=%ProgramW6432%\PowerShell\7\pwsh.exe"
 if not defined TEAM_PWSH if exist "%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe" set "TEAM_PWSH=%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe"
 if not defined TEAM_PWSH goto :keinpwsh
+rem BL-276: Die Rollen schreiben UTF-8; eine cmd-Konsole zeigt per Vorgabe
+rem die OEM-Codepage (850) und malt daraus Zeichensalat - auch in der
+rem Handlungsanweisung eines roten Gates. Umgestellt wird nur, wenn eine
+rem Konsole antwortet, und danach auf den ALTEN Wert zurueck: chcp ueberlebt
+rem setlocal, eine blank umgestellte Shell bliebe nach dem Lauf verstellt.
+set "TEAM_CP="
+for /f "tokens=2 delims=:." %%C in ('chcp 2^>nul') do set "TEAM_CP=%%C"
+if defined TEAM_CP set "TEAM_CP=%TEAM_CP: =%"
+if defined TEAM_CP chcp 65001 >nul 2>&1
 "%TEAM_PWSH%" -NoProfile -File "%~dp0halbautomatik.ps1" %*
-exit /b %ERRORLEVEL%
+set "TEAM_RC=%ERRORLEVEL%"
+if defined TEAM_CP chcp %TEAM_CP% >nul 2>&1
+exit /b %TEAM_RC%
 
 :keinpwsh
 echo FEHLER: PowerShell 7 ^(pwsh^) ist nicht auffindbar.

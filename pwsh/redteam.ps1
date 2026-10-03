@@ -51,7 +51,15 @@ $whitelist = $TEAM_WHITELIST_REDTEAM
 $headHash = (& git rev-parse HEAD).Trim()
 $last = ''
 if (Test-Path $stateFile) { $last = ((Get-Content -Raw $stateFile) -replace '\s', '') }
-if ($last -eq $headHash) {
+# BL-296: Die Pruefdichte liess sich nicht ans Bauvolumen koppeln — ein Sweep
+# je Lauf, und ein zweiter ueber denselben Stand ist gesperrt (richtig gegen
+# Doppelzahlung, BL-30). Die Vollautomatik setzt TEAM_REDTEAM_ZWEITER_DURCHGANG
+# nur, wenn ein ZWEITER FOKUS bestellt ist (TEAM_REDTEAM_FOCUS_2); der Wert ist
+# der Stand VOR dem ersten Durchgang, damit beide denselben Bereich pruefen.
+if ($env:TEAM_REDTEAM_ZWEITER_DURCHGANG) {
+    $last = $env:TEAM_REDTEAM_ZWEITER_DURCHGANG -replace '^-$', ''
+    [Console]::Out.WriteLine("[$Rolle] Zweiter Durchgang über denselben Bau, auf Ansage mit eigenem Fokus — die Sperre gegen Doppelzahlung ist bewusst übersteuert (Kit-BL-296).")
+} elseif ($last -eq $headHash) {
     [Console]::Out.WriteLine("[$Rolle] Kein neuer Commit seit letztem Sweep ($headHash) — nichts zu tun.")
     exit 3
 }
@@ -81,19 +89,39 @@ if ($TEAM_WEITERER_CODE) {
 #
 # Der Fokus wird deshalb an den LAUF gebunden statt an die Prozessumgebung.
 $focusState = ".team-focus-$Rolle"
+# BL-250: Was mit dem Fokus geschah, steht nachher im ABSCHLUSSBERICHT — die
+# Logzeile hier lag im Feld tausend Zeilen und zwei Phasen davor. BL-284 (3):
+# Dazu der Plan, zu dem der Fokus zuletzt gehoerte — ein in der pwsh-Sitzung
+# stehengebliebener Fokus der VORIGEN Kaskade galt sonst als frisch gesetzt.
+$fokusProtokoll = Join-Path $logDir "fokus-$Rolle.txt"
+$planJetzt = if (Test-Path .ralph-plan) { ((Get-Content -Raw .ralph-plan) -replace '\s+$', '') } else { '-' }
+$fokusLage = 'keiner — Grundauftrag'
 $fokus = $env:TEAM_REDTEAM_FOCUS
 if ($fokus) {
     Set-Content -Path $focusState -Value "$headHash`n$fokus" -NoNewline -Encoding utf8
+    $fokusLage = 'gesetzt'
+    if (Test-Path $fokusProtokoll) {
+        $alt = @(Get-Content $fokusProtokoll)
+        $altPlan = if ($alt.Count -ge 2) { $alt[1] } else { '' }
+        $altFokus = ($alt | Select-Object -Skip 2) -join "`n"
+        if ($altFokus -eq $fokus -and $altPlan -ne $planJetzt) {
+            Team-Fehler "[$Rolle] ACHTUNG: Der gesetzte Fokus ist wortgleich der Fokus zu $altPlan — vermutlich aus der vorigen Kaskade stehengeblieben (Kit-BL-284). Gilt er wirklich für $planJetzt, ist nichts zu tun; sonst TEAM_REDTEAM_FOCUS neu setzen."
+            $fokusLage = "gesetzt, aber wortgleich zu $altPlan — stehengeblieben?"
+        }
+    }
 } elseif (Test-Path $focusState) {
     $zeilen = @(Get-Content $focusState)
     if ($zeilen.Count -ge 1 -and $zeilen[0] -eq $headHash) {
         $fokus = ($zeilen | Select-Object -Skip 1) -join "`n"
+        $fokusLage = 'übernommen (für diesen Stand gesetzt)'
     } else {
         Team-Fehler "[$Rolle] Der zuletzt gesetzte Fokus gehört zu einem anderen Stand ($($zeilen[0])) — VERFALLEN (Kit-BL-31)."
         Team-Fehler "  Dieser Sweep läuft mit dem Grundauftrag. Für eine gezielte Prüfung TEAM_REDTEAM_FOCUS neu setzen."
         Remove-Item -Force $focusState -ErrorAction SilentlyContinue
+        $fokusLage = 'VERFALLEN — Grundauftrag'
     }
 }
+Set-Content -Path $fokusProtokoll -Value "$fokusLage`n$planJetzt`n$fokus" -Encoding utf8
 
 # BL-172: Der Fokus steuert ZWEI Dinge, und sie fallen auseinander.
 #

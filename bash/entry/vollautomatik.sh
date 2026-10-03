@@ -26,7 +26,14 @@
 #                            Durchsetzung misst nur die Kosten dieses einen
 #                            Laufs (A), nicht den lebenslangen Kontostand (BL-18).
 #          TEAM_MODEL_LOOP / TEAM_MODEL_STRONG / AUTH_MODE  (siehe team/lib.sh)
-#          TEAM_VOLLAUTOMATIK_AB_PHASE  1 wirkt wie --von-vorn (BL-217).
+#          TEAM_REDTEAM_FOCUS_2  bestellt einen ZWEITEN Sweep-Durchgang je
+#                                       Angreifer mit eigenem Fokus ueber
+#                                       denselben Bau (BL-296) — fuer eine
+#                                       grosse Kaskade; ohne ihn ein Durchgang.
+#          TEAM_VOLLAUTOMATIK_AB_PHASE  1 wirkt wie --von-vorn (BL-217);
+#                                       2, 3 oder 4 startet dort (4 = nur die
+#                                       Fix-Phase, wie fixphase); alles andere
+#                                       bricht ab (BL-241).
 # Exit:    0 = Lauf durch · 1 = echter Fehler (Mensch gefragt; inkl. Stagnation)
 #          43 = Stufe/Fix fertig, Quittung fehlt (BL-41, durchgereicht von
 #               ralph.sh und — seit BL-214 — von frank.sh): kein Neubau,
@@ -61,7 +68,19 @@ for arg in "$@"; do
         *) echo "Unbekannte Option: $arg — erlaubt: --von-vorn, --hilfe" >&2; exit 2 ;;
     esac
 done
-[ "${TEAM_VOLLAUTOMATIK_AB_PHASE:-}" = "1" ] && VON_VORN=1
+# BL-241: Der Name verspricht "ab Phase N" — bis hierher galt nur `1`, und
+# `=4` wurde STILL ignoriert: Der naheliegende Griff fuer "nur fixen" fuehrte
+# lautlos zum teuersten Ergebnis, einem vollen Lauf samt zwei Sweeps. Jetzt
+# gelten 1 bis 4 (4 = nur die Fix-Phase, so startet ./fixphase.sh), und ein
+# unbekannter Wert bricht ab, statt bei Phase 1 zu beginnen.
+AB_PHASE_ANSAGE=""
+case "${TEAM_VOLLAUTOMATIK_AB_PHASE:-}" in
+    "") ;;
+    1) VON_VORN=1 ;;
+    2|3|4) AB_PHASE_ANSAGE="$TEAM_VOLLAUTOMATIK_AB_PHASE" ;;
+    *) echo "TEAM_VOLLAUTOMATIK_AB_PHASE='$TEAM_VOLLAUTOMATIK_AB_PHASE' — erlaubt sind 1 bis 4 (1 = von vorn, 4 = nur die Fix-Phase, wie ./fixphase.sh). Kein Lauf gestartet (Kit-BL-241)." >&2
+       exit 2 ;;
+esac
 
 MAX_RUNDEN="${TEAM_MAX_RUNDEN:-12}"
 # HM-31: Default an TEAM_FRANK_MAX_VERSUCHE koppeln (statt fest 2), sonst
@@ -222,6 +241,11 @@ phasen_naechste() {
 phasen_faellig() { [ "$1" -ge "$AB_PHASE" ]; }
 
 phasen_zeiger_lesen() {
+    if [ -n "$AB_PHASE_ANSAGE" ]; then
+        AB_PHASE="$AB_PHASE_ANSAGE"
+        log "Start bei $(phasen_name "$AB_PHASE") auf Ansage (TEAM_VOLLAUTOMATIK_AB_PHASE=$AB_PHASE, Kit-BL-241) — die Phasen davor laufen NICHT."
+        return 0
+    fi
     [ -f "$PHASEN_STATE" ] || return 0
     if [ "$VON_VORN" -eq 1 ]; then
         log "Phasen-Zeiger verworfen (--von-vorn) — der Lauf beginnt bei Phase 1."
@@ -258,6 +282,51 @@ kaskaden_nummer() {
     printf '%s' "${n:-<N>}"
 }
 
+# BL-254 (3): Nach jedem Rollenlauf, der das Beutebuch anfassen durfte, wird
+# es geprueft — OHNE Abbruch, der Befund landet im Abschlussbericht. Ein
+# Anhang, der einen fremden Fundblock zerschneidet, ist fuer keinen Guard
+# sichtbar (er urteilt ueber Schreibzonen, nicht ueber Struktur), und ein
+# zerschnittener Block bricht spaeter Franks Substanz-Anker.
+# BL-259 (3): Ein Fund auf `offen` ist fuer die Fix-Phase unsichtbar — sie
+# fragt nach 'an Frank übergeben'. Im Feld trug Frank regelkonform einen
+# Beifang ein (Finder ≠ Fixer), der Lauf endete mit "nichts zu tun", und der
+# Bericht meldete fertig. Am Ablauf aendert das nichts; die Luecke wird
+# sichtbar, wo der Mensch hinsieht.
+offene_funde_melden() {
+    local n
+    n="$($TEAM_BEUTEBUCH_TOOL list 2>/dev/null | awk -F'\t' '$2 ~ /^offen/' | wc -l | tr -d ' ')"
+    [ "${n:-0}" -gt 0 ] || return 0
+    log "⚠ $n Fund(e) stehen auf 'offen' und sind NIEMANDEM übergeben — die Fix-Phase sieht sie nicht (Kit-BL-259). Sichten, dann übergeben: $TEAM_BEUTEBUCH_TOOL set <HM-Nr> 'an Frank übergeben'"
+}
+
+LINT_BEFUNDE=""
+beutebuch_lint_nach() {
+    local rolle="$1" aus rc=0
+    aus="$($TEAM_BEUTEBUCH_TOOL lint 2>&1)" || rc=$?
+    [ "$rc" -eq 3 ] || return 0
+    local erste; erste="$(printf '%s\n' "$aus" | grep -m1 '^\[HM-' || true)"
+    log "⚠ Beutebuch nach $rolle: Mängel gefunden (Kit-BL-254) — ${erste:-siehe beutebuch.py lint}"
+    LINT_BEFUNDE="${LINT_BEFUNDE}nach $rolle: ${erste:-Mängel}"$'\n'
+}
+
+# BL-232 (2): Die volle Suite am Phasenende — verbindlich, sobald die Stufen
+# mit dem schnellen Befehl (TEAM_SMOKE_TEST_SCHNELL) verifiziert haben. Ohne
+# diese Regel fehlte jede Antwort auf die Frage, WANN der volle Lauf faellig
+# ist; rot setzt sie das Gate (BL-256), und der Lauf endet mit Exit 44.
+voller_smoke_am_phasenende() {
+    local phase="$1" ausgabe
+    [ -n "${TEAM_SMOKE_TEST_SCHNELL:-}" ] && [ -n "${TEAM_SMOKE_TEST:-}" ] || return 0
+    ausgabe=".team-logs/volle-suite-$(date +%Y%m%d-%H%M%S).log"
+    log "Volle Suite am Ende der $phase: $TEAM_SMOKE_TEST (die Stufen liefen mit $TEAM_SMOKE_TEST_SCHNELL, Kit-BL-232) …"
+    if $TEAM_SMOKE_TEST >"$ausgabe" 2>&1; then
+        log "✓ Volle Suite grün."
+    else
+        log "✗ Volle Suite ROT am Ende der $phase — das Gate wird gesetzt (Kit-BL-232, Kit-BL-256). Ausgabe: $ausgabe"
+        printf '%s | vollautomatik | volle Suite rot am Ende der %s (%s)\n' \
+            "$(date +%Y-%m-%dT%H:%M:%S)" "$phase" "$TEAM_SMOKE_TEST" >> "$TEAM_GATE_DATEI"
+    fi
+}
+
 abbruch_bericht() {
     local grund="$1" offen nr
     nr="$(kaskaden_nummer)"
@@ -286,7 +355,7 @@ abbruch_bericht() {
     elif [ -n "$offen" ]; then
         log "Offene Funde:"
         printf '%s\n' "$offen" | sed 's/^/    /'
-        log "Fixphase fortsetzen:  ./frank.sh   (ein Fund je Aufruf)"
+        log "Fixphase fortsetzen:  ./fixphase.sh   (Frank und Axel, mit Deckel und Bremse — Kit-BL-204)"
         log "Danach der Closeout:  ./team-status.sh --rollen-abschluss $nr <domaene>"
     else
         log "Keine offenen Funde — nur der Closeout fehlt:"
@@ -328,12 +397,17 @@ fi
 # Erst JETZT ist Phase 1 durch — der Zeiger nennt immer die naechste Phase,
 # nie die laufende. Ein Abbruch mittendrin faellt damit auf Phase 1 zurueck.
 phasen_naechste 2
+voller_smoke_am_phasenende "Bauphase"
 budget_ok || { abbruch_bericht "Budget-Deckel"; exit 1; }
 else
     log "=== PHASE 1: Ralph — uebersprungen (Faden aufgenommen, Kit-BL-217) ==="
 fi
 
 # --- Phase 2+3: Red-Team-Sweeps ----------------------------------------------
+# BL-296: Der Stand VOR dem ersten Durchgang — ein zweiter Durchgang mit
+# eigenem Fokus prueft denselben Bereich (siehe unten).
+VORHER_harry="$(cat .harry-state 2>/dev/null || echo -)"
+VORHER_marv="$(cat .marv-state 2>/dev/null || echo -)"
 phase_nr=1
 for rolle in harry marv; do
     phase_nr=$((phase_nr + 1))
@@ -341,7 +415,7 @@ for rolle in harry marv; do
     log "=== PHASE Red Team: $rolle ==="
     ./"$rolle".sh; rc=$?
     case "$rc" in
-        0) log "$rolle hat einen Sweep abgeschlossen." ;;
+        0) log "$rolle hat einen Sweep abgeschlossen."; beutebuch_lint_nach "$rolle" ;;
         3) log "$rolle: nichts Neues zu prüfen." ;;
         42) log "⏸ Session-Limit erreicht — Lauf pausiert ($rolle). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."; exit 42 ;;
         *) log "$rolle endete mit ECHTEM Fehler ($rc: is_error/Guard-Verletzung/Aufruf-Fehlschlag — ein bloß fehlendes Promise bei sauberem Fund liefert bereits 0) — Vollautomatik stoppt."; exit 1 ;;
@@ -349,6 +423,25 @@ for rolle in harry marv; do
     phasen_naechste $((phase_nr + 1))
     budget_ok || { abbruch_bericht "Budget-Deckel"; exit 1; }
 done
+
+# BL-296: Die Pruefdichte an das Bauvolumen koppeln. Ein zweiter Durchgang je
+# Angreifer, mit EIGENEM Fokus (TEAM_REDTEAM_FOCUS_2) ueber denselben Bereich
+# — nur auf Ansage, und nur wenn die Sweeps in DIESEM Lauf gelaufen sind.
+if [ -n "${TEAM_REDTEAM_FOCUS_2:-}" ] && phasen_faellig 3; then
+    for rolle in harry marv; do
+        log "=== PHASE Red Team: $rolle — zweiter Durchgang (eigener Fokus, Kit-BL-296) ==="
+        vorher_var="VORHER_${rolle}"
+        TEAM_REDTEAM_FOCUS="$TEAM_REDTEAM_FOCUS_2" \
+            TEAM_REDTEAM_ZWEITER_DURCHGANG="${!vorher_var}" ./"$rolle".sh; rc=$?
+        case "$rc" in
+            0) log "$rolle hat den zweiten Durchgang abgeschlossen."; beutebuch_lint_nach "$rolle (2. Durchgang)" ;;
+            3) log "$rolle: im zweiten Durchgang nichts zu prüfen." ;;
+            42) log "⏸ Session-Limit erreicht — Lauf pausiert ($rolle, 2. Durchgang). Bitte später './vollautomatik.sh' erneut starten."; exit 42 ;;
+            *) log "$rolle endete im zweiten Durchgang mit ECHTEM Fehler ($rc) — Vollautomatik stoppt."; exit 1 ;;
+        esac
+        budget_ok || { abbruch_bericht "Budget-Deckel"; exit 1; }
+    done
+fi
 
 # --- Phase 4: Fix-Runden (Frank ↔ Axel) --------------------------------------
 phasen_naechste 4
@@ -386,6 +479,7 @@ while [ "$runde" -lt "$MAX_RUNDEN" ]; do
         43) log "⚠ Fix fertig, Quittung fehlt (Kit-BL-41/Kit-BL-214) — Lauf gestoppt. NICHT neu starten, bevor die von Frank genannten Pruefungen gelaufen sind."; exit 43 ;;
         *) getan=1; log "Runde $runde: Frank-Fehlversuch (ggf. Eskalation an Axel)." ;;
     esac
+    [ "$getan" -eq 1 ] && beutebuch_lint_nach "Frank (Runde $runde)"
     budget_ok kulanz || { abbruch_bericht "Budget-Deckel"; exit 1; }
 
     # Axel nur rufen, wenn ein Fall auf ihn wartet.
@@ -397,11 +491,13 @@ while [ "$runde" -lt "$MAX_RUNDEN" ]; do
             42) log "⏸ Session-Limit erreicht — Lauf pausiert (Axel). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."; exit 42 ;;
             *) getan=1; log "Runde $runde: Axel-Fehler ($rc) — Fall bleibt offen." ;;
         esac
+        beutebuch_lint_nach "Axel (Runde $runde)"
         budget_ok kulanz || { abbruch_bericht "Budget-Deckel"; exit 1; }
     fi
 
     if [ "$getan" -eq 0 ]; then
         log "Runde $runde: nichts mehr zu tun — Fix-Phase beendet."
+        offene_funde_melden
         break
     fi
 
@@ -441,16 +537,49 @@ fi
 # --- Abschluss ---------------------------------------------------------------
 # Der Zeiger ueberlebt genau die Abbrueche: Hier, am regulaeren Ende, faellt er
 # weg, damit der naechste Aufruf wieder eine ganze Kaskadenrunde faehrt.
+voller_smoke_am_phasenende "Fix-Phase"
 rm -f "$PHASEN_STATE"
 log "=== ABSCHLUSSBERICHT ==="
 ./team-status.sh || true
-log "Dieser Lauf: $(lauf_kosten) USD (Deckel $TEAM_BUDGET_USD). Gesamt-Kontostand: $(kontostand_gesamt) USD."
+# BL-240: Betrag und Aufzaehlung darunter beschreiben jetzt DIESELBE Menge —
+# alle Rollen dieses Laufs. Vorher stand ueber einer Liste aus dem Ralph-
+# Ordner (egal aus welchem Lauf) ein Betrag ueber alle Rollen dieses Laufs; im
+# Feld 18,86 USD ueber Logs, die 15,40 ergaben, waehrend die Kaskade 21,91
+# gekostet hatte. Wer die falsche Zahl nahm, buchte falsch.
+log "Dieser Lauf: $(lauf_kosten) USD — alle Rollen DIESES Laufs (Deckel $TEAM_BUDGET_USD). Gesamt-Kontostand: $(kontostand_gesamt) USD."
 # BL-37: Das Turn-Profil ist die Diagnose des Stufenschnitts und steht bereits
 # in jedem Log — viele kurze Turns heissen Nacharbeit (Planfehler), wenige
 # lange Urteilsarbeit (richtig geschnitten). Im Feld lief eine als "einfacher"
 # angesetzte Stufe mit 87 Turns in 13 Minuten auf das Doppelte ihres Ansatzes,
 # waehrend die teureren Nachbarstufen 47/57 Turns ueber 17 Minuten brauchten.
-$TEAM_KOSTEN_TOOL turns .ralph-logs 2>/dev/null | sed 's/^/  /' || true
+$TEAM_KOSTEN_TOOL turns .ralph-logs .team-logs .ralph-logs/archiv .team-logs/archiv \
+    --since "$LAUF_START" 2>/dev/null | sed 's/^/  /' || true
+# BL-240 (c): Eine Kaskade kann ueber ZWEI Laeufe gebaut sein (vierter
+# Ausgang, Deckel) — dann ist keine der Zahlen oben die ganze Kaskade.
+KASKADE_BEGINN="$(git log --diff-filter=A --format=%ct -- "$(cat .ralph-plan 2>/dev/null || echo /dev/null)" 2>/dev/null | tail -1)"
+if [ -n "$KASKADE_BEGINN" ]; then
+    log "Kaskade $(kaskaden_nummer) bisher: $(team_kosten_seit "$KASKADE_BEGINN" .ralph-logs .team-logs .ralph-logs/archiv .team-logs/archiv) USD — alle Rohlogs seit ihrem Beginn, über alle Läufe (Kit-BL-240)."
+fi
+# BL-250: Mit welchem Auftrag die Sweeps liefen. Ein verfallener Fokus war
+# bis hierher eine Logzeile mitten im Lauf — und ein Sweep ohne Auftrag sieht
+# aus wie ein gegluekter.
+for rolle in harry marv; do
+    datei=".team-logs/fokus-$rolle.txt"
+    [ -f "$datei" ] || continue
+    [ "$(date -r "$datei" +%s 2>/dev/null || echo 0)" -ge "$LAUF_START" ] || continue
+    log "Red Team: $rolle — Fokus $(sed -n 1p "$datei")"
+done
+# BL-299: Die Abdeckungszeilen der Sweeps — was geprueft wurde, auch ohne Fund.
+ABDECKUNG="$($TEAM_KOSTEN_TOOL abdeckung .team-logs --since "$LAUF_START" 2>/dev/null || true)"
+if [ -n "$ABDECKUNG" ]; then
+    log "Red Team — Abdeckung je Fokus-Punkt (Kit-BL-299):"
+    printf '%s\n' "$ABDECKUNG" | sed 's/^/  /'
+fi
+if [ -n "$LINT_BEFUNDE" ]; then
+    log "Beutebuch-Lint meldete im Lauf Mängel (Kit-BL-254) — vor dem Closeout ansehen: $TEAM_BEUTEBUCH_TOOL lint"
+    printf '%s' "$LINT_BEFUNDE" | sed 's/^/  /'
+fi
+offene_funde_melden
 # BL-255 (c): Eine planmaessig ausgelassene Stufe wird GETRENNT gezaehlt.
 # "4 genommen, 1 planmaessig uebersprungen" ist eine andere Aussage als
 # "5 genommen" — und ohne diese Zeile stuende nirgends, dass eine Stufe

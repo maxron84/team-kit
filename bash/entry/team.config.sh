@@ -173,6 +173,15 @@ TEAM_SMOKE_TEST="${TEAM_SMOKE_TEST:-{{SMOKE_TEST_KONFIG}}}"
 # den vierten Ausgang (BL-41). Leer lassen heisst: der Bibliotheks-Default.
 TEAM_SMOKE_TEST_TIMEOUT="${TEAM_SMOKE_TEST_TIMEOUT:-600}"
 
+# BL-232: Der schnelle STUFEN-Befehl (optional). Waechst die Suite, erfindet
+# sonst jedes Projekt selbst eine schnelle Fassung — und schwaecht dabei
+# unbemerkt die Stufenverifikation. Gesetzt verifizieren die Rollen JE STUFE
+# mit diesem Befehl, und die Vollautomatik faehrt TEAM_SMOKE_TEST (die volle
+# Suite) verbindlich am Ende der Bauphase und der Fix-Phase; ist sie dort rot,
+# endet der Lauf mit dem roten Gate (Exit 44). Leer = wie bisher, jede Stufe
+# mit TEAM_SMOKE_TEST.
+TEAM_SMOKE_TEST_SCHNELL="${TEAM_SMOKE_TEST_SCHNELL:-}"
+
 # --- Commit-Konventionen ------------------------------------------------------
 TEAM_FIX_PRAEFIX="${TEAM_FIX_PRAEFIX:-fix(uat)}"
 TEAM_FEAT_PRAEFIX="${TEAM_FEAT_PRAEFIX:-feat}"

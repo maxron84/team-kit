@@ -11,6 +11,35 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **`fixphase`: nur die Fix-Phase, mit Deckel, Bremse und Bericht**
+  (`BL-204`, `BL-241`, beide aus `Feld B`, beide Bahnen). Funde ausserhalb
+  einer Kaskade abzuarbeiten, war die einzige Team-Taetigkeit ohne eigenen
+  Aufrufer: Die Vollautomatik kaufte davor zwei Sweeps, `frank` in einer
+  Schleife fuhr ohne Axel. `./fixphase.sh` bzw. `.\fixphase.cmd` startet die
+  Vollautomatik ab Phase 4 — derselbe Code, eine zweite Tuer.
+  `TEAM_VOLLAUTOMATIK_AB_PHASE` nimmt jetzt 1 bis 4 an und bricht bei jedem
+  anderen Wert ab, statt ihn still zu ignorieren.
+
+- **Der Zwei-Schritt-Weg fuer lange Suiten: `team/tools/smoke_warten.py`**
+  (`BL-273`, `BL-281`, beide `Feld B`). Die Frist des Agenten-Werkzeugs ist
+  eine Obergrenze; darueber schiebt es den Befehl selbst in den Hintergrund —
+  der vierte Ausgang, vor dem die Vordergrund-Regel warnt. `start` faehrt den
+  Testlauf abgekoppelt, `warten` wartet IM VORDERGRUND und endet mit dem
+  Exit-Code des Smoke-Tests oder mit 75 (*laeuft noch*). Bausteine, Briefings
+  und Regeldatei nennen den Weg samt der Falle eine Ebene hoeher.
+
+- **`TEAM_SMOKE_TEST_SCHNELL`: zweistufige Verifikation als Kit-Begriff**
+  (`BL-232`, `Feld B`, beide Bahnen). Je Stufe der schnelle Befehl, am Ende
+  der Bau- und der Fix-Phase verbindlich die volle Suite — rot setzt sie das
+  Gate. Die Selbstpruefung nennt und misst ihre zweite Messung, wiederholt
+  einen roten Lauf einmal (gruen heisst *flackernd*, nicht quittiert) und
+  warnt ab 75 % der Frist.
+
+- **Ein zweiter Sweep-Durchgang auf Ansage** (`BL-296`, `Feld E`, beide
+  Bahnen). `TEAM_REDTEAM_FOCUS_2` bestellt je Angreifer einen zweiten
+  Durchgang mit eigenem Fokus ueber denselben Bereich; die Sperre gegen
+  Doppelzahlung wird dafuer bewusst und benannt uebersteuert.
+
 - **Welches Modell die Rollen fahren — und welche CLI es auswählt** (`BL-264`,
   Prio 1, gemeldet aus `Feld F`). Das Kit setzt die Modelle als Alias
   (`sonnet`, `opus`) und nahm an, die CLI wähle damit das neueste Modell der
@@ -87,6 +116,16 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Installation, die es nennen müsste.
 
 ### Changed
+
+- **Der Abschlussbericht sagt, was im Lauf war** (`BL-250`, `BL-254`,
+  `BL-259`, `BL-240`, `BL-299`, beide Bahnen). Je Angreifer die Fokus-Lage
+  (ein verfallener Fokus war nur eine Logzeile mitten im Lauf), die
+  Abdeckungszeilen der Sweeps, die Maengel des Beutebuch-Lints, der nach jeder
+  Rolle mit Schreibrecht laeuft, die Zahl der Funde auf `offen`, die die
+  Fix-Phase nicht sieht — und Betrag und Turn-Aufzaehlung ueber dieselbe
+  Menge (alle Rollen dieses Laufs), dazu eine Zeile fuer die ganze Kaskade.
+  Ein Fokus, der wortgleich zu einem anderen Plan gehoert, wird laut
+  (`BL-284` (3)).
 
 - **Lauf-Deckel: Default 50 statt 15 USD** (`BL-304`, Entscheid des Owners).
   Seit die Rollen 20/40 USD duerfen (`BL-286`), lag der Lauf-Deckel UNTER dem
@@ -434,6 +473,16 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   die Umgebungsvariable nicht.* Still bleibt es, wo nichts abweicht.
 
 ### Fixed
+
+- **Die Vollautomatik hing endlos an einem ueberlebenden GUI-Enkel**
+  (`BL-248`, `Feld B`, pwsh-Bahn). `Rolle-Starten` wartete ueber eine
+  Pipeline auf EOF, und ein `electron.exe` mit Fehlerdialog hielt die Leitung
+  neun Stunden offen. Jetzt wird auf das Kind gewartet; haelt ein Nachfahre
+  die Leitung, meldet der Lauf das und geht weiter.
+
+- **Alle `.cmd`-Wrapper malten UTF-8 in eine cp850-Konsole** (`BL-276`,
+  `Feld B`). Die Wrapper stellen die Codepage fuer den Lauf auf 65001 und
+  danach auf den alten Wert zurueck.
 
 - **`--rollen-abschluss` bucht ganz oder gar nicht** (`BL-239`, `BL-244`,
   gemeldet aus `Feld B`, beide Bahnen). Hielt der Altersriegel die eine

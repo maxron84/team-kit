@@ -1,6 +1,6 @@
 @echo off
-rem Bahn: pwsh | Gegenstueck: axel.sh
-rem T.E.A.M. - Aufrufer fuer axel.ps1. Kein Symlink: der braucht unter
+rem Bahn: pwsh | Gegenstueck: fixphase.sh
+rem T.E.A.M. - Aufrufer fuer fixphase.ps1. Kein Symlink: der braucht unter
 rem Windows Administratorrechte. %~dp0 zeigt auf DIESEN Ordner, es entsteht
 rem also keine zweite Kopie, die auseinanderlaufen koennte.
 rem BL-123: pwsh wird AUFGELOEST, nicht vorausgesetzt. Steht PowerShell 7 nicht
@@ -24,7 +24,7 @@ set "TEAM_CP="
 for /f "tokens=2 delims=:." %%C in ('chcp 2^>nul') do set "TEAM_CP=%%C"
 if defined TEAM_CP set "TEAM_CP=%TEAM_CP: =%"
 if defined TEAM_CP chcp 65001 >nul 2>&1
-"%TEAM_PWSH%" -NoProfile -File "%~dp0axel.ps1" %*
+"%TEAM_PWSH%" -NoProfile -File "%~dp0fixphase.ps1" %*
 set "TEAM_RC=%ERRORLEVEL%"
 if defined TEAM_CP chcp %TEAM_CP% >nul 2>&1
 exit /b %TEAM_RC%

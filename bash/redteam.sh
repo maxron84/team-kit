@@ -29,7 +29,17 @@ WHITELIST="$TEAM_WHITELIST_REDTEAM"
 
 HEAD_HASH="$(git rev-parse HEAD)"
 LAST="$( [ -f "$STATE_FILE" ] && cat "$STATE_FILE" || echo "" )"
-if [ "$LAST" = "$HEAD_HASH" ]; then
+# BL-296: Die Pruefdichte liess sich nicht ans Bauvolumen koppeln — ein Sweep
+# je Lauf, ob 1 000 oder 4 000 Zeilen gebaut wurden, und ein zweiter ueber
+# denselben Stand ist gesperrt (richtig gegen Doppelzahlung, BL-30). Die
+# Vollautomatik setzt TEAM_REDTEAM_ZWEITER_DURCHGANG nur, wenn ein ZWEITER
+# FOKUS bestellt ist (TEAM_REDTEAM_FOCUS_2); der Wert ist der Stand VOR dem
+# ersten Durchgang, damit beide denselben Bereich pruefen. Die Sperre wird
+# damit bewusst und benannt uebersteuert, nie still.
+if [ -n "${TEAM_REDTEAM_ZWEITER_DURCHGANG:-}" ]; then
+    LAST="${TEAM_REDTEAM_ZWEITER_DURCHGANG#-}"
+    echo "[$ROLLE] Zweiter Durchgang über denselben Bau, auf Ansage mit eigenem Fokus — die Sperre gegen Doppelzahlung ist bewusst übersteuert (Kit-BL-296)."
+elif [ "$LAST" = "$HEAD_HASH" ]; then
     echo "[$ROLLE] Kein neuer Commit seit letztem Sweep ($HEAD_HASH) — nichts zu tun."
     exit 3
 fi
@@ -67,19 +77,40 @@ fi
 # still weiterverwendet. Kein Abbruch: Der Lauf fällt auf den Grundauftrag
 # zurück und sagt laut, dass er das tut.
 FOCUS_STATE=".team-focus-${ROLLE}"
+# BL-250: Was mit dem Fokus geschah, steht nachher im ABSCHLUSSBERICHT — die
+# Logzeile hier lag im Feld tausend Zeilen und zwei Phasen davor, in einem
+# Lauf, den per Definition niemand beobachtet; beide Sweeps liefen ohne ihren
+# Auftrag und sahen aus wie gegluekte. BL-284 (3): Dazu der Plan, zu dem der
+# Fokus zuletzt gehoerte — ein in der Shell stehengebliebener Fokus der VORIGEN
+# Kaskade ist wortgleich und gilt sonst als frisch gesetzt.
+FOKUS_PROTOKOLL="$LOG_DIR/fokus-${ROLLE}.txt"
+PLAN_JETZT="$(cat .ralph-plan 2>/dev/null || echo -)"
+FOKUS_LAGE="keiner — Grundauftrag"
 if [ -n "${TEAM_REDTEAM_FOCUS:-}" ]; then
     printf '%s\n' "$HEAD_HASH" > "$FOCUS_STATE"
     printf '%s\n' "$TEAM_REDTEAM_FOCUS" >> "$FOCUS_STATE"
+    FOKUS_LAGE="gesetzt"
+    if [ -f "$FOKUS_PROTOKOLL" ]; then
+        ALT_PLAN="$(sed -n 2p "$FOKUS_PROTOKOLL")"
+        ALT_FOKUS="$(tail -n +3 "$FOKUS_PROTOKOLL")"
+        if [ "$ALT_FOKUS" = "$TEAM_REDTEAM_FOCUS" ] && [ "$ALT_PLAN" != "$PLAN_JETZT" ]; then
+            echo "[$ROLLE] ACHTUNG: Der gesetzte Fokus ist wortgleich der Fokus zu $ALT_PLAN — vermutlich aus der vorigen Kaskade stehengeblieben (Kit-BL-284). Gilt er wirklich für $PLAN_JETZT, ist nichts zu tun; sonst TEAM_REDTEAM_FOCUS neu setzen." >&2
+            FOKUS_LAGE="gesetzt, aber wortgleich zu $ALT_PLAN — stehengeblieben?"
+        fi
+    fi
 elif [ -f "$FOCUS_STATE" ]; then
     FOCUS_HEAD="$(head -1 "$FOCUS_STATE")"
     if [ "$FOCUS_HEAD" = "$HEAD_HASH" ]; then
         TEAM_REDTEAM_FOCUS="$(tail -n +2 "$FOCUS_STATE")"
+        FOKUS_LAGE="übernommen (für diesen Stand gesetzt)"
     else
         echo "[$ROLLE] Der zuletzt gesetzte Fokus gehört zu einem anderen Stand ($FOCUS_HEAD) — VERFALLEN (Kit-BL-31)." >&2
         echo "  Dieser Sweep läuft mit dem Grundauftrag. Für eine gezielte Prüfung TEAM_REDTEAM_FOCUS neu setzen." >&2
         rm -f "$FOCUS_STATE"
+        FOKUS_LAGE="VERFALLEN — Grundauftrag"
     fi
 fi
+printf '%s\n%s\n%s\n' "$FOKUS_LAGE" "$PLAN_JETZT" "${TEAM_REDTEAM_FOCUS:-}" > "$FOKUS_PROTOKOLL"
 
 # BL-172: Der Fokus steuert ZWEI Dinge, und sie fallen auseinander.
 #

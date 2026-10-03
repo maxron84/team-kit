@@ -1703,7 +1703,7 @@ function Kandidaten-Ausserhalb {
         if ($n.StartsWith('.')) { continue }
         if ($n -in @($Prod.TrimEnd('/'), $Test.TrimEnd('/'), $Plan.TrimEnd('/'))) { continue }
         if ($n -in $ignorieren) { continue }
-        if ($n -match '^(ralph|frank|harry|marv|axel|vollautomatik|halbautomatik|install)\.(sh|ps1|cmd)$') { continue }
+        if ($n -match '^(ralph|frank|harry|marv|axel|vollautomatik|halbautomatik|fixphase|install)\.(sh|ps1|cmd)$') { continue }
         if ($n -match '^team[-.].*\.(sh|ps1|cmd)$') { continue }
         if ($n -match '\.(md|txt|json|toml|yaml|yml|cfg|ini|lock)$') { continue }
         if ($n -match '^(LICENSE|Makefile)') { continue }
