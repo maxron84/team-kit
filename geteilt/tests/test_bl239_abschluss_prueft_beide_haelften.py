@@ -47,6 +47,11 @@ def _wrapper(repo, bahn, *argumente):
 def _halbe_lage(tmp_path, bahn):
     """Die Feldlage: Die Rollen-Haelfte hat Altlogs (BL-221 haelt sie an),
     die Bau-Haelfte ist einwandfrei buchbar."""
+    # ZUERST die Bahn fragen: Das Fixture kopiert die Entrypoints der Bahn,
+    # und in einer einbahnigen Installation fehlt der der anderen — der Fall
+    # starb dann an FileNotFoundError, statt sich zu ueberspringen (kit-test.sh
+    # Schritt 8, BL-129).
+    (verlange_bash if bahn == "bash" else verlange_pwsh)()
     repo = h._fixture_bahn(tmp_path, bahn)
     # _fixture_bahn legt 3 Alt- und 11 Neu-Logs in .team-logs und 5 Baulogs
     # NACH dem Beginn in .ralph-logs an.

@@ -530,6 +530,11 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Zwei gleichzeitige Installationen teilten sich das Selbsttest-Log**
+  (`BL-306`, Kit, beide Bahnen). Jetzt je Lauf eine eigene Datei; unter
+  Windows brach die zweite Installation sonst ab, und ihr Selbsttest galt als
+  nicht gefahren.
+
 - **`sitzung-messen` zaehlte die Subagenten einer Sitzung nie mit**
   (`BL-305`, Kit). Ihr Verbrauch steht in eigenen Transkripten neben dem der
   Sitzung; am Kit-Repo selbst gemessen fehlten so 17 % einer Sitzung.

@@ -974,14 +974,15 @@ Kopf 'Ergebnis'
 # BL-195: Die Zahl der wirklich gefahrenen Suite-Durchgaenge gehoert ins
 # Ergebnis. Ohne sie waere ein Schalter, der versehentlich auch einen echten
 # Durchgang abstellt, von einem gruenen Lauf nicht zu unterscheiden.
-if ($script:SuiteLaeufe -ne 4) {
-    Rot "Nur $($script:SuiteLaeufe) von 4 Suite-Durchgängen gefahren."
-    Zeile 'Die vier sind: der Selbsttest des Installers (2, BL-127),'
-    Zeile 'Auslieferungswerte (4), angepasste Konfiguration (5), einbahnige'
-    Zeile 'Ablage (7). Fehlt einer, ist die Zusicherung dahinter offen.'
+if ($script:SuiteLaeufe -ne 5) {
+    Rot "$($script:SuiteLaeufe) statt 5 Suite-Durchgängen gefahren."
+    Zeile 'Die fuenf sind: der Selbsttest des Installers (2, BL-127),'
+    Zeile 'Auslieferungswerte (4), angepasste Konfiguration (6), verdrehte'
+    Zeile 'Sprachmarken (6b, BL-194), einbahnige Ablage (8). Fehlt einer, ist'
+    Zeile 'die Zusicherung dahinter offen.'
     $script:Fehler = 1
 } else {
-    Zeile 'Suite-Durchgänge: 4 — die uebrigen Installer-Aufrufe liefen mit'
+    Zeile 'Suite-Durchgänge: 5 — die uebrigen Installer-Aufrufe liefen mit'
     Zeile '-OhneSelbsttest (BL-195); sie haetten nur wiederholt.'
 }
 if ($script:Gepruefte -lt $script:PruefungenSoll) {

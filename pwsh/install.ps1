@@ -2137,7 +2137,9 @@ if ($OhneSelbsttest) {
 } elseif ($pt) {
     Push-Location $Ziel
     try {
-        $log = Join-Path ([System.IO.Path]::GetTempPath()) 'team-init-pytest.log'
+        # BL-306: je Lauf eine eigene Datei (siehe install.sh) — zwei
+        # gleichzeitige Installationen teilten sich sonst denselben Namen.
+        $log = Join-Path ([System.IO.Path]::GetTempPath()) "team-init-pytest-$PID-$(Get-Date -Format 'yyyyMMddHHmmss').log"
         $rc = Pytest-Mitschnitt -Pt $pt -Log $log
         if ($rc -eq 0) {
             $zeile = (Select-String -Path $log -Pattern '\d+ passed' | Select-Object -First 1)

@@ -2072,11 +2072,16 @@ if [ "$OHNE_SELBSTTEST" -eq 1 ]; then
     gelb "  ! Regressionstests AUF VERLANGEN uebersprungen (--ohne-selbsttest)."
     gelb "    Das ist KEIN gruenes Ergebnis, sondern eine fehlende Probe."
 elif PYTEST_AUFRUF="$(team_pytest)"; then
-    if (cd "$ZIEL" && pytest_mitschnitt /tmp/team-init-pytest.log $PYTEST_AUFRUF); then
-        gruen "  ✓ Regressionstests grün ($(grep -oE '[0-9]+ passed' /tmp/team-init-pytest.log | head -1))"
+    # BL-306: Je Lauf eine EIGENE Datei. Mit einem festen Namen schrieben zwei
+    # gleichzeitige Installationen (etwa die Selbsttests beider Bahnen) in
+    # dieselbe — unter Windows brach die zweite mit "wird von einem anderen
+    # Prozess verwendet" ab, und ihr Selbsttest galt als nicht gefahren.
+    INIT_LOG="$(mktemp "${TMPDIR:-/tmp}/team-init-pytest.XXXXXX")"
+    if (cd "$ZIEL" && pytest_mitschnitt "$INIT_LOG" $PYTEST_AUFRUF); then
+        gruen "  ✓ Regressionstests grün ($(grep -oE '[0-9]+ passed' "$INIT_LOG" | head -1))"
     else
-        gelb "  ! Regressionstests nicht vollständig grün — Log: /tmp/team-init-pytest.log"
-        gelb "    $(tail -3 /tmp/team-init-pytest.log | head -1)"
+        gelb "  ! Regressionstests nicht vollständig grün — Log: $INIT_LOG"
+        gelb "    $(tail -3 "$INIT_LOG" | head -1)"
     fi
 else
     gelb "  · pytest nicht gefunden — Regressionstests übersprungen"
