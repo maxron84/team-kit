@@ -43,13 +43,17 @@ WARUM EINE GEFRORENE ALTLAST UND KEINE DATIERTE SCHWELLE
     dass jemand eine als gefroren markierte Konstante aufmacht. Eine Liste,
     die nur schrumpfen kann, ist kein Leck.
 
-WAS OFFEN BLEIBT: die Nachverlinkung der dreizehn (`BL-268`). Sie sind
-triagiert — ihre Zeilen nennen den Fund, nicht die Datei —, aber WELCHE Zeile
-zu welcher Meldung gehoert, ist Zuordnung von Hand ueber 166 Archivzeilen.
-Gemessen: Eine Titelaehnlichkeit liefert 50-87 % auch fuer FALSCHE Zeilen,
-und drei der dreizehn sind damit eindeutig (`BL-192`, `BL-193`, `BL-197`), die
-anderen zehn nicht. Raten verbietet sich hier: Eine falsche Zuordnung in der
-Herkunftsspur ist schlimmer als eine fehlende.
+DIE ALTLAST IST LEER (`BL-268`, 2026-10-03), und ihr Befund war ein anderer
+als angenommen. Die Liste stand hier mit der Begruendung „triagiert, nur nicht
+verlinkt". Beim Zuordnen an DISTINKTIVEN Fakten (Betraege, zitierte
+Fehlertexte, Zeilenzahlen — nicht am Titel, der liefert 50-87 % auch fuer
+falsche Zeilen) stellte sich heraus: Nur drei waren triagiert (`BL-192`,
+`BL-193`, `BL-197`), eine war derselbe Befund wie ein spaeter erneut
+gemeldeter (`BL-218`) — und NEUN waren nie triagiert worden; sie haben
+`BL-293` bis `BL-301` bekommen. Die gefrorene Liste haette diese neun also
+dauerhaft als erledigt durchgewunken. Die Lehre gehoert zur Gattung des
+Waechters: Eine Ausnahme braucht einen BELEG ihres Grundes, nicht nur einen
+plausiblen Satz.
 """
 import re
 import sys
@@ -62,25 +66,13 @@ MELDUNGEN = REPO_ROOT / "plans" / "meldungen"
 QUELLEN = (REPO_ROOT / "plans" / "backlog.md",
            REPO_ROOT / "plans" / "backlog-archiv.md")
 
-# GEFROREN (2026-10-03). Dreizehn triagierte Meldungen ohne Pfad in ihrer
-# Zeile. Diese Liste darf SCHRUMPFEN und nie wachsen — der Fall unten setzt
-# das durch. Wer hier etwas eintraegt, statt es zu verlinken, baut das Leck
-# wieder ein, das BL-267 geschlossen hat.
-ALTLAST = frozenset({
-    "2026-08-24-architekten-briefing-beschreibt-rollen-abschluss-mit-einer-n.md",
-    "2026-08-24-kopplungs-obergrenze-im-architekten-briefing-hat-keine-messv.md",
-    "2026-08-24-p2-der-ledger-pruefung-uebersieht-die-rolle-und-warnt-bei-je.md",
-    "2026-08-24-prueftiefe-des-red-teams-laesst-sich-nicht-ans-bauvolumen-ko.md",
-    "2026-08-24-soft-cap-ueber-den-hard-cap-heben-schaltet-den-airbag-still.md",
-    "2026-08-25-die-ledger-zeile-traegt-den-kumulierten-wert-die-kit-bl-116.md",
-    "2026-08-25-eichwaechter-meldet-preistabelle-veraltet-wenn-ein-lauf-5m-u.md",
-    "2026-08-25-ein-fokus-punkt-ohne-fund-hinterlaesst-keine-spur-der-sweep.md",
-    "2026-08-25-zitat-lint-nimmt-einen-ganzen-beutebuch-fundblock-als-einen.md",
-    "2026-08-26-der-geraetestand-gehoert-in-die-verifikation-ein-slot-plus-e.md",
-    "2026-08-26-die-aushaertungs-sitzung-einer-kaskade-ist-mit-dem-dokumenti.md",
-    "2026-08-26-eine-sitzung-ohne-closeout-hat-keinen-ausloeser-der-sie-zum.md",
-    "2026-08-26-stufennummer-ohne-plan-block-ist-ein-stiller-no-op-und-wird.md",
-})
+# GEFROREN und LEER (2026-10-03, BL-268). Die dreizehn Namen, die hier
+# standen, sind alle verlinkt — neun davon als neu triagierte Eintraege. Die
+# Liste darf nie wieder wachsen: Wer hier etwas eintraegt, statt es zu
+# verlinken, baut das Leck wieder ein, das BL-267 geschlossen hat — und die
+# letzte Fuellung hat gezeigt, wie leicht eine Ausnahme dabei etwas Falsches
+# behauptet.
+ALTLAST = frozenset()
 
 # Dateiname einer Meldung: `<datum>-<slug>.md`. Dasselbe Muster findet den
 # Namen in einer Backlog-Zeile — als Link oder nur in Backticks, beides ist
@@ -215,11 +207,19 @@ def test_eine_verlinkte_meldung_wird_NICHT_gemeldet():
 
 
 def test_eine_meldung_der_altlast_wird_NICHT_gemeldet():
-    """Die dreizehn sind triagiert, nur nicht verlinkt. Ein Waechter, der sie
-    anschlaegt, meldet dreizehnmal etwas Richtiges als Fehler — und wird
-    deshalb beim ersten Lauf abgeschaltet."""
-    name = sorted(ALTLAST)[0]
-    assert unverlinkte([name], "Backlog ohne jeden Verweis") == []
+    """Der Mechanismus bleibt, auch wenn die Liste leer ist: Was in einer
+    Altlast steht, wird nicht gemeldet. Geprueft an einer SYNTHETISCHEN
+    Altlast — die echte ist seit BL-268 leer."""
+    name = "2026-08-24-eine-alte-meldung.md"
+    assert unverlinkte([name], "Backlog ohne jeden Verweis",
+                       altlast=frozenset({name})) == []
+
+
+def test_die_echte_altlast_ist_leer():
+    """BL-268: Alle dreizehn sind verlinkt. Eine neue Ausnahme braeuchte einen
+    Beleg ihres Grundes — die letzte Fuellung behauptete fuer neun Meldungen
+    „triagiert", und keine davon war es."""
+    assert ALTLAST == frozenset()
 
 
 def test_die_altlast_steht_nicht_fuer_ein_ganzes_datum_frei():
