@@ -391,7 +391,7 @@ status_akteur_abschluss() {
 status_rollen_abschluss() {
     local kaskade="${1:-}" domaene="${2:-}"
     if [ -z "$kaskade" ] || [ -z "$domaene" ]; then
-        echo "Nutzung: $0 --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> [\"<notiz-rollen>\"] [\"<notiz-bau>\"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere]" >&2
+        echo "Nutzung: $0 --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> [\"<notiz-rollen>\"] [\"<notiz-bau>\"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere] [--auch-neuere]" >&2
         return 1
     fi
     shift 2
@@ -399,16 +399,17 @@ status_rollen_abschluss() {
     case "${1:-}" in --*|"") ;; *) notiz="$1"; shift ;; esac
     case "${1:-}" in --*|"") ;; *) bau_notiz="$1"; shift ;; esac
     # BL-143 (Lehre): Zusatzschalter werden DURCHGEREICHT, nicht weggeworfen.
-    # BL-220/BL-221 haben zwei weitere dazugelegt, deshalb steht hier eine
-    # Schleife statt eines einzelnen Modus-Wortes — ein --trotzdem, das der
-    # Alias erbt, aber der Wrapper wegwirft, waere derselbe Fehler.
+    # BL-220/BL-221 haben zwei weitere dazugelegt, BL-234 einen dritten,
+    # deshalb steht hier eine Schleife statt eines einzelnen Modus-Wortes —
+    # ein --trotzdem, das der Alias erbt, aber der Wrapper wegwirft, waere
+    # derselbe Fehler.
     local -a schalter=()
     while [ "$#" -gt 0 ]; do
         case "$1" in
-            --addieren|--ersetzen|--trotzdem|--auch-aeltere)
+            --addieren|--ersetzen|--trotzdem|--auch-aeltere|--auch-neuere)
                 schalter+=("$1"); shift ;;
             "") shift ;;
-            *) echo "Unbekannter Schalter '$1' — erlaubt: --addieren, --ersetzen, --trotzdem, --auch-aeltere" >&2
+            *) echo "Unbekannter Schalter '$1' — erlaubt: --addieren, --ersetzen, --trotzdem, --auch-aeltere, --auch-neuere" >&2
                return 1 ;;
         esac
     done

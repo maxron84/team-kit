@@ -9,7 +9,7 @@
            .\team-status.cmd --budget   Kumulierter Kontostand (Ledger + Logs)
            .\team-status.cmd --architekt-abschluss <USD> <domaene> ["<notiz>"]
            .\team-status.cmd --akteur-abschluss <rolle> <auth> <USD> <domaene> ["<notiz>"]
-           .\team-status.cmd --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere]
+           .\team-status.cmd --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere] [--auch-neuere]
            .\team-status.cmd --ledger-pruefen [--kaskade N]
            .\team-status.cmd --altlast [N]
            .\team-status.cmd --beutebuch-archivieren [--dry-run]
@@ -333,15 +333,16 @@ function Status-RollenAbschluss {
       wird sie aus dem Plannamen ABGELEITET — der Text des Menschen wird nicht
       mehr auf eine Zeile kopiert, die er nicht beschreibt.
 
-      BL-220/BL-221: kosten.py kennt zwei weitere Schalter (--trotzdem,
-      --auch-aeltere). Sie werden hier DURCHGEREICHT statt weggeworfen — die
-      Lehre aus BL-143, wo genau das einem Wrapper passiert ist.
+      BL-220/BL-221/BL-234: kosten.py kennt drei weitere Schalter
+      (--trotzdem, --auch-aeltere, --auch-neuere). Sie werden hier
+      DURCHGEREICHT statt weggeworfen — die Lehre aus BL-143, wo genau das
+      einem Wrapper passiert ist.
     #>
     param([string[]]$Argumente)
     $kaskade = if ($Argumente.Count -ge 1) { $Argumente[0] } else { '' }
     $domaene = if ($Argumente.Count -ge 2) { $Argumente[1] } else { '' }
     if (-not $kaskade -or -not $domaene) {
-        Team-Fehler 'Nutzung: team-status --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere]'
+        Team-Fehler 'Nutzung: team-status --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere] [--auch-neuere]'
         return 1
     }
     $rest = @()
@@ -354,7 +355,8 @@ function Status-RollenAbschluss {
     if ($rest.Count -and $rest[0] -and -not $rest[0].StartsWith('--')) {
         $bauNotiz = $rest[0]; $rest = Rest-Ohne-Erstes $rest
     }
-    $erlaubt = @('--addieren', '--ersetzen', '--trotzdem', '--auch-aeltere')
+    $erlaubt = @('--addieren', '--ersetzen', '--trotzdem', '--auch-aeltere',
+                 '--auch-neuere')
     $schalter = @()
     foreach ($s in @($rest)) {
         if (-not $s) { continue }

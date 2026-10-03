@@ -117,8 +117,8 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | sie weicht Guard/Read-Only-Regeln **nicht** auf |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | reichen 42 **unverändert als eigenen Exit 42** durch |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | Der Read-Only-Guard läuft dabei auf **jedem** Pfad (auch Pause) |
-| Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | Der Smoke-Test läuft im **Vordergrund**, nie als Hintergrund-Task und nie mit einem Wakeup darauf. |
-| Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | Die Rolle setzt das Zeitlimit ihres Werkzeugs auf diesen Wert, statt auszuweichen. |
+| Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | Der Smoke-Test läuft im **Vordergrund**, nie als Hintergrund-Task, nie als Monitor und nie mit einem |
+| Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | Die Rolle erhöht das Zeitlimit ihres Werkzeugs auf diesen Wert in **Sekunden** |
 | Loop-Mechanik & Auth (Ralph) | HERLEITUNG | Regeldatei | eine Auflage, die eine Rolle nicht einhalten kann, erzeugt genau das Verhalten, das sie verbieten soll. |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | **Kein** Aufweichen echter Fehler — die Bremse misst ausschließlich Fortschritt. |
 | Loop-Mechanik & Auth (Ralph) | NORM | TEAM.md | **Die Arbeit ist in diesem Fall meistens fertig** |

@@ -305,6 +305,122 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Die Vordergrund-Auflage erreichte Frank nur in einer Fassung, die
+  ausgerechnet seine Bauform nicht verbot** (`BL-232`/`BL-233`, gemeldet von
+  `Feld E` an zwei aufeinanderfolgenden Tagen — und erst zusammen ergeben die
+  beiden Meldungen den Befund).
+
+  Gemeldet war *„der `Kit-BL-201`-Absatz fehlt in `rolle-frank.md`"*. Das
+  stimmt und ist nicht die Ursache: Frank bekommt die Auflage seit `BL-207`
+  wörtlich zur **Laufzeit**, über `$SMOKE_SUFFIX` in Schritt 1 seines
+  Auftrags; sein Briefing lässt sie bewusst weg, weil es exakt auf dem harten
+  45-Zeilen-Limit liegt. Die Meldung des Folgetags hat das belegt — dort
+  verletzte eine Rolle dieselbe Auflage, die sie **wörtlich im Briefing
+  stehen** hatte.
+
+  **Der Befund liegt eine Ebene tiefer:** Die vier Briefings verbieten **drei**
+  Bauformen — Hintergrund-Task, Wakeup, **Monitor** —, die beiden
+  Laufzeit-Bausteine verboten zwei. Franks `result` nannte wörtlich *„I'll
+  hold here until the smoke-test MONITOR notifies me of completion"*. Die
+  fehlende Bauform und die gewählte sind dieselbe Stelle. Kosten im Feld:
+  **13,13 USD in zwei Leerläufen an einem Vormittag**, beide mit
+  `subtype: success` und `is_error: false`.
+
+  **Dazu der Faktor 1 000** (`BL-233`): `TEAM_SMOKE_TEST_TIMEOUT` steht auf
+  `600` und ist in Sekunden gemeint; das Werkzeug der Rolle nimmt sein
+  Zeitlimit in **Millisekunden**. Der Satz *„setze das Zeitlimit deines
+  Werkzeugs auf diesen Wert"* ergab damit 0,6 Sekunden — und der naheliegende
+  Ausweg ist genau der, den derselbe Satz zwei Zeilen später verbietet. Die
+  Rolle rechnet jetzt nicht mehr: Beide Zahlen stehen im Prompt
+  (`600 Sekunden` und `600000`), die Millisekunden-Zahl **eingesetzt** statt
+  beschrieben. Und das Verbot hängt jetzt **an** der Handlungsanweisung statt
+  danebenzustehen.
+
+  Nachgezogen sind alle sechs Stellen — vier Briefings, zwei Laufzeit-Bausteine
+  auf beiden Bahnen —, dazu die NORM in `bootstrap/CLAUDE.md.vorlage` und ihre
+  Zeile in `doku/regel-inventar.md`. **Die Zeilenzahl war dabei die
+  Nebenbedingung, nicht die Nebensache:** Drei der vier Briefings lagen exakt
+  auf 45 Zeilen, die neue Einheit ist deshalb gegen Füllwörter im selben
+  Absatz getauscht und nicht angehängt worden.
+
+  **Der blinde Fleck war eine Liste, keine Datei.** `test_bl201` prüft
+  `SMOKE_SUFFIX` auf `VORDERGRUND` und `Hintergrund-Task`; der Monitor stand
+  nicht darin, also fiel sein Fehlen nicht auf. Der neue Wächter
+  `test_bl232_vordergrund_regel_laeuft_nicht_auseinander.py` (24 Fälle) hält
+  deshalb die **Gattung**: alle drei Bauformen an allen sechs Stellen, die
+  vier Briefing-Absätze **byte-gleich** gegeneinander, und die Zeiteinheit am
+  **gerenderten** Text statt am Quelltext. Das ist der Wächter, den die Meldung
+  selbst vorgeschlagen hat. Drei Gegenproben gefahren, jede greift.
+
+- **`--rollen-abschluss vor-N` buchte immer den GESAMTEN unarchivierten
+  Bestand — der `BL-221`-Riegel greift bei benannten Nummern nicht** (`BL-234`,
+  gemeldet von `Feld E`). `logs_vor_kaskadenbeginn()` hält jedes Log gegen den
+  **Beginn einer Kaskade**; eine benannte Nummer wie `vor-15` hat keinen, also
+  war die Liste immer leer und **jedes** Log galt als zugehörig.
+
+  **Der Schutz fehlte ausgerechnet in dem Fall, für den `vor-N` erfunden
+  wurde** — und schlimmer: Die Anweisung, die hineinführt, ist die
+  *Korrekturanweisung* eines anderen Riegels. `--budget` warnt über drei
+  Altlogs, nennt `vor-N` als Lösung, und wer der Empfehlung folgt, bucht mehr
+  als er wollte. Im Feld: statt der gemeldeten 3,2621 USD wurden **alle 14**
+  unarchivierten Logs gebucht, **17,68 USD unter der falschen Nummer**, Rohlogs
+  im selben Zug archiviert. Die Reihenfolge macht es unvermeidlich — die
+  Warnung erscheint **nach** dem Lauf, wenn die frischen Laufkosten
+  unarchiviert danebenliegen.
+
+  Gebaut ist die **Spiegelseite** des Riegels: `logs_nach_fenster_ende()`
+  bricht ab, wenn Logs **jünger** sind als der Beginn der Kaskade N — Exit 1,
+  **ohne zu buchen und ohne zu archivieren** —, nennt Anzahl, Zeitpunkt,
+  `--kaskade N` als richtiges Ziel und `--auch-neuere` als benannte
+  Übersteuerung; der Befund heißt `WARNUNG:`, nicht `Hinweis:`. Dazu Weg (3)
+  der Meldung, unabhängig nützlich: Die Erfolgsmeldung nennt jetzt die
+  **Zeitspanne** der gebuchten Logs — `9 Log(s) archiviert` war von
+  `3 Log(s)` nur an der Zahl zu unterscheiden.
+
+  **Das Fenster hat bewusst nur eine Kante.** Die obere ist die Commit-Zeit der
+  Plandatei, sekundengenau. Die untere stünde nur im Ledger, und dort steht ein
+  **Datum ohne Uhrzeit** — im Feldfall endete der Frank-Lauf 23:07 und die
+  Kaskade begann 23:18 am selben Tag. Eine Kante mit Tagesauflösung würde
+  richtige Logs anschlagen oder falsche durchlassen, und geraten wird hier
+  nicht. Die obere allein fängt den Feldfall vollständig: elf der vierzehn
+  Logs liegen nach dem Beginn von Kaskade 15. Weg (2) — Bestätigung einholen —
+  ist **nicht** gebaut: Er verlagert die Prüfung auf den Menschen, und genau
+  der hat hier einer Anweisung vertraut.
+
+  Beide Wrapper reichen `--auch-neuere` durch (die Lehre aus `BL-143`).
+  Regressionstest `test_bl234_vor_n_bucht_nur_sein_zeitfenster.py`, **15
+  Fälle** mit sechs Gegenrichtungen; drei Gegenproben gefahren, jede greift.
+  Der pwsh-Durchreiche-Fall ist geschrieben und **übersprungen** (kein
+  PowerShell 7 auf dieser Maschine).
+
+- **Eine abgelegte Meldung bekam ihre `BL-n` von Hand — und nichts verglich die
+  beiden Mengen** (`BL-235`). `kit-melden ablegen` committet die Datei, die
+  Zeile im Backlog schreibt ein Mensch. Was nicht an einer Mechanik hängt, wird
+  übergangen; und der Schaden ist **still** — eine unverlinkte Meldung bricht
+  nichts, sie liegt nur da, und niemand merkt, dass ein bezahlter Feldbefund
+  keine Spur ins Kit gefunden hat.
+
+  **Zweimal eingetreten, beim zweiten Mal vorhergesagt:** Am 2026-09-03 lagen
+  **acht** Meldungen ohne Nummer da, und der Stand-Eintrag dieses Tages hat den
+  Wächter wörtlich beschrieben. Gebaut war er nicht — die drei Einträge
+  `BL-232`, `BL-233` und `BL-234` dieser Version lagen daraufhin seit dem
+  2026-09-05/06 unverlinkt und wurden wieder von Hand gefunden.
+
+  `test_bl235_jede_meldung_bekommt_ihre_nummer.py` (8 Fälle) hält
+  `plans/meldungen/*.md` gegen die in Backlog **und** Archiv genannten
+  Dateinamen, in beiden Richtungen. **Der erste Entwurf nahm eine datierte
+  Schwelle an und behauptete, sie sei gemessen; der eigene Kontrollfall hat das
+  widerlegt** — vor dem angenommenen Tag sind acht Meldungen verlinkt und
+  dreizehn nicht. Statt der Schwelle steht eine **gefrorene Altlast** aus
+  dreizehn Namen, und ein eigener Fall macht den Unterschied zur gewachsenen
+  Ausnahmeliste: Wer eine Altmeldung nachverlinkt, wird rot und muss sie
+  austragen; eine neue kann dort nicht landen, ohne dass jemand eine als
+  gefroren markierte Konstante aufmacht. Eine Liste, die nur schrumpfen kann,
+  ist kein Leck. Vier Gegenproben gefahren, jede greift. **Offen bleibt die
+  Nachverlinkung der dreizehn** (`BL-236`) — Handarbeit und bewusst nicht
+  geraten: Eine falsche Zuordnung in der Herkunftsspur sieht aus wie ein Beleg
+  und zeigt woandershin.
+
 - **Zwei Gegenproben des pwsh-Selbsttests haben seit ihrem ersten Tag nichts
   verfälscht** (`BL-230`, gefunden in `Feld B`). `kit-test.ps1` verfälscht in
   Schritt 5 eine Zahl im README und verlangt, dass `kit-readme-pruefen.py` rot

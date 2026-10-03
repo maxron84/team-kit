@@ -128,6 +128,7 @@ Nutzung:
     kosten.py rollen-abschluss --kaskade N --domaene <domaene>
               [--notiz TEXT] [--logs DIR...] [--pfad PFAD] [--repo DIR]
               [--archivieren] [--trotzdem] [--auch-aeltere]
+              [--auch-neuere]
                                         Kaskadenscharfe Rollenkosten
                                         (BL-17-Restpunkt/BL-29-"1b", Kaskade
                                         16/Stufe 54): summiert die .team-logs
@@ -174,7 +175,16 @@ Nutzung:
                                         Kosten unter dieser Nummer zu buchen
                                         und die Belege wegzuarchivieren
                                         (BL-221, Uebersteuerung
-                                        --auch-aeltere).
+                                        --auch-aeltere). Bei einer BENANNTEN
+                                        Nummer `vor-N` gilt die Spiegelregel:
+                                        Logs, die JUENGER sind als der Beginn
+                                        der Kaskade N, gehoeren nicht in die
+                                        Out-of-Loop-Runde davor und brechen
+                                        den Aufruf ebenso ab (BL-234,
+                                        Uebersteuerung --auch-neuere) — ohne
+                                        ihn buchte `vor-N` immer den GESAMTEN
+                                        unarchivierten Bestand, also auch die
+                                        Kosten des gerade gelaufenen Baus.
     kosten.py ralph-abschluss  … (Argumente wie rollen-abschluss)
                                         BL-4: identischer Mechanismus fuer
                                         Ralphs BAUKOSTEN — Quelle .ralph-logs
@@ -991,6 +1001,88 @@ def logs_vor_kaskadenbeginn(files, kaskade, repo="."):
         if mtime < beginn:
             zu_alt.append((datei, mtime))
     return beginn, sorted(zu_alt, key=lambda p: p[1])
+
+
+BENANNTE_KASKADE = re.compile(r"^vor-(\d+)$")
+
+
+def kaskade_vorlauf_von(kaskade):
+    """Die Nummer N aus einer benannten Kaskade `vor-N`, sonst None.
+
+    `vor-N` ist die Konvention fuer eine Out-of-Loop-Runde ZWISCHEN zwei
+    Kaskaden (BL-45): Frank faehrt einen Fix, der zu keiner der beiden
+    gehoert. Eine rein numerische Nummer ist keine benannte, und ein
+    beliebiger anderer Name sagt ueber den Zeitraum nichts — beides gibt
+    None, damit nichts geraten wird.
+    """
+    if not kaskade:
+        return None
+    treffer = BENANNTE_KASKADE.match(str(kaskade).strip())
+    return int(treffer.group(1)) if treffer else None
+
+
+def logs_nach_fenster_ende(files, kaskade, repo="."):
+    """(ende, [(datei, mtime), …]) fuer alle Logs, die NICHT MEHR in das
+    Zeitfenster einer benannten Kaskade `vor-N` fallen (BL-234).
+
+    DIE SPIEGELSEITE VON `logs_vor_kaskadenbeginn`, und sie fehlte genau dort,
+    wo `vor-N` erfunden wurde. Der BL-221-Riegel haelt jedes Log gegen den
+    BEGINN EINER KASKADE; eine benannte Nummer hat keinen (es gibt keine
+    Plandatei `…vor-15-….md`), `kaskade_beginn` gibt None, die Liste bleibt
+    leer, und damit gilt JEDES Log als zugehoerig. Im Feld hat das bei einem
+    `--rollen-abschluss vor-15` **alle 14** unarchivierten Logs gebucht statt
+    der drei gemeldeten Altlogs: 17,68 USD unter der falschen Nummer, Rohlogs
+    im selben Zug archiviert. Der empfohlene Ausweg aus BL-221 war damit
+    selbst eine Fehlbuchung.
+
+    DAS FENSTER HAT NUR EINE ERMITTELBARE KANTE, und das ist Absicht. Die
+    obere ist der Beginn der Kaskade N — dieselbe Quelle wie beim
+    BL-221-Riegel, die Commit-Zeit der Plandatei, also sekundengenau. Die
+    untere (das Ende der letzten gebuchten Kaskade) stuende nur im Ledger, und
+    dort steht ein DATUM, keine Uhrzeit: Im Feldfall endete der Frank-Lauf um
+    23:07 und die Kaskade begann um 23:18 am SELBEN Tag. Eine Kante mit
+    Tagesaufloesung wuerde richtige Logs anschlagen oder falsche durchlassen
+    — geraten wird hier nicht (dieselbe Regel, die `kaskade_beginn` ohne
+    Plandatei schweigen laesst).
+
+    Leere Liste also, wenn die Nummer nicht benannt ist oder der Beginn von N
+    sich nicht ermitteln laesst (die Kaskade ist noch nicht scharfgeschaltet
+    — dann liegen auch keine Logs von ihr herum)."""
+    n = kaskade_vorlauf_von(kaskade)
+    if n is None:
+        return None, []
+    ende = kaskade_beginn(n, repo)
+    if ende is None:
+        return None, []
+    zu_neu = []
+    for datei in files:
+        try:
+            mtime = os.path.getmtime(datei)
+        except OSError:
+            continue
+        if mtime >= ende:
+            zu_neu.append((datei, mtime))
+    return ende, sorted(zu_neu, key=lambda p: p[1])
+
+
+def log_zeitspanne(files):
+    """(aeltester, juengster) mtime der Dateien, oder (None, None).
+
+    BL-234, Weg (3): Die Erfolgsmeldung sagte `9 Log(s) archiviert` und war
+    damit von `3 Log(s)` nur an der Zahl zu unterscheiden — wer sie
+    ueberblaettert, merkt nichts, und die Belege sind dann schon archiviert.
+    Die gebuchte ZEITSPANNE haette den Feldfall sofort gezeigt: Gemeldet waren
+    drei Altlogs, gebucht wurde ein Fenster, das bis in den laufenden Tag
+    reichte."""
+    zeiten = []
+    for datei in files:
+        try:
+            zeiten.append(os.path.getmtime(datei))
+        except OSError:
+            continue
+    if not zeiten:
+        return None, None
+    return min(zeiten), max(zeiten)
 
 
 def git_churn(seit, pfade, repo="."):
@@ -2601,6 +2693,7 @@ def _main(argv):
         bestand = "abbrechen"   # BL-5: nie stillschweigend ueberschreiben
         trotzdem = False        # BL-220: Plan-Gegenprobe uebersteuern
         auch_aeltere = False    # BL-221: zu alte Logs bewusst mitbuchen
+        auch_neuere = False     # BL-234: zu neue Logs bewusst mitbuchen
         i = 0
         while i < len(rest):
             if rest[i] == "--kaskade":
@@ -2654,6 +2747,9 @@ def _main(argv):
                 i += 1
             elif rest[i] == "--auch-aeltere":
                 auch_aeltere = True
+                i += 1
+            elif rest[i] == "--auch-neuere":
+                auch_neuere = True
                 i += 1
             else:
                 print(f"Fehler: unbekanntes Argument '{rest[i]}'", file=sys.stderr)
@@ -2806,6 +2902,49 @@ def _main(argv):
                       "`--auch-aeltere` sie mit (BL-221).", file=sys.stderr)
                 return 1
 
+        # BL-234: Dieselbe Pruefung in die ANDERE Richtung -- und sie fehlte
+        # ausgerechnet in dem Fall, fuer den `vor-N` erfunden wurde. Der
+        # Riegel oben haelt jedes Log gegen den BEGINN EINER KASKADE; eine
+        # benannte Nummer hat keinen, also war `_zu_alt` dort immer leer und
+        # JEDES Log galt als zugehoerig. Im Feld buchte
+        # `--rollen-abschluss vor-15` deshalb alle 14 unarchivierten Logs
+        # statt der drei gemeldeten Altlogs (17,68 USD unter der falschen
+        # Nummer, Rohlogs im selben Zug archiviert).
+        #
+        # Die Reihenfolge macht es schlimmer, und deshalb ist ein Hinweis
+        # hier zu wenig: Die BL-221-Warnung erscheint NACH einem Lauf, also
+        # genau dann, wenn die frischen Laufkosten unarchiviert daneben
+        # liegen. Der von ihr empfohlene Befehl trifft damit immer den
+        # unguenstigsten Zeitpunkt -- der empfohlene Ausweg war selbst eine
+        # Fehlbuchung. Gegen eine Anweisung, die in die Falle fuehrt, hilft
+        # kein weiterer Satz im Handbuch, sondern nur ein Riegel.
+        _ende, _zu_neu = logs_nach_fenster_ende(files, kaskade, repo)
+        if _zu_neu:
+            from datetime import datetime as _dt
+            marke = "Hinweis" if auch_neuere else "WARNUNG"
+            schluss = (", werden auf `--auch-neuere` hin aber trotzdem "
+                       "unter dieser Nummer gebucht:") if auch_neuere else \
+                      (" -- es wird NICHTS gebucht und NICHTS archiviert:")
+            print(f"{marke}: {len(_zu_neu)} Log(s) sind JUENGER als der "
+                  f"Beginn der Kaskade {kaskade_vorlauf_von(kaskade)} "
+                  f"({_dt.fromtimestamp(_ende).isoformat(timespec='minutes')}) "
+                  f"und gehoeren damit nicht in die Out-of-Loop-Runde "
+                  f"{kaskade}{schluss}",
+                  file=sys.stderr)
+            for datei, mtime in _zu_neu[:5]:
+                print(f"  {datei} ({_dt.fromtimestamp(mtime).isoformat(timespec='minutes')})",
+                      file=sys.stderr)
+            if len(_zu_neu) > 5:
+                print(f"  … und {len(_zu_neu) - 5} weitere", file=sys.stderr)
+            print(f"  Sie gehoeren unter die Kaskadennummer selbst "
+                  f"(`--kaskade {kaskade_vorlauf_von(kaskade)}`); buche die "
+                  f"Out-of-Loop-Runde VOR dem Lauf oder nach dessen "
+                  f"Abschluss (BL-234).", file=sys.stderr)
+            if not auch_neuere:
+                print("  Gehoeren sie doch zu dieser Runde, bucht "
+                      "`--auch-neuere` sie mit (BL-234).", file=sys.stderr)
+                return 1
+
         if bestand == "addieren" and not files and abo == 0.0 and api == 0.0:
             print(f"{rolle_ziel.capitalize()}-Zeile Kaskade {kaskade} "
                   f"({domaene}) unveraendert: nichts hinzuzufuegen "
@@ -2836,6 +2975,20 @@ def _main(argv):
             aktion = "angelegt"
         else:
             aktion = "addiert" if bestand == "addieren" else "ersetzt"
+        # BL-234, Weg (3): Die Erfolgsmeldung nennt die ZEITSPANNE der
+        # gebuchten Logs. `9 Log(s) archiviert` war von `3 Log(s)` nur an der
+        # Zahl zu unterscheiden; im Feld ist die Fehlbuchung nur deshalb
+        # aufgefallen, weil der Mensch die erwartete Summe aus der Warnung
+        # noch im Kopf hatte. Die Spanne ist unabhaengig vom Riegel nuetzlich
+        # -- sie zeigt JEDE Fehlzuordnung, auch die, fuer die es keinen
+        # Zeitfenster-Riegel gibt.
+        _von, _bis = log_zeitspanne(geparst)
+        spanne_hinweis = ""
+        if _von is not None:
+            from datetime import datetime as _dt2
+            spanne_hinweis = (
+                f", Logs von {_dt2.fromtimestamp(_von).isoformat(timespec='minutes')}"
+                f" bis {_dt2.fromtimestamp(_bis).isoformat(timespec='minutes')}")
         archiv_hinweis = ""
         if archivieren:
             verschoben = _archiviere_dateien(geparst + verworfen_liste)
@@ -2852,7 +3005,7 @@ def _main(argv):
         print(f"{rolle_ziel.capitalize()}-Zeile Kaskade {kaskade} "
               f"({domaene}) {aktion}: "
               f"{betrag} USD (abo {abo:.4f} / api {api:.4f})"
-              f"{archiv_hinweis}")
+              f"{spanne_hinweis}{archiv_hinweis}")
         return 0
 
     print(f"Unbekannter Befehl: {befehl}", file=sys.stderr)
