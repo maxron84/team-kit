@@ -595,8 +595,15 @@ pruefe "projekteigener Test in team/tests bleibt erhalten" \
        "$([ -f "$ZIEL/team/tests/test_projekteigener_fund.py" ] && echo da || echo weg)" "da"
 pruefe "und wird als unbekannt gemeldet" \
        "$(grep -c 'test_projekteigener_fund.py' "$ZIEL/.update.log")" "1"
+# BL-270: Mit Pruefsummenliste (die Erstinstallation schreibt sie) meldet das
+# Update eine seit dem letzten Lauf geaenderte Kit-Datei unter eigener
+# Ueberschrift — und sichert sie, bevor es sie ersetzt.
 pruefe "lokal abweichende Infrastruktur wird gemeldet" \
-       "$(grep -c 'bitte gegenlesen' "$ZIEL/.update.log")" "1"
+       "$(grep -c 'Im Projekt geaendert' "$ZIEL/.update.log")" "1"
+pruefe "und vor dem Ersetzen gesichert" \
+       "$(grep -l 'lokaler Fix, noch nicht ans Kit gemeldet' \
+            "$ZIEL"/backups/update-*/team/tools/beutebuch.py 2>/dev/null \
+          | wc -l | tr -d ' ')" "1"
 pruefe "keine offenen Platzhalter in den Briefings" \
        "$(grep -rlE '\{\{[A-Z_]+\}\}' "$ZIEL/team/prompts/" | wc -l)" "0"
 # Der Abgleich-Hinweis muss AUSFUEHRBAR sein, nicht nur gut gemeint. Vorher

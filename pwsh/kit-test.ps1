@@ -163,7 +163,7 @@ function Dateien-Mit-Endung {
 # BL-198 hat fuenf dazugelegt (README-Schritt 5/9), BL-196 eine (das
 # Aufraeumen der Abgleichsablage). Wer eine Pruefung ergaenzt, zieht die
 # Zahl nach — sonst meldet der Lauf am Ende, ein Schritt sei uebersprungen.
-$script:PruefungenSoll = 66
+$script:PruefungenSoll = 67
 
 # BL-195: Die Installer- und Update-Aufrufe ab Schritt 5 laufen mit
 # -OhneSelbsttest. Der Installer wuerde sonst jedes Mal die volle Suite
@@ -701,8 +701,14 @@ try {
     # einen entfernt. Es bleibt liegen UND wird gemeldet.
     Pruefe 'projekteigener Test wird als unbekannt gemeldet' `
         (Treffer $updateLog 'test_projekteigener_fund\.py') 1
+    # BL-270: Mit Pruefsummenliste (die Erstinstallation schreibt sie) meldet
+    # das Update eine seit dem letzten Lauf geaenderte Kit-Datei unter eigener
+    # Ueberschrift — und sichert sie, bevor es sie ersetzt.
     Pruefe 'lokal abweichende Infrastruktur wird gemeldet' `
-        ($abgleichLog -match 'bitte gegenlesen') $true
+        ($abgleichLog -match 'Im Projekt geaendert') $true
+    Pruefe 'und vor dem Ersetzen gesichert' `
+        (@(Get-ChildItem -Path 'backups' -Recurse -Filter 'beutebuch.py' -File -ErrorAction SilentlyContinue |
+           Where-Object { (Get-Content -Raw $_.FullName) -match 'lokaler Fix, noch nicht ans Kit gemeldet' }).Count) 1
     Pruefe 'keine offenen Platzhalter in den Briefings' `
         (@(Get-ChildItem (Join-Path $ziel 'team\prompts') -File -ErrorAction SilentlyContinue |
            Where-Object { (Get-Content -Raw $_.FullName) -match '\{\{[A-Z_]+\}\}' }).Count) 0
