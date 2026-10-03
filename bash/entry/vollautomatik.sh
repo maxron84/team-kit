@@ -327,6 +327,20 @@ voller_smoke_am_phasenende() {
     fi
 }
 
+# BL-300: Am Ende des Laufs, vor jeder Handpruefung: Ist das, woran der Mensch
+# gleich prueft, der Stand, der eben gebaut wurde? Ein Befund, kein Gate —
+# rot heisst nicht "der Code ist falsch", sondern "das Ziel ist alt".
+zielstand_am_ende() {
+    [ -n "${TEAM_ZIELSTAND_PRUEFUNG:-}" ] || return 0
+    local ausgabe
+    ausgabe=".team-logs/zielstand-$(date +%Y%m%d-%H%M%S).log"
+    if $TEAM_ZIELSTAND_PRUEFUNG >"$ausgabe" 2>&1; then
+        log "✓ Zielstand: Das Geprüfte ist das Gebaute (Kit-BL-300)."
+    else
+        log "✗ Zielstand ROT — vor der Handprüfung den gebauten Stand aufs Ziel bringen (Kit-BL-300). Ausgabe: $ausgabe"
+    fi
+}
+
 abbruch_bericht() {
     local grund="$1" offen nr
     nr="$(kaskaden_nummer)"
@@ -538,6 +552,7 @@ fi
 # Der Zeiger ueberlebt genau die Abbrueche: Hier, am regulaeren Ende, faellt er
 # weg, damit der naechste Aufruf wieder eine ganze Kaskadenrunde faehrt.
 voller_smoke_am_phasenende "Fix-Phase"
+zielstand_am_ende
 rm -f "$PHASEN_STATE"
 log "=== ABSCHLUSSBERICHT ==="
 ./team-status.sh || true

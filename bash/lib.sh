@@ -67,6 +67,8 @@ TEAM_SMOKE_TEST_TIMEOUT="${TEAM_SMOKE_TEST_TIMEOUT:-600}"
 # TEAM_SMOKE_TEST selbst (wie bisher). Gesetzt = je Stufe dieser Befehl, und
 # die Vollautomatik faehrt den vollen Smoke-Test verbindlich am Phasenende.
 TEAM_SMOKE_TEST_SCHNELL="${TEAM_SMOKE_TEST_SCHNELL:-}"
+# BL-300: Die Zielstand-Pruefung (siehe team.config.sh). Leer = aus.
+TEAM_ZIELSTAND_PRUEFUNG="${TEAM_ZIELSTAND_PRUEFUNG:-}"
 
 # --- Der Suitenstand ueberlebt die Rolle, die ihn gemessen hat (BL-256) -------
 # WARUM ES DIESE DATEI GIBT. Im Feld aktivierte ein KORREKTER Frank-Fix einen
@@ -164,6 +166,16 @@ if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
 else
     SMOKE_ZEILE="(Kein Smoke-Test konfiguriert — Schritt entfällt. Das Team arbeitet ohne Sicherheitsnetz; TEAM_SMOKE_TEST in team.config.sh nachtragen.)"
     SMOKE_SUFFIX=""
+fi
+# BL-300: Das Gepruefte muss das Gebaute sein. Die Regel haengt an der
+# Handlung (nach dem Bauen), nicht an einer Erinnerung — ein Merksatz "vor
+# jeder Handpruefung aufrufen" hat im Feld genau einmal gegriffen, naemlich
+# als er neu war.
+if [ -n "${TEAM_ZIELSTAND_PRUEFUNG:-}" ]; then
+    local zielstand="Zielstand-Prüfung nach jeder Änderung an baubarem Code: ${TEAM_ZIELSTAND_PRUEFUNG} — sie prüft, ob das, woran geprüft wird (Gerät, Emulator, installierte Fassung), der Stand ist, den du eben gebaut hast. Rot heißt: Das Geprüfte ist nicht das Gebaute — bring den Stand aufs Ziel und prüfe erneut (Kit-BL-300)."
+    SMOKE_ZEILE="${SMOKE_ZEILE}
+   ${zielstand}"
+    SMOKE_SUFFIX="${SMOKE_SUFFIX} ${zielstand}"
 fi
 }
 team_smoke_bausteine

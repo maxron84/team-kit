@@ -34,6 +34,8 @@ nichts, was ich nachlesen kann.
    **Plan:** Kaskade 7 — Thema
    **Typ:** Bau
    **Stufen:** 1–5
+   **Auftrag:** <ein Satz des Stakeholders: wofür, nicht wie>
+   **Vorbild:** <wo das Ziel nachschlagbar ist — oder „keins">
    RALPH_CAP=5
    BUDGET_EMPFEHLUNG_USD=18
    ```
@@ -42,6 +44,15 @@ nichts, was ich nachlesen kann.
    sah richtig aus, Ralph stieg mit Exit 1 aus und der Status zeigte `Cap ?`.
    Die Leser dulden die Auszeichnung inzwischen — ich verlasse mich nicht
    darauf, sondern schreibe die Zeilen blank.
+   **`Auftrag:` und `Vorbild:` sind die Messlatte der Abnahme** (`Kit-BL-219`).
+   Die Stufen-Verifikation fragt *„funktioniert es?"* und stammt von mir, für
+   meinen eigenen Entwurf; *„ist es das Richtige?"* fragt sonst niemand außer
+   dem Menschen, am Ende und aus dem Gedächtnis. Den Auftrag schreibe ich in
+   den Worten des Stakeholders, das Vorbild als Stelle, auf die man zeigen
+   kann (Spezifikation, Referenzanwendung, Norm). Steht dort „keins", frage ich
+   **vor** dem Start nach dem einen Maßstab, an dem sich das Ergebnis messen
+   lässt — ohne ihn nimmt die Abnahme alles ab, denn ein Modell antwortet
+   immer.
 
    **Eine Stufe, die unter einer Bedingung gar nicht gebaut werden soll,
    bekommt die Bedingung UND die zweite Quittungsform** (`Kit-BL-255`).
@@ -156,9 +167,20 @@ zahlt pro Stufe einen Kaltstart und liest die gewachsene Datei erneut — im Fel
 kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
 
 **Nach jedem Lauf (Closeout, Pflicht):**
-1. `{{PLAN_ORDNER}}/kaskade-N-abschluss.md` schreiben — sieben Abschnitte:
-   Ist-Stand · Bewertung des Bauwegs · Funde des Red Teams · Closeout-Funde ·
-   echte Lauf-Kosten · Release-Strategie · offene operative Schritte.
+1. `{{PLAN_ORDNER}}/kaskade-N-abschluss.md` schreiben — vorneweg **Für
+   Menschen**, dann sieben Abschnitte: Ist-Stand · Bewertung des Bauwegs ·
+   Funde des Red Teams · Closeout-Funde · echte Lauf-Kosten ·
+   Release-Strategie · offene operative Schritte.
+   **Für Menschen** sind zehn Sätze ohne Fachkürzel: Was war die Frage, was
+   wurde gebaut, was hat überrascht, was hat es gekostet, was ist offen
+   (`Kit-BL-243`). Die übrigen Abschnitte sind Nachweis, keine Erzählung —
+   ohne diesen Einstieg kann sie nach ein paar Kaskaden niemand mehr lesen,
+   auch ich nicht.
+   **Die Abnahme steht in Abschnitt 1** (`Kit-BL-219`): je Punkt des
+   `Auftrag:` erfüllt oder nicht, mit Beleg — eine Stelle im Vorbild, ein
+   Test, ein Bildschirmfoto. Wo ich auf keine Stelle zeigen kann, entscheide
+   ich nicht selbst: Das ist die eine Frage an den Stakeholder, und sie steht
+   dort als Frage, nicht als Haken.
    In **Abschnitt 4** beantworte ich zusätzlich eine feste Pflichtfrage:
    **Welche offenen Punkte hat dieser Lauf *nebenbei* eingelöst — und wer
    zitiert sie?** Erledigte Einträge abzutragen genügt nicht: Skizzen und
@@ -314,6 +336,21 @@ Fehler dieses Projekts, sondern des Kits**. Ich lege dafür eine Meldung an —
 `{{RUF}}kit-melden{{ENDUNG}} pruefen` — und setze den Status hier auf „ans Kit
 gemeldet". Ohne diesen Schritt trifft derselbe Fehler jede weitere Installation;
 die drei bisher schwersten kamen alle auf diesem Weg.
+
+**Einen Fix außerhalb des Loops lese ich mit drei Proben gegen, nicht mit
+Augenmaß** (`Kit-BL-288`). Grüner Reproducer und grüne Suite sind Franks
+eigene Prüfung; im Feld hatten 6 von 45 solcher Fixe trotzdem eine Lücke,
+jeder davon im ersten Versuch grün:
+1. **Gegenprobe** — die neuen Tests gegen den Stand **vor** dem Fix: Sie
+   müssen rot werden.
+2. **Mutationsprobe** — jede Zusicherung des Fixes einzeln brechen: Der
+   zuständige Test muss rot werden. Bleibt er grün, prüft er sie nicht.
+3. **Probe an der Wirklichkeit** — echte Eingabe, dokumentierter Aufruf samt
+   Umleitung, nicht der Aufruf, den sich der Test eingerichtet hat.
+Jede Probe kostet einen Suitenlauf, ein Nachschliff im Feld 0,6–2,0 USD.
+**Beim Fundschreiben** nennt die Reproducer-Anforderung **jede** sichtbare
+Zusage des Funds, als Zusicherung und nicht als Testname. Legt ein Fund fest,
+was der Nutzer sieht, lege ich ihn vorher dem Stakeholder vor.
 
 **Wann die Gegenprobe für einen zentralen Wert gehört — das ist eine Frage des
 Stufenschnitts, also meine** (`Kit-BL-167`). Die Regel verlangt sie von der

@@ -177,6 +177,15 @@ $TEAM_SMOKE_TEST_TIMEOUT = Team-Wert 'TEAM_SMOKE_TEST_TIMEOUT' '600'
 # mit TEAM_SMOKE_TEST.
 $TEAM_SMOKE_TEST_SCHNELL = Team-Wert 'TEAM_SMOKE_TEST_SCHNELL' ''
 
+# BL-300: Die Zielstand-Pruefung (optional). Prueft, ob das, woran geprueft
+# wird — Geraet, Emulator, installierte Fassung —, der Stand ist, der eben
+# gebaut wurde. Im Feld lag vor einer entscheidenden Handpruefung noch der Bau
+# von vor der Kaskade auf dem Emulator, daneben ein Zwilling unter der alten
+# Kennung; headless unsichtbar. Gesetzt ruft die bauende Rolle den Befehl nach
+# jeder Aenderung an baubarem Code selbst auf, und die Vollautomatik meldet
+# sein Ergebnis am Ende des Laufs. Exit 0 = Ziel und Bau stimmen ueberein.
+$TEAM_ZIELSTAND_PRUEFUNG = Team-Wert 'TEAM_ZIELSTAND_PRUEFUNG' ''
+
 # --- Commit-Konventionen ------------------------------------------------------
 $TEAM_FIX_PRAEFIX  = Team-Wert 'TEAM_FIX_PRAEFIX'  'fix(uat)'
 $TEAM_FEAT_PRAEFIX = Team-Wert 'TEAM_FEAT_PRAEFIX' 'feat'

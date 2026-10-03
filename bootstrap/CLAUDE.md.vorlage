@@ -166,7 +166,8 @@ und jedes Feldprojekt ihn so führen):
 
 1. **Fund ins Beutebuch** [`{{BEUTEBUCH}}`]({{BEUTEBUCH}}) eintragen:
    `HM-<Nr>`, Angreifer (Harry/Marv), Schweregrad (kritisch/hoch/mittel/klein),
-   **Reproschritte**, Erwartung vs. Realität.
+   **Reproschritte**, Erwartung vs. Realität. Die Erwartung nennt **jede**
+   sichtbare Zusage — als Zusicherung, nicht als Testname (`Kit-BL-288`).
 2. **Pflicht: `Reproducer-Test`-Zeile setzen**, mit dem Pfad **in Backticks** —
    auch wenn die Datei noch nicht existiert. Sie reserviert den Dateinamen für
    Frank; **zulässig ist auch der Pfad einer bestehenden Datei**, wenn der
@@ -372,7 +373,12 @@ im Git nachlesbares Lauf-Protokoll.
 Stufen X–Y, `RALPH_CAP=Y`, `BUDGET_EMPFEHLUNG_USD=Z`. **Typ:** <Produkt |
 Team-Infrastruktur> — Deploy/SemVer ja/nein.
 
+## 0. Für Menschen         Zehn Sätze ohne Fachkürzel: Frage, gebaut,
+##                         Überraschung, Kosten, offen (Kit-BL-243)
 ## 1. Ist-Stand            Bau, State, Qualitäts-Gates, Commit-Tabelle je Stufe
+##                         ABNAHME: je Punkt aus `Auftrag:` im Plankopf erfüllt
+##                         oder nicht, mit Beleg; ohne Stelle im Vorbild ist es
+##                         die Frage an den Menschen (Kit-BL-219)
 ## 2. Bewertung des Bauwegs War der Loop hier das richtige Werkzeug?
 ## 3. Funde des Red Teams   Fund-Nummern + Status
 ## 4. Closeout-Funde        Was erst beim Lesen des Berichts auffiel
@@ -563,6 +569,12 @@ Guard/Read-Only-Regeln **nicht** auf.
   ist der schnelle Befehl je Stufe; die Vollautomatik fährt dann den vollen
   `TEAM_SMOKE_TEST` verbindlich am Ende der Bauphase und der Fix-Phase, und
   rot setzt er das Gate.
+  **Das Geprüfte muss das Gebaute sein** (`Kit-BL-300`):
+  `TEAM_ZIELSTAND_PRUEFUNG` ist ein optionaler Befehl, der prüft, ob Gerät,
+  Emulator oder installierte Fassung den eben gebauten Stand tragen. Gesetzt
+  ruft ihn die bauende Rolle nach jeder Änderung an baubarem Code selbst auf,
+  und die Vollautomatik meldet sein Ergebnis am Ende des Laufs — rot heißt:
+  vor der Handprüfung erst den Stand aufs Ziel bringen.
 - **Auslauf-Bremse gegen Leerlaufkosten (`TEAM_FIX_MAX_STAGNATION`, `Kit-BL-25`).**
   Bleibt in der Frank↔Axel-Fixphase **weder** ein Fix **noch** eine neue Akte
   **noch** ein Statuswechsel, bricht die Phase nach N Runden ab, statt teuer

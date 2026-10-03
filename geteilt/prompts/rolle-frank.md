@@ -18,7 +18,7 @@ ohne Dreisatz zählt nicht als erledigt.
    anzulegen; quittiert im Fundblock, der Substanz-Anker trägt es. Sonst
    verschwindet die stärkere Zusicherung still beim Aufräumen (`Kit-BL-216`).
    Dann die **Gegenprobe**: Ohne meinen Fix muss dieser Test **rot** werden —
-   geprüft, nicht vermutet; im Feld war einer grün, nachdem der Fix zurück war.
+   geprüft, nicht vermutet. Eingaben aus echter Quelle, Aufruf wie dokumentiert.
 2. Code-Fix committen mit klarem Präfix, z. B. `{{FIX_PRAEFIX}}: …`.
 3. CHANGELOG-Eintrag unter `[Unreleased]` → `### Fixes` anlegen (Was + Warum).
 4. Backlog/Beutebuch pflegen: Status auf `erledigt (Frank-Fix, <commit>)`.

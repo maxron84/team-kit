@@ -435,6 +435,20 @@ function Voller-Smoke-Am-Phasenende {
     }
 }
 
+function Zielstand-Am-Ende {
+    # BL-300: Am Ende des Laufs, vor jeder Handpruefung: Ist das, woran der
+    # Mensch gleich prueft, der Stand, der eben gebaut wurde? Ein Befund, kein
+    # Gate — rot heisst nicht "der Code ist falsch", sondern "das Ziel ist alt".
+    if (-not $TEAM_ZIELSTAND_PRUEFUNG) { return }
+    $ausgabe = Join-Path $logDir "zielstand-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+    Team-Werkzeug $TEAM_ZIELSTAND_PRUEFUNG @() *> $ausgabe
+    if ($LASTEXITCODE -eq 0) {
+        Log '✓ Zielstand: Das Geprüfte ist das Gebaute (Kit-BL-300).'
+    } else {
+        Log "✗ Zielstand ROT — vor der Handprüfung den gebauten Stand aufs Ziel bringen (Kit-BL-300). Ausgabe: $ausgabe"
+    }
+}
+
 function Abbruch-Bericht {
     param([string]$Grund)
     $nr = Kaskaden-Nummer
@@ -676,6 +690,7 @@ if ($frankRest -gt 0) {
 }
 
 Voller-Smoke-Am-Phasenende 'Fix-Phase'
+Zielstand-Am-Ende
 Remove-Item -LiteralPath $phasenState -Force -ErrorAction SilentlyContinue
 Log '=== ABSCHLUSSBERICHT ==='
 Rolle-Starten './team-status.ps1' | Out-Null

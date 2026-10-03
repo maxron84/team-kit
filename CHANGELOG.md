@@ -11,6 +11,24 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **Auftrag und Abnahme** (`BL-219`, `Feld E`). Der Plankopf traegt
+  `Auftrag:` und `Vorbild:`, Abschnitt 1 des Abschluss-Docs nimmt daran ab —
+  je Punkt erfuellt oder nicht, mit Beleg. Ohne Vorbild stellt der Architekt
+  vor dem Start die eine Frage an den Menschen, statt selbst abzunehmen.
+  Keine neue Rolle, kein neues Dokumentformat.
+
+- **"Fuer Menschen" vorneweg** (`BL-243` klein, `Feld B`). Jedes
+  Abschluss-Doc beginnt mit zehn Saetzen ohne Fachkuerzel.
+
+- **Gegenlesen mit drei Proben** (`BL-288`, `Feld F`). Ein Fix ausserhalb des
+  Loops wird mit Gegenprobe, Mutationsprobe und Probe an der Wirklichkeit
+  gegengelesen; ein Fund nennt jede sichtbare Zusage als Zusicherung.
+
+- **`TEAM_ZIELSTAND_PRUEFUNG`** (`BL-300`, `Feld E`, beide Bahnen). Prueft,
+  ob Geraet, Emulator oder installierte Fassung den eben gebauten Stand
+  tragen. Die bauenden Rollen rufen ihn nach jeder Aenderung an baubarem
+  Code, die Vollautomatik meldet ihn am Ende des Laufs.
+
 - **Das Ledger traegt die Messung, nicht nur ihren Dollarwert** (`BL-247`
   Schritt 1, `BL-252`, `BL-298`, `Feld B`/`Feld E`). Ein optionales achtes
   Feld haelt je Buchung eine Quelle: Token je Modell und Sorte, die benutzten

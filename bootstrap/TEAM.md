@@ -150,6 +150,12 @@ das austauschen lässt (Hintergrund: `README.md`, Abschnitt **Modelle**).
 der Aufrufe. Wer sie hochdreht, dreht die Rechnung mit hoch — deshalb steht der
 Kontostand in `{{RUF}}team-status{{ENDUNG}} --budget` und nicht im Kleingedruckten.
 
+**Welche Rolle stark läuft, folgt einer Frage** (`Kit-BL-219`): *Hat die
+Ausgabe dieser Rolle ein maschinelles Netz?* Ralphs Code prüft der Smoke-Test,
+Franks Fix die Gegenprobe, einen Fund des Red Teams Franks Nachprüfung. Den
+Plan des Architekten prüft keine Maschine — deshalb läuft er stark, und wird
+er teuer, stuft man ihn nicht herunter, sondern lässt ihn kürzer laufen.
+
 > **T.E.A.M. international** — für Projekte auf Englisch oder Italienisch bleiben
 > die Initialen **T-E-A-M** zwingend erhalten, ebenso die selbstironische Pointe
 > („die Arbeit macht — mit voller Absicht — ein anderer"):
