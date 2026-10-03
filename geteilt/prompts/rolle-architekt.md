@@ -121,10 +121,11 @@ nichts, was ich nachlesen kann.
    mehr eine Regel. Gemessen wurden 36,22 USD und 7,68 USD — **43,90 USD**
    Abo-Gegenwert, die nie im Ledger standen.
    Zwei Befehle, weil der Betrag erst **gemessen** werden muss; die
-   Kaskadennummer fülle ich aus dem Plankopf vor:
+   Kaskadennummer fülle ich aus dem Plankopf vor, `<USD>`, `<kennung>` und
+   `<zeit>` stehen in der Buchungszeile, die der erste Befehl druckt:
    ```
    {{PYTHON}} team/tools/kosten.py sitzung-messen --projekt .
-   {{RUF}}team-status{{ENDUNG}} --architekt-abschluss <USD> <domaene> "Kaskade N+1 geplant" --kaskade <N+1>
+   {{RUF}}team-status{{ENDUNG}} --architekt-abschluss <USD> <domaene> "Kaskade N+1 geplant" --kaskade <N+1> --transkript <kennung> --bis <zeit>
    ```
    **Das ersetzt die Regel aus `Kit-BL-165` nicht.** Die Regel sagt das
    **Warum**, die Sequenz liefert das **Wann**; gelesen wird im entscheidenden
@@ -190,7 +191,10 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    Lücke**: Das Ledger ist in sich stimmig, `--ledger-pruefen` schweigt (für
    eine interaktive Sitzung gibt es keinen Rohlog), und `--budget` zeigt eine
    plausible Summe. Sichtbar wird sie nur, wenn ich die Transkript-Ablage gegen
-   das Ledger halte — also hier.
+   das Ledger halte — also hier, und dafür gibt es ein Werkzeug:
+   `{{PYTHON}} team/tools/kosten.py sitzungen-pruefen` nennt jede Sitzung, die
+   **nicht gebucht** ist oder nach ihrer Buchung **weiterlief** (Exit `3`,
+   `Kit-BL-279`). Ich lasse es vor jedem Kostenabschluss laufen.
    Der erste Befehl bucht **beide** Laufquellen als zwei Zeilen (`roles` für
    Harry/Marv/Frank/Axel, `ralph` für die Baukosten) und archiviert beide
    Log-Ordner. Lief nach dem Closeout noch eine Rolle, **bricht** ein zweiter
@@ -230,6 +234,13 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    **ungeeicht** und ich buche sie nicht — dann gehört die Preistabelle
    nachgezogen. Exit `2` heißt genau das. Nennt es ein Modell, das es nicht
    kennt, fehlt dessen Anteil in der Summe, und es sagt das.
+   **Die gedruckte Buchungszeile übernehme ich vollständig**, samt
+   `--transkript` und `--bis`: Die Buchung misst damit dieselben Antworten nach
+   und legt Token und Transkript-Kennung in die Ledger-Zeile (`Kit-BL-247`).
+   Nur so nennt die nächste Messung desselben Transkripts das schon Gebuchte
+   und druckt den **Zuwachs** selbst (`Kit-BL-252`), und ein zweites Buchen
+   desselben Fensters bricht ab (`Kit-BL-116`). Subagenten meiner Sitzung
+   zählen mit (`Kit-BL-305`).
    **Eine Sitzung ohne Closeout bucht ihre Kosten selbst** (`Kit-BL-165`).
    Der Rat am Ende dieses Briefings — nach einem gebuchten Closeout eine
    **neue** Sitzung für die nächste Kaskade — erzeugt genau diesen Fall: Ich
@@ -264,9 +275,13 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    und der Kollisionsschutz von `--akteur-abschluss` schlaegt nur bei
    **derselben** Rolle + Kaskade an. Deshalb: nach einem gebuchten Closeout
    eine **neue** Sitzung fuer die naechste Kaskade. Geht das ausnahmsweise
-   nicht, buche ich **Rohwert minus bereits gebucht** und schreibe die Rechnung
-   in den Notiztext der Ledger-Zeile, damit sie nachvollziehbar bleibt
-   (`Kit-BL-116`, Feld-Fall `BL-120` im `Feld A`). Das Werkzeug ist rollen-agnostisch —
+   nicht, buche ich **Rohwert minus bereits gebucht** — gemeint ist, was aus
+   **diesem Transkript** gebucht ist, nicht die ganze Zeile: Sie kann Beträge
+   aus mehreren Transkripten tragen, und im Feld ergab die falsche Lesart
+   −27,07 USD (`Kit-BL-298`). Trug die erste Buchung `--transkript`, rechnet
+   `sitzung-messen` das selbst und druckt nur den Zuwachs; sonst schreibe ich
+   die Rechnung in den Notiztext der Ledger-Zeile, damit sie nachvollziehbar
+   bleibt (`Kit-BL-116`, Feld-Fall `BL-120` im `Feld A`). Das Werkzeug ist rollen-agnostisch —
    `--akteur-abschluss <rolle> <auth:abo|api> <USD> <domaene> ["<notiz>"]`
    deckt jede interaktiv arbeitende Rolle ab (auch Frank-im-Abo);
    `--architekt-abschluss` ist der dünne Alias dafür. Steht für **dieselbe

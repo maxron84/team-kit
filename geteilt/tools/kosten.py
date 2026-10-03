@@ -94,7 +94,22 @@ Nutzung:
                                         mehr traegt. --projekt waehlt das
                                         zuletzt geaenderte Transkript der
                                         Ablage und warnt, wenn das ein
-                                        ROLLEN-Lauf ist (BL-251).
+                                        ROLLEN-Lauf ist (BL-251). Die
+                                        Transkripte der Subagenten einer
+                                        Sitzung zaehlen mit (BL-305).
+                                        --von/--bis messen ein Zeitfenster
+                                        (BL-279). Steht aus dem Transkript
+                                        schon etwas im Ledger, nennt es das
+                                        und druckt nur den ZUWACHS seither
+                                        als Buchungszeile (BL-252, BL-298).
+    kosten.py sitzungen-pruefen [--projekt PFAD] [--ledger P] [--seit ZEIT]
+                                        BL-279/BL-193: haelt jede Sitzung der
+                                        Transkript-Ablage (Rollen-Laeufe
+                                        ausgenommen) gegen das Ledger —
+                                        NICHT gebucht, nach der Buchung
+                                        weitergelaufen (Zuwachs), gebucht.
+                                        Fenster: ab dem Tag der aeltesten
+                                        Ledger-Zeile. Exit 3 = Luecke.
     kosten.py architekt-schaetzung --since REF [--repo DIR] [PFAD...]
                                         A2-Live-Schaetzung (BL-28, Kaskade 13/
                                         Stufe 42) fuer die Architekt-Rolle, die
@@ -152,6 +167,14 @@ Nutzung:
     kosten.py akteur-abschluss --usd USD --domaene <domaene>
               --rolle ROLLE --auth abo|api
               [--kaskade N] [--notiz TEXT] [--pfad PFAD] [--repo DIR]
+              [--transkript KENNUNG|PFAD [--von ZEIT] [--bis ZEIT]]
+                                        BL-247/BL-252: Mit --transkript misst
+                                        die Buchung das Fenster nach und legt
+                                        Kennung, Fenster und Token je Modell
+                                        im achten Feld der Zeile ab; ein
+                                        Fenster, das sich mit einer frueheren
+                                        Buchung desselben Transkripts
+                                        ueberschneidet, bricht ab (BL-116).
                                         Rollen-agnostische A1-Ersetzung
                                         (BL-33, Kaskade 15/Stufe 50): wie
                                         architekt-abschluss, aber fuer JEDE
@@ -264,7 +287,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from datetime import date
+from datetime import date, datetime, timezone
 
 # BL-133: Die AUSGABE dieses Werkzeugs ist UTF-8 — unabhaengig von der Locale
 # des Wirts.
@@ -540,7 +563,9 @@ def ledger_zeilen(pfad=".budget-ledger"):
     domaene/rolle/notiz. Altzeilen im urspruenglichen 5-Feld-Schema (datum |
     kaskade | usd | auth | notiz) haben domaene=None und rolle=None -- sie
     werden bei einem Domaenen-/Rollen-Filter NIE mitgezaehlt (BL-29:
-    "unzugeordnet" statt stillschweigend zugeschlagen)."""
+    "unzugeordnet" statt stillschweigend zugeschlagen). Seit BL-247 kann
+    eine Zeile ein achtes Feld tragen; `meta` ist dann dessen Inhalt (siehe
+    _meta_lesen), sonst None."""
     if not os.path.isfile(pfad):
         return
     with open(pfad, encoding="utf-8") as fh:
@@ -567,7 +592,164 @@ def ledger_zeilen(pfad=".budget-ledger"):
                 "rolle": rolle,
                 "kaskade": felder[1],
                 "notiz": notiz,
+                "datum": felder[0],
+                "meta": _meta_lesen(felder),
             }
+
+
+# --- Das achte Feld (BL-247, BL-252, BL-298) ---------------------------------
+# Das Ledger buchte EINE Zahl je Zeile: Dollar. Gemessen werden aber Token, je
+# Modell und je Sorte — und die Umrechnung ist unumkehrbar. Stand ein Preis
+# falsch (BL-166), ist jede vorher gebuchte Zeile dauerhaft falsch und nicht
+# nachrechenbar. Zwei weitere Luecken hatten dieselbe Ursache: WELCHE Sitzung
+# eine Zeile traegt, stand nur in der Prosa der Notiz — der Zuwachs einer
+# weitergelaufenen Sitzung war so nicht zu finden (BL-252), eine nie gebuchte
+# Sitzung auch nicht (BL-193, BL-279); und eine addierte Zeile trug nur ihre
+# Summe, die Rueckrechnung "minus bereits gebucht" zog im Feld den Betrag
+# ZWEIER Transkripte ab (BL-298).
+#
+# Deshalb ein optionales ACHTES Feld, kompaktes JSON: {"v":2,"quellen":[…]}.
+# Je Buchung EINE Quelle — Betrag und Datum, dazu wo bekannt die
+# Transkript-Kennung samt gemessenem Zeitfenster und die Token je Modell und
+# Sorte (eine fehlende Sorte zaehlt 0). Die Dollarspalte bleibt, was sie war,
+# und `--budget` summiert weiter nur sie: erst SCHREIBEN, dann RECHNEN — die
+# Reihenfolge der Meldung. Nach diesem Schritt existiert die Basis, und ein
+# spaeteres Nachrechnen ist gegen die Dollarspalte pruefbar.
+#
+# Die Kennung, die die Meldung zur einzigen harten Auflage macht: Eine Zeile
+# OHNE dieses Feld ist dollargeboren, eine mit Token in jeder Quelle
+# tokengeboren — `zeilen_basis()` sagt es. Bestandszeilen werden nicht
+# nachgeruestet; ihre Token sind nicht mehr zu beschaffen, und eine Migration
+# wuerde Zahlen erfinden.
+#
+# Geschrieben wird das Feld nur, wenn es etwas traegt, das die sieben Felder
+# nicht tragen: Token, eine Transkript-Kennung oder eine zweite Quelle. Eine
+# einfache Buchung von Hand bleibt die Sieben-Feld-Zeile von gestern.
+LEDGER_META_VERSION = 2
+
+
+def _meta_lesen(felder):
+    """Das achte Feld einer Ledger-Zeile als Dict — oder None.
+
+    Es gilt nur, was als JSON-Objekt mit `v` == 2 und einer Liste `quellen`
+    lesbar ist. Ein von Hand in die Notiz getipptes `|` ergibt ein weiteres
+    Feld, aber kein Meta-Feld, und aendert an der Zeile nichts."""
+    if len(felder) < 8 or not felder[-1].startswith("{"):
+        return None
+    try:
+        meta = json.loads(felder[-1])
+    except ValueError:
+        return None
+    if (not isinstance(meta, dict) or meta.get("v") != LEDGER_META_VERSION
+            or not isinstance(meta.get("quellen"), list)):
+        return None
+    meta["quellen"] = [q for q in meta["quellen"] if isinstance(q, dict)]
+    return meta
+
+
+def _quelle_usd(quelle):
+    try:
+        wert = float(quelle.get("usd", 0) or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    return wert if math.isfinite(wert) else 0.0
+
+
+def _meta_noetig(quellen):
+    """Traegt die Quellenliste etwas, das die sieben Felder nicht tragen?"""
+    return len(quellen) > 1 or any(q.get("tokens") or q.get("transkript")
+                                   for q in quellen)
+
+
+def _ledger_zeile(kaskade, usd, auth, domaene, rolle, notiz, quellen=None):
+    """Eine fertige Ledger-Zeile — mit achtem Feld nur, wenn es etwas traegt.
+
+    Ein `|` kann im JSON nur ueber einen Wert hereinkommen (Modellname,
+    Pfad); es wird wie in jedem anderen Feld zu `/` (HM-36). Zeilenumbrueche
+    schreibt json.dumps ohnehin nur maskiert."""
+    zeile = (f"{date.today().isoformat()} | {kaskade} | {usd:.4f} | {auth} | "
+             f"{domaene} | {rolle} | {notiz}")
+    if quellen and _meta_noetig(quellen):
+        feld = json.dumps({"v": LEDGER_META_VERSION, "quellen": quellen},
+                          ensure_ascii=False, separators=(",", ":"))
+        zeile += " | " + feld.replace("|", "/")
+    return zeile + "\n"
+
+
+def _quellen_fortschreiben(felder, alt, neu):
+    """Die Quellen einer Summenzeile (`--addieren`): die der Altzeile plus die
+    neue (BL-298).
+
+    Was die Quellen der Altzeile nicht erklaeren — eine Zeile ohne achtes
+    Feld, oder eine, deren Dollarspalte von Hand korrigiert wurde —, bekommt
+    eine eigene Quelle `ohne_beleg`. So ergeben die Quellen immer die Zeile,
+    und der Zuwachs JEDER Buchung bleibt einzeln lesbar."""
+    meta = _meta_lesen(felder)
+    quellen = [dict(q) for q in meta["quellen"]] if meta else []
+    rest = alt - sum(_quelle_usd(q) for q in quellen)
+    if abs(rest) >= 0.0001 * (len(quellen) + 1):
+        quellen.append({"usd": round(rest, 4), "datum": felder[0],
+                        "ohne_beleg": True})
+    quellen.append(neu)
+    return quellen
+
+
+def zeilen_basis(meta):
+    """"token", "dollar" oder "gemischt": woraus eine Zeile geboren ist
+    (BL-247). Die harte Auflage der Meldung — solange beide Sorten im Feld
+    nebeneinander stehen, muss jedes Werkzeug sie auseinanderhalten koennen,
+    statt zwei Datenformate zu einer Zahl zu summieren."""
+    arten = set()
+    for q in (meta or {}).get("quellen") or []:
+        if not q.get("tokens"):
+            arten.add("dollar")
+        elif q.get("ohne_tokens"):
+            arten.add("gemischt")     # Logs ohne `modelUsage` darunter
+        else:
+            arten.add("token")
+    if not arten or arten == {"dollar"}:
+        return "dollar"
+    return "token" if arten == {"token"} else "gemischt"
+
+
+def gebuchte_quellen(pfad, transkript):
+    """[(zeile, quelle)]: alles, was aus diesem Transkript gebucht ist
+    (BL-252). `transkript` ist die Kennung — der Dateiname ohne .jsonl."""
+    treffer = []
+    for zeile in ledger_zeilen(pfad):
+        for quelle in (zeile["meta"] or {}).get("quellen", []):
+            if quelle.get("transkript") == transkript:
+                treffer.append((zeile, quelle))
+    return treffer
+
+
+def _zeit_oder_none(text):
+    try:
+        return zeitpunkt_lesen(text) if text else None
+    except ValueError:
+        return None
+
+
+def fenster_ueberschneidung(pfad, quelle, ausser=None):
+    """[(zeile, quelle)]: gebuchte Quellen desselben Transkripts, deren
+    Fenster sich mit dem der neuen ueberschneidet (BL-116).
+
+    Fenster sind halboffen, [von, bis); ein fehlendes Ende ist offen. Zwei
+    aneinanderstossende Fenster ueberschneiden sich also nicht — genau so
+    bucht sich ein Zuwachs an eine fruehere Buchung an. `ausser(zeile)`
+    nimmt Zeilen aus, etwa die, die eine Korrektur gerade ersetzt."""
+    von = _zeit_oder_none(quelle.get("von"))
+    bis = _zeit_oder_none(quelle.get("bis"))
+    treffer = []
+    for zeile, alt in gebuchte_quellen(pfad, quelle.get("transkript")):
+        if ausser is not None and ausser(zeile):
+            continue
+        alt_von = _zeit_oder_none(alt.get("von"))
+        alt_bis = _zeit_oder_none(alt.get("bis"))
+        if ((von is None or alt_bis is None or von < alt_bis)
+                and (alt_von is None or bis is None or alt_von < bis)):
+            treffer.append((zeile, alt))
+    return treffer
 
 
 def ledger_summe(pfad=".budget-ledger", domaene=None, rolle=None, kaskade=None):
@@ -964,6 +1146,26 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
     befunde.extend(kaskaden_ohne_abschluss(
         je_kaskade, aktuelle_kaskade, repo,
         [ralph_logs, team_logs]))
+
+    # --- P5 (BL-247) ----------------------------------------------------------
+    # Die Quellen im achten Feld ergeben die Dollarspalte — es sei denn, die
+    # Zeile wurde von Hand korrigiert (der dokumentierte Ausweg aus HM-47).
+    # Dann sagen zwei Teile derselben Zeile Verschiedenes, und die Token
+    # gehoeren nicht mehr sicher zum Betrag. Ein Hinweis, kein Verlust: Die
+    # naechste Addition nimmt die Differenz als eigene Quelle auf.
+    for zeile in zeilen:
+        quellen = (zeile["meta"] or {}).get("quellen") or []
+        if not quellen:
+            continue
+        summe = sum(_quelle_usd(q) for q in quellen)
+        if abs(summe - zeile["usd"]) >= 0.0001 * (len(quellen) + 1):
+            befunde.append(_befund(
+                "quellen-weichen-ab", "hinweis",
+                f"Kaskade {zeile['kaskade']} {zeile['rolle']}: Die Zeile "
+                f"traegt {zeile['usd']:.4f} USD, ihre Quellen ergeben "
+                f"{summe:.4f} USD — von Hand korrigiert? Die Token im achten "
+                f"Feld gehoeren dann nicht mehr sicher zum Betrag "
+                f"(Kit-BL-247)."))
     return befunde
 
 
@@ -1771,16 +1973,142 @@ def _modelusage_kuebel(u, cache_art):
     return kuebel
 
 
-def sitzung_messen(pfade):
+def log_tokens(files):
+    """(je_modell, ohne): Token je Modell aus `modelUsage` der Logs, und wie
+    viele Logs keine tragen (BL-247).
+
+    Die Cache-Erstellung steht in `modelUsage` als EINE Summe, ohne die
+    5m/1h-Aufteilung des Transkripts (siehe `preise_nachrechnen`). Sie wird
+    deshalb als `cache_write` gefuehrt und keiner Laufzeit zugeschlagen: Eine
+    geratene Laufzeit waere genau die stille Annahme, die eine Token-Basis
+    verhindern soll."""
+    je_modell = {}
+    ohne = 0
+    for datei in files:
+        try:
+            with open(datei, encoding="utf-8-sig") as fh:
+                d = json.load(fh)
+        except (OSError, ValueError):
+            ohne += 1
+            continue
+        nutzung = d.get("modelUsage") if isinstance(d, dict) else None
+        if not isinstance(nutzung, dict) or not nutzung:
+            ohne += 1
+            continue
+        for modell, u in nutzung.items():
+            if not isinstance(u, dict):
+                continue
+            kuebel = je_modell.setdefault(modell, {})
+            for art, schluessel in (("input", "inputTokens"),
+                                    ("output", "outputTokens"),
+                                    ("cache_read", "cacheReadInputTokens"),
+                                    ("cache_write", "cacheCreationInputTokens")):
+                try:
+                    wert = int(u.get(schluessel, 0) or 0)
+                except (TypeError, ValueError):
+                    wert = 0
+                kuebel[art] = kuebel.get(art, 0) + wert
+    return je_modell, ohne
+
+
+def tokens_kompakt(je_modell):
+    """Token je Modell ohne Nullen — fuer das achte Feld (eine fehlende
+    Sorte zaehlt 0, siehe oben)."""
+    return {modell: {art: n for art, n in kuebel.items() if n}
+            for modell, kuebel in sorted(je_modell.items())
+            if any(kuebel.values())}
+
+
+def _iso_utc(roh):
+    """Der Zeitstempel eines Transkript-Satzes (`…Z`) als datetime in UTC."""
+    if not isinstance(roh, str) or not roh:
+        return None
+    try:
+        zeit = datetime.fromisoformat(
+            roh[:-1] + "+00:00" if roh.endswith("Z") else roh)
+    except ValueError:
+        return None
+    if zeit.tzinfo is None:
+        zeit = zeit.replace(tzinfo=timezone.utc)
+    return zeit.astimezone(timezone.utc)
+
+
+def zeitpunkt_lesen(text):
+    """Ein Zeitpunkt fuer --von/--bis als datetime in UTC (BL-279).
+
+    Angenommen wird ISO 8601 — mit Zone (`…Z`, `+02:00`) wie in den
+    Transkripten, ohne Zone als ORTSZEIT, so wie ein Mensch sie abliest —
+    und Sekunden seit der Epoche. ValueError bei allem anderen."""
+    roh = str(text).strip()
+    if re.fullmatch(r"\d+(\.\d+)?", roh):
+        return datetime.fromtimestamp(float(roh), tz=timezone.utc)
+    if roh.endswith(("Z", "z")):
+        roh = roh[:-1] + "+00:00"
+    if len(roh) > 10 and roh[10] == " ":
+        roh = roh[:10] + "T" + roh[11:]
+    zeit = datetime.fromisoformat(roh)
+    if zeit.tzinfo is None:
+        zeit = zeit.astimezone()
+    return zeit.astimezone(timezone.utc)
+
+
+def zeitpunkt_text(zeit):
+    """UTC mit Millisekunden und `Z` — die Form der Transkripte."""
+    zeit = zeit.astimezone(timezone.utc)
+    return zeit.strftime("%Y-%m-%dT%H:%M:%S.") + f"{zeit.microsecond // 1000:03d}Z"
+
+
+def jetzt_utc():
+    """Jetzt, auf Millisekunden gekappt — so, wie es gedruckt wird. Ein
+    Fenster, das mit dem gedruckten Wert nachgemessen wird, trifft dann
+    dieselben Antworten wie die Messung, die ihn gedruckt hat."""
+    return zeitpunkt_lesen(zeitpunkt_text(datetime.now(timezone.utc)))
+
+
+def transkript_kennung(pfad):
+    """Die Kennung eines Transkripts: sein Dateiname ohne `.jsonl`."""
+    name = os.path.basename(pfad)
+    return name[:-6] if name.endswith(".jsonl") else name
+
+
+def sitzungs_dateien(pfad):
+    """Das Transkript einer Sitzung plus die ihrer Subagenten (BL-305).
+
+    Die Agenten-CLI schreibt, was ein Subagent verbraucht, NICHT in das
+    Transkript der Sitzung, sondern nach `<kennung>/subagents/*.jsonl`
+    daneben — keine Nachrichten-ID steht in beiden. Gemessen am Kit-Repo
+    selbst: 43,83 USD in der Sitzung und 7,42 USD in ihrem Subagenten, also
+    17 %, die keine Messung je gesehen hat."""
+    ordner = os.path.join(os.path.dirname(pfad), transkript_kennung(pfad),
+                          "subagents")
+    unter = sorted(glob.glob(os.path.join(ordner, "**", "*.jsonl"),
+                             recursive=True))
+    return [pfad] + unter
+
+
+def sitzung_messen(pfade, von=None, bis=None, info=None):
     """Liest Transkripte und gibt (je_modell, antworten, doppelt) zurueck.
 
     je_modell bildet die Modell-ID auf einen Token-Kuebel ab. Getrennt gehalten,
     weil eine Sitzung das Modell wechseln kann und der Basispreis daran haengt —
     ein gemeinsamer Kuebel waere mit dem ersten Wechsel falsch.
+
+    von/bis (BL-279): nur Antworten im Fenster [von, bis) — datetime in UTC,
+    None heisst offen. Entschieden wird am ERSTEN Satz einer Nachrichten-ID:
+    Eine Antwort, deren Saetze ueber die Grenze reichen, zaehlt so in genau
+    einem von zwei angrenzenden Fenstern, und die Haelften ergeben das Ganze
+    (im Feld von Hand zerlegt, traf ihre Summe die Gesamtmessung auf
+    0,0001 USD). Eine Antwort ohne lesbaren Zeitstempel faellt bei gesetztem
+    Fenster heraus — gezaehlt, nicht verschwiegen.
+
+    info (optional, ein Dict) bekommt "erste"/"letzte" (Zeitpunkte der
+    gezaehlten Antworten) und "ohne_zeit".
     """
+    fenster = von is not None or bis is not None
     gesehen = set()
     je_modell = {}
-    antworten = doppelt = 0
+    antworten = doppelt = ohne_zeit = 0
+    erste = letzte = None
     for pfad in pfade:
         with open(pfad, encoding="utf-8") as f:
             for zeile in f:
@@ -1801,10 +2129,24 @@ def sitzung_messen(pfade):
                     doppelt += 1
                     continue
                 gesehen.add(kennung)
+                if fenster or info is not None:
+                    zeit = _iso_utc(d.get("timestamp"))
+                    if zeit is None:
+                        ohne_zeit += 1
+                        if fenster:
+                            continue
+                    elif fenster and ((von is not None and zeit < von)
+                                      or (bis is not None and zeit >= bis)):
+                        continue
+                    else:
+                        erste = zeit if erste is None else min(erste, zeit)
+                        letzte = zeit if letzte is None else max(letzte, zeit)
                 antworten += 1
                 modell = nachricht.get("model") or "unbekannt"
                 _usage_addieren(je_modell.setdefault(modell, _tokenkuebel()),
                                 usage)
+    if info is not None:
+        info.update(erste=erste, letzte=letzte, ohne_zeit=ohne_zeit)
     return je_modell, antworten, doppelt
 
 
@@ -2068,6 +2410,222 @@ def transkripte_aus_projekt(projektpfad):
     # stillschweigend nur die letzte. Die Auswahl trifft jetzt der AUFRUFER,
     # und er sagt, was er weggelassen hat.
     return sorted(dateien, key=os.path.getmtime, reverse=True)
+
+
+def transkript_finden(angabe, projekt="."):
+    """Das Transkript hinter `--transkript`: ein vorhandener Pfad oder eine
+    Kennung aus der Ablage des Projekts — sonst None."""
+    if os.path.isfile(angabe):
+        return angabe
+    kennung = transkript_kennung(angabe)
+    for pfad in transkripte_aus_projekt(projekt):
+        if transkript_kennung(pfad) == kennung:
+            return pfad
+    return None
+
+
+def transkript_argument(pfad):
+    """Was eine Buchungszeile hinter --transkript schreibt: die Kennung, wenn
+    die Buchung (aus der Projektwurzel) sie in der Ablage wiederfindet, sonst
+    den Pfad. Eine Kennung ist kurz und uebersteht jede Shell; ein Pfad unter
+    Windows enthaelt Backslashes und oft Leerzeichen."""
+    kennung = transkript_kennung(pfad)
+    gefunden = transkript_finden(kennung)
+    if gefunden and os.path.realpath(gefunden) == os.path.realpath(pfad):
+        return kennung
+    return f'"{pfad}"'
+
+
+def buchungsvorschlaege(pfade, ledger_pfad, von, ende, vorab=None):
+    """Je Transkript, was noch zu buchen ist (BL-252, BL-298).
+
+    Ohne ausdrueckliches `von` beginnt das Fenster dort, wo die letzte Buchung
+    aus diesem Transkript endete. Der Zuwachs ist damit eine eigene MESSUNG,
+    keine Differenz zweier Summen — die Differenz stimmt nur, solange die
+    Zeile allein dieses Transkript traegt und die Preistabelle dieselbe ist,
+    und im Feld trug die Zeile zwei Transkripte (BL-298: -27,07 USD).
+
+    `vorab` = (usd, antworten) einer schon gemachten Messung des ganzen
+    Transkripts; sie wird genommen, statt dieselbe Datei ein zweites Mal zu
+    lesen."""
+    vorschlaege = []
+    for pfad in pfade:
+        kennung = transkript_kennung(pfad)
+        gebucht = gebuchte_quellen(ledger_pfad, kennung)
+        v = {"pfad": pfad, "kennung": kennung, "gebucht": gebucht,
+             "gebucht_usd": sum(_quelle_usd(q) for _, q in gebucht),
+             "von": von, "bis": ende, "offen": False, "ueberschneidung": [],
+             "betrag": 0.0, "antworten": 0}
+        if von is None and gebucht:
+            enden = [_zeit_oder_none(q.get("bis")) for _, q in gebucht]
+            if any(e is None for e in enden):
+                v["offen"] = True       # eine Buchung ohne Ende deckt alles
+                vorschlaege.append(v)
+                continue
+            v["von"] = max(enden)
+        if v["von"] is not None and v["von"] >= ende:
+            pass
+        elif vorab is not None and v["von"] is None:
+            v["betrag"], v["antworten"] = vorab
+        else:
+            je, n, _ = sitzung_messen(sitzungs_dateien(pfad), von=v["von"],
+                                      bis=ende)
+            v["betrag"], v["antworten"] = sitzung_kosten(je)[0], n
+        v["ueberschneidung"] = fenster_ueberschneidung(ledger_pfad, {
+            "transkript": kennung,
+            "von": zeitpunkt_text(v["von"]) if v["von"] else None,
+            "bis": zeitpunkt_text(ende)})
+        vorschlaege.append(v)
+    return vorschlaege
+
+
+def _buchungen_drucken(vorschlaege):
+    """Die Buchungszeile(n) von `sitzung-messen`. Jede traegt --transkript
+    und das gemessene Fenster: Die Buchung misst damit dieselben Antworten
+    nach und legt ihre Token ins Ledger (BL-247) — und die naechste Messung
+    weiss, wo der Zuwachs beginnt (BL-252)."""
+    erste = True
+    for v in vorschlaege:
+        if len(vorschlaege) > 1:
+            print(f"  {v['kennung']}: {v['betrag']:.4f} USD in "
+                  f"{v['antworten']} Antwort(en)")
+        if v["gebucht"]:
+            wo = sorted({f"Kaskade {z['kaskade']} {z['rolle']}"
+                         for z, _ in v["gebucht"]})
+            enden = [q.get("bis") for _, q in v["gebucht"] if q.get("bis")]
+            print(f"  Aus diesem Transkript schon gebucht: "
+                  f"{v['gebucht_usd']:.4f} USD ({', '.join(wo)}), gemessen "
+                  f"bis {max(enden) if enden else 'Ende'} (Kit-BL-252).")
+        if v["offen"]:
+            print("    Eine dieser Buchungen hat kein Fensterende und deckt "
+                  "das ganze Transkript — nichts nachzubuchen.")
+            continue
+        if v["ueberschneidung"]:
+            zeile, quelle = v["ueberschneidung"][0]
+            print(f"  ! Dieses Fenster ist ganz oder teilweise schon gebucht "
+                  f"(Kaskade {zeile['kaskade']} {zeile['rolle']}, bis "
+                  f"{quelle.get('bis') or 'Ende'}) — NICHT buchen, es stuende "
+                  f"doppelt im Ledger (Kit-BL-116).", file=sys.stderr)
+            continue
+        if not v["antworten"]:
+            if v["gebucht"]:
+                print("    Kein Zuwachs seit der letzten Buchung — nichts "
+                      "zu buchen.")
+            continue
+        if v["gebucht"]:
+            print(f"  ZUWACHS seither: {v['betrag']:.4f} USD in "
+                  f"{v['antworten']} Antwort(en) — nur DIESEN Betrag buchen; "
+                  f"GESAMT oben enthaelt das schon Gebuchte (Kit-BL-298).")
+        zeile = (f"  Buchen: team-status --akteur-abschluss architekt abo "
+                 f"{v['betrag']:.4f} <domaene> \"<notiz>\" --transkript "
+                 f"{transkript_argument(v['pfad'])}")
+        if v["von"] is not None:
+            zeile += f" --von {zeitpunkt_text(v['von'])}"
+        zeile += f" --bis {zeitpunkt_text(v['bis'])}"
+        if not erste:
+            zeile += " --addieren"
+        print(zeile)
+        erste = False
+
+
+# BL-279: Die juengste Sitzung, deren Transkript eben noch geschrieben wurde,
+# ist sehr wahrscheinlich DIE, in der geprueft wird. Sie ist nicht vergessen,
+# sondern noch nicht fertig — und eine Warnung, die bei jedem Aufruf ueber die
+# eigene Sitzung kommt, ist keine (BL-14).
+LAEUFT_MINUTEN = 15
+
+
+def sitzungen_pruefen(projekt=".", ledger_pfad=None, seit=None, jetzt=None):
+    """Haelt die Sitzungs-Transkripte des Projekts gegen das Ledger (BL-279,
+    BL-193 Weg 2): je Sitzung Betrag und Buchungsstand.
+
+    Fenster: Sitzungen, die nach `seit` noch geschrieben wurden — Default ist
+    der Tag der aeltesten Ledger-Zeile. Rollen-Laeufe sind ausgenommen; sie
+    bucht `--rollen-abschluss` ueber ihre Logs (BL-251).
+
+    Rueckgabe: {"sitzungen": [...], "rollen": <Anzahl ausgenommen>,
+    "seit": <Fensteranfang>, "grenze": <juengster Tag einer Akteur-Zeile ohne
+    Kennung, oder None>}.
+
+    status je Sitzung, die aelteste zuerst:
+      "gebucht"         jede Antwort steht in einer Buchung mit Kennung
+      "zuwachs"         gebucht, aber danach weitergelaufen (BL-252)
+      "nicht gebucht"   keine Buchung traegt die Kennung (BL-193)
+      "erwaehnt"        nur die Notiz einer Zeile nennt die Kennung —
+                        Betrag nicht maschinell pruefbar
+      "ohne zuordnung"  das Ledger traegt fuer diese Zeit Buchungen OHNE
+                        Kennung (vor BL-247); ob sie darin steckt, sagt nur
+                        der Mensch
+      "laeuft"          die juengste Sitzung, eben noch geschrieben
+    """
+    ledger_pfad = ledger_pfad or os.path.join(projekt, ".budget-ledger")
+    jetzt = jetzt or datetime.now(timezone.utc)
+    zeilen = list(ledger_zeilen(ledger_pfad))
+    if seit is None:
+        tage = []
+        for z in zeilen:
+            try:
+                tage.append(date.fromisoformat(z["datum"]))
+            except (TypeError, ValueError):
+                continue
+        if tage:
+            seit = datetime.combine(min(tage), datetime.min.time()).astimezone()
+    # Ohne Kennung gebuchte Akteur-Zeilen (Architekt, Frank im Abo): bis zu
+    # ihrem juengsten Tag kann eine Sitzung in ihnen stecken, ohne dass ein
+    # Werkzeug es sehen kann.
+    ohne_kennung = []
+    for z in zeilen:
+        if z["rolle"] in (None, "ralph", "roles"):
+            continue
+        if any(q.get("transkript") for q in (z["meta"] or {}).get("quellen", [])):
+            continue
+        try:
+            ohne_kennung.append(date.fromisoformat(z["datum"]))
+        except (TypeError, ValueError):
+            continue
+    grenze = max(ohne_kennung) if ohne_kennung else None
+
+    alle = transkripte_aus_projekt(projekt)
+    rollen = [p for p in alle if ist_rollenlauf(p) is True]
+    kandidaten = [p for p in alle if p not in rollen
+                  and (seit is None or os.path.getmtime(p) >= seit.timestamp())]
+    kandidaten.sort(key=os.path.getmtime)
+    ergebnis = []
+    for pfad in kandidaten:
+        kennung = transkript_kennung(pfad)
+        info = {}
+        je, antworten, _ = sitzung_messen(sitzungs_dateien(pfad), info=info)
+        usd, _z, unbekannt = sitzung_kosten(je)
+        geaendert = datetime.fromtimestamp(os.path.getmtime(pfad), timezone.utc)
+        s = {"pfad": pfad, "kennung": kennung, "antworten": antworten,
+             "usd": usd, "unbekannt": unbekannt,
+             "erste": info.get("erste") or geaendert,
+             "letzte": info.get("letzte") or geaendert,
+             "gebucht_usd": 0.0, "gebucht_wo": [], "zuwachs_usd": 0.0,
+             "zuwachs_antworten": 0}
+        v = buchungsvorschlaege([pfad], ledger_pfad, None, jetzt,
+                                vorab=(usd, antworten))[0]
+        if v["gebucht"]:
+            s["gebucht_usd"] = v["gebucht_usd"]
+            s["gebucht_wo"] = sorted({f"K{z['kaskade']} {z['rolle']}"
+                                      for z, _ in v["gebucht"]})
+            s["zuwachs_usd"], s["zuwachs_antworten"] = v["betrag"], v["antworten"]
+            s["status"] = "zuwachs" if v["antworten"] else "gebucht"
+        elif any(kennung in z["notiz"] or kennung[:8] in z["notiz"]
+                 for z in zeilen):
+            s["status"] = "erwaehnt"
+        elif grenze is not None and s["letzte"].astimezone().date() <= grenze:
+            s["status"] = "ohne zuordnung"
+        else:
+            s["status"] = "nicht gebucht"
+        ergebnis.append(s)
+    if ergebnis and (jetzt - datetime.fromtimestamp(
+            os.path.getmtime(ergebnis[-1]["pfad"]), timezone.utc)
+            ).total_seconds() < LAEUFT_MINUTEN * 60 \
+            and ergebnis[-1]["status"] in ("nicht gebucht", "zuwachs"):
+        ergebnis[-1]["status"] = "laeuft"
+    return {"sitzungen": ergebnis, "rollen": len(rollen), "seit": seit,
+            "grenze": grenze}
 
 
 def preise_nachrechnen(logs):
@@ -2578,7 +3136,7 @@ def _alt_usd_lesen(felder, rolle, kaskade):
 
 
 def akteur_abschluss(usd, domaene, kaskade, rolle, auth, notiz="",
-                      pfad=".budget-ledger", bestand="abbrechen"):
+                      pfad=".budget-ledger", bestand="abbrechen", quelle=None):
     """A1-Ersetzung, rollen-agnostisch (BL-33, Stufe 50): haengt eine echte
     Ledger-Zeile fuer <rolle>/<kaskade> an. Eine bestehende Zeile DERSELBEN
     Rolle DERSELBEN Kaskade (7-Feld-Schema) wird nach `bestand` behandelt;
@@ -2606,7 +3164,12 @@ def akteur_abschluss(usd, domaene, kaskade, rolle, auth, notiz="",
 
     Anders als dort ist hier "ersetzen" der Korrektur-, nicht der
     Normalfall: Der uebergebene Wert ist ein extern GEMESSENER Absolutwert
-    (Transkript, Konsolenausgabe), kein aus Restlogs gezaehlter Zuwachs."""
+    (Transkript, Konsolenausgabe), kein aus Restlogs gezaehlter Zuwachs.
+
+    quelle (BL-247/BL-252): die Messung hinter dem Betrag — Kennung des
+    Transkripts, Fenster, Token je Modell. Sie landet im achten Feld (siehe
+    _ledger_zeile), und eine Quelle mit Transkript wird vorher gegen die
+    schon gebuchten Fenster desselben Transkripts gehalten (BL-116)."""
     pruefe_domaene(domaene)
     if auth not in ("abo", "api"):
         raise ValueError(f"auth muss 'abo' oder 'api' sein, nicht '{auth}'")
@@ -2623,8 +3186,14 @@ def akteur_abschluss(usd, domaene, kaskade, rolle, auth, notiz="",
             ".ralph-plan pruefen)")
 
     notiz_sauber = _sanitize_pipe_feld(notiz)
-    zeile_neu = (f"{date.today().isoformat()} | {kaskade} | {usd:.4f} | "
-                 f"{auth} | {domaene} | {rolle} | {notiz_sauber}\n")
+    # BL-247/BL-298: Jede Buchung ist EINE Quelle. Traegt sie eine Messung
+    # (Transkript, Token), steht sie im achten Feld; sonst bleibt die Zeile
+    # die Sieben-Feld-Zeile von gestern.
+    neu = dict(quelle or {})
+    neu["usd"] = round(usd, 4)
+    neu.setdefault("datum", date.today().isoformat())
+    zeile_neu = _ledger_zeile(kaskade, usd, auth, domaene, rolle, notiz_sauber,
+                              [neu])
 
     def match_fn(felder):
         return len(felder) >= 7 and felder[1] == kaskade and felder[5] == rolle
@@ -2633,6 +3202,28 @@ def akteur_abschluss(usd, domaene, kaskade, rolle, auth, notiz="",
         raise ValueError(
             f"bestand muss 'abbrechen', 'addieren' oder 'ersetzen' sein, "
             f"nicht '{bestand}'")
+    if neu.get("transkript"):
+        # BL-116 als Riegel statt als Regel: Dasselbe Stueck eines
+        # Transkripts darf nur EINMAL im Ledger stehen. Bis hierher stand
+        # das nur im Architekten-Briefing ("Rohwert minus bereits gebucht")
+        # — und im Feld ergab die Rueckrechnung -27,07 USD, weil die Zeile
+        # zwei Transkripte trug (BL-298). Eine Korrektur (`--ersetzen`)
+        # darf die Quelle der Zeile ueberdecken, die sie ersetzt.
+        ausser = ((lambda z: z["kaskade"] == kaskade and z["rolle"] == rolle)
+                  if bestand == "ersetzen" else None)
+        doppelt = fenster_ueberschneidung(pfad, neu, ausser=ausser)
+        if doppelt:
+            zeile, alt_q = doppelt[0]
+            raise ValueError(
+                f"Aus diesem Transkript ({neu['transkript']}) ist das Fenster "
+                f"{alt_q.get('von') or 'Anfang'} bis {alt_q.get('bis') or 'Ende'} "
+                f"schon gebucht — Kaskade {zeile['kaskade']}, Rolle "
+                f"{zeile['rolle']}, {_quelle_usd(alt_q):.4f} USD. Diese Buchung "
+                f"ueberschneidet sich damit und schriebe denselben Verbrauch "
+                f"ein zweites Mal ins Ledger (Kit-BL-116). Es wird NICHTS "
+                f"geschrieben.\n"
+                f"  Den Zuwachs SEITHER misst `kosten.py sitzung-messen` auf "
+                f"diesem Transkript; es druckt die Buchungszeile mit --von.")
     if bestand == "ersetzen":
         return _ledger_zeile_setzen(zeile_neu, match_fn, pfad)
 
@@ -2654,26 +3245,26 @@ def akteur_abschluss(usd, domaene, kaskade, rolle, auth, notiz="",
         notiz_summe = (f"{notiz_sauber} (addiert auf Bestand {alt:.4f} USD, "
                        f"auth {alt_auth or '—'})") if notiz_sauber else \
             (f"addiert auf Bestand {alt:.4f} USD, auth {alt_auth or '—'}")
-        return (f"{date.today().isoformat()} | {kaskade} | {summe:.4f} | "
-                f"{auth_summe} | {domaene} | {rolle} | {notiz_summe}\n")
+        return _ledger_zeile(kaskade, summe, auth_summe, domaene, rolle,
+                             notiz_summe, _quellen_fortschreiben(felder, alt, neu))
 
     return _ledger_zeile_setzen(zeile_neu, match_fn, pfad, merge_fn=merge_fn)
 
 
 def architekt_abschluss(usd, domaene, kaskade, notiz="", pfad=".budget-ledger",
-                         bestand="abbrechen"):
+                         bestand="abbrechen", quelle=None):
     """Duenner, rueckwaertskompatibler Alias auf akteur_abschluss() mit
     rolle=architekt/auth=api. `bestand` wird durchgereicht (BL-25) — der
     Architekt ist die Rolle, die am haeufigsten zweimal an derselben Kaskade
     bucht."""
     return akteur_abschluss(usd, domaene, kaskade, rolle="architekt",
                              auth="api", notiz=notiz, pfad=pfad,
-                             bestand=bestand)
+                             bestand=bestand, quelle=quelle)
 
 
 def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
                       pfad=".budget-ledger", bestand="abbrechen",
-                      rolle="roles"):
+                      rolle="roles", quelle=None):
     """Kaskadenscharfe Rollenkosten (BL-17-Restpunkt/BL-29-"1b", Kaskade
     16/Stufe 54): haengt EINE rolle=roles-Ledger-Zeile fuer die
     .team-logs-Kosten (Harry/Marv/Frank/Axel) EINER Kaskade an. usd = abo +
@@ -2758,8 +3349,12 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     vorspann = ROLLEN_VORSPANN.get(rolle, rolle.capitalize())
     notiz_voll = f"{vorspann}: {notiz_sauber} — {split_hinweis}" \
         if notiz_sauber else f"{vorspann} — {split_hinweis}"
-    zeile_neu = (f"{date.today().isoformat()} | {kaskade} | {usd:.4f} | "
-                 f"{auth} | {domaene} | {rolle} | {notiz_voll}\n")
+    # BL-247: die Token der gezaehlten Logs, je Modell — siehe log_tokens().
+    neu = dict(quelle or {})
+    neu["usd"] = round(usd, 4)
+    neu.setdefault("datum", date.today().isoformat())
+    zeile_neu = _ledger_zeile(kaskade, usd, auth, domaene, rolle, notiz_voll,
+                              [neu])
 
     def match_fn(felder):
         return len(felder) >= 7 and felder[1] == kaskade and felder[5] == rolle
@@ -2787,8 +3382,8 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
         # Baukosten damit erneut unsichtbar gemacht — genau der BL-4-Fehler,
         # nur eine Ebene tiefer. Beim manuellen Durchlauf aufgefallen,
         # nicht von den Tests (die pruefen je Rolle nur einen Modus).
-        return (f"{date.today().isoformat()} | {kaskade} | {summe:.4f} | "
-                f"{auth_summe} | {domaene} | {rolle} | {notiz_summe}\n")
+        return _ledger_zeile(kaskade, summe, auth_summe, domaene, rolle,
+                             notiz_summe, _quellen_fortschreiben(felder, alt, neu))
 
     return _ledger_zeile_setzen(zeile_neu, match_fn, pfad, merge_fn=merge_fn)
 
@@ -2817,13 +3412,18 @@ VERBEN = {
     "ledger": ("ledger [PFAD] [--domaene D] [--rolle R] [--kaskade N] "
                "[--split] [--anzahl]"),
     "ledger-pruefen": "ledger-pruefen [--pfad P] [--kaskade N]",
-    "sitzung-messen": "sitzung-messen (--projekt PFAD [--alle] | TRANSKRIPT...)",
+    "sitzung-messen": ("sitzung-messen (--projekt PFAD [--alle] | TRANSKRIPT...) "
+                       "[--von ZEIT] [--bis ZEIT] [--ledger P]"),
+    "sitzungen-pruefen": ("sitzungen-pruefen [--projekt PFAD] [--ledger P] "
+                          "[--seit ZEIT]   (Kit-BL-279)"),
     "architekt-schaetzung": ("architekt-schaetzung --since REF [--repo DIR] "
                              "[PFAD...]"),
     "architekt-abschluss": ("architekt-abschluss --usd USD --domaene D "
-                            "--kaskade N [--pfad P] [--notiz T | --notiz-datei P]"),
+                            "--kaskade N [--pfad P] [--notiz T | --notiz-datei P] "
+                            "[--transkript T [--von ZEIT] [--bis ZEIT]]"),
     "akteur-abschluss": ("akteur-abschluss --rolle R --usd USD --domaene D "
-                         "--kaskade N [--auth abo|api] [--pfad P] [--notiz T | --notiz-datei P]"),
+                         "--kaskade N [--auth abo|api] [--pfad P] [--notiz T | --notiz-datei P] "
+                         "[--transkript T [--von ZEIT] [--bis ZEIT]]"),
     "rollen-abschluss": ("rollen-abschluss --kaskade N --domaene D "
                          "[--logs DIR] [--pfad P] [--archivieren] [--notiz T | --notiz-datei P] "
                          "[--nur-pruefen]"),
@@ -3160,6 +3760,8 @@ def _main(argv):
         pfade = []
         projekt = None
         alle = False
+        von = bis = None        # BL-279: Zeitfenster der Messung
+        ledger = None
         i = 0
         while i < len(rest):
             if rest[i] == "--projekt":
@@ -3171,9 +3773,35 @@ def _main(argv):
             elif rest[i] == "--alle":
                 alle = True
                 i += 1
+            elif rest[i] in ("--von", "--bis"):
+                if i + 1 >= len(rest):
+                    print(f"Fehler: {rest[i]} braucht einen Zeitpunkt",
+                          file=sys.stderr)
+                    return 1
+                try:
+                    zeit = zeitpunkt_lesen(rest[i + 1])
+                except ValueError:
+                    print(f"Fehler: {rest[i]} '{rest[i + 1]}' ist kein "
+                          f"Zeitpunkt (ISO 8601, ohne Zone als Ortszeit, oder "
+                          f"Sekunden seit der Epoche)", file=sys.stderr)
+                    return 1
+                if rest[i] == "--von":
+                    von = zeit
+                else:
+                    bis = zeit
+                i += 2
+            elif rest[i] == "--ledger":
+                if i + 1 >= len(rest):
+                    print("Fehler: --ledger braucht einen Pfad", file=sys.stderr)
+                    return 1
+                ledger = rest[i + 1]
+                i += 2
             else:
                 pfade.append(rest[i])
                 i += 1
+        if von is not None and bis is not None and von >= bis:
+            print("Fehler: --von liegt nicht vor --bis", file=sys.stderr)
+            return 1
         if projekt:
             gefunden = transkripte_aus_projekt(projekt)
             if not gefunden:
@@ -3347,13 +3975,37 @@ def _main(argv):
                   "Zahl unten ruht allein auf der Preistabelle.",
                   file=sys.stderr)
 
-        je_modell, antworten, doppelt = sitzung_messen(pfade)
+        # BL-279: `jetzt` VOR dem Lesen festhalten. Die Buchungszeile traegt
+        # es als --bis, und die Buchung misst damit genau die Antworten nach,
+        # die hier gezaehlt wurden — auch wenn die Sitzung inzwischen
+        # weiterlief. Was danach entsteht, ist der Zuwachs der naechsten
+        # Messung, nicht verloren.
+        jetzt = jetzt_utc()
+        # BL-305: Was ein Subagent verbraucht, steht in einem eigenen
+        # Transkript neben dem der Sitzung.
+        dateien = [d for p in pfade for d in sitzungs_dateien(p)]
+        info = {}
+        je_modell, antworten, doppelt = sitzung_messen(dateien, von=von,
+                                                       bis=bis, info=info)
         if not antworten:
-            print("Fehler: keine Nutzungsdaten im Transkript", file=sys.stderr)
+            if von is not None or bis is not None:
+                print("Fehler: keine Antworten in diesem Fenster",
+                      file=sys.stderr)
+            else:
+                print("Fehler: keine Nutzungsdaten im Transkript",
+                      file=sys.stderr)
             return 1
         gesamt, zeilen, unbekannt = sitzung_kosten(je_modell)
-        for pfad in pfade:
-            print(f"  gelesen: {pfad}")
+        for pfad in dateien:
+            zusatz = "" if pfad in pfade else "  (Subagent, Kit-BL-305)"
+            print(f"  gelesen: {pfad}{zusatz}")
+        if von is not None or bis is not None:
+            print(f"  Fenster: {zeitpunkt_text(von) if von else 'Anfang'} bis "
+                  f"{zeitpunkt_text(bis) if bis else 'Ende'} (UTC, Kit-BL-279)")
+            if info.get("ohne_zeit"):
+                print(f"  ! {info['ohne_zeit']} Antwort(en) ohne lesbaren "
+                      f"Zeitstempel — in keinem Fenster gezaehlt.",
+                      file=sys.stderr)
         print(f"  Antworten: {antworten}  (Duplikate verworfen: {doppelt})")
         for modell, preis, kuebel, usd in zeilen:
             print(f"    {modell}  ({preis:.2f} USD/Mio Input)")
@@ -3374,7 +4026,8 @@ def _main(argv):
         # Zahlen liegen hier ohnehin vor; sie kosten nichts und sie sind das
         # einzige Signal, das eine zu lang gewordene Sitzung ueberhaupt gibt.
         cache_read = sum(k["cache_read"] for k in je_modell.values())
-        if antworten >= LANGE_SITZUNG_ANTWORTEN or                 cache_read >= LANGE_SITZUNG_CACHE_READ:
+        if (antworten >= LANGE_SITZUNG_ANTWORTEN
+                or cache_read >= LANGE_SITZUNG_CACHE_READ):
             print(f"  ! Lange Sitzung: {antworten} Antworten, "
                   f"{cache_read / 1_000_000:.1f} Mio. Cache-Read-Token. "
                   f"Gemessene Faelle dieser Groesse waren regelmaessig "
@@ -3392,8 +4045,16 @@ def _main(argv):
                   "`--rollen-abschluss` sehr wahrscheinlich schon im Ledger "
                   "(Kit-BL-251).", file=sys.stderr)
         else:
-            print(f"  Buchen: team-status --akteur-abschluss architekt abo "
-                  f"{gesamt:.4f} <domaene> \"<notiz>\"")
+            # BL-252/BL-298: Was aus DIESEM Transkript schon gebucht ist, steht
+            # seit BL-247 in der Zeile — also sagt das Werkzeug selbst, was
+            # noch fehlt, statt die Rueckrechnung dem Menschen zu lassen.
+            ledger_pfad = ledger or os.path.join(projekt or ".",
+                                                 ".budget-ledger")
+            vorab = ((gesamt, antworten) if len(pfade) == 1 and von is None
+                     and bis is None else None)
+            _buchungen_drucken(
+                buchungsvorschlaege(pfade, ledger_pfad, von, bis or jetzt,
+                                    vorab=vorab))
         print("  Erst NACH dem letzten Schritt messen — mittendrin gemessen "
               "untertreibt der Wert systematisch.")
         # BL-252, Richtung (1): Der Satz, der die Lage ueberhaupt erst
@@ -3407,6 +4068,102 @@ def _main(argv):
               "erfassbar: fuer die naechste Kaskade eine NEUE Sitzung "
               "oeffnen (Kit-BL-252).")
         return 2 if (schief or unbekannt) else 0
+
+    if befehl == "sitzungen-pruefen":
+        # BL-279/BL-193 (Weg 2): Die Gegenprobe stand im Architekten-Briefing
+        # — "die Transkript-Ablage gegen das Ledger halten" — und ist im Feld
+        # dreimal ausgefallen: eine Gedaechtnisleistung ohne Mechanik. Im
+        # selben Closeout fehlten 273,83 USD, und kein Werkzeug zeigte es.
+        projekt = "."
+        ledger = None
+        seit = None
+        i = 0
+        while i < len(rest):
+            if rest[i] in ("--projekt", "--ledger", "--seit"):
+                if i + 1 >= len(rest):
+                    print(f"Fehler: {rest[i]} braucht einen Wert",
+                          file=sys.stderr)
+                    return 1
+                wert = rest[i + 1]
+                if rest[i] == "--projekt":
+                    projekt = wert
+                elif rest[i] == "--ledger":
+                    ledger = wert
+                else:
+                    try:
+                        seit = zeitpunkt_lesen(wert)
+                    except ValueError:
+                        print(f"Fehler: --seit '{wert}' ist kein Zeitpunkt",
+                              file=sys.stderr)
+                        return 1
+                i += 2
+            else:
+                print(f"Fehler: unbekanntes Argument '{rest[i]}'",
+                      file=sys.stderr)
+                return 1
+        if not transkripte_aus_projekt(projekt):
+            print(f"Fehler: kein Transkript zu {projekt} gefunden",
+                  file=sys.stderr)
+            return 1
+        bericht = sitzungen_pruefen(projekt, ledger, seit)
+        sitzungen = bericht["sitzungen"]
+        fenster = (f"ab {bericht['seit'].astimezone():%Y-%m-%d %H:%M}"
+                   if bericht["seit"] else "ohne Grenze")
+        print(f"Sitzungen zu {projekt}, {fenster}: {len(sitzungen)} — "
+              f"{bericht['rollen']} Rollen-Lauf/Laeufe ausgenommen "
+              f"(Kit-BL-279).")
+        marke = {"gebucht": "gebucht", "zuwachs": "ZUWACHS",
+                 "nicht gebucht": "NICHT gebucht",
+                 "erwaehnt": "nur in einer Notiz erwaehnt",
+                 "ohne zuordnung": "ohne Zuordnung",
+                 "laeuft": "laeuft noch (vermutlich diese Sitzung)"}
+        for s in sitzungen:
+            text = marke[s["status"]]
+            if s["gebucht_wo"]:
+                text += (f" ({s['gebucht_usd']:.4f} USD, "
+                         f"{', '.join(s['gebucht_wo'])})")
+            if s["zuwachs_antworten"]:
+                text += (f" — seither +{s['zuwachs_usd']:.4f} USD in "
+                         f"{s['zuwachs_antworten']} Antwort(en)")
+            print(f"  {s['erste'].astimezone():%Y-%m-%d %H:%M} bis "
+                  f"{s['letzte'].astimezone():%Y-%m-%d %H:%M}  "
+                  f"{s['kennung'][:8]}  {s['usd']:>10.4f} USD  {text}")
+            if s["unbekannt"]:
+                print(f"      ! ohne Preis, nicht im Betrag: "
+                      f"{', '.join(s['unbekannt'])}", file=sys.stderr)
+        fehlend = [s for s in sitzungen if s["status"] == "nicht gebucht"]
+        zuwachs = [s for s in sitzungen if s["status"] == "zuwachs"]
+        ohne = [s for s in sitzungen if s["status"] == "ohne zuordnung"]
+        if fehlend:
+            print(f"-- {len(fehlend)} Sitzung(en) NICHT gebucht, zusammen "
+                  f"{sum(s['usd'] for s in fehlend):.4f} USD (Kit-BL-193):")
+            for s in fehlend:
+                print(f"     {s['pfad']}")
+        if zuwachs:
+            print(f"-- {len(zuwachs)} Sitzung(en) nach ihrer Buchung "
+                  f"weitergelaufen, zusammen +"
+                  f"{sum(s['zuwachs_usd'] for s in zuwachs):.4f} USD "
+                  f"(Kit-BL-252):")
+            for s in zuwachs:
+                print(f"     {s['pfad']}")
+        if fehlend or zuwachs:
+            print("   Je Sitzung druckt `kosten.py sitzung-messen <pfad>` die "
+                  "Buchungszeile — bei einer schon gebuchten nur den Zuwachs.")
+        if ohne:
+            print(f"-- {len(ohne)} Sitzung(en) ohne Zuordnung: Das Ledger "
+                  f"traegt bis {bericht['grenze']} Akteur-Buchungen ohne "
+                  f"Transkript-Kennung (vor Kit-BL-247). Ob diese Sitzungen "
+                  f"darin stecken, sagt nur ein Abgleich von Hand; was ab "
+                  f"jetzt ueber `sitzung-messen` gebucht wird, traegt die "
+                  f"Kennung.")
+        erwaehnt = [s for s in sitzungen if s["status"] == "erwaehnt"]
+        if erwaehnt:
+            print(f"-- {len(erwaehnt)} Sitzung(en) nur in einer Notiz "
+                  f"erwaehnt — den Betrag von Hand gegen die Zeile halten.")
+        if not (fehlend or zuwachs or ohne or erwaehnt):
+            print("-- Keine Luecke: jede Sitzung im Fenster ist gebucht "
+                  "oder laeuft noch.")
+        return 3 if (fehlend or zuwachs) else 0
 
     if befehl == "architekt-schaetzung":
         seit = None
@@ -3468,6 +4225,8 @@ def _main(argv):
         pfad = ".budget-ledger"
         repo = "."
         bestand = "abbrechen"   # BL-25: nie stillschweigend ueberschreiben
+        transkript = None       # BL-247: die Messung hinter dem Betrag
+        fenster_von = fenster_bis = None
         i = 0
         while i < len(rest):
             if rest[i] == "--addieren":
@@ -3523,6 +4282,29 @@ def _main(argv):
                 if notiz is None:
                     return 1
                 i += 2
+            elif rest[i] == "--transkript":    # BL-247/BL-252
+                if i + 1 >= len(rest):
+                    print("Fehler: --transkript braucht eine Kennung oder "
+                          "einen Pfad", file=sys.stderr)
+                    return 1
+                transkript = rest[i + 1]
+                i += 2
+            elif rest[i] in ("--von", "--bis"):
+                if i + 1 >= len(rest):
+                    print(f"Fehler: {rest[i]} braucht einen Zeitpunkt",
+                          file=sys.stderr)
+                    return 1
+                try:
+                    zeit = zeitpunkt_lesen(rest[i + 1])
+                except ValueError:
+                    print(f"Fehler: {rest[i]} '{rest[i + 1]}' ist kein "
+                          f"Zeitpunkt", file=sys.stderr)
+                    return 1
+                if rest[i] == "--von":
+                    fenster_von = zeit
+                else:
+                    fenster_bis = zeit
+                i += 2
             elif rest[i] == "--pfad":
                 if i + 1 >= len(rest):
                     print("Fehler: --pfad braucht einen Wert", file=sys.stderr)
@@ -3562,10 +4344,41 @@ def _main(argv):
 
         ledger_pfad = pfad if os.path.isabs(pfad) or repo == "." \
             else os.path.join(repo, pfad)
+        # BL-247/BL-252: Mit --transkript misst die Buchung das Fenster selbst
+        # nach und legt die Messung neben den Betrag — Token je Modell und
+        # Sorte, die Kennung des Transkripts und wo das Fenster endet. Ohne
+        # bleibt alles wie gestern: eine dollargeborene Sieben-Feld-Zeile.
+        quelle = None
+        if transkript is None and (fenster_von or fenster_bis):
+            print("Fehler: --von/--bis gelten einem Transkript — ohne "
+                  "--transkript gibt es nichts nachzumessen.", file=sys.stderr)
+            return 1
+        if transkript is not None:
+            datei = transkript_finden(transkript, repo)
+            if datei is None:
+                print(f"Fehler: Transkript '{transkript}' nicht gefunden — "
+                      f"weder als Pfad noch in der Ablage zu "
+                      f"{os.path.abspath(repo)}.", file=sys.stderr)
+                return 1
+            ende = fenster_bis or jetzt_utc()
+            je, antworten_m, _ = sitzung_messen(sitzungs_dateien(datei),
+                                                von=fenster_von, bis=ende)
+            gemessen, zeilen_m, unbekannt_m = sitzung_kosten(je)
+            quelle = {"transkript": transkript_kennung(datei)}
+            if fenster_von is not None:
+                quelle["von"] = zeitpunkt_text(fenster_von)
+            quelle["bis"] = zeitpunkt_text(ende)
+            quelle["antworten"] = antworten_m
+            quelle["tokens"] = tokens_kompakt(je)
+            quelle["preise"] = {m: p for m, p, _k, _u in zeilen_m}
+            if unbekannt_m:
+                quelle["ohne_preis"] = unbekannt_m
+            if abs(gemessen - usd) >= 0.0001:
+                quelle["usd_gemessen"] = round(gemessen, 4)
         try:
             ersetzt = akteur_abschluss(usd, domaene, kaskade, rolle, auth,
                                         notiz=notiz, pfad=ledger_pfad,
-                                        bestand=bestand)
+                                        bestand=bestand, quelle=quelle)
         except ValueError as exc:
             print(f"Fehler: {exc}", file=sys.stderr)
             return 1
@@ -3580,6 +4393,16 @@ def _main(argv):
         # ("abo 4.5571 / api 0.0000"); ausgerechnet diese nicht.
         print(f"{rolle.capitalize()}-Zeile Kaskade {kaskade} ({domaene}) "
               f"{aktion}: {usd:.4f} USD ({auth})")
+        if quelle:
+            print(f"  Beleg in der Zeile: Transkript {quelle['transkript']}, "
+                  f"{quelle['antworten']} Antwort(en) bis {quelle['bis']}, "
+                  f"Token je Modell (Kit-BL-247).")
+            if "usd_gemessen" in quelle:
+                print(f"  ! Im Fenster gemessen: {quelle['usd_gemessen']:.4f} "
+                      f"USD, gebucht: {usd:.4f} USD — die Zeile traegt beide. "
+                      f"Stammt der Betrag aus einer anderen Messung, gehoert "
+                      f"deren Fenster dazu (--von/--bis aus der Buchungszeile "
+                      f"von sitzung-messen).", file=sys.stderr)
         # BL-252, Richtung (1): Die Buchung ist der EINZIGE Zeitpunkt, an dem
         # sicher jemand hinsieht — also sagt sie selbst, was jetzt gilt. Die
         # Regel dazu steht seit langem im Architekten-Briefing und hat im Feld
@@ -3959,10 +4782,19 @@ def _main(argv):
                 + ".",
                 file=sys.stderr,
             )
+        # BL-247: Die Logs tragen je Aufruf die Token je Modell — gemessen
+        # ist alles, es fehlte nur das Mitschreiben.
+        je_log, ohne_log = log_tokens(geparst)
+        quelle = None
+        if je_log:
+            quelle = {"logs": len(geparst), "tokens": tokens_kompakt(je_log)}
+            if ohne_log:
+                quelle["ohne_tokens"] = ohne_log
         try:
             angefasst = rollen_abschluss(kaskade, abo, api, domaene,
                                           notiz=notiz, pfad=ledger_pfad,
-                                          bestand=bestand, rolle=rolle_ziel)
+                                          bestand=bestand, rolle=rolle_ziel,
+                                          quelle=quelle)
         except ValueError as exc:
             print(f"Fehler: {exc}", file=sys.stderr)
             return 1

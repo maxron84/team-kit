@@ -460,6 +460,13 @@ vor, sagt das Werkzeug es und nennt `--alle` — erstreckt sich eine Kaskade üb
 mehrere Sitzungen (Planung und Closeout getrennt), buchst du sonst zu wenig
 (`BL-186`).
 
+**Ob etwas fehlt, prüft ein eigenes Verb:**
+`<dein Python> team/tools/kosten.py sitzungen-pruefen` hält jede Sitzung der
+Ablage gegen das Ledger und nennt, was nicht gebucht ist oder nach seiner
+Buchung weiterlief (`BL-279`). Dafür die Buchungszeile, die `sitzung-messen`
+druckt, **vollständig** übernehmen — mit `--transkript` und `--bis`: Erst
+damit steht im Ledger, welche Sitzung eine Zeile trägt (`BL-247`).
+
 ### Warum die Zahl höher ist, als das Ergebnis vermuten lässt
 
 Der **Löwenanteil entfällt auf das erneute Vorlegen des Kontexts**, nicht auf

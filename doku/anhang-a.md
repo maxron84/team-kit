@@ -598,6 +598,19 @@ Bau-Details von `team/tools/kosten.py`:
   **nicht** aus dem rohen Plan-Ordner-Pfad. Altzeilen ohne die Felder zählen
   bei gesetztem Filter **nie** mit („unzugeordnet", nie stillschweigend
   zugeschlagen).
+- **Die Messung gehört in die Zeile, nicht nur ihr Dollarwert (`BL-247`).**
+  Ein optionales achtes Feld trägt kompaktes JSON, `{"v":2,"quellen":[…]}` —
+  je Buchung **eine** Quelle mit Betrag und Datum, dazu wo gemessen die
+  Transkript-Kennung, das Fenster `[von, bis)` und die Token je Modell und
+  Sorte. Die Dollarspalte bleibt, was sie war, und `--budget` summiert weiter
+  nur sie: **erst schreiben, dann rechnen**. Eine Zeile **ohne** das Feld ist
+  dollargeboren; Bestandszeilen werden nicht nachgerüstet, ihre Token sind
+  nicht mehr zu beschaffen. Bewertet wird zu den **geltenden API-Preisen** des
+  Anbieters, nie zu Abopreisen — auch im Abo, wo die Zahl ein Gegenwert ist. Aus derselben Quelle folgen drei Werkzeuge:
+  `sitzung-messen` nennt den **Zuwachs** einer schon gebuchten Sitzung
+  (`BL-252`, `BL-298`), eine Buchung über ein schon gebuchtes Fenster bricht ab
+  (`BL-116`), und `sitzungen-pruefen` hält die Transkript-Ablage gegen das
+  Ledger (`BL-279`, `BL-193`).
 - **Ein Aufruf ohne Beleg ist keine Null (`BL-46`).** Ein gescheiterter Anlauf
   kann ein **0-Byte-Log** hinterlassen — im Feld nach **47 Minuten** Laufzeit.
   Eine Summierung, die eine unlesbare Datei stillschweigend mit 0 zählt, macht

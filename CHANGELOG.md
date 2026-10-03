@@ -11,6 +11,22 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **Das Ledger traegt die Messung, nicht nur ihren Dollarwert** (`BL-247`
+  Schritt 1, `BL-252`, `BL-298`, `Feld B`/`Feld E`). Ein optionales achtes
+  Feld haelt je Buchung eine Quelle: Token je Modell und Sorte, die benutzten
+  Basispreise, bei Sitzungen Transkript-Kennung und Fenster. Die
+  Buchungszeile von `sitzung-messen` traegt dafuer `--transkript` und `--bis`;
+  `--rollen-abschluss` schreibt die Token der Logs mit. Eine Zeile ohne das
+  Feld bleibt erkennbar dollargeboren, die Dollarspalte zaehlt `--budget` wie
+  bisher. Laeuft eine gebuchte Sitzung weiter, nennt die naechste Messung das
+  schon Gebuchte und druckt nur den Zuwachs; dasselbe Fenster zweimal zu
+  buchen, lehnt die Buchung ab.
+
+- **`kosten.py sitzungen-pruefen`** (`BL-279`, `BL-193`, `Feld B`/`Feld E`).
+  Haelt jede Sitzung der Transkript-Ablage gegen das Ledger und nennt, was
+  nicht gebucht ist oder nach seiner Buchung weiterlief (Exit 3). Dazu
+  `sitzung-messen --von/--bis` fuer ein Zeitfenster.
+
 - **`fixphase`: nur die Fix-Phase, mit Deckel, Bremse und Bericht**
   (`BL-204`, `BL-241`, beide aus `Feld B`, beide Bahnen). Funde ausserhalb
   einer Kaskade abzuarbeiten, war die einzige Team-Taetigkeit ohne eigenen
@@ -473,6 +489,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   die Umgebungsvariable nicht.* Still bleibt es, wo nichts abweicht.
 
 ### Fixed
+
+- **`sitzung-messen` zaehlte die Subagenten einer Sitzung nie mit**
+  (`BL-305`, Kit). Ihr Verbrauch steht in eigenen Transkripten neben dem der
+  Sitzung; am Kit-Repo selbst gemessen fehlten so 17 % einer Sitzung.
 
 - **Der Rollback warf fremde Commits und fremde Arbeit weg** (`BL-236`,
   `BL-271`, `BL-206`, alle `Feld B`, beide Bahnen). Ein Fix-Lauf setzte HEAD

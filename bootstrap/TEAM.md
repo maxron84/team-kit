@@ -223,7 +223,23 @@ dem Sitzungstranskript, nicht geschätzt:
 Das Werkzeug eicht sich an den abgerechneten Läufen deines Projekts. Sagt es
 „Preistabelle stimmt nicht mehr", ist die Zahl **ungeeicht** — nicht buchen,
 sondern die Tabelle nachziehen (Exit `2`). Gemessen wird die **letzte**
-Sitzung; liegen mehrere vor, sagt es das und nennt `--alle` (`Kit-BL-186`). Die Zeile `Architekt (Churn-Proxy)`
+Sitzung; liegen mehrere vor, sagt es das und nennt `--alle` (`Kit-BL-186`).
+Am Ende druckt es eine fertige Zeile `Buchen: …` — übernimm sie **vollständig**,
+samt `--transkript` und `--bis`: Die Buchung misst damit dieselben Antworten
+nach und legt Token und Transkript-Kennung in die Ledger-Zeile (`Kit-BL-247`).
+Läuft die Sitzung danach weiter, nennt die nächste Messung das schon Gebuchte
+und druckt nur den **Zuwachs** (`Kit-BL-252`); dasselbe Stück zweimal zu
+buchen, lehnt die Buchung ab (`Kit-BL-116`). Subagenten einer Sitzung zählen
+mit (`Kit-BL-305`).
+
+**Vor dem Abschluss die Lücken suchen:**
+`{{PYTHON}} team/tools/kosten.py sitzungen-pruefen` hält jede Sitzung der
+Transkript-Ablage gegen das Ledger — Rollen-Läufe ausgenommen — und nennt,
+was **nicht gebucht** ist oder nach seiner Buchung **weiterlief** (Exit `3`).
+Bis hierher ging das nur von Hand, und im Feld fehlten so 273,83 USD in einem
+einzigen Closeout (`Kit-BL-279`).
+
+Die Zeile `Architekt (Churn-Proxy)`
 im Kontostand ist **keine** Messung: Sie rechnet Zeilen-Churn mal Eichfaktor und
 misst damit die Größe des Diffs, nicht die Arbeit. Im Feld lag sie 35 % zu
 niedrig (`Kit-BL-141`).
@@ -290,6 +306,7 @@ gehört **nach** den Lauf, niemals in eine Loop-Stufe.
 >
 > **Also:** Eine Planungssitzung ohne Closeout bucht ihre Kosten selbst, mit
 > `--architekt-abschluss <USD> <domaene> "Kaskade N+1 geplant" --kaskade <N+1>`.
+> Was trotzdem durchrutscht, findet `sitzungen-pruefen` (`Kit-BL-279`).
 
 **Was `<domaene>` ist:** der Arbeitsstrang, auf den die Kosten gebucht werden —
 bei den meisten Projekten schlicht `produkt`. **Dieses Projekt führt genau eine
