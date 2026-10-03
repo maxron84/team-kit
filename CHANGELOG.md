@@ -11,6 +11,28 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **Das Update sichert und nennt, was es an Aenderungen im Projekt ersetzt**
+  (`BL-270`, `Feld B`, beide Bahnen). `team/.kit-stand` haelt je Kit-Datei
+  die Pruefsumme, die das letzte Update schrieb; eine seither geaenderte
+  Datei landet vor dem Ersetzen unter `backups/update-<zeit>/` und wird
+  namentlich gemeldet — auch die gerenderten Briefings. Ein ungefuellter
+  Platzhalter gilt nicht mehr als Commit-Entscheid (`BL-139`).
+
+- **`team/tools/protokolle.py ablegen`** (`BL-242`, `Feld B`). Holt die
+  Sitzungsprotokolle des Projekts samt Subagenten nach `.team-protokolle/`,
+  mit Index; nie in einen versionierten Ordner, nie automatisch geladen.
+
+- **`team/tools/prozesse.py`** (`BL-278`, `Feld B`). Waisen-Kandidaten mit
+  drei Merkmalen und Begruendung; raeumt nichts ab.
+
+- **Schreibzonen-Hinweis im Statusbericht** (`BL-237`, `Feld B`, beide
+  Bahnen). Nennt Fremdes im Plan-Ordner und ausfuehrbare Dateien ausserhalb
+  des Pruefumfangs.
+
+- **Dritte Konfiguration im Selbsttest: verdrehte Sprachmarken** (`BL-194`,
+  Kit, beide Bahnen). Faengt Kit-Zusicherungen, die stillschweigend Python
+  voraussetzen, bevor ein Nicht-Python-Projekt sie findet.
+
 - **Auftrag und Abnahme** (`BL-219`, `Feld E`). Der Plankopf traegt
   `Auftrag:` und `Vorbild:`, Abschnitt 1 des Abschluss-Docs nimmt daran ab —
   je Punkt erfuellt oder nicht, mit Beleg. Ohne Vorbild stellt der Architekt

@@ -173,6 +173,20 @@ status_einmal() {
     { $TEAM_KOSTEN_TOOL modelle .ralph-logs .team-logs --cli "$TEAM_CLAUDE_BIN" 2>/dev/null || true; } \
         | sed 's/^/    /'
 
+    # BL-237: Was im Plan-Ordner liegt, ohne Team-Artefakt oder Bestand zu
+    # sein. Der Bestandsvermerk wird beim Einzug erfasst und altert danach
+    # still — im Feld lagen nach elf Kaskaden neun fremde Dateien dort, vier
+    # davon ausfuehrbar und nie gesweept. Ein Hinweis, kein Abbruch.
+    local py_zone="${TEAM_PYTHON:-${TEAM_KOSTEN_TOOL%% *}}" zone
+    zone="$("${py_zone:-python3}" team/tools/schreibzone.py pruefen \
+            --plan-ordner "$TEAM_PLAN_ORDNER" \
+            --bestand "${TEAM_PLAN_ORDNER_BESTAND:-}" \
+            --weiterer "${TEAM_WEITERER_CODE:-}" 2>/dev/null || true)"
+    if [ -n "$zone" ]; then
+        echo "  ──────── Schreibzone ────────"
+        printf '%s\n' "$zone"
+    fi
+
     # Letzte Aktivität
     echo "  ──────── Letzte Commits ────────"
     git log --oneline -5 2>/dev/null | sed 's/^/    /' || echo "    (kein Git-Log)"

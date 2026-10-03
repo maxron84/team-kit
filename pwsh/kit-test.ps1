@@ -163,7 +163,7 @@ function Dateien-Mit-Endung {
 # BL-198 hat fuenf dazugelegt (README-Schritt 5/9), BL-196 eine (das
 # Aufraeumen der Abgleichsablage). Wer eine Pruefung ergaenzt, zieht die
 # Zahl nach — sonst meldet der Lauf am Ende, ein Schritt sei uebersprungen.
-$script:PruefungenSoll = 65
+$script:PruefungenSoll = 66
 
 # BL-195: Die Installer- und Update-Aufrufe ab Schritt 5 laufen mit
 # -OhneSelbsttest. Der Installer wuerde sonst jedes Mal die volle Suite
@@ -520,6 +520,31 @@ if ($ptBefehl -or (Get-Command pytest -ErrorAction SilentlyContinue)) {
     }
 } else {
     Gelb 'pytest fehlt — der angepasste Lauf ist UNGEPRÜFT.'
+    $script:Fehler = 1
+}
+
+# BL-194: Die dritte Konfiguration — verdrehte SPRACHMARKEN (siehe
+# kit-test.sh, Schritt 5b). Beide Laeufe oben sind Python; eine Zusicherung,
+# die stillschweigend `.py` oder `strict=True` voraussetzt, ist dort gruen und
+# erst in einem Nicht-Python-Projekt rot (BL-171).
+Kopf '6b/9 — Regressionstests mit verdrehten Sprachmarken (BL-194)'
+if ($ptBefehl) {
+    & $ptBefehl (Join-Path $KIT 'geteilt\kit-marken-verdrehen.py') $ziel
+    if ($LASTEXITCODE -ne 0) { Rot 'Die Verdrehung hat nicht gegriffen.'; exit 1 }
+    Git-Zwischenstand $ziel 'chore: verdrehte Sprachmarken'
+    $logMarken = Join-Path $basis 'pytest-marken.log'
+    $script:SuiteLaeufe++
+    $rc = Suite-Mitschnitt $ziel $logMarken $ptBefehl @('-m', 'pytest')
+    Pruefe 'Suite bleibt grün mit verdrehten Sprachmarken (BL-194)' $rc 0
+    if ($rc -ne 0) {
+        Zeile 'Das ist der BL-171-Fall: Eine Zusicherung des Kits setzt die Sprache des'
+        Zeile 'Projekts voraus — eine Endung, eine Marker-Schreibweise, einen Testbefehl.'
+        Zeile 'Gepruefte Eigenschaft statt Literal: den ORDNER pruefen statt der Endung,'
+        Zeile 'den BEGRIFF statt der Schreibweise (Vorbild: test_bl15, test_bl28).'
+        Get-Content -Tail 15 $logMarken | ForEach-Object { Zeile $_ }
+    }
+} else {
+    Gelb 'Python fehlt — der Lauf mit verdrehten Marken ist UNGEPRÜFT.'
     $script:Fehler = 1
 }
 

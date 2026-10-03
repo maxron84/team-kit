@@ -168,6 +168,21 @@ function Status-Einmal {
         }
     } catch { }
 
+    # BL-237: siehe team-status.sh. Leere Werte werden gar nicht erst
+    # uebergeben — eine aeltere pwsh liesse ein leeres Argument fallen, und
+    # der naechste Schalter wuerde zum Wert.
+    $pyZone = @(($TEAM_KOSTEN_TOOL -split '\s+') | Where-Object { $_ })[0]
+    $zoneArgs = @('pruefen', '--plan-ordner', $TEAM_PLAN_ORDNER)
+    if ($TEAM_PLAN_ORDNER_BESTAND) { $zoneArgs += @('--bestand', "$TEAM_PLAN_ORDNER_BESTAND") }
+    if ($TEAM_WEITERER_CODE) { $zoneArgs += @('--weiterer', "$TEAM_WEITERER_CODE") }
+    try {
+        $zone = @(Team-Werkzeug "$pyZone team/tools/schreibzone.py" $zoneArgs 2>$null)
+        if ($zone.Count) {
+            [Console]::Out.WriteLine('  ──────── Schreibzone ────────')
+            foreach ($z in $zone) { [Console]::Out.WriteLine($z) }
+        }
+    } catch { }
+
     # Letzte Aktivitaet
     [Console]::Out.WriteLine('  ──────── Letzte Commits ────────')
     $log = @(& git log --oneline -5 2>$null)

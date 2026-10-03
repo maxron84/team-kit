@@ -241,6 +241,10 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    archivierten Rohlogs gegen das Ledger — eine **andere** Quelle. Bleibt ein
    Warnbefund stehen, gehört er samt Begründung ins Abschluss-Doc; ich
    schließe keine Kaskade mit einem unerklärten Befund ab.
+   **Zum Schluss lege ich die Sitzungsprotokolle ab:**
+   `{{PYTHON}} team/tools/protokolle.py ablegen` (`Kit-BL-242`). Der
+   Übergabezettel trägt die Deutung, das Protokoll den Beleg. Den Ordner
+   `.team-protokolle/` lese ich nur auf ausdrückliche Nachfrage.
    **Woher `<USD>` kommt:** Im Abo gibt es keinen Konsolenwert. Ich **messe** ihn
    aus dem Sitzungstranskript der CLI — dafür gibt es ein Werkzeug, ich schreibe
    mir keins:

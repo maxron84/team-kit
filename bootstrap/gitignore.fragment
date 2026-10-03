@@ -20,6 +20,10 @@
 .frank-attempts
 .budget-ledger.lock
 backups/
+# BL-242: die Sitzungsprotokolle (team/tools/protokolle.py ablegen). In einem
+# Protokoll steht alles, was je in eine Sitzung eingefuegt wurde — Token,
+# Kennwoerter, Kundennamen. NIE versionieren.
+.team-protokolle/
 
 # Laufzeitartefakte der Team-Werkzeuge (Python) — NUR unter team/.
 team/**/__pycache__/

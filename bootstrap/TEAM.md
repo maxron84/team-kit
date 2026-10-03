@@ -380,6 +380,8 @@ Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 | `./team-status.sh --budget` | `.\team-status.cmd --budget` | Kontostand, API vs. Abo getrennt |
 | `./team-test.sh` | `.\team-test.cmd` | Regressionstests der **Team-Infrastruktur** |
 | `python3 team/tools/beutebuch.py list` | *(gleich)* | alle Funde mit Status |
+| `{{PYTHON}} team/tools/protokolle.py ablegen` | *(gleich)* | die Sitzungsprotokolle dieses Projekts nach `.team-protokolle/` holen — nicht versioniert, keine Rolle liest dort von sich aus (`Kit-BL-242`) |
+| `{{PYTHON}} team/tools/prozesse.py pruefen` | *(gleich)* | Waisen-Kandidaten unter den Prozessen dieses Projekts, mit Begründung — räumt nichts ab (`Kit-BL-278`) |
 | `{{RUF}}kit-melden{{ENDUNG}} neu --titel "…"` | *(gleich, mit `.cmd`)* | Fund **am T.E.A.M. selbst** melden — siehe unten |
 
 > **Das Monitoring ist schon da.** `--watch` zeichnet denselben Block alle 5 s
@@ -593,6 +595,15 @@ Projekt-Spezifika und eigenen Regeln behalten, geänderte oder neue **Kit-Regeln
 übernehmen.** Überspringst du das, läuft die Mechanik der Doku davon — die
 Skripte können dann etwas, wovon die Regeln nichts wissen. Genau daran ist im
 Feld schon einmal die halbe Kostenerfassung gescheitert.
+
+**Was du an Kit-Dateien geändert hast, geht nicht mehr still verloren**
+(`Kit-BL-270`). Das Update merkt sich in `team/.kit-stand`, was es geschrieben
+hat. Weicht eine Kit-Datei beim nächsten Update davon ab — eine Ausnahme im
+Briefing einer Rolle, ein eigener Wächter in der Bibliothek —, sichert es sie
+unter `backups/update-<zeit>/` und nennt sie, bevor es sie ersetzt. Die
+Sicherung ist ein Netz, kein Ablageort: Eine Anpassung, die bleiben muss,
+gehört ans Kit gemeldet (`{{RUF}}kit-melden{{ENDUNG}}`), sonst holst du sie nach
+jedem Update von Hand zurück.
 
 Was sich zwischen den Versionen geändert hat, steht im `CHANGELOG.md` **des
 Kit-Repos** (nicht in deinem — deiner gehört deinem Projekt).

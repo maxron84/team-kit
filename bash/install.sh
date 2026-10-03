@@ -951,11 +951,41 @@ if [ "$UPDATE" -eq 1 ]; then
     if [ -f "$ARCHITEKT_ALT" ]; then
         COMMIT_ENTSCHEID="$(sed -n 's/^\*\*Committen:\*\* //p' "$ARCHITEKT_ALT" | head -1)"
     fi
+    # BL-270/BL-139: Ein ungefuellter Platzhalter ist kein Entscheid. Stand er
+    # einmal im Briefing, rettete jedes Update ihn als "Entscheid" weiter — im
+    # Feld stand danach wieder {{COMMIT_ENTSCHEID}} im gerenderten Text.
+    case "$COMMIT_ENTSCHEID" in *'{{'*) COMMIT_ENTSCHEID="" ;; esac
     if [ -n "$COMMIT_ENTSCHEID" ]; then
         gruen "  ✓ Commit-Entscheid aus dem bisherigen Briefing uebernommen"
     else
         COMMIT_ENTSCHEID="Ich committe NICHT selbst — ich liefere die fertigen Commit-Befehle zum Kopieren, der Stakeholder führt sie aus."
         gelb "  ! Commit-Entscheid nicht lesbar — Default (nicht selbst committen) gesetzt."
+    fi
+
+    # BL-270: Was das letzte Update geschrieben hat, steht mit Pruefsumme in
+    # team/.kit-stand. Weicht eine Kit-Datei davon ab, hat sie seither jemand
+    # geaendert — sie wird gesichert und unten namentlich gemeldet, BEVOR das
+    # Kopieren sie ersetzt. Im Feld hat ein Update drei bewusst gesetzte
+    # Stellen ueberschrieben und nichts gesagt, Stunden spaeter dieselben drei
+    # ein zweites Mal. Ohne Liste (erstes Update seit dieser Fassung) wird
+    # alles gesichert: Ohne sie ist eine Aenderung von einer Kit-Neuerung
+    # nicht zu unterscheiden.
+    STAND_TOOL="$KIT/geteilt/tools/kit_stand.py"
+    STAND_STEMPEL="$(date +%Y%m%d-%H%M%S)"
+    STAND_LIEGT=0
+    LOKAL_GEAENDERT=""
+    if LOKAL_GEAENDERT="$("$PYTHON" "$STAND_TOOL" pruefen --ziel "$ZIEL" --kit "$KIT" 2>/dev/null)"; then
+        STAND_LIEGT=1
+        LOKAL_GEAENDERT="${LOKAL_GEAENDERT//$'\r'/}"
+        if [ -n "$LOKAL_GEAENDERT" ]; then
+            # shellcheck disable=SC2086  # eine Zeile je Pfad, ohne Leerzeichen
+            "$PYTHON" "$STAND_TOOL" sichern --ziel "$ZIEL" --stempel "$STAND_STEMPEL" \
+                $LOKAL_GEAENDERT >/dev/null
+        fi
+    else
+        LOKAL_GEAENDERT=""
+        "$PYTHON" "$STAND_TOOL" sichern --ziel "$ZIEL" --kit "$KIT" \
+            --stempel "$STAND_STEMPEL" --alle >/dev/null 2>&1 || true
     fi
 
     FORCE=1   # innerhalb der Infrastruktur bewusst ueberschreiben
@@ -1188,10 +1218,26 @@ PY
     # TEAM.md traegt keine: Sie wird gerendert und sonst nicht angefasst.
     kopiere "$KIT/bootstrap/TEAM.md" "TEAM.md"
     fuelle "TEAM.md"
+    "$PYTHON" "$STAND_TOOL" schreiben --ziel "$ZIEL" --kit "$KIT" \
+        || gelb "  ! team/.kit-stand nicht geschrieben (Kit-BL-270) — das naechste Update sichert dann alles."
 
     gruen "  ✓ $GESCHRIEBEN Infrastruktur-Dateien aktualisiert"
 
-    if [ -n "$ABWEICHEND" ]; then
+    if [ -n "$LOKAL_GEAENDERT" ]; then
+        kopf "Im Projekt geaendert und ersetzt — gesichert unter backups/update-$STAND_STEMPEL/ (Kit-BL-270)"
+        printf '%s\n' "$LOKAL_GEAENDERT" | while IFS= read -r f; do echo "  ! $f"; done
+        gelb "  Diese Dateien standen anders da, als das letzte Update sie geschrieben"
+        gelb "  hat — eine Anpassung im Projekt. Ersetzt durch die Kit-Fassung; die"
+        gelb "  alte liegt in der Sicherung. Gehoert die Anpassung ins Kit: melden"
+        gelb "  (kit-melden). Muss sie bleiben: aus der Sicherung zurueckholen."
+    elif [ "$STAND_LIEGT" -eq 0 ]; then
+        gelb "  ! Erstes Update mit Pruefsummenliste: alle Kit-Dateien gesichert unter"
+        gelb "    backups/update-$STAND_STEMPEL/ (Kit-BL-270). Ab dem naechsten Update"
+        gelb "    nennt es jede Datei einzeln, die im Projekt geaendert wurde."
+    fi
+    # Mit Liste ist eine Abweichung von der Kit-Fassung nur noch eine aeltere
+    # Version — die Aenderungen im Projekt nennt der Block darueber.
+    if [ -n "$ABWEICHEND" ] && [ "$STAND_LIEGT" -eq 0 ]; then
         kopf "Ersetzt, obwohl abweichend — bitte gegenlesen"
         for f in $ABWEICHEND; do echo "  ! $f"; done
         gelb "  Diese Dateien wichen von der Kit-Fassung ab. Meist ist das nur"
@@ -1988,6 +2034,11 @@ done
 # ---------------------------------------------------------------- .gitignore
 gitignore_abgleich ergaenzen
 gitattributes_abgleich ergaenzen
+
+# BL-270: Die Pruefsummenliste — was das Kit hier geschrieben hat, nach dem
+# Rendern. Das erste --update erkennt daran eine Aenderung im Projekt.
+"$PYTHON" "$KIT/geteilt/tools/kit_stand.py" schreiben --ziel "$ZIEL" --kit "$KIT" \
+    || gelb "  ! team/.kit-stand nicht geschrieben (Kit-BL-270) — das erste Update sichert dann alles."
 
 # ---------------------------------------------------------------- Selbsttest
 kopf "Selbsttest"

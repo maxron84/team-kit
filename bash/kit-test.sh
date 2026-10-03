@@ -513,6 +513,27 @@ if [ "$RC" -ne 0 ]; then
     exit "$RC"
 fi
 
+# BL-194: Die dritte Konfiguration — verdrehte SPRACHMARKEN. Schritt 4 und 5
+# sind beide Python; eine Kit-Zusicherung, die stillschweigend `.py` oder
+# `strict=True` voraussetzt, ist in beiden gruen und erst in einem
+# Nicht-Python-Projekt rot (BL-171: im Feld ein Sockel von sechs bis sieben
+# dauerhaft roten Faellen). Verdreht werden die Marken, nicht der
+# Interpreter — die billige Bauform aus dem Eintrag, und sie faengt die
+# Gattung "Literal statt Konfigurationswert".
+kopf "5b/11 — Regressionstests mit verdrehten Sprachmarken (BL-194)"
+"$KIT_PYTHON" "$KIT/geteilt/kit-marken-verdrehen.py" "$ZIEL" || exit 1
+RC=0
+./team-test.sh "${PYTEST_ARGS[@]}" || RC=$?
+if [ "$RC" -ne 0 ]; then
+    rot "
+✗ Die Suite ist grün mit Python-Marken und rot mit verdrehten (Exit $RC)."
+    echo "  Das ist der BL-171-Fall: Eine Zusicherung des Kits setzt die Sprache des" >&2
+    echo "  Projekts voraus — eine Endung, eine Marker-Schreibweise, einen Testbefehl." >&2
+    echo "  Gepruefte Eigenschaft statt Literal: den ORDNER pruefen statt der Endung," >&2
+    echo "  den BEGRIFF statt der Schreibweise (Vorbild: test_bl15, test_bl28)." >&2
+    exit "$RC"
+fi
+
 # BL-8: --update ist der einzige sichere Weg, ein gelebtes Projekt auf eine
 # neue Kit-Version zu heben. Der Beweis dafuer gehoert ins Gate, nicht in ein
 # einmaliges Handprotokoll: Wir tun so, als sei das Projekt in Betrieb

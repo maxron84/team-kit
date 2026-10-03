@@ -1360,8 +1360,11 @@ if ($Update) {
     if (Test-Path $architektAlt) {
         $t = [regex]::Match([System.IO.File]::ReadAllText($architektAlt),
                             '(?m)^\*\*Committen:\*\* (.+)$')
-        if ($t.Success) { $commitEntscheid = $t.Groups[1].Value }
+        if ($t.Success) { $commitEntscheid = $t.Groups[1].Value.TrimEnd() }
     }
+    # BL-270/BL-139: Ein ungefuellter Platzhalter ist kein Entscheid (siehe
+    # install.sh) — sonst rettet jedes Update ihn weiter.
+    if ($commitEntscheid -like '*{{*') { $commitEntscheid = '' }
     if ($commitEntscheid) {
         Gruen "  [ok] Commit-Entscheid aus dem bisherigen Briefing uebernommen"
     } else {
@@ -1372,6 +1375,28 @@ if ($Update) {
     Setze-Werte $Projekt $Produktivcode $TestOrdner $PlanOrdner $SmokeTest `
                 'TODO: in CLAUDE.md nachtragen' 'TODO: in CLAUDE.md nachtragen' 'keine' `
                 $Domaenen $commitEntscheid '' $testBestand $planBestand (Python-Fuer-Config) (ClaudeBin-Fuer-Config)
+
+    # BL-270: Pruefsummenliste, Sicherung und Meldung — siehe install.sh. Ohne
+    # Python gibt es keine Liste; das wird gesagt, nicht verschwiegen.
+    $standTool = Join-Path $KIT 'geteilt\tools\kit_stand.py'
+    $standStempel = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $standPy = Finde-Python
+    $standLiegt = $false
+    $lokalGeaendert = @()
+    if ($standPy) {
+        $aus = @(& $standPy $standTool pruefen --ziel $Ziel --kit $KIT 2>$null)
+        if ($LASTEXITCODE -eq 0) {
+            $standLiegt = $true
+            $lokalGeaendert = @($aus | Where-Object { $_ })
+            if ($lokalGeaendert.Count) {
+                & $standPy $standTool sichern --ziel $Ziel --stempel $standStempel @lokalGeaendert | Out-Null
+            }
+        } else {
+            & $standPy $standTool sichern --ziel $Ziel --kit $KIT --stempel $standStempel --alle 2>$null | Out-Null
+        }
+    } else {
+        Gelb "  [!] Kein Python — ohne Pruefsummenliste meldet das Update keine Aenderungen im Projekt (Kit-BL-270)."
+    }
 
     Kopiere-Infrastruktur -Immer -OhneConfig
 
@@ -1431,10 +1456,28 @@ if ($Update) {
     # TEAM.md traegt keine: Sie wird gerendert und sonst nicht angefasst.
     Kopiere (Join-Path $KIT 'bootstrap\TEAM.md') 'TEAM.md' -Immer
     Fuelle-Datei (Join-Path $Ziel 'TEAM.md')
+    if ($standPy) {
+        & $standPy $standTool schreiben --ziel $Ziel --kit $KIT
+        if ($LASTEXITCODE -ne 0) { Gelb "  [!] team/.kit-stand nicht geschrieben (Kit-BL-270) — das naechste Update sichert dann alles." }
+    }
 
     Gruen "  [ok] $($script:Geschrieben) Infrastruktur-Dateien aktualisiert"
 
-    if ($script:Abweichend.Count) {
+    if ($lokalGeaendert.Count) {
+        Kopf "Im Projekt geaendert und ersetzt — gesichert unter backups/update-$standStempel/ (Kit-BL-270)"
+        foreach ($f in $lokalGeaendert) { Write-Host "  ! $f" }
+        Gelb "  Diese Dateien standen anders da, als das letzte Update sie geschrieben"
+        Gelb "  hat — eine Anpassung im Projekt. Ersetzt durch die Kit-Fassung; die"
+        Gelb "  alte liegt in der Sicherung. Gehoert die Anpassung ins Kit: melden"
+        Gelb "  (kit-melden). Muss sie bleiben: aus der Sicherung zurueckholen."
+    } elseif ($standPy -and -not $standLiegt) {
+        Gelb "  [!] Erstes Update mit Pruefsummenliste: alle Kit-Dateien gesichert unter"
+        Gelb "      backups/update-$standStempel/ (Kit-BL-270). Ab dem naechsten Update"
+        Gelb "      nennt es jede Datei einzeln, die im Projekt geaendert wurde."
+    }
+    # Mit Liste ist eine Abweichung von der Kit-Fassung nur noch eine aeltere
+    # Version — die Aenderungen im Projekt nennt der Block darueber.
+    if ($script:Abweichend.Count -and -not $standLiegt) {
         Kopf "Ersetzt, obwohl abweichend — bitte gegenlesen"
         foreach ($f in $script:Abweichend) { Write-Host "  ! $f" }
         Gelb "  Diese Dateien wichen von der Kit-Fassung ab. Meist ist das nur"
@@ -2052,6 +2095,14 @@ foreach ($f in (Get-ChildItem (Join-Path $Ziel 'team\prompts') -Filter '*.md' -F
 # ----------------------------------------------------------------- .gitignore
 Gitignore-Abgleich ergaenzen
 Gitattributes-Abgleich ergaenzen
+
+# BL-270: Die Pruefsummenliste — was das Kit hier geschrieben hat, nach dem
+# Rendern. Das erste -Update erkennt daran eine Aenderung im Projekt.
+$standPyErst = Finde-Python
+if ($standPyErst) {
+    & $standPyErst (Join-Path $KIT 'geteilt\tools\kit_stand.py') schreiben --ziel $Ziel --kit $KIT
+    if ($LASTEXITCODE -ne 0) { Gelb "  [!] team/.kit-stand nicht geschrieben (Kit-BL-270) — das erste Update sichert dann alles." }
+}
 
 # ----------------------------------------------------------------- Selbsttest
 Kopf "Selbsttest"

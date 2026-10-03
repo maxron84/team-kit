@@ -1353,7 +1353,7 @@ team_guard_fremdpfade() {
 # Welche Datei hierher gehört, hält test_bl269_laufzeitartefakte_an_allen_stellen.py
 # gegen das gitignore-Fragment und gegen die Namen, die der Code schreibt.
 _team_gate_re="$(printf '%s' "$TEAM_GATE_DATEI" | sed 's/[][\\.*^$(){}?+|]/\\&/g')"
-TEAM_GUARD_LAUFZEIT='^(\.team-logs/|\.ralph-logs/|\.team-loop\.lock$|\.team-loop\.lock\.d/|\.ralph-state$|\.harry-state$|\.marv-state$|\.vollautomatik-state$|\.ralph-uebersprungen$|\.frank-attempts$|\.team-focus-[a-z]+$|\.budget-ledger\.lock$|'"$_team_gate_re"'$)'
+TEAM_GUARD_LAUFZEIT='^(\.team-logs/|\.ralph-logs/|\.team-protokolle/|\.team-loop\.lock$|\.team-loop\.lock\.d/|\.ralph-state$|\.harry-state$|\.marv-state$|\.vollautomatik-state$|\.ralph-uebersprungen$|\.frank-attempts$|\.team-focus-[a-z]+$|\.budget-ledger\.lock$|'"$_team_gate_re"'$)'
 
 # Werkzeug-Ordner des Stakeholders, die das T.E.A.M. KOMPLETT ignoriert
 # (BL-263): weder angelastet noch zurueckgesetzt, weder gelesen noch

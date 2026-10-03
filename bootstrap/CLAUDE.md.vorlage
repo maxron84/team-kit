@@ -96,6 +96,11 @@ fehlt, hat der Stakeholder (noch) nicht angelegt.
 - **`.obsidian/` ist tabu.** Dort liegt die Arbeitsfläche des Notizwerkzeugs
   des Stakeholders (Obsidian); keine Rolle liest oder schreibt dort. Auch
   dieser Ordner steht im `.gitignore`, und der Guard übergeht ihn.
+- **`.team-protokolle/` liest keine Rolle von sich aus** (`Kit-BL-242`). Dort
+  legt `team/tools/protokolle.py ablegen` die Sitzungsprotokolle ab — nicht
+  versioniert, weil darin steht, was je in eine Sitzung eingefügt wurde.
+  Gelesen wird dort nur auf ausdrückliche Nachfrage; sonst zahlte jeder
+  Rollenaufruf die ganze Projektgeschichte mit.
 
 Die Mechanik dahinter (`Kit-BL-263`): Guard und Rollback fassen die
 Rohmaterial-Ordner nie an — auch dann nicht, wenn eine Rolle dort geschrieben

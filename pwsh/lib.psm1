@@ -1429,7 +1429,7 @@ function team_briefing {
 # Default. Welche Datei hierher gehoert, haelt
 # test_bl269_laufzeitartefakte_an_allen_stellen.py gegen das gitignore-Fragment
 # und gegen die Namen, die der Code schreibt.
-$TEAM_GUARD_LAUFZEIT = '^(\.team-logs/|\.ralph-logs/|\.team-loop\.lock$|\.team-loop\.lock\.d/|\.ralph-state$|\.harry-state$|\.marv-state$|\.vollautomatik-state$|\.ralph-uebersprungen$|\.frank-attempts$|\.team-focus-[a-z]+$|\.budget-ledger\.lock$|' + [regex]::Escape($TEAM_GATE_DATEI) + '$)'
+$TEAM_GUARD_LAUFZEIT = '^(\.team-logs/|\.ralph-logs/|\.team-protokolle/|\.team-loop\.lock$|\.team-loop\.lock\.d/|\.ralph-state$|\.harry-state$|\.marv-state$|\.vollautomatik-state$|\.ralph-uebersprungen$|\.frank-attempts$|\.team-focus-[a-z]+$|\.budget-ledger\.lock$|' + [regex]::Escape($TEAM_GATE_DATEI) + '$)'
 
 $script:TEAM_GUARD_HASH = ''
 $script:TEAM_GUARD_VORHER = @()
