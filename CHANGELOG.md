@@ -334,6 +334,67 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Die Vordergrund-Auflage erreichte Frank nur in einer Fassung, die
+  ausgerechnet seine Bauform nicht verbot** (`BL-265`, gemeldet von `Feld E`
+  an zwei aufeinanderfolgenden Tagen). Die vier Briefings verbieten **drei**
+  Bauformen — Hintergrund-Task, Wakeup, **Monitor** —, die beiden
+  Laufzeit-Bausteine `SMOKE_ZEILE` und `SMOKE_SUFFIX` verboten zwei. Frank
+  liest die Auflage seit `BL-207` nur dort, und sein `result` nannte wörtlich
+  *„I'll hold here until the smoke-test MONITOR notifies me of completion"*:
+  **13,13 USD in zwei Leerläufen an einem Vormittag**, beide mit
+  `subtype: success`. `BL-257` hatte die Meldung als „im Quellstand bereits
+  abgetragen" geschlossen — richtig für die Platzierung der Regel, blind für
+  ihre Liste.
+
+  Der Monitor steht jetzt an allen sechs Stellen — zwei Laufzeit-Bausteine auf
+  beiden Bahnen, vier Briefings —, dazu in der NORM der Regeldatei-Vorlage und
+  ihrer Inventarzeile. Die Briefings nennen außerdem die **Einheit** von
+  `TEAM_SMOKE_TEST_TIMEOUT` (Sekunden, im Werkzeug ×1000) — der Rest von
+  `BL-258`, das die Millisekunden nur in die Laufzeit-Bausteine gebracht hatte.
+  Der Wächter `test_bl265_vordergrund_regel_laeuft_nicht_auseinander.py` hält
+  die **Gattung**: alle drei Bauformen an allen Stellen, am gerenderten Text,
+  und die vier Briefing-Absätze byte-gleich gegeneinander. **Der blinde Fleck
+  war eine Liste, keine Datei** — `test_bl201` prüfte den Laufzeit-Baustein
+  auf zwei Bauformen, und die dritte fehlte nicht auf.
+
+- **`--rollen-abschluss` prüfte nur auf zu ALTE Logs** (`BL-266`, gemeldet von
+  `Feld E` und `Feld B`). Eine benannte Nummer wie `vor-15` hat keinen
+  Kaskadenbeginn, also galt **jedes** Log als zugehörig: Im Feld buchte
+  `vor-15` statt der gemeldeten 3,2621 USD **alle 14** unarchivierten Logs,
+  **17,68 USD unter der falschen Nummer**, Rohlogs im selben Zug archiviert —
+  und hineingeführt hatte die Korrekturanweisung eines anderen Riegels
+  (`--budget` nennt `vor-N` als Ausweg). Dieselbe Lücke traf eine
+  **numerische** Kaskade: Blieb ein Closeout aus, hätte
+  `--rollen-abschluss 28` die Logs der Kaskade 29 mitgebucht und archiviert.
+
+  Der Riegel aus `BL-221` hat jetzt seine Spiegelseite: Logs, die **jünger**
+  sind als das Ende des Fensters, brechen den Aufruf ab — Exit 1, ohne zu
+  buchen und ohne zu archivieren, Übersteuerung `--auch-neuere` (beide
+  Wrapper reichen sie durch). Das Ende ist bei `vor-N` der Beginn der Kaskade
+  N, bei einer Kaskade N der Beginn von N+1 — die Commit-Zeit einer Plandatei,
+  dasselbe Kriterium wie beim Beginn. Die Erfolgsmeldung nennt außerdem die
+  **Zeitspanne** der gebuchten Logs. Die untere Kante von `vor-N` ist bewusst
+  nicht gebaut: Sie stünde nur im Ledger, und dort steht ein Datum ohne
+  Uhrzeit. Regressionstest `test_bl266_vor_n_bucht_nur_sein_zeitfenster.py`,
+  19 Fälle auf beiden Bahnen.
+
+- **Eine abgelegte Meldung bekam ihre `BL-n` von Hand — und nichts verglich
+  die beiden Mengen** (`BL-267`). Beim Zusammenführen zweier Maschinen am
+  2026-10-03 lagen **29** Meldungen ohne Nummer da, eine davon seit dem
+  2026-09-06; der Stand-Eintrag vom 2026-09-03 hatte genau diesen Wächter nach
+  acht liegengebliebenen Meldungen schon einmal vorgeschlagen.
+  `test_bl267_jede_meldung_bekommt_ihre_nummer.py` hält `plans/meldungen/*.md`
+  gegen die Dateinamen in Backlog und Archiv, in beiden Richtungen. Statt einer
+  datierten Schwelle — die der erste Entwurf behauptete und der eigene
+  Kontrollfall widerlegte — steht eine **gefrorene Altlast** aus dreizehn
+  Namen, die nur schrumpfen kann (Nachverlinkung: `BL-268`).
+
+  Gebaut wurden `BL-265` bis `BL-267` auf der bash-Maschine, auf einem 78
+  Commits alten Stand und unter Nummern, die oben schon vergeben waren.
+  Zusammengeführt nach der Regel aus `41b2ee0` (die ungepushte Seite zieht
+  um), die Bibliothekstexte aus dem gepushten Stand genommen, und auf der
+  pwsh-Bahn hier zum ersten Mal ausgeführt.
+
 - **`kit-test.sh` verstellte in Stufe 5 nur `team.config.sh`** (`BL-262`).
   Wo neben bash auch pwsh 7 liegt, verglich der Gleichstandstest aus `BL-117`
   dort `fix(qa)` gegen `fix(uat)`, wurde rot, und der Selbsttest brach ab,

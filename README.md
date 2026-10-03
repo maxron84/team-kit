@@ -127,7 +127,7 @@ und ein Gleichstands-Prüfer, der **an seinem eigenen Befund starb**, weil `diff
 mit 1 endet, wenn es etwas findet. Keiner der fallenden Fälle wurde grün
 gedreht.
 
-**Offen sind 52 Einträge**, und keiner davon ist ein Rest dieser Version.
+**Offen sind 53 Einträge**, und keiner davon ist ein Rest dieser Version.
 **Fünf warten auf eine Entscheidung**, die die Einträge selbst dem Owner
 vorbehalten — welche der beiden Bauformen gefahren wird (`BL-194`), ob der
 Lückenfinder eine Formatänderung am Ledger wert ist (`BL-193`), wie der
@@ -135,16 +135,16 @@ Rollback mit Pfaden umgeht, die es beim Rollenstart noch nicht gab (`BL-206`,
 Befund 2), wie ein Abnahme-Gate zugeschnitten wird (`BL-219`), und der eigene
 Einstieg in die Fixphase (`BL-204`).
 
-**Die übrigen 47 kommen aus dem Feld**: 22 aus einer Welle vom 2026-09-03
+**Die übrigen 48 kommen aus dem Feld und aus dem Kit**: 22 aus einer Welle vom 2026-09-03
 bis zum 2026-09-16, überwiegend aus dem Betrieb einer gewachsenen
-Installation (Kostenabschluss, Fixphase, Vollautomatik), dazu `BL-264` und
+Installation (Kostenabschluss, Fixphase, Vollautomatik), dazu `BL-264`, `BL-268` und
 24 Einträge, die am 2026-10-03 triagiert wurden (`BL-269`…`BL-292`). Dass sie offen
 *dastehen*, ist die Absicht des Rückkanals — sie sind erfasst, begründet und
 nach Wirkung sortiert, statt in Sitzungsprotokollen zu verschwinden. Der
 Engpass ist nicht das Melden.
 
 Alles in [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (173 Einträge).
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (176 Einträge).
 
 ---
 
@@ -439,7 +439,7 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen sieben Quellen
 kommen die Backlog-Einträge `BL-1`…`BL-292`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (173 Einträge), der Rest in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (176 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors

@@ -107,9 +107,9 @@ if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
     # Prompt, damit die Regel nicht als willkürlich gelesen wird.
     SMOKE_ZEILE="Smoke-Test ausführen: ${TEAM_SMOKE_TEST} — muss grün sein.
    Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe. Starte ihn
-   NIEMALS als Hintergrund-Task und plane keinen Wakeup darauf: Diese Sitzung
-   ist headless, es kommt keine Benachrichtigung, und du wartest bis zum
-   Zeitlimit auf ein Ereignis, das nicht eintreten kann.
+   NIEMALS als Hintergrund-Task oder Monitor und plane keinen Wakeup darauf:
+   Diese Sitzung ist headless, es kommt keine Benachrichtigung, und du wartest
+   bis zum Zeitlimit auf ein Ereignis, das nicht eintreten kann (BL-265).
    Er darf dafür bis zu ${TEAM_SMOKE_TEST_TIMEOUT} Sekunden brauchen: Erhöhe das
    Zeitlimit deines Werkzeugs entsprechend, statt in den Hintergrund
    auszuweichen — viele Werkzeuge erwarten MILLISEKUNDEN, das wären
@@ -128,7 +128,7 @@ if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
     # Fehlversuch (.frank-attempts) und eskaliert ab dem dritten an Axel —
     # das teure Modell wird also fuer einen Formfehler gerufen. Deshalb
     # steht die Auflage hier ausgeschrieben statt nur bei Ralph.
-    SMOKE_SUFFIX=" Smoke-Test grün: ${TEAM_SMOKE_TEST}. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu ${TEAM_SMOKE_TEST_TIMEOUT} Sekunden brauchen, erhöhe das Zeitlimit deines Werkzeugs entsprechend (viele Werkzeuge erwarten MILLISEKUNDEN — das wären ${TEAM_SMOKE_TEST_TIMEOUT}000, BL-258). NIEMALS als Hintergrund-Task und kein Wakeup darauf: Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (BL-41). War die Suite schon VOR deinem Fix rot, brich nicht ab: Miss beide Staende und belege, dass durch DEINEN Fix kein NEUER Fehlschlag entsteht (BL-205) — und haenge die Zeile '<ISO-Zeit> | frank | <Namen der roten Tests>' an ${TEAM_GATE_DATEI} an, sonst meldet sich der Lauf am Ende als fertig, waehrend das Gate aus ist (BL-256). Ist der Baum am Ende gruen, loesche die Datei wieder."
+    SMOKE_SUFFIX=" Smoke-Test grün: ${TEAM_SMOKE_TEST}. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu ${TEAM_SMOKE_TEST_TIMEOUT} Sekunden brauchen, erhöhe das Zeitlimit deines Werkzeugs entsprechend (viele Werkzeuge erwarten MILLISEKUNDEN — das wären ${TEAM_SMOKE_TEST_TIMEOUT}000, BL-258). NIEMALS als Hintergrund-Task, als Monitor oder mit einem Wakeup darauf (BL-265): Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (BL-41). War die Suite schon VOR deinem Fix rot, brich nicht ab: Miss beide Staende und belege, dass durch DEINEN Fix kein NEUER Fehlschlag entsteht (BL-205) — und haenge die Zeile '<ISO-Zeit> | frank | <Namen der roten Tests>' an ${TEAM_GATE_DATEI} an, sonst meldet sich der Lauf am Ende als fertig, waehrend das Gate aus ist (BL-256). Ist der Baum am Ende gruen, loesche die Datei wieder."
 else
     SMOKE_ZEILE="(Kein Smoke-Test konfiguriert — Schritt entfällt. Das Team arbeitet ohne Sicherheitsnetz; TEAM_SMOKE_TEST in team.config.sh nachtragen.)"
     SMOKE_SUFFIX=""
