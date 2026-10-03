@@ -97,6 +97,23 @@ while ($true) {
         exit 0
     }
 
+    # BL-301: Steht die Stufe gar nicht im Plan, ist das VOR dem ersten Token
+    # klar — kein Aufruf, keine Kosten, und vor allem kein Rat, eine nie
+    # gebaute Stufe zu quittieren. Ein Plan ohne `## Stufe N`-Bloecke wird
+    # nicht beurteilt (team_plan_stufen liefert dann nichts).
+    $planStufen = @(team_plan_stufen $planDatei)
+    if ($planStufen.Count -and ($planStufen -notcontains $stufe)) {
+        Team-Fehler "Ralph: Stufe $stufe steht nicht in $planDatei — der Plan definiert die Stufen $($planStufen[0])–$($planStufen[-1]) (BL-301)."
+        Team-Fehler "  Kein Aufruf, keine Kosten. Meist zeigt $stateFile nach einem Closeout oder Planwechsel auf eine alte Nummer — oder $planZeiger auf den falschen Plan."
+        Team-Fehler "  NICHT einfach eins weiterzählen: $stateFile auf die erste noch nicht gebaute Stufe DIESES Plans setzen."
+        exit 1
+    }
+
+    # BL-283: In der ersten Kaskade traegt Stufe 1 den Smoke-Test in
+    # team.config.ps1 ein — das Modul ist aber nur einmal geladen. Ohne das
+    # Auffrischen bauten die Stufen 2..N ohne Sicherheitsnetz.
+    team_smoke_auffrischen
+
     [Console]::Out.WriteLine("=== Ralph: Stufe $stufe (Plan: $planDatei, Budget: $ralphBudget USD) ===")
     $out = Join-Path $logDir "stufe-$stufe-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
 
@@ -223,6 +240,9 @@ Regeln:
     # neunmal im Feld mit demselben Ergebnis ausgegangen. Der gesprengte Cap
     # schliesst das aus — die Automatik darf eine Budget-Entscheidung des
     # Menschen nicht ueberschreiben.
+    # TEAM_SELBSTPRUEFUNG_LEER setzt das Modul zu Beginn jeder Pruefung selbst
+    # zurueck. Hier NICHT zuweisen: Eine Zuweisung im Skriptbereich legte eine
+    # eigene Variable an und verdeckte die exportierte des Moduls.
     if ($capGesprengt -eq 0 -and (team_result_meldet_erfolg $TEAM_LAST_OUT) -and
         (team_quittung_selbstpruefung 'ralph' $stufe)) {
         # Committen, falls die Stufe ihre Arbeit uncommittet liegen liess: Ohne
@@ -248,6 +268,17 @@ Loop kennt den Inhalt der Stufe nicht - der Plan tut es.
         continue
     }
 
+    # BL-301 (Befund 2): Hat die Sitzung NICHTS hinterlassen, ist das nicht
+    # der vierte Ausgang, und sein Handlungsplan waere falsch — der einzige
+    # konkrete Befehl darin quittiert eine nie gebaute Stufe. Stattdessen:
+    # das, was die Rolle selbst als Grund nennt.
+    if ($TEAM_SELBSTPRUEFUNG_LEER -eq 1) {
+        Team-Fehler "Ralph: Stufe $stufe hat NICHTS hinterlassen — kein Commit, keine Änderung, kein Promise (BL-301)."
+        Team-Fehler "  Das ist NICHT der vierte Ausgang: Die Stufe ist nicht gebaut. NICHT von Hand quittieren."
+        Team-Fehler "  Warum, sagt die Rolle meist selbst — Anfang des result-Feldes ($TEAM_LAST_OUT):"
+        Team-Fehler "    $(team_result_auszug $TEAM_LAST_OUT)"
+        exit 1
+    }
     $smokeHinweis = if ($TEAM_SMOKE_TEST) { $TEAM_SMOKE_TEST } else { '(kein Smoke-Test konfiguriert)' }
     if (team_quittung_fehlt_melden 'ralph' $TEAM_LAST_OUT `
             "Stufe $stufe hat kein <promise>STUFE_${stufe}_COMPLETE</promise> gegeben." `

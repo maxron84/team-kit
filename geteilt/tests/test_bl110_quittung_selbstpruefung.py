@@ -184,10 +184,13 @@ def test_roter_baum_wird_NICHT_quittiert(tmp_path):
 
 def test_ohne_jede_arbeit_wird_NICHT_quittiert(tmp_path):
     """Kein Commit, keine Aenderung: Das ist kein 'fertig ohne Quittung',
-    sondern eine Stufe, die nie angefangen hat."""
+    sondern eine Stufe, die nie angefangen hat. Seit BL-301 endet sie auch
+    nicht mehr im vierten Ausgang (Exit 43): Dessen Anleitung riet, die nie
+    gebaute Stufe von Hand zu quittieren."""
     repo = _repo(tmp_path)
     lauf = _lauf(repo, baut=[])
-    assert lauf.returncode == 43
+    assert lauf.returncode == 1, lauf.stderr
+    assert "NICHTS hinterlassen" in lauf.stderr, lauf.stderr
     assert (repo / ".ralph-state").read_text().strip() == "1"
 
 

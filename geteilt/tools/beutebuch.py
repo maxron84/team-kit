@@ -31,7 +31,9 @@ Aufrufe:
                                        (Exit 3 = Maengel, auf stderr).
                                        OHNE Fundnummer wird JEDER Block
                                        geprueft, --alle bezieht das Archiv
-                                       mit ein (BL-254)
+                                       mit ein (BL-254). Dazu HINWEISE, die
+                                       den Exit nicht aendern: ein Testbefehl
+                                       ohne zitierte Ausgabe (BL-289)
   beutebuch.py archiviere [--dry-run]
                                      → verschiebt jeden Block mit Status
                                        'erledigt'/'überholt' wörtlich ans Ende
@@ -414,6 +416,48 @@ def lint_alle(pfade):
     return ergebnis
 
 
+# BL-289: Ein Testbefehl in Backticks ist die Form, in der ein Fund das
+# Ergebnis eines Befehls behauptet (im Feld: "`python -m pytest <datei> -q`
+# zeigt den roten Fall"). Gesucht wird der BEFEHL, nicht das Wort: Der Laeufer
+# muss am Anfang stehen oder nach einem Leerzeichen und darf nicht weiter-
+# gehen — `pytest.raises`, `pytest.ini` und `test_pytest_x.py` sind Namen.
+BACKTICK_RE = re.compile(r"`([^`\n]+)`")
+TESTBEFEHL_RE = re.compile(
+    r"(?:^|\s)(?:pytest|py\.test|unittest|npm\s+(?:run\s+)?test|"
+    r"npx\s+(?:jest|vitest)|jest|vitest|dotnet\s+test|go\s+test|cargo\s+test|"
+    r"mvn\s+test|\S*gradlew?\s+test|phpunit|rspec|Invoke-Pester|bats)(?:\s|$)")
+# Eine zitierte Ausgabe: ein Codeblock oder ein Zitat im Fundblock.
+ZITAT_RE = re.compile(r"^\s*(?:```|~~~|>)", re.MULTILINE)
+# Nur VOR dem Fix ist der Hinweis etwas wert — ueber `--alle` liefe er sonst
+# durch den ganzen erledigten Bestand.
+HINWEIS_STATUS = ("offen", "an Frank übergeben", "an Axel übergeben")
+
+
+def hinweise_text(text):
+    """Hinweise zu einem Fundblock, die den Exit NICHT aendern (BL-289).
+
+    Der Feldfall: Harry behauptete einen roten Test, ohne ihn auszufuehren;
+    die Herleitung aus dem Kontrollfluss uebersah eine Datendatei, und der
+    Test war gruen. Frank baute trotzdem eine Absicherung (1,42 USD), der
+    Architekt musste den Fund widerlegen.
+
+    Ein Hinweis und kein Mangel, weil die Pruefung eine Heuristik ist: Ein
+    Mangel sperrt den Fund fuer Frank (Exit 5), und ein gesperrter ECHTER Fund
+    waere teurer als ein ueberlesener Hinweis."""
+    status = next((m.group(2) for m in map(STATUS_RE.match, text.splitlines())
+                   if m), None)
+    if status is None or not any(passt(status, s) for s in HINWEIS_STATUS):
+        return []
+    befehl = any(TESTBEFEHL_RE.search(span) for span in BACKTICK_RE.findall(text))
+    if befehl and not ZITAT_RE.search(text):
+        return [
+            "Hinweis (sperrt nicht): Der Block nennt einen Testbefehl, zitiert "
+            "aber keine Ausgabe. Ist er ausgefuehrt? Ein Befehlsergebnis wird "
+            "belegt, nicht hergeleitet (Kit-BL-289) — im Feld war der "
+            "behauptete rote Test gruen."]
+    return []
+
+
 def status_bekannt(wert: str) -> bool:
     """Ist `wert` ein Wert der Status-Kette (mit erlaubtem Klammerzusatz)?
 
@@ -539,6 +583,10 @@ def main() -> int:
             for hm, maengel in befunde:
                 for mangel in maengel:
                     print(f"[{hm}] {mangel}", file=sys.stderr)
+            for pfad in pfade:
+                for block in _blockbereiche(_lies_zeilen(pfad)):
+                    for hinweis in hinweise_text("\n".join(block["core"])):
+                        print(f"[{block['hm']}] {hinweis}", file=sys.stderr)
             umfang = "Beutebuch und Archiv" if alle else "Beutebuch"
             if not alle:
                 print(f"  ({geprueft} Fundbloecke aus dem {umfang} geprueft; "
@@ -553,13 +601,17 @@ def main() -> int:
         # kein `--alle` — gemessen an 141 Funden waren damit 126 (89 Prozent
         # des Bestands) unerreichbar, und `archiviere` verschiebt Bloecke
         # WOERTLICH, also auch einen bereits zerschnittenen.
+        text = block_text(hm_soll, aktiv_pfad)
         if maengel is None and alle:
             maengel = lint(hm_soll, archiv_pfad)
+            text = block_text(hm_soll, archiv_pfad)
         if maengel is None:
             print(f"FEHLER: {hm_soll} nicht im Beutebuch gefunden.", file=sys.stderr)
             return 1
         for mangel in maengel:
             print(f"[{hm_soll}] {mangel}", file=sys.stderr)
+        for hinweis in hinweise_text(text or ""):
+            print(f"[{hm_soll}] {hinweis}", file=sys.stderr)
         return 3 if maengel else 0
 
     if cmd == "archiviere":

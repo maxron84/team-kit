@@ -33,6 +33,7 @@ ZWEI FALLEN, beide im Feld beim Bauen aufgelaufen und hier uebernommen
     wirklich IMPORTIEREN. `install.ps1` nennt `$TEAM_PYTHON` in Ausgabetexten
     und importiert die Bibliothek nie — dort gibt es keine Modulgrenze.
 """
+import os
 import re
 import sys
 from pathlib import Path
@@ -130,6 +131,48 @@ def test_die_exportliste_ist_die_am_ende_und_nicht_der_kopfkommentar():
     liste = exportliste(text)
     assert "TEAM_SMOKE_TEST" in liste and len(liste) < 80, (
         f"{len(liste)} Namen — das ist nicht die Exportliste am Ende.")
+
+
+def test_jede_exportierte_variable_existiert_nach_dem_laden(tmp_path):
+    """Die zweite Haelfte derselben Gattung, beim Bauen von BL-301 gemessen.
+
+    `Export-ModuleMember -Variable` exportiert nur, was beim LADEN existiert.
+    Eine Variable, die erst eine Funktion anlegt, steht zwar in der Liste —
+    draussen ist sie trotzdem `$null`, und eine Weiche im Entrypoint bleibt
+    blind (so geschehen mit TEAM_SELBSTPRUEFUNG_LEER). Die Liste allein
+    beweist das nicht; geprueft wird deshalb am geladenen Modul."""
+    import shutil
+    import subprocess
+    from conftest import entrypoint_pfad, verlange_pwsh
+    verlange_pwsh()
+    modul = _modul()
+    namen = sorted(exportliste(modul))
+    # Wie im Projekt: die Bibliothek unter team/, die Konfiguration daneben —
+    # die meisten TEAM_*-Werte kommen von dort.
+    (tmp_path / "team").mkdir()
+    shutil.copy(kit_pfad("lib.psm1"), tmp_path / "team" / "lib.psm1")
+    konf = entrypoint_pfad("team.config.ps1")
+    if not konf.is_file():
+        pytest.skip("team.config.ps1 liegt in dieser Ablage nicht")
+    shutil.copy(konf, tmp_path / "team.config.ps1")
+    skript = ("Import-Module ./team/lib.psm1 -Force -DisableNameChecking 3>$null\n"
+              "foreach ($n in @(" + ", ".join(f"'{n}'" for n in namen) + ")) {\n"
+              "  if (-not (Get-Variable -Name $n -ErrorAction SilentlyContinue)) {"
+              " \"FEHLT $n\" }\n}\n'FERTIG'\n")
+    (tmp_path / "probe.ps1").write_text(skript, encoding="utf-8-sig")
+    umgebung = dict(os.environ)
+    umgebung.pop("PSExecutionPolicyPreference", None)
+    r = subprocess.run(["pwsh", "-NoProfile", "-NonInteractive", "-File",
+                        "probe.ps1"], cwd=tmp_path, capture_output=True,
+                       text=True, encoding="utf-8", errors="replace",
+                       env=umgebung, timeout=120)
+    assert "FERTIG" in r.stdout, r.stdout + r.stderr
+    fehlend = [z.split()[1] for z in r.stdout.splitlines()
+               if z.startswith("FEHLT ")]
+    assert not fehlend, (
+        "Diese Variablen stehen in der Exportliste, existieren beim Laden aber "
+        "nicht — ein Entrypoint sieht sie als $null:\n  " + "\n  ".join(fehlend)
+        + "\nBeim Laden anlegen (BL-301).")
 
 
 # --- Gegenproben: der Waechter wird rot, und nur dann ------------------------

@@ -197,6 +197,14 @@ und jedes Feldprojekt ihn so führen):
    Kaskade kosteten zusammen **2,89 USD**. Ein Fehlalarm dieser Bauart ist für
    den Fixer nicht billiger als ein echter Fund, weil er die Ursache erst
    widerlegen muss (`Kit-BL-215`).
+
+   **Dasselbe gilt für das Ergebnis eines Befehls** (`Kit-BL-289`): Behauptet
+   ein Fund, was ein Befehl ausgibt, den der Finder selbst ausführen kann —
+   „`pytest <datei>` zeigt den roten Fall", ein Exit-Code, eine Fehlermeldung
+   —, dann **führt er ihn aus und zitiert die Ausgabe** im Fund. Dort versagt
+   Lesen genauso: Im Feld behauptete ein Fund einen roten Test, den niemand
+   ausgeführt hatte; die Herleitung aus dem Kontrollfluss übersah eine
+   Datendatei, der Test war grün, und der Fix-Lauf kostete trotzdem 1,42 USD.
 4. **Übergabe an Frank**: Status von `offen` auf `an Frank übergeben` setzen —
    am besten mit `beutebuch.py set <HM-Nr> 'an Frank übergeben'`, das schreibt
    den **Feldwert** und sonst nichts. **In die Statuszeile gehört immer nur ein
@@ -585,7 +593,10 @@ divergierender Defaults.
   Harry/Marv sind read-only (nichts Bezahltes geht verloren).
 
 Übersteuerung je Lauf/Rolle bleibt möglich (`TEAM_BUDGET_USD` für den Lauf,
-`TEAM_ROLE_BUDGET_USD`/`TEAM_ROLE_HARDCAP_USD` für die Schwellen).
+`TEAM_ROLE_BUDGET_USD`/`TEAM_ROLE_HARDCAP_USD` für die Schwellen). **Die beiden
+Schwellen hängen zusammen** (`Kit-BL-297`): Liegt der Hard-Cap nicht über dem
+Soft-Cap, greift Franks und Axels harter Abbruch nie — wer den Soft-Cap hebt,
+hebt den Hard-Cap mit; die Bibliothek warnt sonst bei jedem Start.
 **Der Soft-Cap liegt über dem Default des Lauf-Deckels** (`TEAM_BUDGET_USD`,
 15 USD, `Kit-BL-286`): Ohne Budget-Empfehlung im Plan stoppt einen teuren
 Aufruf von Ralph, Harry oder Marv deshalb in der Regel der **Lauf-Deckel**,

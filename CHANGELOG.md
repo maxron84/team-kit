@@ -88,6 +88,40 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Changed
 
+- **Das Architekten-Briefing: Kostenabschluss zuerst, Befehle in der Bahn des
+  Menschen, Dateien statt Punkte** (`BL-291`, `BL-284`, `BL-294`, `BL-293`,
+  gemeldet aus `Feld F` und `Feld E`). Die Scharfschalt-Sequenz beginnt jetzt
+  mit dem Kostenabschluss DIESER Sitzung — vor dem Start: Läuft die
+  Vollautomatik erst, schreibt jeder Rollen-Lauf sein Transkript in dieselbe
+  Ablage, und im Feld fielen so die Planungskosten weg. Die Sequenz steht in
+  der Bahn, in der der Mensch arbeitet (bash `./x.sh`, pwsh `.\x.cmd` samt
+  `Remove-Item Env:VAR`, damit kein Fokus und kein Deckel in der Sitzung
+  stehen bleibt), Python heißt `{{PYTHON}}`. Die Kopplungsgrenze zählt die
+  **Bestandsdateien**, die eine Stufe ändern muss, nicht die Aufzählungspunkte
+  (im Feld: drei Punkte, acht Dateien, 7,70 USD gegen 1,88 im Median). Und
+  das Briefing nennt beide Notizen von `--architekt-abschluss` — ohne die
+  vierte trägt die teuerste Ledger-Zeile drei Wörter Prosa. Offen bleibt aus
+  `BL-284`, dass `vollautomatik` einen Fokus erkennt, der zu einem anderen
+  Plan gehört.
+
+- **Beutezug-Dreisatz Punkt 3: Auch ein behauptetes Befehlsergebnis wird
+  belegt** (`BL-289`, gemeldet aus `Feld F`). Harry meldete einen roten Test,
+  ohne ihn auszuführen; der Test war grün, Frank baute trotzdem eine
+  Absicherung (1,42 USD, 44 Turns), der Architekt musste den Fund widerlegen.
+  Punkt 3 verlangte den Beleg bisher nur für das Laufzeitverhalten einer
+  Sprachkonstruktion. Jetzt auch für das Ergebnis eines Befehls: ausführen
+  und die Ausgabe zitieren — in beiden Red-Team-Briefings und in der
+  Regeldatei-Vorlage.
+  `beutebuch.py lint` gibt dazu einen **Hinweis**, wenn ein offener Fund einen
+  Testbefehl nennt, aber keine Ausgabe zitiert. Der Hinweis ändert den Exit
+  nicht und sperrt Frank nicht.
+
+- **Warnung, wenn der Hard-Cap nicht über dem Soft-Cap liegt** (`BL-297`,
+  gemeldet aus `Feld E`, beide Bahnen). `team_budget_check` prüft den
+  Hard-Cap nur, wenn er über dem Soft-Cap liegt; wer nur den Soft-Cap hob,
+  nahm Frank und Axel still den harten Abbruch. Die Bibliothek warnt beim
+  Laden, die Regeldatei-Vorlage nennt die Kopplung.
+
 - **Budget-Defaults der Rollen 20/40 statt 5/10 USD** (`BL-286`, Entscheid
   des Owners). Soft-Cap `TEAM_ROLE_BUDGET_USD` 20, Hard-Cap
   `TEAM_ROLE_HARDCAP_USD` 40 — in beiden Bibliotheken, beiden
@@ -361,6 +395,55 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   die Umgebungsvariable nicht.* Still bleibt es, wo nichts abweicht.
 
 ### Fixed
+
+- **Relative Schreibregeln griffen nach einem `cd` nicht mehr — und der Sweep
+  meldete trotzdem „keine neuen Funde"** (`BL-292`, gemeldet aus `Feld F`,
+  beide Bahnen). Die CLI löst `Edit(plans/**)` gegen das aktuelle
+  Verzeichnis der Shell auf; nach einem erlaubten `cd` lehnte sie jeden
+  Schreibversuch ab, und vier Funde standen nur im `result`. Jede Schreibregel
+  steht jetzt zusätzlich absolut da (`//c/<pfad>/plans/**`, unter Git Bash
+  über `pwd -W`); ein Leerzeichen im Projektpfad bekommt eine Warnung. Das neue
+  Verb `kosten.py verweigert` liest `permission_denials`: Ein abgelehnter
+  Schreibversuch IM erlaubten Bereich macht den Sweep nicht sauber — Exit 1,
+  der Zeiger bleibt stehen. Axel nennt im selben Fall die abgelehnten Pfade,
+  und der Sweep-Prompt sagt, dass Funde dann vollständig in die
+  Abschlussantwort gehören.
+
+- **Axel meldete eine Ermittlung, die es nicht gab** (`BL-303`, Kit-intern,
+  beim Bau von `BL-292` gefunden, beide Bahnen). Ohne Guard-Übergriff ließ das
+  Urteil jede Runde zählen, auch eine ohne Akte: „Ermittlungsakte AX-1
+  erstellt", Exit 0, der Fall blieb bei Axel, und die Vollautomatik hätte ihn
+  erneut gerufen — bezahlt, mit dem stärksten Modell. Exit 0 verlangt jetzt
+  Akte und Statuswechsel. Dazu starb `axel.sh` ohne Akten-Ordner wortlos an
+  `pipefail`. Den Erfolgsweg fährt jetzt auch ein Test.
+
+- **Eine Stufennummer ohne Plan-Block war ein bezahlter No-Op, und danach riet
+  die Selbstprüfung zum falschen Befehl** (`BL-301`, gemeldet aus `Feld E`,
+  beide Bahnen). Ralph prüft vor dem Aufruf, ob der Plan einen Block
+  `## Stufe N` hat, und bricht sonst mit der Spanne des Plans ab — kein
+  Aufruf, keine Kosten. Hat eine Sitzung nichts hinterlassen, endet Ralph mit
+  Exit 1 statt im vierten Ausgang und zeigt den Anfang des `result`-Feldes;
+  der Rat `echo N+1 > .ralph-state` hätte eine nie gebaute Stufe quittiert.
+
+- **Der Smoke-Test, den Stufe 1 einträgt, fehlte den Stufen 2…N** (`BL-283`,
+  gemeldet aus `Feld F`, beide Bahnen). Ralph lädt die Bibliothek einmal und
+  fährt dann alle Stufen; in der ersten Kaskade eines Projekts bauten die
+  übrigen Stufen deshalb ohne Sicherheitsnetz. Der Wert wird jetzt je Stufe
+  nachgelesen, sobald einer eingetragen ist, und Ralphs Briefing sagt dann
+  nicht mehr „noch KEIN Smoke-Test".
+
+- **`sitzung-messen` hielt eine interaktive Ein-Prompt-Sitzung für einen
+  Rollen-Lauf — und `--projekt` nahm den jüngsten Rollen-Lauf statt der
+  Sitzung** (`BL-272` aus `Feld B`, `BL-291` aus `Feld F`). Das Merkmal ist
+  jetzt die Herkunft: der Briefing-Kopf des Kits, sonst `entrypoint:
+  sdk-cli`; die Zahl der Prompts entscheidet nicht mehr. Wo ein Transkript
+  nichts verrät, wird gefragt statt verboten. `--projekt` überspringt jüngere
+  Rollen-Läufe mit Meldung, `--alle` zählt sie nicht doppelt.
+
+- **P2 der Ledger-Prüfung zählte jede Zeile der Kaskade als „gebucht"**
+  (`BL-295`, gemeldet aus `Feld E`). Eine Architekten- oder Akteur-Zeile
+  verdeckte so eine fehlende Rollen-Buchung. Gezählt werden jetzt nur Zeilen
+  aus Rohlogs, wie in P1b.
 
 - **Die Preistabelle kannte die 5.5er-Generation nicht, und der
   Cache-Read-Satz galt als modellübergreifend** (`BL-302`, Kit-intern, beim

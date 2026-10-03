@@ -179,6 +179,10 @@ gelesen, ist von keinem Fundblock referenziert und fällt trotzdem unter die
 Zusicherungen des Projekts.
 
 Findest du NICHTS, ändere keine Datei.
+Lehnt die CLI ein Edit oder Write im Beutebuch oder im Test-Ordner ab, weiche
+NICHT auf Bash aus: Schreibe jeden Fundblock vollständig, samt
+Reproducer-Zeile, in deine Abschlussantwort — dort holt ihn der Mensch ab
+(BL-292).
 Beende IMMER mit exakt: <promise>REDTEAM_SWEEP_COMPLETE</promise> — AUCH WENN
 du einen Fund ins Beutebuch geschrieben hast; das Promise ist die
 Sweep-Quittung, nicht der Fund-Beleg.
@@ -260,6 +264,12 @@ if (-not (team_guard_urteil $Rolle $guardUebergriff 1)) { exit 1 }
 # Damit ist "geprueft, nichts gefunden" von "nie fertig geworden" nicht mehr zu
 # unterscheiden: Beides kostet gleich viel und sieht identisch aus.
 $nextIdNachher = (Team-Werkzeug $TEAM_BEUTEBUCH_TOOL @('next-id')).Trim()
+# BL-292: Abgelehnte Schreibversuche IM erlaubten Bereich heissen: Die Rolle
+# DURFTE schreiben und KONNTE nicht. Im Feld standen danach vier Funde nur im
+# `result`, und der Sweep meldete "Geprueft, keine neuen Funde". Ein solcher
+# Sweep ist nicht sauber: Der Zeiger bleibt stehen (der Bereich gilt als
+# ungeprueft), was geschrieben wurde, wird committet, und der Lauf endet laut.
+$verweigert = @(Team-Werkzeug $TEAM_KOSTEN_TOOL @('verweigert', $out, '--ordner', $TEAM_PLAN_ORDNER, $TEAM_TEST_ORDNER) 2>$null | Where-Object { $_ })
 $neueFunde = [int]($nextIdNachher -replace '^HM-') - [int]($nextId -replace '^HM-')
 if ($neueFunde -lt 0) { $neueFunde = 0 }
 $fundText = if ($neueFunde -eq 1) { '1 neuer Fund' }
@@ -267,7 +277,7 @@ $fundText = if ($neueFunde -eq 1) { '1 neuer Fund' }
             else { 'keine neuen Funde' }
 
 # Whitelist-Aenderungen deterministisch committen (der Angreifer darf nicht).
-Set-Content -Path $stateFile -Value $headHash -Encoding ascii
+if (-not $verweigert.Count) { Set-Content -Path $stateFile -Value $headHash -Encoding ascii }
 # BL-206 (Feld B): NAMENTLICH stagen statt den Ordner blanko. `git add
 # <Testordner>` nimmt jede untracked Datei darin mit — auch eine fremde, die
 # schon vor dem Rollenstart dalag. Sie landete dann unter der Sweep-Botschaft,
@@ -299,5 +309,12 @@ if ($eigenePfade.Count) {
 # BL-30: Die Ueberschreitung bleibt die letzte Zeile des Laufs.
 if ($budgetUeberschritten -eq 1) {
     Team-Fehler "[$Rolle] ERINNERUNG: Dieser Sweep lag über dem Cap ($TEAM_LAST_COST USD ≥ $rolleBudget USD). Fortschritt ist gebucht, der nächste Aufruf ist gedeckelt."
+}
+if ($verweigert.Count) {
+    Team-Fehler "[$Rolle] SWEEP NICHT SAUBER — die CLI hat Schreibversuche IM erlaubten Bereich abgelehnt (BL-292):"
+    foreach ($z in $verweigert) { Team-Fehler "  $z" }
+    Team-Fehler "  Funde stehen womöglich NUR im result des Logs: $out"
+    Team-Fehler "  Dort lesen und ins Beutebuch übertragen. $stateFile bleibt stehen — der Bereich gilt als ungeprüft."
+    exit 1
 }
 exit 0

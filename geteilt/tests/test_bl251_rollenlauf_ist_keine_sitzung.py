@@ -75,10 +75,14 @@ def _antwort(mid, ein=0, aus=0, lesen=0, modell="claude-opus-5"):
                                      "ephemeral_1h_input_tokens": 0}}}})
 
 
-def _prompt(text="mach mal"):
-    """Ein Satz, den ein Mensch getippt hat."""
-    return json.dumps({"type": "user", "message": {
-        "role": "user", "content": [{"type": "text", "text": text}]}})
+def _prompt(text="mach mal", eingang=None):
+    """Ein Satz, den ein Mensch getippt hat — oder, mit Briefing-Kopf und
+    `eingang="sdk-cli"`, der Auftrag eines headless Rollen-Laufs."""
+    satz = {"type": "user", "message": {
+        "role": "user", "content": [{"type": "text", "text": text}]}}
+    if eingang:
+        satz["entrypoint"] = eingang
+    return json.dumps(satz)
 
 
 def _werkzeug_antwort():
@@ -89,10 +93,13 @@ def _werkzeug_antwort():
                                      "content": "ok", "tool_use_id": "t1"}]}})
 
 
-def _transkript(pfad, prompts, antworten=1, lesen=0):
+def _transkript(pfad, prompts, antworten=1, lesen=0, rolle=False,
+                eingang=None):
     zeilen = []
     for i in range(prompts):
-        zeilen.append(_prompt(f"Auftrag {i}"))
+        text = (f"# Briefing — Ralph (Bau-Loop)\n\nAuftrag {i}" if rolle
+                else f"Auftrag {i}")
+        zeilen.append(_prompt(text, eingang=eingang))
         zeilen.append(_werkzeug_antwort())
         zeilen.append(_werkzeug_antwort())
     for i in range(antworten):
@@ -147,20 +154,23 @@ def _cli(cwd, *args, heim=None):
     return r.returncode, r.stdout, r.stderr
 
 
-def _ablage(tmp_path, projekt, prompts):
+def _ablage(tmp_path, projekt, prompts, rolle=False, eingang=None):
     """Eine Transkript-Ablage, wie die Agenten-CLI sie anlegt."""
     heim = tmp_path / "heim"
     ordner = heim / ".claude" / "projects" / kosten.projekt_ordnername(
         str(projekt.resolve()))
-    _transkript(ordner / "abc.jsonl", prompts=prompts)
+    _transkript(ordner / "abc.jsonl", prompts=prompts, rolle=rolle,
+                eingang=eingang)
     return heim
 
 
 def test_warnt_wenn_projekt_einen_rollenlauf_trifft(tmp_path):
-    """Der Fund selbst."""
+    """Der Fund selbst — an einem Rollen-Lauf, wie er im Feld aussieht:
+    Briefing-Kopf und `entrypoint: sdk-cli` (BL-272)."""
     projekt = tmp_path / "projekt"
     projekt.mkdir()
-    heim = _ablage(tmp_path, projekt, prompts=1)
+    heim = _ablage(tmp_path, projekt, prompts=1, rolle=True,
+                   eingang="sdk-cli")
     rc, out, err = _cli(projekt, "sitzung-messen", "--projekt", ".", heim=heim)
     assert "ROLLEN-Laufs" in err, f"keine Warnung:\n{err}"
     assert "BL-251" in err

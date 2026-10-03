@@ -54,6 +54,11 @@ Nutzung:
                                         "kein Treffer" zu unterscheiden — nur
                                         die Trefferanzahl beantwortet
                                         "existiert eine Zeile?" zuverlaessig.
+    kosten.py verweigert LOG --ordner ORDNER...
+                                        BL-292: abgelehnte Schreibversuche
+                                        IM erlaubten Bereich aus dem Log
+                                        einer Rolle (permission_denials).
+                                        Exit 3 = es gibt welche.
     kosten.py modelle [DIR...] [--cli BEFEHL]
                                         BL-264: je Rolle das Modell, das
                                         die Logs in DIR tragen (Default
@@ -869,7 +874,15 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
                 f"--rollen-abschluss <jene Kaskade> <domaene>`."))
 
     # --- P2 -----------------------------------------------------------------
-    if aktuelle_kaskade is not None and aktuelle_kaskade in je_kaskade:
+    # BL-295: "Bereits gebucht" heisst: eine Zeile, die Rohlogs abgerechnet
+    # hat — `ralph` oder `roles`. Eine `architekt`-Zeile hat keinen Rohlog
+    # (LEDGER_OHNE_ROHLOG). Ohne die Verengung genuegte die gebuchte
+    # AUSHAERTUNG, und P2 meldete bei jedem Closeout "bereits gebucht … lief
+    # danach noch eine Rolle?" — mit einer Abhilfe (`--ersetzen`), die beim
+    # Befolgen Geld aus dem Ledger loescht. P1 und P1b machen diese Ausnahme
+    # seit jeher; P2 fehlte sie.
+    if aktuelle_kaskade is not None and \
+            je_kaskade.get(aktuelle_kaskade, set()) & {"ralph", "roles"}:
         alle_offen = team_log_dateien([ralph_logs, team_logs])
         # BL-46: Ein unarchiviertes Log, das gar kein Kostenbeleg IST
         # (Ersatzzettel ueber einen verworfenen Versuch, oder eine kaputte
@@ -1126,6 +1139,69 @@ def ide_cli_version(heim=None):
 
 def _v(version):
     return ".".join(str(x) for x in version)
+
+
+# --- BL-292: Abgelehnte Schreibversuche im ERLAUBTEN Bereich ------------------
+#
+# Harry und Marv laufen mit `--permission-mode default` und einer Allowlist,
+# deren Schreibregeln relativ waren (`Edit(plans/**)`). Die CLI loest sie
+# gegen das AKTUELLE Arbeitsverzeichnis der Shell auf: Nach einem erlaubten
+# `cd <Unterordner>` lehnte sie jeden Schreibversuch nach plans/ und tests/
+# ab. Im Feld (`Feld F`) legten beide Rollen ihre vier Funde deshalb nur im
+# `result` ab — und der Sweep meldete „Gepruft, keine neuen Funde", die
+# Fixphase „nichts zu tun". Die Ablehnungen standen in `permission_denials`,
+# gelesen hat sie niemand.
+
+SCHREIBWERKZEUGE = ("Edit", "Write", "MultiEdit", "NotebookEdit")
+
+
+def _relativer_pfad(pfad, wurzel):
+    """Pfad relativ zur Wurzel mit Schraegstrichen — auch aus einem
+    MSYS-Pfad (`/c/Users/...`) oder einem Windows-Pfad. None, wenn er
+    ausserhalb liegt oder auf einem anderen Laufwerk."""
+    if not pfad:
+        return None
+    p = str(pfad).replace("\\", "/")
+    m = re.match(r"^/([a-zA-Z])/(.*)$", p)
+    if m and os.name == "nt":
+        p = f"{m.group(1)}:/{m.group(2)}"
+    if not os.path.isabs(p):
+        return os.path.normpath(p).replace("\\", "/")
+    try:
+        rel = os.path.relpath(p, wurzel)
+    except ValueError:
+        return None
+    rel = rel.replace("\\", "/")
+    return None if rel.startswith("../") or rel == ".." else rel
+
+
+def abgelehnte_schreibversuche(log, ordner, wurzel="."):
+    """[(werkzeug, relativer_pfad)] der abgelehnten Schreibversuche, die IN
+    einem der erlaubten Ordner lagen — also Arbeit, die die Rolle tun DURFTE
+    und nicht tun konnte. Ein abgelehnter Versuch AUSSERHALB ist dagegen die
+    Allowlist bei der Arbeit (Linie 2), kein Verlust."""
+    try:
+        with open(log, encoding="utf-8-sig") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return []
+    if not isinstance(data, dict):
+        return []
+    praefixe = [o.replace("\\", "/").strip("/") + "/" for o in ordner if o]
+    wurzel = os.path.abspath(wurzel)
+    funde = []
+    for eintrag in data.get("permission_denials") or []:
+        if not isinstance(eintrag, dict):
+            continue
+        werkzeug = eintrag.get("tool_name") or ""
+        if werkzeug not in SCHREIBWERKZEUGE:
+            continue
+        eingabe = eintrag.get("tool_input") or {}
+        pfad = eingabe.get("file_path") or eingabe.get("notebook_path")
+        rel = _relativer_pfad(pfad, wurzel)
+        if rel and any(rel.startswith(p) for p in praefixe):
+            funde.append((werkzeug, rel))
+    return funde
 
 
 def modell_bericht(files, cli=None, heim=None):
@@ -1638,6 +1714,64 @@ def _ist_werkzeug_antwort(content):
         return any(isinstance(b, dict) and b.get("type") == "tool_result"
                    for b in content)
     return False
+
+
+# BL-272/BL-291: WOHER ein Transkript stammt, verraet es selbst — zweimal,
+# unabhaengig voneinander. Ein Rollen-Lauf beginnt mit dem Briefing des Kits
+# (`# Briefing — Ralph (Bau-Loop)`, ebenso Frank, Harry, Marv, Axel; der
+# Architekt ist interaktiv), und die CLI vermerkt `entrypoint: sdk-cli` fuer
+# einen headless Aufruf. Gemessen an der Transkript-Ablage von `Feld F`:
+# 185 Rollen-Laeufe, alle `sdk-cli` und alle mit Briefing-Kopf; die
+# interaktiven Sitzungen `claude-vscode` und ein Menschensatz. Die ZAHL der
+# Nutzer-Prompts (BL-251) trennt dagegen nicht: Eine interaktive Sitzung mit
+# EINEM umfangreichen Auftrag sah aus wie ein Rollen-Lauf, und das Werkzeug
+# riet, sie NICHT zu buchen. Der Briefing-Kopf zaehlt zuerst, weil ein
+# Rollen-Lauf, der aus einer laufenden Sitzung heraus gestartet wird, deren
+# `entrypoint` erbt.
+ROLLEN_BRIEFING_KOPF = re.compile(r"^\s*# Briefing — (?!Der Architekt)")
+
+
+def _erster_auftrag(pfad):
+    """(text, entrypoint) des ersten Satzes, den ein Mensch oder ein
+    Rollen-Skript geschrieben hat — oder (None, None)."""
+    try:
+        f = open(pfad, encoding="utf-8")
+    except OSError:
+        return None, None
+    with f:
+        for zeile in f:
+            try:
+                d = json.loads(zeile)
+            except ValueError:
+                continue
+            if d.get("type") != "user" or d.get("isMeta"):
+                continue
+            nachricht = d.get("message")
+            if not isinstance(nachricht, dict):
+                continue
+            inhalt = nachricht.get("content")
+            if _ist_werkzeug_antwort(inhalt):
+                continue
+            if isinstance(inhalt, list):
+                inhalt = " ".join(b.get("text", "") for b in inhalt
+                                  if isinstance(b, dict))
+            return str(inhalt or ""), d.get("entrypoint")
+    return None, None
+
+
+def ist_rollenlauf(pfad):
+    """True (ein headless Rollen-Lauf), False (eine interaktive Sitzung) oder
+    None (das Transkript verraet es nicht — dann wird nicht geraten)."""
+    text, eingang = _erster_auftrag(pfad)
+    if text is None:
+        return None
+    if ROLLEN_BRIEFING_KOPF.match(text):
+        return True
+    if eingang == "sdk-cli":
+        return True
+    if eingang:
+        return False
+    return None
 
 
 def echte_nutzer_prompts(pfade):
@@ -2533,6 +2667,7 @@ VERBEN = {
     "turns": "turns [DIR...]   (Default .ralph-logs)",
     "modelle": ("modelle [DIR...] [--cli BEFEHL]   (Default .ralph-logs "
                 ".team-logs)"),
+    "verweigert": "verweigert LOG --ordner ORDNER...   (BL-292)",
     "ledger": ("ledger [PFAD] [--domaene D] [--rolle R] [--kaskade N] "
                "[--split] [--anzahl]"),
     "ledger-pruefen": "ledger-pruefen [--pfad P] [--kaskade N]",
@@ -2618,6 +2753,30 @@ def _main(argv):
         if hinweis:
             print(hinweis, file=sys.stderr)
         return 0
+
+    if befehl == "verweigert":
+        # BL-292: Abgelehnte Schreibversuche IM erlaubten Bereich aus dem
+        # Ergebnis-JSON einer Rolle. Exit 3 = es gibt welche — dann stehen
+        # Funde womoeglich nur im `result` des Logs.
+        if not rest or rest[0].startswith("--"):
+            print("Nutzung: kosten.py verweigert LOG --ordner ORDNER...",
+                  file=sys.stderr)
+            return 1
+        log, ordner = rest[0], []
+        i = 1
+        while i < len(rest):
+            if rest[i] == "--ordner":
+                i += 1
+                while i < len(rest) and not rest[i].startswith("--"):
+                    ordner.append(rest[i])
+                    i += 1
+            else:
+                print(f"Fehler: unbekanntes Argument '{rest[i]}'", file=sys.stderr)
+                return 1
+        funde = abgelehnte_schreibversuche(log, ordner)
+        for werkzeug, pfad in funde:
+            print(f"{werkzeug}\t{pfad}")
+        return 3 if funde else 0
 
     if befehl == "modelle":
         # BL-264: Welches Modell lief je Rolle, und ist es das neueste seiner
@@ -2818,22 +2977,39 @@ def _main(argv):
             # Default. Neu ist, dass der Rest nicht mehr verschwiegen wird:
             # Eine Kaskade laeuft regelmaessig ueber mehrere Sitzungen, und
             # wer das nicht weiss, bucht zu wenig und merkt es nie.
+            # BL-291/BL-272: Rollen-Laeufe schreiben in DIESELBE Ablage. Wer
+            # die Planungssitzung erst nach dem Start der Vollautomatik misst,
+            # traf sonst den letzten Rollen-Lauf — und `--alle` zaehlte die
+            # schon ueber `--rollen-abschluss` gebuchten Laeufe ein zweites
+            # Mal. Erkannt wird die Herkunft am Transkript (ist_rollenlauf).
+            rollen = [p for p in gefunden if ist_rollenlauf(p) is True]
+            sitzungen = [p for p in gefunden if p not in rollen]
             if alle:
-                pfade = gefunden
+                pfade = sitzungen
+                if rollen:
+                    print(f"  {len(rollen)} Rollen-Lauf/Laeufe der Ablage NICHT "
+                          f"mitgezaehlt — sie sind ueber --rollen-abschluss "
+                          f"gebucht (BL-291).", file=sys.stderr)
             else:
-                pfade = gefunden[:1]
-                if len(gefunden) > 1:
-                    print(f"  ! {len(gefunden)} Transkripte zu diesem Projekt, "
-                          f"gemessen wird das ZULETZT geaenderte. Erstreckt "
+                pfade = sitzungen[:1] or gefunden[:1]
+                if len(sitzungen) > 1:
+                    print(f"  ! {len(sitzungen)} Transkripte von Sitzungen zu diesem Projekt, "
+                          f"gemessen wird die ZULETZT geaenderte. Erstreckt "
                           f"sich die Kaskade ueber mehrere Sitzungen, fehlen "
-                          f"{len(gefunden) - 1} davon — dann --alle nehmen "
+                          f"{len(sitzungen) - 1} davon — dann --alle nehmen "
                           f"oder die Transkripte einzeln benennen.",
                           file=sys.stderr)
                 # BL-251, Richtung (3): Die Auswahl NENNEN. Bis hierher stand
                 # bei genau einem Kandidaten gar nichts da — und der Mensch
                 # konnte nicht wissen, dass ueberhaupt gewaehlt wurde.
+                uebersprungen = sum(1 for p in rollen
+                                    if os.path.getmtime(p)
+                                    > os.path.getmtime(pfade[0]))
+                zusatz = (f"; {uebersprungen} juengere(r) Rollen-Lauf/Laeufe "
+                          f"uebersprungen (BL-291)") if uebersprungen else ""
                 print(f"  gewaehlt: 1 von {len(gefunden)} Transkript(en) der "
-                      f"Ablage (das zuletzt geaenderte).", file=sys.stderr)
+                      f"Ablage (die zuletzt geaenderte Sitzung{zusatz}).",
+                      file=sys.stderr)
         if not pfade:
             print(f"Nutzung: kosten.py {VERBEN['sitzung-messen']}",
                   file=sys.stderr)
@@ -2848,13 +3024,28 @@ def _main(argv):
         # Auffallen kann es nirgends — es entstehen zwei fuer sich plausible
         # Zeilen mit VERSCHIEDENER Rolle, der Kollisionsschutz von
         # `--akteur-abschluss` schlaegt nur bei derselben Rolle plus Kaskade an.
-        rollenlauf = (projekt and not alle
-                      and echte_nutzer_prompts(pfade) <= ZAEHLT_ALS_ROLLENLAUF)
+        # BL-272: Die Herkunft entscheidet, wo sie bekannt ist; die Zahl der
+        # Prompts nur noch, wo das Transkript sie nicht verraet — und dann
+        # als Frage, nicht als Verbot (unten). Die Falschrichtung ist
+        # asymmetrisch: Eine Doppelbuchung faellt beim Ledger-Pruefen auf,
+        # eine ausgelassene Buchung nirgends.
+        herkunft = ist_rollenlauf(pfade[0]) if (projekt and not alle) else False
+        unklar = (herkunft is None
+                  and echte_nutzer_prompts(pfade) <= ZAEHLT_ALS_ROLLENLAUF)
+        rollenlauf = herkunft is True
+        if unklar:
+            print("  ? Dieses Transkript hat genau EINEN Nutzer-Prompt und "
+                  "verraet nicht, woher es stammt — es KANN ein headless "
+                  "Rollen-Lauf sein. Prüfe vor dem Buchen, ob er über "
+                  "`--rollen-abschluss` schon im Ledger steht (BL-272).",
+                  file=sys.stderr)
         if rollenlauf:
-            print(f"  ! Dieses Transkript hat genau EINEN echten "
-                  f"Nutzer-Prompt — das ist die Signatur eines headless "
-                  f"gefahrenen ROLLEN-Laufs, nicht die einer interaktiven "
-                  f"Sitzung.", file=sys.stderr)
+            print("  ! Dieses Transkript ist das eines headless gefahrenen "
+                  "ROLLEN-Laufs, nicht das einer interaktiven Sitzung: Es "
+                  "beginnt mit einem Rollen-Briefing des Kits oder traegt "
+                  "`entrypoint: sdk-cli` — und die Ablage enthaelt keine "
+                  "Sitzung, auf die --projekt ausweichen koennte.",
+                  file=sys.stderr)
             print("    Rollen-Laeufe sind ueber `--rollen-abschluss` in aller "
                   "Regel BEREITS gebucht; wer diese Zahl noch einmal bucht, "
                   "schreibt denselben Lauf ein zweites Mal in den Ledger "

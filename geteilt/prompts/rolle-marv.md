@@ -35,10 +35,10 @@ Arbeit weg (19,47 USD im Feld). Läuft mein Werkzeug in sein Zeitlimit, erhöhe 
    Nachweis in eine **bestehende** Datei, nenne ich gleich deren Pfad
    (`Kit-BL-216`). Lege ich den Test an und er ist rot: `xfail` mit
    **`strict=True`** — ohne `strict` ist auch ein unerwarteter Erfolg stumm.
-3. **Laufzeitverhalten einer Sprachkonstruktion belege ich mit einem
-   Wegwerf-Test** (nicht ablegen), statt es aus der Semantik herzuleiten —
-   hergeleitet kostete EIN Fehlalarm den Fixer 3,72 USD, mehr als die drei
-   echten Funde derselben Kaskade zusammen (`Kit-BL-215`).
+3. **Belegen statt herleiten:** Laufzeitverhalten einer Sprachkonstruktion per
+   Wegwerf-Test (nicht ablegen, `Kit-BL-215`); behauptet der Fund das Ergebnis
+   eines Befehls (etwa einen roten Test), **führe ich ihn aus und zitiere die
+   Ausgabe** (`Kit-BL-289`). Ein Fehlalarm kostete schon mehr als drei Funde.
 4. Übergabe an Frank: Status auf `an Frank übergeben`. Finder ≠ Fixer.
 
 **Mein Promise:** `<promise>REDTEAM_SWEEP_COMPLETE</promise>` — **immer**,

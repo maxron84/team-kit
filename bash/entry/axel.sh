@@ -35,7 +35,9 @@ HM="$($TEAM_BEUTEBUCH_TOOL first "an Axel übergeben")" || {
 
 echo "=== Axel: Ermittlung zu $HM (Modell $TEAM_MODEL_STRONG, Budget $AXEL_BUDGET_USD USD) ==="
 OUT="$LOG_DIR/axel-${HM}-$(date +%Y%m%d-%H%M%S).json"
-AX_NR="$(find "$TEAM_ERMITTLUNGSAKTEN" -name 'AX-*.md' 2>/dev/null | wc -l | awk '{print $1+1}')"
+# BL-303: Ohne Akten-Ordner endet `find` mit 1, und unter `pipefail` + `-e`
+# starb das Skript an dieser Zuweisung — ohne ein Wort, mit Exit 1.
+AX_NR="$( { find "$TEAM_ERMITTLUNGSAKTEN" -name 'AX-*.md' 2>/dev/null || true; } | wc -l | awk '{print $1+1}')"
 START_HASH="$(git rev-parse HEAD)"
 
 # BL-52: derselbe Prüfumfang wie beim Red Team — was Harry und Marv angreifen
@@ -146,8 +148,23 @@ ERGEBNIS=0
 if [ -f "$AKTE" ] && [ "$STATUS_JETZT" = "Fix-Plan liegt vor" ]; then
     ERGEBNIS=1
 fi
-if ! team_guard_urteil axel "$GUARD_UEBERGRIFF" "$ERGEBNIS"; then
+URTEIL=0
+team_guard_urteil axel "$GUARD_UEBERGRIFF" "$ERGEBNIS" || URTEIL=1
+# BL-303: Das Urteil entscheidet nur ueber einen UEBERGRIFF — ohne einen liess
+# es jede Runde zaehlen, auch eine ohne Akte. Dann stand unten "Ermittlungsakte
+# erstellt", der Fall blieb bei Axel, und die Schleife rief ihn erneut, bezahlt.
+# Exit 0 heisst "Akte erstellt", also wird das hier auch geprueft.
+if [ "$URTEIL" -ne 0 ] || [ "$ERGEBNIS" -eq 0 ]; then
+    [ "$URTEIL" -eq 0 ] && echo "[axel] KEINE Ermittlung geliefert — Akte oder Statuswechsel fehlt (BL-303)." >&2
     echo "[axel] Akte vorhanden: $([ -f "$AKTE" ] && echo ja || echo nein) · Status $HM: ${STATUS_JETZT:-unbekannt}" >&2
+    # BL-292, sinngemaess: Hat die CLI das Schreiben IM erlaubten Bereich
+    # abgelehnt, steht die Ermittlung womoeglich vollstaendig im result des Logs.
+    VERWEIGERT="$($TEAM_KOSTEN_TOOL verweigert "$OUT" --ordner "$TEAM_PLAN_ORDNER" 2>/dev/null || true)"
+    if [ -n "$VERWEIGERT" ]; then
+        echo "[axel] Die CLI hat Schreibversuche IM erlaubten Bereich abgelehnt (BL-292):" >&2
+        printf '%s\n' "$VERWEIGERT" | sed 's/^/  /' >&2
+        echo "  Die Akte steht womöglich NUR im result des Logs: $OUT" >&2
+    fi
     exit 1
 fi
 

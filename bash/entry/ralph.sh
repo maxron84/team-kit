@@ -102,6 +102,23 @@ while true; do
         exit 0
     fi
 
+    # BL-301: Steht die Stufe gar nicht im Plan, ist das VOR dem ersten Token
+    # klar — kein Aufruf, keine Kosten, und vor allem kein Rat, eine nie
+    # gebaute Stufe zu quittieren. Ein Plan ohne `## Stufe N`-Bloecke wird
+    # nicht beurteilt (team_plan_stufen liefert dann nichts).
+    PLAN_STUFEN="$(team_plan_stufen "$PLAN_DATEI")"
+    if [ -n "$PLAN_STUFEN" ] && ! printf '%s\n' "$PLAN_STUFEN" | grep -qx "$STUFE"; then
+        echo "Ralph: Stufe $STUFE steht nicht in $PLAN_DATEI — der Plan definiert die Stufen $(printf '%s\n' "$PLAN_STUFEN" | head -n1)–$(printf '%s\n' "$PLAN_STUFEN" | tail -n1) (BL-301)." >&2
+        echo "  Kein Aufruf, keine Kosten. Meist zeigt $STATE_FILE nach einem Closeout oder Planwechsel auf eine alte Nummer — oder $PLAN_ZEIGER auf den falschen Plan." >&2
+        echo "  NICHT einfach eins weiterzählen: $STATE_FILE auf die erste noch nicht gebaute Stufe DIESES Plans setzen." >&2
+        exit 1
+    fi
+
+    # BL-283: In der ersten Kaskade traegt Stufe 1 den Smoke-Test in
+    # team.config.sh ein — die Bibliothek ist aber nur einmal geladen. Ohne
+    # das Auffrischen bauten die Stufen 2…N ohne Sicherheitsnetz.
+    team_smoke_auffrischen
+
     echo "=== Ralph: Stufe $STUFE (Plan: $PLAN_DATEI, Budget: $RALPH_BUDGET_USD USD) ==="
     OUT="$LOG_DIR/stufe-$STUFE-$(date +%Y%m%d-%H%M%S).json"
 
@@ -232,6 +249,7 @@ Regeln:
         # anzuhalten. Der gesprengte Cap schließt das aus — dort gilt
         # unverändert "Stopp VOR dem Weiterschalten", die Automatik darf eine
         # Budget-Entscheidung des Menschen nicht überschreiben.
+        TEAM_SELBSTPRUEFUNG_LEER=0
         if [ "$CAP_GESPRENGT" -eq 0 ] \
             && team_result_meldet_erfolg "$TEAM_LAST_OUT" \
             && team_quittung_selbstpruefung ralph "$STUFE"; then
@@ -253,6 +271,18 @@ Loop kennt den Inhalt der Stufe nicht - der Plan tut es."
             echo "$NEXT" > "$STATE_FILE"
             echo "Ralph: Quittung fehlte (BL-41), Selbstprüfung bestanden — Stufe $STUFE abgeschlossen, weiter mit $NEXT."
             continue
+        fi
+        # BL-301 (Befund 2): Hat die Sitzung NICHTS hinterlassen, ist das nicht
+        # der vierte Ausgang, und sein Handlungsplan waere falsch — der einzige
+        # konkrete Befehl darin quittiert eine nie gebaute Stufe. Stattdessen:
+        # das, was die Rolle selbst als Grund nennt.
+        if [ "${TEAM_SELBSTPRUEFUNG_LEER:-0}" -eq 1 ]; then
+            echo "Ralph: Stufe $STUFE hat NICHTS hinterlassen — kein Commit, keine Änderung, kein Promise (BL-301)." >&2
+            echo "  Das ist NICHT der vierte Ausgang: Die Stufe ist nicht gebaut. NICHT von Hand quittieren." >&2
+            echo "  Warum, sagt die Rolle meist selbst — Anfang des result-Feldes ($TEAM_LAST_OUT):" >&2
+            team_result_auszug "$TEAM_LAST_OUT" | fold -s -w 76 | sed 's/^/    /' >&2
+            echo >&2
+            exit 1
         fi
         if team_quittung_fehlt_melden ralph "$TEAM_LAST_OUT" \
             "Stufe $STUFE hat kein <promise>STUFE_${STUFE}_COMPLETE</promise> gegeben." \

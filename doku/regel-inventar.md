@@ -77,6 +77,7 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | NORM | Regeldatei | **Reproducer-Tests nach der Fund-Nummer benennen** |
 | Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | NORM | Regeldatei | `xfail` mit **`strict=True`** |
 | Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | HERLEITUNG | Regeldatei | Ohne `strict` sind **beide** Ausgänge stumm |
+| Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | NORM | Regeldatei | **führt er ihn aus und zitiert die Ausgabe** |
 | Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | NORM | rolle-harry | mit **`strict=True`** |
 | Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | NORM | rolle-marv | mit **`strict=True`** |
 | Franks Dreisatz — Out-of-Loop-Fixes  ✅ erprobt | NORM | rolle-frank | **Reproducer scharfstellen.** |

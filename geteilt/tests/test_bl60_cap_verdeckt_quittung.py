@@ -112,6 +112,10 @@ def _lauf(repo, kosten, mit_promise):
     stub.write_text("#!/usr/bin/env bash\ncat <<'JSON'\n" + ergebnis + "\nJSON\n",
                     encoding="utf-8")
     stub.chmod(0o755)
+    # Die Sitzung hat GEBAUT, die Datei liegt uncommittet da — so war es im
+    # Feld. Eine Sitzung OHNE jede Arbeit ist seit BL-301 ein eigener Ausgang
+    # (Exit 1), nicht der vierte, dessen Anleitung diese Datei prueft.
+    (repo / "src" / "modul.py").write_text("x = 1\n", encoding="utf-8")
     env = dict(os.environ)
     env.update({"PATH": pfad_voran(bin_dir, env), "AUTH_MODE": "api",
                 "ANTHROPIC_API_KEY": "sk-ant-dummy", "TEAM_LOCK_HELD": "1"})

@@ -76,12 +76,22 @@ nichts, was ich nachlesen kann.
    mindestens den Ansatz der ersten (im Feld: 3,0 angesetzt, 5,90 real). Der
    Kostentreiber ist die **Zahl gleichzeitig zu erfüllender Kopplungen**, nicht
    die Schwierigkeit des Gedankens — ab etwa drei gekoppelten Ansprüchen teile
-   ich die Stufe. Und im Closeout lese ich das **Turn-Profil**: viele kurze
-   Turns heißen Nacharbeit (mein Planfehler), wenige lange Urteilsarbeit
-   (richtig geschnitten).
+   ich die Stufe. **Gezählt werden die Bestandsdateien, die die Stufe ändern
+   muss**, nicht meine Aufzählungspunkte — die lassen sich durch Umformatieren
+   auf drei halten (`Kit-BL-294`: drei Punkte, aber acht Bestandsdateien und
+   7,70 USD gegen 1,88 im Median). Mehr als fünf → teilen. Und im Closeout
+   lese ich das **Turn-Profil**: viele kurze Turns heißen Nacharbeit (mein
+   Planfehler), wenige lange Urteilsarbeit (richtig geschnitten).
 3. **Scharfschalt-Sequenz ausgeben** — am Ende jeder Aushärtung **immer
    automatisch**, aus dem Plankopf abgeleitet, kopierfertig:
-   Zeiger umlegen → Konsistenz-Check → Budget → Red-Team-Fokus → Start.
+   Kostenabschluss dieser Sitzung → Zeiger umlegen → Konsistenz-Check →
+   Budget → Red-Team-Fokus → Start.
+   **In der Bahn, in der der Mensch arbeitet** (`Kit-BL-284`): bash
+   (`./x.sh`, `VAR='…' ./vollautomatik.sh`) oder pwsh (`.\x.cmd`,
+   `$env:VAR = '…'; .\vollautomatik.cmd; Remove-Item Env:VAR`) — in pwsh
+   bleibt eine `$env:`-Variable sonst in der Sitzung stehen, und der nächste
+   Lauf fährt still mit dem Fokus und dem Deckel der vorigen Kaskade. Python
+   heißt `{{PYTHON}}`, nicht `python3`. Weiß ich die Bahn nicht, frage ich.
    **Den Fokus setze ich bei jeder Kaskade**, auch bei reinem Produktivcode —
    ein alter Fokus lenkt sonst den nächsten Sweep, und ein fehlender lässt ihn
    ohne Schwerpunkt laufen.
@@ -96,8 +106,12 @@ nichts, was ich nachlesen kann.
    Beutebuch — **nie** nur in die Nachricht. Was danebensteht, wird nicht
    geprüft; es entsteht nur der Eindruck, es sei geprüft, weil ich es
    ausgesprochen habe.
-   **Letzter Schritt der Sequenz, kopierfertig: der Kostenabschluss DIESER
-   Sitzung** (`Kit-BL-197`). Er hängt damit an einem **Ereignis** statt an
+   **Erster Schritt der Sequenz, kopierfertig: der Kostenabschluss DIESER
+   Sitzung** (`Kit-BL-197`) — **vor** dem Start, nicht danach (`Kit-BL-291`):
+   Läuft die Vollautomatik erst, schreibt jeder Rollen-Lauf sein Transkript
+   in dieselbe Ablage. `sitzung-messen --projekt` überspringt Rollen-Läufe
+   inzwischen, aber die Reihenfolge macht es unabhängig davon richtig. Der
+   Abschluss hängt damit an einem **Ereignis** statt an
    einer Erinnerung — und das ist der ganze Unterschied. Die Regel dafür gibt
    es seit `Kit-BL-165` (*„Eine Sitzung ohne Closeout bucht ihre Kosten
    selbst"*), und sie hat im Feld an **einem Tag zweimal** nicht gegriffen,
@@ -109,8 +123,8 @@ nichts, was ich nachlesen kann.
    Zwei Befehle, weil der Betrag erst **gemessen** werden muss; die
    Kaskadennummer fülle ich aus dem Plankopf vor:
    ```
-   python3 team/tools/kosten.py sitzung-messen --projekt .
-   ./team-status.sh --architekt-abschluss <USD> <domaene> "Kaskade N+1 geplant" --kaskade <N+1>
+   {{PYTHON}} team/tools/kosten.py sitzung-messen --projekt .
+   {{RUF}}team-status{{ENDUNG}} --architekt-abschluss <USD> <domaene> "Kaskade N+1 geplant" --kaskade <N+1>
    ```
    **Das ersetzt die Regel aus `Kit-BL-165` nicht.** Die Regel sagt das
    **Warum**, die Sequenz liefert das **Wann**; gelesen wird im entscheidenden
@@ -180,8 +194,12 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    Log-Ordner. Lief nach dem Closeout noch eine Rolle, **bricht** ein zweiter
    Aufruf ab, statt die Erstbuchung zu überschreiben — den Nachlauf hänge ich
    mit `--addieren` an, `--ersetzen` ist nur für eine falsche Altzeile.
-   Meine Notiz steht in **beiden** Zeilen, je mit eigenem Vorspann
-   (`Rollen: …` / `Bau: …`) — sie ist die einzige Prosa-Spur je Ledger-Zeile.
+   **Zwei Notizen, nicht eine** (`Kit-BL-34`, `Kit-BL-293`): Die dritte
+   Angabe beschriftet die Rollen-Zeile, die optionale vierte die Bau-Zeile.
+   Fehlt die vierte, leitet das Werkzeug sie aus dem Plannamen ab
+   (`Bau: K3 chat`) — dann trägt die Zeile mit dem Großteil der Laufkosten
+   drei Wörter Prosa. Ich gebe deshalb **beide** an; sie sind die einzige
+   Prosa-Spur je Ledger-Zeile.
    **Die Architekt-Zeile in `--budget` nehme ich beim Wort, nicht aus dem
    Gedächtnis:** Sie gilt für **eine** Kaskade (`Architekt K3 …`) in einem
    sonst lebenslang kumulierenden Block, und sie sagt selbst, ob sie im

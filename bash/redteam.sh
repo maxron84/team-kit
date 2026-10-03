@@ -165,6 +165,10 @@ gelesen, ist von keinem Fundblock referenziert und fällt trotzdem unter die
 Zusicherungen des Projekts.
 
 Findest du NICHTS, ändere keine Datei.
+Lehnt die CLI ein Edit oder Write im Beutebuch oder im Test-Ordner ab, weiche
+NICHT auf Bash aus: Schreibe jeden Fundblock vollständig, samt
+Reproducer-Zeile, in deine Abschlussantwort — dort holt ihn der Mensch ab
+(BL-292).
 Beende IMMER mit exakt: <promise>REDTEAM_SWEEP_COMPLETE</promise> — AUCH WENN
 du einen Fund ins Beutebuch geschrieben hast; das Promise ist die
 Sweep-Quittung, nicht der Fund-Beleg."
@@ -278,6 +282,12 @@ fi
 # ausgewertet. Bei einer read-only-Rolle gibt es weder State-Wechsel noch
 # Produktivdiff, an dem der Unterschied sonst auffiele.
 NEXT_ID_NACHHER="$($TEAM_BEUTEBUCH_TOOL next-id)"
+# BL-292: Abgelehnte Schreibversuche IM erlaubten Bereich heissen: Die Rolle
+# DURFTE schreiben und KONNTE nicht. Im Feld standen danach vier Funde nur im
+# `result`, und der Sweep meldete "Geprueft, keine neuen Funde". Ein solcher
+# Sweep ist nicht sauber: Der Zeiger bleibt stehen (der Bereich gilt als
+# ungeprueft), was geschrieben wurde, wird committet, und der Lauf endet laut.
+VERWEIGERT="$($TEAM_KOSTEN_TOOL verweigert "$OUT" --ordner "$TEAM_PLAN_ORDNER" "$TEAM_TEST_ORDNER" 2>/dev/null || true)"
 NEUE_FUNDE=$(( ${NEXT_ID_NACHHER#HM-} - ${NEXT_ID#HM-} ))
 [ "$NEUE_FUNDE" -lt 0 ] && NEUE_FUNDE=0
 if [ "$NEUE_FUNDE" -eq 1 ]; then
@@ -289,7 +299,7 @@ else
 fi
 
 # Whitelist-Änderungen deterministisch committen (der Angreifer selbst darf nicht).
-echo "$HEAD_HASH" > "$STATE_FILE"
+[ -z "$VERWEIGERT" ] && echo "$HEAD_HASH" > "$STATE_FILE"
 # BL-206 (Feld B): NAMENTLICH stagen statt den Ordner blanko. `git add
 # <testordner>` nimmt jede untracked Datei darin mit — auch eine fremde, die
 # schon vor dem Rollenstart dalag. Sie landete dann unter der Sweep-Botschaft,
@@ -327,5 +337,12 @@ fi
 # merkt es spätestens beim nächsten Aufruf: Der Kontostand deckelt ihn.
 if [ "$BUDGET_UEBERSCHRITTEN" -eq 1 ]; then
     echo "[$ROLLE] ERINNERUNG: Dieser Sweep lag über dem Cap ($TEAM_LAST_COST USD ≥ $ROLLE_BUDGET_USD USD). Fortschritt ist gebucht, der nächste Aufruf ist gedeckelt." >&2
+fi
+if [ -n "$VERWEIGERT" ]; then
+    echo "[$ROLLE] SWEEP NICHT SAUBER — die CLI hat Schreibversuche IM erlaubten Bereich abgelehnt (BL-292):" >&2
+    printf '%s\n' "$VERWEIGERT" | sed 's/^/  /' >&2
+    echo "  Funde stehen womöglich NUR im result des Logs: $OUT" >&2
+    echo "  Dort lesen und ins Beutebuch übertragen. $STATE_FILE bleibt stehen — der Bereich gilt als ungeprüft." >&2
+    exit 1
 fi
 exit 0

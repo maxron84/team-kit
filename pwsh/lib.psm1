@@ -317,6 +317,15 @@ $TEAM_SMOKE_TEST_TIMEOUT = Team-Default 'TEAM_SMOKE_TEST_TIMEOUT' '600'
 $TEAM_GATE_DATEI = Team-Default 'TEAM_GATE_DATEI' '.team-gate-rot'
 
 # --- Abgeleitete Prompt-Bausteine ---------------------------------------------
+# BL-283: Eine FUNKTION statt eines Blocks beim Laden. Die erste Kaskade eines
+# Projekts baut den Smoke-Test in Stufe 1 und traegt ihn in team.config.ps1
+# ein — Ralph importiert das Modul aber EINMAL und faehrt dann alle Stufen.
+# Die Stufen 2..N bauten deshalb mit "Kein Smoke-Test konfiguriert".
+# team_smoke_auffrischen (unten) liest den Wert je Stufe nach. Die Bausteine
+# entstehen als lokale Variablen und werden am Ende in den Modulbereich
+# geschrieben — exportierte Modulvariablen sind mit dem Aufrufer verknuepft,
+# er sieht den neuen Wert ohne neuen Import.
+function team_smoke_bausteine {
 if ($TEAM_SMOKE_TEST) {
     # Der Nachsatz ist eine Notbremse gegen einen teuren Fehlermodus, nicht
     # Ausschmueckung (BL-41, Feld A K27/K28): Eine bauende Rolle
@@ -357,16 +366,68 @@ Smoke-Test ausführen: $TEAM_SMOKE_TEST — muss grün sein.
     $SMOKE_ZEILE = "(Kein Smoke-Test konfiguriert — Schritt entfällt. Das Team arbeitet ohne Sicherheitsnetz; TEAM_SMOKE_TEST in team.config.ps1 nachtragen.)"
     $SMOKE_SUFFIX = ""
 }
+$script:SMOKE_ZEILE = $SMOKE_ZEILE
+$script:SMOKE_SUFFIX = $SMOKE_SUFFIX
+}
+team_smoke_bausteine
+
+function team_smoke_auffrischen {
+    # Ist (noch) kein Smoke-Test bekannt, liest es TEAM_SMOKE_TEST frisch aus
+    # team.config.ps1 — in einem eigenen Gueltigkeitsbereich, damit kein
+    # anderer Wert dieses Laufs angefasst wird — und baut die Zeilen neu,
+    # sobald einer eingetragen ist (BL-283). Ein schon bekannter Wert bleibt:
+    # Ein Lauf wechselt ein laufendes Sicherheitsnetz nicht still aus.
+    if ($script:TEAM_SMOKE_TEST) { return }
+    $konf = Join-Path (Split-Path -Parent $PSScriptRoot) 'team.config.ps1'
+    if (-not (Test-Path -LiteralPath $konf)) { return }
+    $neu = & {
+        $TEAM_SMOKE_TEST = ''
+        try { . $konf *> $null } catch { }
+        $TEAM_SMOKE_TEST
+    }
+    if (-not $neu) { return }
+    $script:TEAM_SMOKE_TEST = $neu
+    team_smoke_bausteine
+    [Console]::Error.WriteLine("[team-lib] Smoke-Test seit dieser Stufe konfiguriert: $neu — die folgenden Stufen bauen mit ihm (BL-283).")
+}
 
 function team_allowed_tools {
     # Werkzeug-Allowlist fuer Guard-Linie 2. Axel bekommt NUR den Plan-Ordner,
     # das Red Team zusaetzlich den Test-Ordner.
+    #
+    # BL-292: Jede Schreibregel steht zusaetzlich ABSOLUT da. Die CLI loest
+    # eine relative Regel gegen das AKTUELLE Arbeitsverzeichnis der Shell auf —
+    # nach einem erlaubten `cd <Unterordner>` lehnte sie im Feld jeden
+    # Schreibversuch nach plans/ und tests/ ab, und vier Funde standen nur
+    # noch im `result`. Absolut heisst `//c/Users/.../plans/**`: kleiner
+    # Laufwerksbuchstabe, Schraegstriche — die Form, die im Feld trug, und
+    # dieselbe, die die bash-Bahn unter Git Bash aus `pwd` bekommt. Ein
+    # Leerzeichen im Projektpfad zerlegte die leerzeichengetrennte Liste —
+    # dann bleibt es bei der relativen Form, mit einer Meldung statt still.
     param([string]$Rolle)
     $basis = "Read Grep Glob Bash(${TEAM_BEUTEBUCH_TOOL}:*) Bash(git log:*) Bash(git diff:*) Bash(git show:*)"
     if ($TEAM_SMOKE_TEST) { $basis = "$basis Bash($TEAM_SMOKE_TEST)" }
-    $plan = "Edit($($TEAM_PLAN_ORDNER.TrimEnd('/'))/**) Write($($TEAM_PLAN_ORDNER.TrimEnd('/'))/**)"
+    $wurzel = (Get-Location).ProviderPath -replace '\\', '/'
+    if ($wurzel -match '^([A-Za-z]):/(.*)$') {
+        $wurzel = "$($Matches[1].ToLowerInvariant())/$($Matches[2])"
+    } else {
+        $wurzel = $wurzel.TrimStart('/')
+    }
+    $wurzel = $wurzel.TrimEnd('/')
+    if ($wurzel.Contains(' ')) {
+        [Console]::Error.WriteLine("[team-lib] WARNUNG: Der Projektpfad enthält ein Leerzeichen — die Schreibregeln gelten nur relativ. Wechselt eine Rolle mit cd in einen Unterordner, lehnt die CLI ihre Schreibversuche ab (BL-292).")
+        $wurzel = ''
+    }
+    $regeln = {
+        param([string]$Ordner)
+        $o = $Ordner.TrimEnd('/')
+        $r = "Edit($o/**) Write($o/**)"
+        if ($wurzel) { $r = "$r Edit(//$wurzel/$o/**) Write(//$wurzel/$o/**)" }
+        return $r
+    }
+    $plan = & $regeln $TEAM_PLAN_ORDNER
     if ($Rolle -eq 'axel') { return "$basis $plan" }
-    return "$basis $plan Edit($($TEAM_TEST_ORDNER.TrimEnd('/'))/**) Write($($TEAM_TEST_ORDNER.TrimEnd('/'))/**)"
+    return "$basis $plan $(& $regeln $TEAM_TEST_ORDNER)"
 }
 
 # --- Modelle ------------------------------------------------------------------
@@ -379,6 +440,14 @@ $TEAM_MODEL_STRONG = Team-Default 'TEAM_MODEL_STRONG' 'opus'
 # BL-286: bis hierher 5/10 — angehoben auf Entscheid des Owners.
 $TEAM_ROLE_BUDGET_USD = Team-Default 'TEAM_ROLE_BUDGET_USD' '20'
 $TEAM_ROLE_HARDCAP_USD = Team-Default 'TEAM_ROLE_HARDCAP_USD' '40'
+# BL-297: team_budget_check prueft den Hard-Cap nur, wenn er UEBER dem
+# Soft-Cap liegt. Hebt ein Projekt nur den Soft-Cap (der dokumentierte Weg),
+# greift Franks und Axels harter Abbruch nie mehr — und nichts sagte es.
+try {
+    if ([double]$TEAM_ROLE_HARDCAP_USD -le [double]$TEAM_ROLE_BUDGET_USD) {
+        [Console]::Error.WriteLine("[team-lib] WARNUNG: TEAM_ROLE_HARDCAP_USD ($TEAM_ROLE_HARDCAP_USD) liegt nicht über TEAM_ROLE_BUDGET_USD ($TEAM_ROLE_BUDGET_USD) — Frank und Axel haben damit KEINEN harten Abbruch mehr (BL-297). Wer den Soft-Cap hebt, hebt den Hard-Cap mit.")
+    }
+} catch { }
 
 # --- Auth ---------------------------------------------------------------------
 function Team-CfgDir {
@@ -627,6 +696,40 @@ function team_plan_erlaubt_uebersprung {
     if (-not $Plan -or -not (Test-Path $Plan)) { return $false }
     $text = Get-Content -Raw -Encoding utf8 $Plan
     return $text.Contains("STUFE_${Stufe}_UEBERSPRUNGEN")
+}
+
+function team_result_auszug {
+    # Der Anfang des `result`-Feldes, in einer Zeile. BL-301: Dort sagt eine
+    # Rolle, die nichts gebaut hat, meist selbst warum — im Feld stand die
+    # richtige Antwort nur im Log, und die Konsole zeigte daneben einen
+    # falschen Rat.
+    param([string]$Log)
+    try { $r = (Get-Content -Raw -Encoding utf8 $Log | ConvertFrom-Json).result } catch { return '' }
+    if (-not $r) { return '' }
+    $r = (($r -split '\s+') | Where-Object { $_ }) -join ' '
+    if ($r.Length -gt 700) { return $r.Substring(0, 700) + ' …' }
+    return $r
+}
+
+function team_plan_stufen {
+    # Die Nummern, fuer die der Plan einen Block `## Stufe N` hat —
+    # aufsteigend; leer, wenn er keinen hat.
+    #
+    # BL-301: Eine Stufennummer ohne Block ist keine baubare Aufgabe, und das
+    # steht VOR dem ersten Token fest. Im Feld zeigte .ralph-state nach einem
+    # Closeout versehentlich auf 17, der Plan kannte nur 28-33; Ralph startete
+    # trotzdem einen bezahlten Aufruf, und die Selbstpruefung empfahl danach
+    # `echo 18 > .ralph-state`. Ebene 2-4 und ein Titel hinter der Nummer sind
+    # erlaubt; ein Plan ganz ohne solche Bloecke liefert LEER, und dann prueft
+    # der Aufrufer nicht (ein fremdes Format ist kein Befund).
+    param([string]$Plan)
+    if (-not $Plan) { $Plan = team_plan_datei }
+    if (-not $Plan -or -not (Test-Path $Plan)) { return @() }
+    $text = Get-Content -Raw -Encoding utf8 $Plan
+    $nummern = foreach ($m in [regex]::Matches($text, '(?m)^#{2,4}[ \t]*Stufe[ \t]+(\d+)(?!\d)')) {
+        [int]$m.Groups[1].Value
+    }
+    return @($nummern | Sort-Object -Unique)
 }
 
 
@@ -1254,10 +1357,23 @@ function team_briefing {
     # Fallback (Pflicht): fehlt die Datei oder ist sie leer, kommt exakt die
     # alte Zeile zurueck — kein Abbruch, keine Fehlermeldung, damit ein Fehler
     # hier nie einen Lauf lahmlegt.
+    #
+    # BL-283: Ralphs Briefing traegt den Satz zur Smoke-Test-Grenze, wie ihn
+    # der Installer gerendert hat — in einem frischen Projekt also "noch KEIN
+    # Smoke-Test ... entfaellt". Baut Stufe 1 ihn, widerspraeche das Briefing
+    # bis zum naechsten -Update der Konfiguration im SELBEN Prompt. Deshalb
+    # wird der Satz hier zur Laufzeit ersetzt, sobald einer bekannt ist.
     param([string]$Rolle)
     $datei = "team/prompts/rolle-$Rolle.md"
     if ((Test-Path $datei -PathType Leaf) -and (Get-Item $datei).Length -gt 0) {
-        Write-Output ([System.IO.File]::ReadAllText((Team-Pfad $datei)))
+        $text = [System.IO.File]::ReadAllText((Team-Pfad $datei))
+        if ($Rolle -eq 'ralph' -and $TEAM_SMOKE_TEST) {
+            $neu = "Der Smoke-Test (``$TEAM_SMOKE_TEST``) muss gruen sein, bevor die Stufe fertig ist."
+            $text = [regex]::Replace($text,
+                'Fuer dieses Projekt ist noch KEIN Smoke-Test konfiguriert\.[^\r\n]*',
+                [System.Text.RegularExpressions.MatchEvaluator] { param($m) $neu })
+        }
+        Write-Output $text
     } else {
         Write-Output "Rolle siehe CLAUDE.md — lies sie zuerst."
     }
@@ -1885,6 +2001,11 @@ function team_smoke_parallel_lauf {
     return $true
 }
 
+# BL-301: Beim Laden ANLEGEN, nicht erst in der Funktion. Export-ModuleMember
+# exportiert nur, was beim Laden existiert — eine erst spaeter angelegte
+# Variable sah ralph.ps1 nie, und die Weiche dort blieb blind.
+$TEAM_SELBSTPRUEFUNG_LEER = 0
+
 function team_quittung_selbstpruefung {
     <#
       BL-110: Die Erkennung oben ist richtig, aber sie haelt den Lauf an und
@@ -1901,6 +2022,11 @@ function team_quittung_selbstpruefung {
       Zweifel gilt "nicht bestanden".
     #>
     param([string]$Rolle, [string]$Stufe)
+    # BL-301 (Befund 2): Der Aufrufer muss wissen, ob die Pruefung an "nichts
+    # hinterlassen" scheiterte — sonst druckt er den Plan des vierten
+    # Ausgangs samt "N+1 eintragen", also den Rat, eine nie gebaute Stufe zu
+    # quittieren.
+    $script:TEAM_SELBSTPRUEFUNG_LEER = 0
     if ($env:TEAM_QUITTUNG_AUTO -eq '0') { return $false }
     $testOrdner = if ($TEAM_TEST_ORDNER) { $TEAM_TEST_ORDNER } else { 'tests/' }
 
@@ -1909,13 +2035,20 @@ function team_quittung_selbstpruefung {
     # (1) Hat die Sitzung ueberhaupt etwas hinterlassen? Ohne Arbeit gibt es
     #     nichts zu quittieren — dann ist es kein "fertig ohne Quittung",
     #     sondern eine Stufe, die nie angefangen hat.
-    $uncommittet = @(& git status --porcelain 2>$null | Where-Object { $_ })
+    # BL-269: Laufzeitartefakte (das eigene Log dieser Stufe, .ralph-logs/)
+    # sind keine Arbeit — ohne Filter galt eine Sitzung, die nichts gebaut
+    # hatte, in jedem Projekt ohne die gitignore-Zeile als "Arbeit vorhanden".
+    $uncommittet = @(& git status --porcelain 2>$null | Where-Object { $_ } |
+                     ForEach-Object { $_.Substring(3) } |
+                     Where-Object { $_ -notmatch $TEAM_GUARD_LAUFZEIT -and
+                                    $_ -notmatch $TEAM_GUARD_IGNORIERT })
     $betreff = & git log -1 --pretty=%s 2>$null
     $hatArbeit = $uncommittet.Count -gt 0 -or
                  ($betreff -and ($betreff -like "*stufe$Stufe*" -or $betreff -like "*Stufe $Stufe*"))
     if (-not $hatArbeit) {
         Team-Fehler "    ✗ Kein Commit für Stufe $Stufe und keine uncommitteten Änderungen."
         Team-Fehler "      Die Sitzung hat nichts hinterlassen — das ist NICHT der vierte Ausgang."
+        $script:TEAM_SELBSTPRUEFUNG_LEER = 1
         return $false
     }
     Team-Fehler "    ✓ Arbeit vorhanden (uncommittet und/oder Commit der Stufe)."
@@ -1925,7 +2058,9 @@ function team_quittung_selbstpruefung {
     #     baut und keine einzige Testdatei beruehrt, ist nicht fertig — egal wie
     #     gruen der Baum ist, denn der Bestand deckt das Neue nicht ab.
     if ($uncommittet.Count) {
-        $dateien = @($uncommittet | ForEach-Object { $_.Substring(3) })
+        # Schon ohne Statusspalte (siehe oben) — ein zweites Abschneiden
+        # machte aus `tests/` ein `ts/`, und jede Stufe galt als ungesichert.
+        $dateien = $uncommittet
     } else {
         $dateien = @(& git show --name-only --pretty=format: HEAD 2>$null | Where-Object { $_ })
     }
@@ -2199,6 +2334,8 @@ Export-ModuleMember -Function * -Variable @(
     # test_bl275_modulvariablen_sind_exportiert.py: Jede $TEAM_*-Variable, die
     # ein Entrypoint liest, muss in dieser Liste stehen.
     'TEAM_GATE_DATEI',
+    # BL-301: den Befund der Selbstpruefung liest ralph.ps1 ausserhalb.
+    'TEAM_SELBSTPRUEFUNG_LEER',
     'TEAM_DOMAENEN', 'TEAM_LEDGER',
     'TEAM_REDTEAM_AUFTRAG_HARRY', 'TEAM_REDTEAM_AUFTRAG_MARV',
     'TEAM_WHITELIST_REDTEAM', 'TEAM_WHITELIST_AXEL'

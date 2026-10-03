@@ -296,9 +296,14 @@ def _briefing():
 
 
 def _sequenz_absatz():
-    """Der EINE Absatz der Scharfschalt-Sequenz, der den Abschluss traegt."""
+    """Der EINE Absatz der Scharfschalt-Sequenz, der den Abschluss traegt.
+
+    BL-291: Der Anker nennt keine Position mehr. Der Abschluss stand bis zum
+    2026-10-03 als LETZTER Schritt da — hinter dem Start, und dann traf die
+    Messung den letzten Rollen-Lauf statt der Planung. Er steht jetzt vorn;
+    `test_der_abschluss_kommt_vor_dem_start` haelt das fest."""
     t = _briefing()
-    marke = "Letzter Schritt der Sequenz"
+    marke = "Schritt der Sequenz, kopierfertig: der Kostenabschluss"
     assert marke in t, (
         "BL-197 (2): Die Scharfschalt-Sequenz traegt den Kostenabschluss "
         "nicht mehr. Damit haengt er wieder an einer Erinnerung statt an "
@@ -325,6 +330,20 @@ def test_die_scharfschalt_sequenz_traegt_den_kostenabschluss():
     assert "--kaskade" in absatz, (
         "BL-197 (2): Ohne --kaskade landet die Buchung auf der falschen "
         "Kaskade oder gar keiner.")
+
+
+def test_der_abschluss_kommt_vor_dem_start():
+    """BL-291 (`Feld F`): Wer die Sequenz von oben nach unten ausfuehrt,
+    startet die Vollautomatik vor der Buchung — dann schreiben die
+    Rollen-Laeufe in dieselbe Ablage, und `--projekt` nahm das zuletzt
+    geaenderte Transkript. Der Kostenabschluss gehoert an den ANFANG."""
+    t = _briefing()
+    reihenfolge = t[t.index("**Scharfschalt-Sequenz ausgeben**"):]
+    reihenfolge = reihenfolge[:reihenfolge.index("\n   **")]
+    assert reihenfolge.index("Kostenabschluss") < reihenfolge.index("Start"), (
+        f"Der Kostenabschluss steht nicht vor dem Start (BL-291):\n"
+        f"{reihenfolge}")
+    assert "Erster Schritt der Sequenz" in t
 
 
 def test_der_absatz_nennt_die_gemessene_groessenordnung():

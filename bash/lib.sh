@@ -94,6 +94,14 @@ TEAM_GATE_DATEI="${TEAM_GATE_DATEI:-.team-gate-rot}"
 # Smoke-Test-Zeile für die bauenden Rollen. Ist kein Befehl konfiguriert, wird
 # der Schritt AUSDRÜCKLICH als offener Punkt benannt, statt still zu
 # verschwinden — sonst merkt niemand, dass das Sicherheitsnetz fehlt.
+#
+# BL-283: Eine FUNKTION statt eines Blocks beim Laden. Die erste Kaskade eines
+# Projekts baut den Smoke-Test in Stufe 1 und traegt ihn in team.config.sh
+# ein — Ralph laedt die Bibliothek aber EINMAL und faehrt dann alle Stufen.
+# Die Stufen 2…N bauten deshalb mit "Kein Smoke-Test konfiguriert", und die
+# BL-41-Selbstpruefung hielt an statt zu quittieren. team_smoke_auffrischen
+# (unten) liest den Wert je Stufe nach und baut die Zeilen dann neu.
+team_smoke_bausteine() {
 if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
     # Der Nachsatz ist eine Notbremse gegen einen teuren Fehlermodus, nicht
     # Ausschmückung (BL-41, Feld A K27/K28): Eine bauende Rolle
@@ -133,6 +141,27 @@ else
     SMOKE_ZEILE="(Kein Smoke-Test konfiguriert — Schritt entfällt. Das Team arbeitet ohne Sicherheitsnetz; TEAM_SMOKE_TEST in team.config.sh nachtragen.)"
     SMOKE_SUFFIX=""
 fi
+}
+team_smoke_bausteine
+
+# team_smoke_auffrischen: Ist (noch) kein Smoke-Test bekannt, liest es
+# TEAM_SMOKE_TEST frisch aus team.config.sh — in einer Subshell, damit kein
+# anderer Wert dieses Laufs angefasst wird — und baut die Zeilen neu, sobald
+# einer eingetragen ist (BL-283). Ein schon bekannter Wert bleibt: Ihn hat die
+# Umgebung oder die Konfiguration beim Start gesetzt, und ein Lauf wechselt
+# ein laufendes Sicherheitsnetz nicht still aus.
+team_smoke_auffrischen() {
+    [ -n "${TEAM_SMOKE_TEST:-}" ] && return 0
+    local konf neu
+    konf="$(dirname "${BASH_SOURCE[0]}")/../team.config.sh"
+    [ -f "$konf" ] || return 0
+    neu="$( unset TEAM_SMOKE_TEST; source "$konf" >/dev/null 2>&1; printf '%s' "${TEAM_SMOKE_TEST:-}" )"
+    [ -n "$neu" ] || return 0
+    TEAM_SMOKE_TEST="$neu"
+    team_smoke_bausteine
+    echo "[team-lib] Smoke-Test seit dieser Stufe konfiguriert: $neu — die folgenden Stufen bauen mit ihm (BL-283)." >&2
+    return 0
+}
 
 # --- Bedienung: Hilfe und Zurueckweisung (BL-223) -----------------------------
 # Warum das in der Bibliothek steht und nicht siebenmal daneben: Eine
@@ -193,13 +222,43 @@ team_hilfe_wenn_gefragt() {
 
 # team_allowed_tools <redteam|axel>: Werkzeug-Allowlist für Guard-Linie 2.
 # Axel bekommt NUR den Plan-Ordner, das Red Team zusätzlich den Test-Ordner.
+#
+# BL-292: Jede Schreibregel steht zusaetzlich ABSOLUT da. Die CLI loest eine
+# relative Regel (`Edit(plans/**)`) gegen das AKTUELLE Arbeitsverzeichnis der
+# Shell auf — nach einem erlaubten `cd <Unterordner>` lehnte sie im Feld jeden
+# Schreibversuch nach plans/ und tests/ ab, und vier Funde standen nur noch im
+# `result`. Die absolute Form `//<pfad>/<ordner>/**` haengt nicht am `cd`
+# (unter Git Bash ist `pwd` schon `/c/Users/...`, die Form, die im Feld trug).
+# Ein Leerzeichen im Projektpfad zerlegte die leerzeichengetrennte Liste —
+# dann bleibt es bei der relativen Form, mit einer Meldung statt still.
+team_schreibregeln() {
+    local ordner="${1%/}" wurzel="$2"
+    printf 'Edit(%s/**) Write(%s/**)' "$ordner" "$ordner"
+    [ -n "$wurzel" ] && printf ' Edit(//%s/%s/**) Write(//%s/%s/**)' \
+        "$wurzel" "$ordner" "$wurzel" "$ordner"
+    return 0
+}
+
 team_allowed_tools() {
     local basis="Read Grep Glob Bash(${TEAM_BEUTEBUCH_TOOL}:*) Bash(git log:*) Bash(git diff:*) Bash(git show:*)"
     [ -n "${TEAM_SMOKE_TEST:-}" ] && basis="$basis Bash(${TEAM_SMOKE_TEST})"
-    local plan="Edit(${TEAM_PLAN_ORDNER%/}/**) Write(${TEAM_PLAN_ORDNER%/}/**)"
+    # Unter Git Bash ist `pwd` nicht immer `/c/...`: Gemountete Ordner heissen
+    # `/tmp/...` — und `//tmp/...` versteht die native CLI nicht. `pwd -W`
+    # liefert dort den Windows-Pfad (`C:/...`); unter Linux gibt es -W nicht.
+    local wurzel; wurzel="$(pwd -W 2>/dev/null || pwd)"
+    case "$wurzel" in
+        [A-Za-z]:/*) wurzel="$(printf '%s' "${wurzel%%:*}" | tr 'A-Z' 'a-z')/${wurzel#?:/}" ;;
+        *) wurzel="${wurzel#/}" ;;
+    esac
+    wurzel="${wurzel%/}"
+    case "$wurzel" in
+        *" "*) echo "[team-lib] WARNUNG: Der Projektpfad enthält ein Leerzeichen — die Schreibregeln gelten nur relativ. Wechselt eine Rolle mit cd in einen Unterordner, lehnt die CLI ihre Schreibversuche ab (BL-292)." >&2
+               wurzel="" ;;
+    esac
+    local plan; plan="$(team_schreibregeln "$TEAM_PLAN_ORDNER" "$wurzel")"
     case "$1" in
         axel) echo "$basis $plan" ;;
-        *)    echo "$basis $plan Edit(${TEAM_TEST_ORDNER%/}/**) Write(${TEAM_TEST_ORDNER%/}/**)" ;;
+        *)    echo "$basis $plan $(team_schreibregeln "$TEAM_TEST_ORDNER" "$wurzel")" ;;
     esac
 }
 
@@ -243,6 +302,14 @@ TEAM_MODEL_STRONG="${TEAM_MODEL_STRONG:-opus}"
 TEAM_PYTHON="${TEAM_PYTHON:-python3}"
 TEAM_ROLE_BUDGET_USD="${TEAM_ROLE_BUDGET_USD:-20}"
 TEAM_ROLE_HARDCAP_USD="${TEAM_ROLE_HARDCAP_USD:-40}"
+# BL-297: team_budget_check prueft den Hard-Cap nur, wenn er UEBER dem
+# Soft-Cap liegt. Hebt ein Projekt nur den Soft-Cap (der dokumentierte Weg),
+# greift Franks und Axels harter Abbruch nie mehr — und nichts sagte es. Im
+# Feld fiel es nur auf, weil vorher jemand in den Quelltext sah.
+if awk -v s="$TEAM_ROLE_BUDGET_USD" -v h="$TEAM_ROLE_HARDCAP_USD" \
+       'BEGIN { exit !(h + 0 <= s + 0) }' 2>/dev/null; then
+    echo "[team-lib] WARNUNG: TEAM_ROLE_HARDCAP_USD ($TEAM_ROLE_HARDCAP_USD) liegt nicht über TEAM_ROLE_BUDGET_USD ($TEAM_ROLE_BUDGET_USD) — Frank und Axel haben damit KEINEN harten Abbruch mehr (BL-297). Wer den Soft-Cap hebt, hebt den Hard-Cap mit." >&2
+fi
 
 # --- Auth-Modus --------------------------------------------------------------
 # team_resolve_auth_mode [rollen-default]
@@ -787,10 +854,45 @@ sys.exit(0 if f"<promise>{sys.argv[2]}</promise>" in result else 1)
 # nur dort, wo der Architekt die Abbruchbedingung vorher hingeschrieben hat.
 # Geprueft wird die Zeichenkette selbst — sie traegt die Stufennummer, kann
 # also nicht aus dem Block einer anderen Stufe stammen.
+# team_result_auszug <log>: der Anfang des `result`-Feldes, in einer Zeile.
+# BL-301: Dort sagt eine Rolle, die nichts gebaut hat, meist selbst warum —
+# im Feld stand die richtige Antwort ("`.ralph-state` muss auf 34") nur im
+# Log, und die Konsole zeigte daneben einen falschen Rat.
+team_result_auszug() {
+    "$TEAM_PYTHON" -c '
+import json, sys
+try:
+    r = json.load(open(sys.argv[1], encoding="utf-8")).get("result") or ""
+except Exception:
+    sys.exit(0)
+r = " ".join(str(r).split())
+sys.stdout.buffer.write((r[:700] + (" …" if len(r) > 700 else "")).encode("utf-8"))
+' "$1" 2>/dev/null || true
+}
+
 team_plan_erlaubt_uebersprung() {
     local stufe="$1" plan="${2:-$(team_plan_datei)}"
     [ -n "$plan" ] && [ -f "$plan" ] || return 1
     grep -q "STUFE_${stufe}_UEBERSPRUNGEN" "$plan"
+}
+
+# team_plan_stufen [plan]: die Nummern, fuer die der Plan einen Block
+# `## Stufe N` hat — eine je Zeile, aufsteigend; leer, wenn er keinen hat.
+#
+# BL-301: Eine Stufennummer ohne Block ist keine baubare Aufgabe, und das
+# steht VOR dem ersten Token fest. Im Feld zeigte .ralph-state nach einem
+# Closeout versehentlich auf 17, der Plan kannte nur 28–33; Ralph startete
+# trotzdem einen bezahlten Aufruf, und die Selbstpruefung empfahl danach
+# `echo 18 > .ralph-state` — eine nie gebaute Stufe zu quittieren.
+# Ebene 2–4 und ein Titel hinter der Nummer sind erlaubt; ein Plan ganz ohne
+# solche Bloecke liefert LEER, und dann prueft der Aufrufer nicht (geraten
+# wird nicht — ein fremdes Format ist kein Befund).
+team_plan_stufen() {
+    local plan="${1:-$(team_plan_datei)}"
+    [ -n "$plan" ] && [ -f "$plan" ] || return 0
+    { grep -E '^#{2,4}[[:space:]]*Stufe[[:space:]]+[0-9]+([^0-9]|$)' "$plan" || true; } \
+        | sed -E 's/^#{2,4}[[:space:]]*Stufe[[:space:]]+([0-9]+).*/\1/' \
+        | sort -n -u
 }
 
 
@@ -943,6 +1045,11 @@ team_quittung_selbstpruefung() {
     local rolle="$1" stufe="$2"
     local test_ordner="${TEAM_TEST_ORDNER:-tests/}"
     local smoke="${TEAM_SMOKE_TEST:-}"
+    # BL-301 (Befund 2): Der Aufrufer muss wissen, ob die Pruefung an
+    # "nichts hinterlassen" scheiterte — sonst druckt er den Plan des
+    # vierten Ausgangs samt `echo N+1`, also den Rat, eine nie gebaute Stufe
+    # zu quittieren.
+    TEAM_SELBSTPRUEFUNG_LEER=0
 
     if [ "${TEAM_QUITTUNG_AUTO:-1}" != "1" ]; then
         return 1
@@ -954,13 +1061,18 @@ team_quittung_selbstpruefung() {
     #     nichts zu quittieren — dann ist es kein "fertig ohne Quittung",
     #     sondern eine Stufe, die nie angefangen hat.
     local uncommittet betreff hat_arbeit=0
-    uncommittet="$(git status --porcelain 2>/dev/null)"
+    # BL-269: Laufzeitartefakte (das eigene Log dieser Stufe, .ralph-logs/)
+    # sind keine Arbeit — ohne Filter galt eine Sitzung, die nichts gebaut
+    # hatte, in jedem Projekt ohne die gitignore-Zeile als "Arbeit vorhanden".
+    uncommittet="$(git status --porcelain 2>/dev/null | cut -c4- \
+                   | grep -Ev "$TEAM_GUARD_LAUFZEIT" | grep -Ev "$TEAM_GUARD_IGNORIERT" || true)"
     betreff="$(git log -1 --pretty=%s 2>/dev/null)"
     [ -n "$uncommittet" ] && hat_arbeit=1
     case "$betreff" in *"stufe$stufe"*|*"Stufe $stufe"*) hat_arbeit=1 ;; esac
     if [ "$hat_arbeit" -eq 0 ]; then
         echo "    ✗ Kein Commit für Stufe $stufe und keine uncommitteten Änderungen." >&2
         echo "      Die Sitzung hat nichts hinterlassen — das ist NICHT der vierte Ausgang." >&2
+        TEAM_SELBSTPRUEFUNG_LEER=1
         return 1
     fi
     echo "    ✓ Arbeit vorhanden (uncommittet und/oder Commit der Stufe)." >&2
@@ -972,7 +1084,9 @@ team_quittung_selbstpruefung() {
     #     Baum ist, denn der bestehende Bestand deckt das Neue nicht ab.
     local dateien
     if [ -n "$uncommittet" ]; then
-        dateien="$(printf '%s\n' "$uncommittet" | sed 's/^...//')"
+        # Schon ohne Statusspalte (siehe oben) — ein zweites Abschneiden
+        # machte aus `tests/` ein `ts/`, und jede Stufe galt als ungesichert.
+        dateien="$uncommittet"
     else
         dateien="$(git show --name-only --pretty=format: HEAD 2>/dev/null)"
     fi
@@ -1038,7 +1152,24 @@ team_quittung_selbstpruefung() {
 # lahmlegt.
 team_briefing() {
     local datei="team/prompts/rolle-$1.md"
-    if [ -s "$datei" ]; then
+    # BL-283: Ralphs Briefing traegt den Satz zur Smoke-Test-Grenze, wie ihn
+    # der Installer gerendert hat — in einem frischen Projekt also "noch KEIN
+    # Smoke-Test … entfaellt". Baut Stufe 1 ihn, widerspraeche das Briefing
+    # bis zum naechsten --update der Konfiguration im SELBEN Prompt. Deshalb
+    # wird der Satz hier zur Laufzeit ersetzt, sobald einer bekannt ist.
+    local fehlt="Fuer dieses Projekt ist noch KEIN Smoke-Test konfiguriert."
+    if [ -s "$datei" ] && [ "$1" = ralph ] && [ -n "${TEAM_SMOKE_TEST:-}" ] \
+       && grep -qF "$fehlt" "$datei"; then
+        local zeile
+        while IFS= read -r zeile || [ -n "$zeile" ]; do
+            case "$zeile" in
+                *"$fehlt"*)
+                    printf '%s%s\n' "${zeile%%"$fehlt"*}" \
+                        "Der Smoke-Test (\`${TEAM_SMOKE_TEST}\`) muss gruen sein, bevor die Stufe fertig ist." ;;
+                *) printf '%s\n' "$zeile" ;;
+            esac
+        done < "$datei"
+    elif [ -s "$datei" ]; then
         cat "$datei"
     else
         echo "Rolle siehe CLAUDE.md — lies sie zuerst."
