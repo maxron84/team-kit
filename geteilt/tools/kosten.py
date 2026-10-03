@@ -478,7 +478,7 @@ def verworfen_hinweis(treffer):
     zeit = f", zusammen {sum(dauern) // 60} min" if dauern else ""
     return (f"Hinweis: {len(treffer)} verworfener Versuch(e){zeit}, Kosten "
             f"UNBEKANNT -- nicht in dieser Summe enthalten und bewusst nicht "
-            f"geschaetzt (BL-46): "
+            f"geschaetzt (Kit-BL-46): "
             + ", ".join(os.path.basename(f) for f, _ in treffer))
 
 
@@ -759,7 +759,7 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
             "altzeilen", "hinweis",
             f"{ohne_quelle} Ledger-Zeile(n) im alten 5-Feld-Schema ohne "
             f"Domaene/Rolle -- sie zaehlen als 'unzugeordnet' und koennen "
-            f"nicht auf Vollstaendigkeit geprueft werden (BL-29)."))
+            f"nicht auf Vollstaendigkeit geprueft werden (Kit-BL-29)."))
     architekt_fehlt = []          # BL-197: gesammelt, EINE Warnung daraus
     for kaskade in sorted(je_kaskade, key=_kaskade_key):
         vorhanden = je_kaskade[kaskade]
@@ -781,7 +781,7 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
                 f"Kaskade {kaskade}: keine ralph-Zeile, obwohl eine "
                 f"roles-Zeile steht. " + (
                     f"Die Baukosten des Loops sind nicht gebucht "
-                    f"(BL-4-Muster) -- nachtragen mit `./team-status.sh "
+                    f"(Kit-BL-4-Muster) -- nachtragen mit `./team-status.sh "
                     f"--rollen-abschluss {kaskade} <domaene>`."
                     if nummeriert else
                     "Benannte Kaskade -- bei einer Out-of-Loop-Fixserie hat "
@@ -831,7 +831,7 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
             f"gebucht -- ohne sie gaebe es nichts zu bauen. Nachtragen mit "
             f"`kosten.py sitzung-messen`, dann `--architekt-abschluss <USD> "
             f"<domaene> \"Kaskade N geplant\" --kaskade <N>` je Kaskade "
-            f"(BL-197)."))
+            f"(Kit-BL-197)."))
 
     # --- P1b (BL-27) --------------------------------------------------------
     # P1 winkt jede Kaskade ohne ralph/roles-Zeile als "geplant, aber nie
@@ -870,7 +870,7 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
                 f"gehoeren zu einem frueheren Durchgang, fuer den kein "
                 f"Rollenabschluss gebucht ist. Eine geplante Kaskade hat keine "
                 f"Rohlogs; hier wurde gebaut und nicht abgeschlossen "
-                f"(BL-27-Muster). Nachtragen mit `./team-status.sh "
+                f"(Kit-BL-27-Muster). Nachtragen mit `./team-status.sh "
                 f"--rollen-abschluss <jene Kaskade> <domaene>`."))
 
     # --- P2 -----------------------------------------------------------------
@@ -907,7 +907,7 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
                 f"Abschluss. Ein Ersatzzettel wird beim naechsten "
                 f"`--rollen-abschluss --archivieren` mit weggeraeumt; eine "
                 f"nicht lesbare Datei bleibt liegen und gehoert von Hand "
-                f"angesehen (BL-46)."))
+                f"angesehen (Kit-BL-46)."))
         if offen:
             befunde.append(_befund(
                 "unarchiviert", "warnung",
@@ -919,7 +919,7 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
                 f"Abschluss lief ohne --archivieren (dann zaehlt dieselbe "
                 f"Arbeit doppelt). Nicht einfach erneut abschliessen: Der "
                 f"Default ueberschreibt nicht, aber ein --ersetzen hier "
-                f"verliert den Altwert (BL-5)."))
+                f"verliert den Altwert (Kit-BL-5)."))
 
     # --- P3 -----------------------------------------------------------------
     # BL-13: Die Rollenmenge je Ordner wird aus dem Ledger abgeleitet, nicht
@@ -953,8 +953,74 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
                 f"Quelle '{benannt}': archivierte Rohlogs in {archiv} ergeben "
                 f"{roh:.4f} USD, die Ledger-Zeilen der Rolle(n) {benannt} nur "
                 f"{gebucht:.4f} USD -- {differenz:.4f} USD sind archiviert, "
-                f"aber nie gebucht. So sahen BL-4 (Zeile fehlte ganz) und "
-                f"BL-5 (Altwert ueberschrieben) im Feld aus."))
+                f"aber nie gebucht. So sahen Kit-BL-4 (Zeile fehlte ganz) und "
+                f"Kit-BL-5 (Altwert ueberschrieben) im Feld aus."))
+
+    # --- P4 (BL-280) ----------------------------------------------------------
+    befunde.extend(kaskaden_ohne_abschluss(
+        je_kaskade, aktuelle_kaskade, repo,
+        [ralph_logs, team_logs]))
+    return befunde
+
+
+def kaskaden_ohne_abschluss(je_kaskade, aktuelle_kaskade, repo, log_ordner):
+    """P4: Kaskaden UNTER der aktiven, die einen Plan und gelaufene Stufen
+    haben, aber keine einzige Ledger-Zeile (BL-280).
+
+    Im Feld kam beim Closeout der Kaskade 29 heraus, dass 28 nie
+    abgeschlossen war: keine Ledger-Zeile, kein Abschluss-Protokoll, elf
+    Rohlogs ueber 31,19 USD vier Tage unarchiviert — und `--ledger-pruefen`
+    meldete 0 Warnungen. P1 bis P3 koennen konstruktiv nur Kaskaden sehen, die
+    im Ledger VORKOMMEN: Der Pruefling definierte die Pruefmenge (`Kit-BL-1`).
+    Die Menge kommt jetzt aus den Plandateien.
+
+    "Gelaufen" heisst: Im Fenster der Kaskade (Commit ihrer Plandatei bis
+    Commit der naechsten) liegt mindestens ein Rohlog, archiviert oder nicht.
+    Ein Plan, der nie lief, ist kein Befund; die aktive Kaskade selbst
+    ebensowenig — ihr Closeout steht regulaer noch aus (P1b)."""
+    if aktuelle_kaskade is None or not str(aktuelle_kaskade).isdigit():
+        return []
+    aktiv = int(aktuelle_kaskade)
+    nummern = set()
+    for praefix in PLAN_PRAEFIXE:
+        muster = os.path.join(repo, plan_ordner(), f"{praefix}*-*.md")
+        for datei in glob.glob(muster):
+            kopf = os.path.basename(datei)[len(praefix):]
+            nr = kopf.split("-", 1)[0]
+            if nr.isdigit():
+                nummern.add(int(nr))
+    nummern = sorted(n for n in nummern if n <= aktiv)
+    dateien = []
+    # Die Log-Ordner gelten wie in P2/P3 so, wie der Aufrufer sie nennt.
+    for ordner in log_ordner:
+        for unter in (ordner, os.path.join(ordner, "archiv")):
+            dateien.extend(glob.glob(os.path.join(unter, "*.json")))
+    zeiten = []
+    for datei in dateien:
+        try:
+            zeiten.append(os.path.getmtime(datei))
+        except OSError:
+            continue
+    befunde = []
+    for stelle, nr in enumerate(nummern):
+        if nr >= aktiv or je_kaskade.get(str(nr)):
+            continue
+        beginn = kaskade_beginn(str(nr), repo)
+        if beginn is None:
+            continue
+        naechste = nummern[stelle + 1] if stelle + 1 < len(nummern) else None
+        ende = kaskade_beginn(str(naechste), repo) if naechste else None
+        im_fenster = [t for t in zeiten
+                      if t >= beginn and (ende is None or t < ende)]
+        if not im_fenster:
+            continue
+        befunde.append(_befund(
+            "kaskade-ohne-abschluss", "warnung",
+            f"Kaskade {nr} hat eine Plandatei und {len(im_fenster)} Rohlog(s) "
+            f"in ihrem Zeitfenster, aber KEINE Ledger-Zeile -- ihr Closeout "
+            f"ist ausgefallen (Kit-BL-280). Nachholen mit `--rollen-abschluss "
+            f"{nr} <domaene>`; Logs der Kaskade {naechste or aktiv} haelt der "
+            f"Riegel aus Kit-BL-266 dabei heraus."))
     return befunde
 
 
@@ -1225,7 +1291,7 @@ def modell_bericht(files, cli=None, heim=None):
             f"nicht das Abo: `claude update` fuer die CLI, die der Loop ruft "
             f"(TEAM_CLAUDE_BIN), oder das Modell festnageln (TEAM_MODEL_* = "
             f"{neuer}). Ist die aeltere Version Absicht, ist nichts zu tun "
-            f"(BL-264).")
+            f"(Kit-BL-264).")
     if cli:
         eigene = cli_version(cli)
         ide = ide_cli_version(heim)
@@ -1240,7 +1306,7 @@ def modell_bericht(files, cli=None, heim=None):
                     f"die IDE-gebuendelte ({_v(ide[0])}). Welches Modell ein "
                     f"Alias meint, entscheidet die CLI-Version — im Feld liefen "
                     f"damit alle Rollen auf einer aelteren Sonnet-Version "
-                    f"(BL-264). Abhilfe: `claude update`, oder TEAM_CLAUDE_BIN "
+                    f"(Kit-BL-264). Abhilfe: `claude update`, oder TEAM_CLAUDE_BIN "
                     f"auf die neuere CLI setzen.")
         else:
             zeilen.append(f"Agenten-CLI des Loops: Version nicht lesbar ({cli})")
@@ -1530,6 +1596,54 @@ PREIS_INPUT_USD_PRO_MTOK = {
 }
 
 
+# BL-238: Die Projektwurzel, in der `preise_aus_konfiguration` sucht. main()
+# setzt sie auf `--projekt`, wenn der Aufruf eines nennt; sonst gilt das
+# Arbeitsverzeichnis — der dokumentierte Aufruf laeuft aus der Wurzel.
+_KONFIG_WURZEL = "."
+
+
+def preise_aus_konfiguration(wurzel=None):
+    """`TEAM_PREISE` aus `team.config.*` der Projektwurzel — oder "".
+
+    BL-238: Die Shell-Konfiguration EXPORTIERT den Wert, und nur darueber kam
+    er an. Der Weg, den das Architekten-Briefing fuer den Kostenabschluss
+    nennt, ist aber der DIREKTaufruf (`python3 team/tools/kosten.py
+    sitzung-messen --projekt .`). Im Feld meldete er deshalb *„159 von 161
+    Laeufen weichen ab"*, alle um konstant 33,3 % — dieselbe Sitzung war mit
+    vorangestelltem `TEAM_PREISE=…` *„geeicht an 161 Laeufen"*. Die Diagnose
+    zeigte auf die Tabelle; der Fehler sass im Aufrufweg.
+
+    Gelesen wird NUR dieser eine Wert und nur, wenn die Umgebung ihn gar nicht
+    kennt: Die Shell-Konfiguration bleibt die Quelle, die gewinnt. Erkannt
+    werden die beiden Formen, in denen die Vorlagen ihn fuehren:
+        TEAM_PREISE="${TEAM_PREISE:-claude-sonnet-5=3.00}"   (bash)
+        $TEAM_PREISE = Team-Wert 'TEAM_PREISE' 'claude-…'    (pwsh)
+    und ein schlichtes `TEAM_PREISE="…"` bzw. `$TEAM_PREISE = '…'`.
+    """
+    wurzel = wurzel or _KONFIG_WURZEL
+    reihenfolge = (("team.config.ps1", "team.config.sh") if os.name == "nt"
+                   else ("team.config.sh", "team.config.ps1"))
+    muster = (
+        re.compile(r'^\s*(?:export\s+)?TEAM_PREISE="(?:\$\{TEAM_PREISE:-)?'
+                   r'([^"}]*)\}?"'),
+        re.compile(r"^\s*\$TEAM_PREISE\s*=\s*(?:Team-Wert\s+'TEAM_PREISE'\s+)?"
+                   r"['\"]([^'\"]*)['\"]"),
+    )
+    for name in reihenfolge:
+        pfad = os.path.join(wurzel, name)
+        try:
+            with open(pfad, encoding="utf-8-sig") as fh:
+                zeilen = fh.read().splitlines()
+        except OSError:
+            continue
+        for zeile in zeilen:
+            for m in muster:
+                treffer = m.match(zeile)
+                if treffer and treffer.group(1).strip():
+                    return treffer.group(1).strip()
+    return ""
+
+
 def preis_uebersteuerung():
     """Projektlokale Preise aus `TEAM_PREISE`, als {praefix: usd_pro_mtok}.
 
@@ -1556,6 +1670,8 @@ def preis_uebersteuerung():
     gelte, und die Eichung sagt ihm etwas ueber eine Zahl, die nie ankam.
     """
     roh = os.environ.get("TEAM_PREISE", "").strip()
+    if not roh and "TEAM_PREISE" not in os.environ:
+        roh = preise_aus_konfiguration()
     if not roh:
         return {}
     werte = {}
@@ -2398,6 +2514,41 @@ def _sanitize_pipe_feld(wert):
     return wert.replace("|", "/").replace("\r", " ").replace("\n", " ").strip()
 
 
+def _notiz_aus_datei(pfad):
+    """Notiztext aus einer Datei (BL-249, BL-245) — oder None mit Meldung.
+
+    Die Notiz ist die einzige Prosa-Spur je Ledger-Zeile und zitiert deshalb
+    naturgemaess Log-Ausgaben und `result`-Felder. Auf der Kommandozeile
+    zerlegte ein doppeltes Anfuehrungszeichen darin den Aufruf in Schalter
+    (BL-245), und `--addieren` braucht den ganzen bisherigen Text, der mit
+    jedem Nachlauf waechst — bis an die 8191-Zeichen-Grenze von cmd.exe
+    (BL-249). Aus einer Datei gelesen muss der Text durch keine Shell.
+    Zeilenumbrueche werden zu Leerzeichen: Eine Ledger-Zeile ist EINE Zeile."""
+    try:
+        with open(pfad, encoding="utf-8-sig") as fh:
+            text = fh.read()
+    except OSError as exc:
+        print(f"Fehler: --notiz-datei '{pfad}' ist nicht lesbar ({exc}).",
+              file=sys.stderr)
+        return None
+    return " ".join(text.split())
+
+
+def _bestand_meldung(kaskade, rolle, alt, usd):
+    """Der Text des BL-5-Abbruchs — an EINER Stelle, weil ihn die Buchung UND
+    die Vorpruefung (`--nur-pruefen`, BL-239) drucken."""
+    return (f"Fuer Kaskade {kaskade} steht bereits eine {rolle}-Zeile ueber "
+            f"{alt:.4f} USD. Dieser Aufruf wuerde sie durch {usd:.4f} USD "
+            f"ERSETZEN und die Differenz verlieren. Es wird NICHTS "
+            f"geschrieben.\n"
+            f"  Nachlauf (weitere Rolle lief nach dem Abschluss): "
+            f"--addieren  -> {alt + usd:.4f} USD\n"
+            f"  Korrektur (die Altzeile war falsch):              "
+            f"--ersetzen  -> {usd:.4f} USD\n"
+            f"  Wurde seit der Altzeile NICHT archiviert, zaehlen beide "
+            f"Aufrufe dieselben Logs — dann ist --ersetzen richtig.")
+
+
 def _alt_usd_lesen(felder, rolle, kaskade):
     """USD-Feld einer bestehenden Ledger-Zeile. Gemeinsamer Helfer fuer
     akteur_abschluss() und rollen_abschluss() (BL-25): Beide muessen den
@@ -2619,17 +2770,7 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     def merge_fn(felder):
         alt = _alt_usd_lesen(felder, rolle, kaskade)
         if bestand == "abbrechen":
-            raise ValueError(
-                f"Fuer Kaskade {kaskade} steht bereits eine {rolle}-Zeile ueber "
-                f"{alt:.4f} USD. Dieser Aufruf wuerde sie durch {usd:.4f} USD "
-                f"ERSETZEN und die Differenz verlieren. Es wird NICHTS "
-                f"geschrieben.\n"
-                f"  Nachlauf (weitere Rolle lief nach dem Abschluss): "
-                f"--addieren  -> {alt + usd:.4f} USD\n"
-                f"  Korrektur (die Altzeile war falsch):              "
-                f"--ersetzen  -> {usd:.4f} USD\n"
-                f"  Wurde seit der Altzeile NICHT archiviert, zaehlen beide "
-                f"Aufrufe dieselben Logs — dann ist --ersetzen richtig.")
+            raise ValueError(_bestand_meldung(kaskade, rolle, alt, usd))
         summe = alt + usd
         # auth der Summenzeile: nur wenn Alt- und Neuanteil dieselbe
         # Auth-Art tragen, bleibt sie erhalten — sonst ehrlich "abo/api".
@@ -2667,7 +2808,7 @@ VERBEN = {
     "turns": "turns [DIR...]   (Default .ralph-logs)",
     "modelle": ("modelle [DIR...] [--cli BEFEHL]   (Default .ralph-logs "
                 ".team-logs)"),
-    "verweigert": "verweigert LOG --ordner ORDNER...   (BL-292)",
+    "verweigert": "verweigert LOG --ordner ORDNER...   (Kit-BL-292)",
     "ledger": ("ledger [PFAD] [--domaene D] [--rolle R] [--kaskade N] "
                "[--split] [--anzahl]"),
     "ledger-pruefen": "ledger-pruefen [--pfad P] [--kaskade N]",
@@ -2675,11 +2816,12 @@ VERBEN = {
     "architekt-schaetzung": ("architekt-schaetzung --since REF [--repo DIR] "
                              "[PFAD...]"),
     "architekt-abschluss": ("architekt-abschluss --usd USD --domaene D "
-                            "--kaskade N [--pfad P] [--notiz T]"),
+                            "--kaskade N [--pfad P] [--notiz T | --notiz-datei P]"),
     "akteur-abschluss": ("akteur-abschluss --rolle R --usd USD --domaene D "
-                         "--kaskade N [--auth abo|api] [--pfad P] [--notiz T]"),
+                         "--kaskade N [--auth abo|api] [--pfad P] [--notiz T | --notiz-datei P]"),
     "rollen-abschluss": ("rollen-abschluss --kaskade N --domaene D "
-                         "[--logs DIR] [--pfad P] [--archivieren] [--notiz T]"),
+                         "[--logs DIR] [--pfad P] [--archivieren] [--notiz T | --notiz-datei P] "
+                         "[--nur-pruefen]"),
     "ralph-abschluss": "ralph-abschluss  … (Argumente wie rollen-abschluss)",
 }
 
@@ -2709,6 +2851,13 @@ def _main(argv):
         return 1
 
     befehl, rest = argv[0], argv[1:]
+
+    # BL-238: Nennt der Aufruf ein Projekt, liegt DORT seine Konfiguration.
+    global _KONFIG_WURZEL
+    if "--projekt" in rest:
+        stelle = rest.index("--projekt")
+        if stelle + 1 < len(rest):
+            _KONFIG_WURZEL = rest[stelle + 1]
 
     # Der Riegel aus BL-253: Erreichbar ist nur, was in VERBEN steht. Ohne ihn
     # koennte ein elftes Verb wieder unterhalb der Hilfe existieren.
@@ -2989,7 +3138,7 @@ def _main(argv):
                 if rollen:
                     print(f"  {len(rollen)} Rollen-Lauf/Laeufe der Ablage NICHT "
                           f"mitgezaehlt — sie sind ueber --rollen-abschluss "
-                          f"gebucht (BL-291).", file=sys.stderr)
+                          f"gebucht (Kit-BL-291).", file=sys.stderr)
             else:
                 pfade = sitzungen[:1] or gefunden[:1]
                 if len(sitzungen) > 1:
@@ -3006,7 +3155,7 @@ def _main(argv):
                                     if os.path.getmtime(p)
                                     > os.path.getmtime(pfade[0]))
                 zusatz = (f"; {uebersprungen} juengere(r) Rollen-Lauf/Laeufe "
-                          f"uebersprungen (BL-291)") if uebersprungen else ""
+                          f"uebersprungen (Kit-BL-291)") if uebersprungen else ""
                 print(f"  gewaehlt: 1 von {len(gefunden)} Transkript(en) der "
                       f"Ablage (die zuletzt geaenderte Sitzung{zusatz}).",
                       file=sys.stderr)
@@ -3037,7 +3186,7 @@ def _main(argv):
             print("  ? Dieses Transkript hat genau EINEN Nutzer-Prompt und "
                   "verraet nicht, woher es stammt — es KANN ein headless "
                   "Rollen-Lauf sein. Prüfe vor dem Buchen, ob er über "
-                  "`--rollen-abschluss` schon im Ledger steht (BL-272).",
+                  "`--rollen-abschluss` schon im Ledger steht (Kit-BL-272).",
                   file=sys.stderr)
         if rollenlauf:
             print("  ! Dieses Transkript ist das eines headless gefahrenen "
@@ -3049,7 +3198,7 @@ def _main(argv):
             print("    Rollen-Laeufe sind ueber `--rollen-abschluss` in aller "
                   "Regel BEREITS gebucht; wer diese Zahl noch einmal bucht, "
                   "schreibt denselben Lauf ein zweites Mal in den Ledger "
-                  "(BL-251).", file=sys.stderr)
+                  "(Kit-BL-251).", file=sys.stderr)
             print("    Gemeint war vermutlich die Architekten-Sitzung — dann "
                   "das Transkript ausdruecklich benennen statt --projekt zu "
                   "nehmen.", file=sys.stderr)
@@ -3106,7 +3255,7 @@ def _main(argv):
                         continue
                     vorschlag.append(f"{modell}={(lo + hi) / 2:.2f}")
                 if vorschlag:
-                    print(f"    Projektlokal setzen (BL-211), ohne die "
+                    print(f"    Projektlokal setzen (Kit-BL-211), ohne die "
                           f"Kit-Tabelle anzufassen — in team.config.*:",
                           file=sys.stderr)
                     print(f'      TEAM_PREISE="{" ".join(vorschlag)}"',
@@ -3122,7 +3271,7 @@ def _main(argv):
                 print(f"  ~ {len(abweichend)} von {len(befunde)} "
                       f"nachgerechneten Laeufen reproduzieren sich nicht — "
                       f"die Preistabelle ist dafuer NICHT die Ursache "
-                      f"(BL-213/BL-218):", file=sys.stderr)
+                      f"(Kit-BL-213/Kit-BL-218):", file=sys.stderr)
                 for pfad, gemeldet, gerechnet, rel in abweichend[:3]:
                     print(f"      {os.path.basename(pfad)}: abgerechnet "
                           f"{gemeldet:.4f}, erklaerbar bis {gerechnet:.4f} "
@@ -3171,7 +3320,7 @@ def _main(argv):
             print(f"  ! Lange Sitzung: {antworten} Antworten, "
                   f"{cache_read / 1_000_000:.1f} Mio. Cache-Read-Token. "
                   f"Gemessene Faelle dieser Groesse waren regelmaessig "
-                  f"MEHRERE Kaskaden in EINEM Fenster (BL-252).",
+                  f"MEHRERE Kaskaden in EINEM Fenster (Kit-BL-252).",
                   file=sys.stderr)
             print("    Ist hier schon einmal gebucht worden, deckt diese Zahl "
                   "den Zuwachs SEIT der Buchung nicht ab — sie ist die Summe "
@@ -3183,7 +3332,7 @@ def _main(argv):
             print("  NICHT buchen: Dieser Lauf traegt die Signatur eines "
                   "Rollen-Laufs (siehe oben) und ist ueber "
                   "`--rollen-abschluss` sehr wahrscheinlich schon im Ledger "
-                  "(BL-251).", file=sys.stderr)
+                  "(Kit-BL-251).", file=sys.stderr)
         else:
             print(f"  Buchen: team-status --akteur-abschluss architekt abo "
                   f"{gesamt:.4f} <domaene> \"<notiz>\"")
@@ -3198,7 +3347,7 @@ def _main(argv):
         print("  Was du in DIESER Sitzung weiterarbeitest, waechst im selben "
               "Transkript weiter und ist nach der Buchung nicht mehr "
               "erfassbar: fuer die naechste Kaskade eine NEUE Sitzung "
-              "oeffnen (BL-252).")
+              "oeffnen (Kit-BL-252).")
         return 2 if (schief or unbekannt) else 0
 
     if befehl == "architekt-schaetzung":
@@ -3307,6 +3456,15 @@ def _main(argv):
                     return 1
                 notiz = rest[i + 1]
                 i += 2
+            elif rest[i] == "--notiz-datei":   # BL-249/BL-245
+                if i + 1 >= len(rest):
+                    print("Fehler: --notiz-datei braucht einen Pfad",
+                          file=sys.stderr)
+                    return 1
+                notiz = _notiz_aus_datei(rest[i + 1])
+                if notiz is None:
+                    return 1
+                i += 2
             elif rest[i] == "--pfad":
                 if i + 1 >= len(rest):
                     print("Fehler: --pfad braucht einen Wert", file=sys.stderr)
@@ -3375,7 +3533,7 @@ def _main(argv):
             print("  Diese Sitzung ist abgerechnet. Fuer die naechste Kaskade "
                   "eine NEUE Sitzung oeffnen — was in dieser hier noch "
                   "entsteht, waechst im gebuchten Transkript weiter und faellt "
-                  "aus der Abrechnung (BL-252).")
+                  "aus der Abrechnung (Kit-BL-252).")
         return 0
 
     # BL-4: ralph-abschluss ist derselbe Mechanismus mit anderer Quelle und
@@ -3400,6 +3558,9 @@ def _main(argv):
         trotzdem = False        # BL-220: Plan-Gegenprobe uebersteuern
         auch_aeltere = False    # BL-221: zu alte Logs bewusst mitbuchen
         auch_neuere = False     # BL-266: zu neue Logs bewusst mitbuchen
+        nur_pruefen = False     # BL-239: alle Riegel, aber nichts schreiben
+        haelfte = ("Bau-Haelfte (.ralph-logs)" if ist_ralph
+                   else "Rollen-Haelfte (.team-logs)")
         i = 0
         while i < len(rest):
             if rest[i] == "--kaskade":
@@ -3408,6 +3569,18 @@ def _main(argv):
                     return 1
                 kaskade = rest[i + 1]
                 i += 2
+            elif rest[i] == "--notiz-datei":
+                if i + 1 >= len(rest):
+                    print("Fehler: --notiz-datei braucht einen Pfad",
+                          file=sys.stderr)
+                    return 1
+                notiz = _notiz_aus_datei(rest[i + 1])
+                if notiz is None:
+                    return 1
+                i += 2
+            elif rest[i] == "--nur-pruefen":
+                nur_pruefen = True
+                i += 1
             elif rest[i] == "--domaene":
                 if i + 1 >= len(rest):
                     print("Fehler: --domaene braucht einen Wert (siehe TEAM_DOMAENEN)",
@@ -3499,7 +3672,7 @@ def _main(argv):
             if aus_plan is not None and str(aus_plan) != str(kaskade):
                 print(
                     f"Fehler: .ralph-plan sagt Kaskade {aus_plan}, uebergeben "
-                    f"wurde {kaskade} -- nicht gebucht (BL-220).\n"
+                    f"wurde {kaskade} -- nicht gebucht (Kit-BL-220).\n"
                     f"  Verwechslung mit der STUFENnummer (RALPH_CAP)? Beide "
                     f"stehen im Plankopf untereinander.\n"
                     f"  Ist {kaskade} wirklich gemeint, erzwingt `--trotzdem` "
@@ -3539,7 +3712,7 @@ def _main(argv):
             print(f"Hinweis: '{datei}' ist ein verworfener Versuch ({zeit}, "
                   f"Kosten UNBEKANNT) -- er fehlt in dieser Summe und wird "
                   f"nicht geschaetzt. Der Betrag dieser Kaskade ist damit "
-                  f"nachweislich UNVOLLSTAENDIG (BL-46).", file=sys.stderr)
+                  f"nachweislich UNVOLLSTAENDIG (Kit-BL-46).", file=sys.stderr)
         for datei in kaputt:
             print(f"Warnung: '{datei}' konnte nicht als JSON gelesen werden "
                   f"oder enthaelt ein unplausibles total_cost_usd (negativ "
@@ -3602,10 +3775,14 @@ def _main(argv):
             print("  Gehoeren sie zu einer Out-of-Loop-Runde zwischen zwei "
                   "Kaskaden, gehoeren sie unter eine eigene benannte Nummer "
                   "(`--kaskade vor-N`) — sonst traegt diese Kaskade fremde "
-                  "Kosten (BL-45).", file=sys.stderr)
+                  "Kosten (Kit-BL-45).", file=sys.stderr)
+            # BL-239 (a): Die Meldung sagt, fuer WELCHE Haelfte sie gilt. Im
+            # Feld war die andere Haelfte schon gebucht, als diese Zeile
+            # "NICHTS gebucht" sagte — der Wrapper prueft beide jetzt vorher.
+            print(f"  Betrifft die {haelfte}.", file=sys.stderr)
             if not auch_aeltere:
                 print("  Gehoeren sie doch zu dieser Kaskade, bucht "
-                      "`--auch-aeltere` sie mit (BL-221).", file=sys.stderr)
+                      "`--auch-aeltere` sie mit (Kit-BL-221).", file=sys.stderr)
                 return 1
 
         # BL-266: Dieselbe Pruefung in die ANDERE Richtung -- und sie fehlte
@@ -3654,17 +3831,56 @@ def _main(argv):
             if vorlauf:
                 print(f"  Sie gehoeren unter die Kaskadennummer selbst "
                       f"(`--kaskade {naechste}`); buche die Out-of-Loop-Runde "
-                      f"VOR dem Lauf oder nach dessen Abschluss (BL-266).",
+                      f"VOR dem Lauf oder nach dessen Abschluss (Kit-BL-266).",
                       file=sys.stderr)
             else:
                 print(f"  Sie gehoeren zur Kaskade {naechste} (oder zu "
                       f"`vor-{naechste}`). Lege sie beiseite, buche Kaskade "
                       f"{kaskade}, lege sie zurueck und buche danach "
-                      f"{naechste} (BL-266).", file=sys.stderr)
+                      f"{naechste} (Kit-BL-266).", file=sys.stderr)
+            print(f"  Betrifft die {haelfte}.", file=sys.stderr)
             if not auch_neuere:
                 print(f"  Gehoeren sie doch zu {ziel}, bucht "
-                      "`--auch-neuere` sie mit (BL-266).", file=sys.stderr)
+                      "`--auch-neuere` sie mit (Kit-BL-266).", file=sys.stderr)
                 return 1
+
+        # BL-244: `--ersetzen` ohne Logs ersetzte eine korrekte Zeile durch
+        # 0.0000 USD — im Feld 6,7523 USD, nach dem halben Abbruch aus BL-239,
+        # mit einer Warnung, die NACH der Entscheidung kam. Wer `--ersetzen`
+        # schreibt, hat einen Betrag vor Augen; eine Ersetzung durch Null ist
+        # nie gemeint. Die Haelfte bleibt deshalb unveraendert (Exit 0, damit
+        # die andere Haelfte derselben Bedienhandlung ihre Korrektur bekommt).
+        # Beim ERSTaufruf kann 0.0000 richtig sein — dort bleibt die Warnung.
+        if bestand == "ersetzen" and not files and abo == 0.0 and api == 0.0:
+            print(f"Hinweis: {rolle_ziel.capitalize()}-Zeile Kaskade {kaskade} "
+                  f"bleibt UNVERAENDERT — `--ersetzen`, aber in "
+                  f"{', '.join(logs)} liegen keine Logs; ersetzt wird nie "
+                  f"durch 0.0000 USD (Kit-BL-244). Wurden die Logs schon "
+                  f"archiviert (siehe {logs_default}/archiv/), steht ihr "
+                  f"Betrag sehr wahrscheinlich schon in der Zeile.",
+                  file=sys.stderr)
+            return 0
+        if nur_pruefen:
+            # BL-239: Die Vorpruefung des Wrappers. Alle Riegel oben sind
+            # gelaufen; uebrig sind Domaene und Bestand (BL-5), die sonst erst
+            # die Buchung selbst meldet — nach der ANDEREN Haelfte. Die
+            # Vorpruefung muss genau das vorhersagen, was die Buchung tut,
+            # sonst entsteht der halbe Zustand an einer neuen Stelle.
+            try:
+                pruefe_domaene(domaene)
+            except ValueError as exc:
+                print(f"Fehler: {exc}", file=sys.stderr)
+                return 1
+            if bestand == "abbrechen":
+                for z in ledger_zeilen(ledger_pfad):
+                    if z.get("kaskade") == str(kaskade) and \
+                            z.get("rolle") == rolle_ziel:
+                        print(f"Fehler: "
+                              f"{_bestand_meldung(kaskade, rolle_ziel, z['usd'], abo + api)}",
+                              file=sys.stderr)
+                        print(f"  Betrifft die {haelfte}.", file=sys.stderr)
+                        return 1
+            return 0
 
         if bestand == "addieren" and not files and abo == 0.0 and api == 0.0:
             print(f"{rolle_ziel.capitalize()}-Zeile Kaskade {kaskade} "

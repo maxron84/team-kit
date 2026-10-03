@@ -362,7 +362,7 @@ def lint_text(text):
     zeilen = [z for z in text.splitlines() if REPRODUCER_RE.match(z)]
     if not zeilen:
         maengel.append(
-            "keine `- **Reproducer-Test**:`-Zeile (Pflicht seit BL-15) — ohne "
+            "keine `- **Reproducer-Test**:`-Zeile (Pflicht seit Kit-BL-15) — ohne "
             "sie kennt niemand den Namen, unter dem die Absicherung entstehen "
             "soll.")
     elif not reproducer_pfad(text):
@@ -385,7 +385,7 @@ def lint_text(text):
             f"{len(zeilen)} `- **Reproducer-Test**:`-Zeilen in EINEM Fundblock "
             f"— es gilt die erste, die zweite ist unsichtbar. Haeufigster "
             f"Fall: Die Zeile eines FREMDEN Fundes wurde hier nachgetragen "
-            f"(BL-210). Sie gehoert in den Block, zu dem sie gehoert.")
+            f"(Kit-BL-210). Sie gehoert in den Block, zu dem sie gehoert.")
     return maengel
 
 
@@ -448,14 +448,67 @@ def hinweise_text(text):
                    if m), None)
     if status is None or not any(passt(status, s) for s in HINWEIS_STATUS):
         return []
+    hinweise = []
     befehl = any(TESTBEFEHL_RE.search(span) for span in BACKTICK_RE.findall(text))
     if befehl and not ZITAT_RE.search(text):
-        return [
+        hinweise.append(
             "Hinweis (sperrt nicht): Der Block nennt einen Testbefehl, zitiert "
             "aber keine Ausgabe. Ist er ausgefuehrt? Ein Befehlsergebnis wird "
             "belegt, nicht hergeleitet (Kit-BL-289) — im Feld war der "
-            "behauptete rote Test gruen."]
-    return []
+            "behauptete rote Test gruen.")
+    # BL-277: Datierte Nachtraege unten, aber eine aeltere (oder gar keine)
+    # Stand-Zeile oben — dann liest die planende Rolle einen veralteten Kopf.
+    zeilen = text.splitlines()
+    nachtraege = [d for z in zeilen if NACHTRAG_RE.search(z)
+                  for d in DATUM_RE.findall(z)]
+    if nachtraege:
+        juengster = max(nachtraege)
+        stand = next((m.group(1) for m in map(STAND_DATUM_RE.match, zeilen)
+                      if m), None)
+        if stand is None:
+            hinweise.append(
+                f"Hinweis (sperrt nicht): Der Block hat datierte Nachtraege "
+                f"(bis {juengster}), aber keine `- **Stand**:`-Zeile am Kopf. "
+                f"Wer ihn von oben liest, haelt den Kopf fuer den Stand "
+                f"(Kit-BL-277).")
+        elif stand < juengster:
+            hinweise.append(
+                f"Hinweis (sperrt nicht): Die Stand-Zeile ({stand}) ist aelter "
+                f"als der juengste Nachtrag ({juengster}) — Datum UND Halbsatz "
+                f"nachziehen (Kit-BL-277).")
+    return hinweise
+
+
+STAND_RE = re.compile(r"^-\s+\*\*Stand\*\*:\s*(.*?)\s*$")
+STAND_DATUM_RE = re.compile(r"^-\s+\*\*Stand\*\*:\s*(\d{4}-\d{2}-\d{2})")
+DATUM_RE = re.compile(r"\b(20\d{2}-\d{2}-\d{2})\b")
+NACHTRAG_RE = re.compile(r"nachtrag", re.I)
+
+
+def _stand_mitziehen(zeilen, status_zeile, status_neu, ende="\n"):
+    """BL-277: Ein Statuswechsel zieht die `Stand`-Zeile des Blocks mit.
+
+    Ein Fundblock waechst nach unten und wird von oben gelesen. Im Feld wurde
+    eine Kaskade auf dem Kopf eines 183 Zeilen langen Blocks geplant — dass
+    die Haelfte seit neun Tagen gebaut war, stand in den Nachtraegen darunter.
+    Eine Prompt-Auflage allein haelt das nicht: Besser ist, dass das Werkzeug
+    die Zeile beim Schreiben selbst mitzieht. Fehlt sie, wird sie direkt unter
+    der Statuszeile angelegt."""
+    from datetime import date
+    text = f"- **Stand**: {date.today().isoformat()} — Status auf '{status_neu}' gesetzt"
+    j = status_zeile + 1
+    while j < len(zeilen) and not (zeilen[j].startswith("### ")
+                                   or zeilen[j].startswith("## ")):
+        if STAND_RE.match(zeilen[j].rstrip("\n")):
+            zeilen[j] = text + ("\n" if zeilen[j].endswith("\n") else "")
+            return
+        j += 1
+    if ende:
+        zeilen.insert(status_zeile + 1, text + "\n")
+    else:
+        # Die Statuszeile war die letzte der Datei, ohne Zeilenende.
+        zeilen[status_zeile] += "\n"
+        zeilen.insert(status_zeile + 1, text)
 
 
 def status_bekannt(wert: str) -> bool:
@@ -632,6 +685,7 @@ def main() -> int:
                 alt = zeilen[zeilennr]
                 ende = "\n" if alt.endswith("\n") else ""
                 zeilen[zeilennr] = STATUS_RE.sub(rf"\g<1>{status_neu}", alt.rstrip("\n")) + ende
+                _stand_mitziehen(zeilen, zeilennr, status_neu, ende)
                 _schreibe(aktiv_pfad, "".join(zeilen))
                 return 0
         print(f"FEHLER: {hm_soll} nicht im Beutebuch gefunden.", file=sys.stderr)

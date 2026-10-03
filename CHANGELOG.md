@@ -88,6 +88,45 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Changed
 
+- **Lauf-Deckel: Default 50 statt 15 USD** (`BL-304`, Entscheid des Owners).
+  Seit die Rollen 20/40 USD duerfen (`BL-286`), lag der Lauf-Deckel UNTER dem
+  Soft-Cap einer Rolle — ein teurer Einzelaufruf stiess zuerst an ihn. Jetzt
+  begrenzt der Rollen-Cap den Aufruf und der Lauf-Deckel die Summe. Geaendert
+  in Voll- und Halbautomatik beider Bahnen, den Installer-Meldungen,
+  `TEAM.md`, der Regeldatei-Vorlage und dem Architekten-Briefing.
+
+- **Laufzeit-Ausgaben nennen Kit-Nummern als `Kit-BL-<N>`** (`BL-235`,
+  gemeldet aus `Feld B`). Ein Abbruchbericht mit `(BL-41)` fuehrte im
+  Feldprojekt zum eigenen, voellig anderen `BL-41`. 155 Stellen in
+  Bibliotheken, Entrypoints, Sweep-Skripten und Python-Werkzeugen; Kommentare
+  bleiben, wie sie sind.
+
+- **Die Fundvorlage traegt eine `Stand`-Zeile am Kopf** (`BL-277`, gemeldet
+  aus `Feld B`). Ein Fundblock waechst nach unten und wird von oben gelesen —
+  eine Kaskade wurde im Feld auf einem veralteten Kopf geplant.
+  `beutebuch.py set` zieht die Zeile bei jedem Statuswechsel mit, `lint` weist
+  auf eine Stand-Zeile hin, die aelter ist als der juengste datierte Nachtrag.
+
+- **Der Sweep quittiert, was er geprueft hat** (`BL-299`, gemeldet aus
+  `Feld E`). Bei nummerierten Fokus-Punkten verlangt der Prompt eine
+  Abdeckungszeile je Punkt (`ABDECKUNG <Nr>: …`) in der Abschlussantwort.
+
+- **`zitat_lint.py` kennt Fund- und Aktenzitate und zaehlt Rueckblicke nur
+  noch** (`BL-234`, `BL-282`, beide `Feld B`). `HM-` und `AX-` werden gegen das
+  Beutebuch geprueft (eine Akte ueber den Fund ihrer Kopfzeile); Treffer in
+  Abschlussprotokollen und Archiven stehen als Zahl da und aendern den Exit
+  nicht.
+
+- **`ledger-pruefen` sieht eine ganz ausgefallene Kaskade** (`BL-280`,
+  gemeldet aus `Feld B`). Neue Pruefung P4: Plandatei und Rohlogs im
+  Zeitfenster, aber keine Ledger-Zeile, ist eine Warnung samt Befehl zum
+  Nachholen.
+
+- **Beutezug-Dreisatz Punkt 3 praezisiert** (`BL-289`). Im Loop-Sweep darf das
+  Red Team nur den Smoke-Test starten; ein Befehlsergebnis, das es nicht
+  ausgefuehrt hat, steht als ERWARTUNG im Fund, nie als Beobachtung. Die erste
+  Fassung verlangte das Ausfuehren auch dort, wo es nicht erlaubt ist.
+
 - **Das Architekten-Briefing: Kostenabschluss zuerst, Befehle in der Bahn des
   Menschen, Dateien statt Punkte** (`BL-291`, `BL-284`, `BL-294`, `BL-293`,
   gemeldet aus `Feld F` und `Feld E`). Die Scharfschalt-Sequenz beginnt jetzt
@@ -395,6 +434,30 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   die Umgebungsvariable nicht.* Still bleibt es, wo nichts abweicht.
 
 ### Fixed
+
+- **`--rollen-abschluss` bucht ganz oder gar nicht** (`BL-239`, `BL-244`,
+  gemeldet aus `Feld B`, beide Bahnen). Hielt der Altersriegel die eine
+  Haelfte an, war die andere schon gebucht und archiviert, waehrend die
+  Meldung „NICHTS gebucht" sagte; der korrigierende Zweitaufruf mit
+  `--ersetzen` ersetzte dann 6,75 USD durch 0.0000. Der Wrapper prueft jetzt
+  beide Haelften mit `--nur-pruefen`, bevor er bucht, jede Meldung nennt ihre
+  Haelfte, und `--ersetzen` ohne Logs laesst die Zeile unveraendert.
+
+- **Notizen muessen durch keine Shell mehr** (`BL-245`, `BL-249`, gemeldet
+  aus `Feld B`, beide Bahnen). Ein Anfuehrungszeichen im Notiztext zerlegte den
+  Aufruf in Schalter, und eine lange Notiz scheiterte an der 8191-Zeichen-
+  Grenze von cmd.exe — wobei `--addieren` den ganzen, wachsenden Text braucht.
+  `--notiz-datei <pfad>` (und `--bau-notiz-datei`) loest beides; ein
+  unbekanntes Wort nennt jetzt diesen Weg.
+
+- **`sitzung-messen` ueber den dokumentierten Direktaufruf war ungeeicht**
+  (`BL-238`, gemeldet aus `Feld B`). `TEAM_PREISE` exportierte nur die
+  Shell-Konfiguration; `kosten.py` liest den Wert jetzt aus `team.config.*`,
+  wenn die Umgebung ihn nicht kennt.
+
+- **`test_bl135` faerbte die Team-Suite wegen verworfener Ausgabe rot**
+  (`BL-246`, gemeldet aus `Feld B`). `*> $null` und `2>&1 | Out-Null` zaehlen
+  nicht mehr als Auffangen.
 
 - **Relative Schreibregeln griffen nach einem `cd` nicht mehr — und der Sweep
   meldete trotzdem „keine neuen Funde"** (`BL-292`, gemeldet aus `Feld F`,

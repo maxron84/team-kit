@@ -89,7 +89,7 @@ if ($fokus) {
     if ($zeilen.Count -ge 1 -and $zeilen[0] -eq $headHash) {
         $fokus = ($zeilen | Select-Object -Skip 1) -join "`n"
     } else {
-        Team-Fehler "[$Rolle] Der zuletzt gesetzte Fokus gehört zu einem anderen Stand ($($zeilen[0])) — VERFALLEN (BL-31)."
+        Team-Fehler "[$Rolle] Der zuletzt gesetzte Fokus gehört zu einem anderen Stand ($($zeilen[0])) — VERFALLEN (Kit-BL-31)."
         Team-Fehler "  Dieser Sweep läuft mit dem Grundauftrag. Für eine gezielte Prüfung TEAM_REDTEAM_FOCUS neu setzen."
         Remove-Item -Force $focusState -ErrorAction SilentlyContinue
     }
@@ -172,7 +172,7 @@ Block an (nächste freie Nummer beginnt bei $nextId):
 - **Realität**: …
 
 Was in $TEAM_TEST_ORDNER liegen bleibt, braucht einen Namen und einen Fund
-(BL-47): Ein Hilfs-/Sondenskript ohne zugehörigen Fund LÖSCHST du wieder,
+(Kit-BL-47): Ein Hilfs-/Sondenskript ohne zugehörigen Fund LÖSCHST du wieder,
 bevor du fertig meldest — oder du benennst es als Reproducer nach seinem Fund
 (test_hm<Nr>_<stichwort>). Eine namenlose Datei im Test-Ordner wird nie wieder
 gelesen, ist von keinem Fundblock referenziert und fällt trotzdem unter die
@@ -182,7 +182,13 @@ Findest du NICHTS, ändere keine Datei.
 Lehnt die CLI ein Edit oder Write im Beutebuch oder im Test-Ordner ab, weiche
 NICHT auf Bash aus: Schreibe jeden Fundblock vollständig, samt
 Reproducer-Zeile, in deine Abschlussantwort — dort holt ihn der Mensch ab
-(BL-292).
+(Kit-BL-292).
+Nennt dein Auftrag nummerierte Fokus-Punkte, schließe die Abschlussantwort
+mit EINER Abdeckungszeile je Punkt, in genau dieser Form:
+ABDECKUNG <Nr>: Fund HM-<Nr> | geprüft, ohne Befund | nicht geprüft — <Grund>
+Ein Punkt ohne Fund hinterlässt sonst keine Spur, und „nichts gefunden“ ist
+von „zu vage gefragt“ nicht zu unterscheiden (Kit-BL-299). Das ist keine Datei —
+die Read-Only-Grenze bleibt, wie sie ist.
 Beende IMMER mit exakt: <promise>REDTEAM_SWEEP_COMPLETE</promise> — AUCH WENN
 du einen Fund ins Beutebuch geschrieben hast; das Promise ist die
 Sweep-Quittung, nicht der Fund-Beleg.
@@ -232,7 +238,7 @@ if ($budgetRc -ge 2) {
         (team_promise_in $TEAM_LAST_OUT 'REDTEAM_SWEEP_COMPLETE')) {
         $budgetUeberschritten = 1
         Team-Fehler "[$Rolle] Budget-Cap überschritten ($TEAM_LAST_COST USD ≥ $rolleBudget USD) — der Aufruf war aber nachweislich erfolgreich (Promise + sauberes Log)."
-        Team-Fehler "  Der Fortschritt wird gebucht; der Deckel verhindert den NÄCHSTEN Aufruf, nicht diesen (BL-30)."
+        Team-Fehler "  Der Fortschritt wird gebucht; der Deckel verhindert den NÄCHSTEN Aufruf, nicht diesen (Kit-BL-30)."
     } else {
         Team-Fehler "[$Rolle] Budget-Hard-Cap überschritten — Abbruch (kein vollständiges Ergebnis; $stateFile bleibt unverändert)."
         exit 1
@@ -311,7 +317,7 @@ if ($budgetUeberschritten -eq 1) {
     Team-Fehler "[$Rolle] ERINNERUNG: Dieser Sweep lag über dem Cap ($TEAM_LAST_COST USD ≥ $rolleBudget USD). Fortschritt ist gebucht, der nächste Aufruf ist gedeckelt."
 }
 if ($verweigert.Count) {
-    Team-Fehler "[$Rolle] SWEEP NICHT SAUBER — die CLI hat Schreibversuche IM erlaubten Bereich abgelehnt (BL-292):"
+    Team-Fehler "[$Rolle] SWEEP NICHT SAUBER — die CLI hat Schreibversuche IM erlaubten Bereich abgelehnt (Kit-BL-292):"
     foreach ($z in $verweigert) { Team-Fehler "  $z" }
     Team-Fehler "  Funde stehen womöglich NUR im result des Logs: $out"
     Team-Fehler "  Dort lesen und ins Beutebuch übertragen. $stateFile bleibt stehen — der Bereich gilt als ungeprüft."

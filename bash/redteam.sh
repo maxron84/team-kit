@@ -75,7 +75,7 @@ elif [ -f "$FOCUS_STATE" ]; then
     if [ "$FOCUS_HEAD" = "$HEAD_HASH" ]; then
         TEAM_REDTEAM_FOCUS="$(tail -n +2 "$FOCUS_STATE")"
     else
-        echo "[$ROLLE] Der zuletzt gesetzte Fokus gehört zu einem anderen Stand ($FOCUS_HEAD) — VERFALLEN (BL-31)." >&2
+        echo "[$ROLLE] Der zuletzt gesetzte Fokus gehört zu einem anderen Stand ($FOCUS_HEAD) — VERFALLEN (Kit-BL-31)." >&2
         echo "  Dieser Sweep läuft mit dem Grundauftrag. Für eine gezielte Prüfung TEAM_REDTEAM_FOCUS neu setzen." >&2
         rm -f "$FOCUS_STATE"
     fi
@@ -158,7 +158,7 @@ Block an (nächste freie Nummer beginnt bei $NEXT_ID):
 - **Realität**: …
 
 Was in ${TEAM_TEST_ORDNER} liegen bleibt, braucht einen Namen und einen Fund
-(BL-47): Ein Hilfs-/Sondenskript ohne zugehörigen Fund LÖSCHST du wieder,
+(Kit-BL-47): Ein Hilfs-/Sondenskript ohne zugehörigen Fund LÖSCHST du wieder,
 bevor du fertig meldest — oder du benennst es als Reproducer nach seinem Fund
 (test_hm<Nr>_<stichwort>). Eine namenlose Datei im Test-Ordner wird nie wieder
 gelesen, ist von keinem Fundblock referenziert und fällt trotzdem unter die
@@ -168,7 +168,13 @@ Findest du NICHTS, ändere keine Datei.
 Lehnt die CLI ein Edit oder Write im Beutebuch oder im Test-Ordner ab, weiche
 NICHT auf Bash aus: Schreibe jeden Fundblock vollständig, samt
 Reproducer-Zeile, in deine Abschlussantwort — dort holt ihn der Mensch ab
-(BL-292).
+(Kit-BL-292).
+Nennt dein Auftrag nummerierte Fokus-Punkte, schließe die Abschlussantwort
+mit EINER Abdeckungszeile je Punkt, in genau dieser Form:
+ABDECKUNG <Nr>: Fund HM-<Nr> | geprüft, ohne Befund | nicht geprüft — <Grund>
+Ein Punkt ohne Fund hinterlässt sonst keine Spur, und „nichts gefunden“ ist
+von „zu vage gefragt“ nicht zu unterscheiden (Kit-BL-299). Das ist keine Datei —
+die Read-Only-Grenze bleibt, wie sie ist.
 Beende IMMER mit exakt: <promise>REDTEAM_SWEEP_COMPLETE</promise> — AUCH WENN
 du einen Fund ins Beutebuch geschrieben hast; das Promise ist die
 Sweep-Quittung, nicht der Fund-Beleg."
@@ -239,7 +245,7 @@ if [ "$BUDGET_RC" -ge 2 ]; then
        && team_promise_in "$TEAM_LAST_OUT" "REDTEAM_SWEEP_COMPLETE"; then
         BUDGET_UEBERSCHRITTEN=1
         echo "[$ROLLE] Budget-Cap überschritten ($TEAM_LAST_COST USD ≥ $ROLLE_BUDGET_USD USD) — der Aufruf war aber nachweislich erfolgreich (Promise + sauberes Log)." >&2
-        echo "  Der Fortschritt wird gebucht; der Deckel verhindert den NÄCHSTEN Aufruf, nicht diesen (BL-30)." >&2
+        echo "  Der Fortschritt wird gebucht; der Deckel verhindert den NÄCHSTEN Aufruf, nicht diesen (Kit-BL-30)." >&2
     else
         echo "[$ROLLE] Budget-Hard-Cap überschritten — Abbruch (kein vollständiges Ergebnis; $STATE_FILE bleibt unverändert)." >&2
         exit 1
@@ -339,7 +345,7 @@ if [ "$BUDGET_UEBERSCHRITTEN" -eq 1 ]; then
     echo "[$ROLLE] ERINNERUNG: Dieser Sweep lag über dem Cap ($TEAM_LAST_COST USD ≥ $ROLLE_BUDGET_USD USD). Fortschritt ist gebucht, der nächste Aufruf ist gedeckelt." >&2
 fi
 if [ -n "$VERWEIGERT" ]; then
-    echo "[$ROLLE] SWEEP NICHT SAUBER — die CLI hat Schreibversuche IM erlaubten Bereich abgelehnt (BL-292):" >&2
+    echo "[$ROLLE] SWEEP NICHT SAUBER — die CLI hat Schreibversuche IM erlaubten Bereich abgelehnt (Kit-BL-292):" >&2
     printf '%s\n' "$VERWEIGERT" | sed 's/^/  /' >&2
     echo "  Funde stehen womöglich NUR im result des Logs: $OUT" >&2
     echo "  Dort lesen und ins Beutebuch übertragen. $STATE_FILE bleibt stehen — der Bereich gilt als ungeprüft." >&2

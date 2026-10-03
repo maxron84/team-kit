@@ -341,15 +341,15 @@ Smoke-Test ausführen: $TEAM_SMOKE_TEST — muss grün sein.
    Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe. Starte ihn
    NIEMALS als Hintergrund-Task oder Monitor und plane keinen Wakeup darauf:
    Diese Sitzung ist headless, es kommt keine Benachrichtigung, und du wartest
-   bis zum Zeitlimit auf ein Ereignis, das nicht eintreten kann (BL-265).
+   bis zum Zeitlimit auf ein Ereignis, das nicht eintreten kann (Kit-BL-265).
    Er darf dafür bis zu $TEAM_SMOKE_TEST_TIMEOUT Sekunden brauchen: Erhöhe das
    Zeitlimit deines Werkzeugs entsprechend, statt in den Hintergrund
    auszuweichen — viele Werkzeuge erwarten MILLISEKUNDEN, das wären
-   ${TEAM_SMOKE_TEST_TIMEOUT}000 (BL-258). Läuft er länger, ist das ein Befund
+   ${TEAM_SMOKE_TEST_TIMEOUT}000 (Kit-BL-258). Läuft er länger, ist das ein Befund
    für den Menschen — melde ihn, weiche nicht aus.
    War der Baum schon VOR deiner Arbeit rot, hänge eine Zeile
    '<ISO-Zeit> | <deine Rolle> | <Namen der roten Tests>' an
-   $TEAM_GATE_DATEI an (BL-256). Dein Auftrag scheitert daran NICHT — aber
+   $TEAM_GATE_DATEI an (Kit-BL-256). Dein Auftrag scheitert daran NICHT — aber
    ohne diese Zeile meldet sich der Lauf am Ende als fertig, während das Gate
    aus ist. Ist der Baum am Ende grün, lösche die Datei wieder.
 "@.TrimEnd()
@@ -361,7 +361,7 @@ Smoke-Test ausführen: $TEAM_SMOKE_TEST — muss grün sein.
     # Fehlversuch (.frank-attempts) und eskaliert ab dem dritten an Axel —
     # das teure Modell wird also fuer einen Formfehler gerufen. Deshalb
     # steht die Auflage hier ausgeschrieben statt nur bei Ralph.
-    $SMOKE_SUFFIX = " Smoke-Test grün: $TEAM_SMOKE_TEST. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu $TEAM_SMOKE_TEST_TIMEOUT Sekunden brauchen, erhöhe das Zeitlimit deines Werkzeugs entsprechend (viele Werkzeuge erwarten MILLISEKUNDEN — das wären ${TEAM_SMOKE_TEST_TIMEOUT}000, BL-258). NIEMALS als Hintergrund-Task, als Monitor oder mit einem Wakeup darauf (BL-265): Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (BL-41). War die Suite schon VOR deinem Fix rot, brich nicht ab: Miss beide Staende und belege, dass durch DEINEN Fix kein NEUER Fehlschlag entsteht (BL-205) — und haenge die Zeile '<ISO-Zeit> | frank | <Namen der roten Tests>' an $TEAM_GATE_DATEI an, sonst meldet sich der Lauf am Ende als fertig, waehrend das Gate aus ist (BL-256). Ist der Baum am Ende gruen, loesche die Datei wieder."
+    $SMOKE_SUFFIX = " Smoke-Test grün: $TEAM_SMOKE_TEST. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu $TEAM_SMOKE_TEST_TIMEOUT Sekunden brauchen, erhöhe das Zeitlimit deines Werkzeugs entsprechend (viele Werkzeuge erwarten MILLISEKUNDEN — das wären ${TEAM_SMOKE_TEST_TIMEOUT}000, Kit-BL-258). NIEMALS als Hintergrund-Task, als Monitor oder mit einem Wakeup darauf (Kit-BL-265): Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (Kit-BL-41). War die Suite schon VOR deinem Fix rot, brich nicht ab: Miss beide Staende und belege, dass durch DEINEN Fix kein NEUER Fehlschlag entsteht (Kit-BL-205) — und haenge die Zeile '<ISO-Zeit> | frank | <Namen der roten Tests>' an $TEAM_GATE_DATEI an, sonst meldet sich der Lauf am Ende als fertig, waehrend das Gate aus ist (Kit-BL-256). Ist der Baum am Ende gruen, loesche die Datei wieder."
 } else {
     $SMOKE_ZEILE = "(Kein Smoke-Test konfiguriert — Schritt entfällt. Das Team arbeitet ohne Sicherheitsnetz; TEAM_SMOKE_TEST in team.config.ps1 nachtragen.)"
     $SMOKE_SUFFIX = ""
@@ -388,7 +388,7 @@ function team_smoke_auffrischen {
     if (-not $neu) { return }
     $script:TEAM_SMOKE_TEST = $neu
     team_smoke_bausteine
-    [Console]::Error.WriteLine("[team-lib] Smoke-Test seit dieser Stufe konfiguriert: $neu — die folgenden Stufen bauen mit ihm (BL-283).")
+    [Console]::Error.WriteLine("[team-lib] Smoke-Test seit dieser Stufe konfiguriert: $neu — die folgenden Stufen bauen mit ihm (Kit-BL-283).")
 }
 
 function team_allowed_tools {
@@ -415,7 +415,7 @@ function team_allowed_tools {
     }
     $wurzel = $wurzel.TrimEnd('/')
     if ($wurzel.Contains(' ')) {
-        [Console]::Error.WriteLine("[team-lib] WARNUNG: Der Projektpfad enthält ein Leerzeichen — die Schreibregeln gelten nur relativ. Wechselt eine Rolle mit cd in einen Unterordner, lehnt die CLI ihre Schreibversuche ab (BL-292).")
+        [Console]::Error.WriteLine("[team-lib] WARNUNG: Der Projektpfad enthält ein Leerzeichen — die Schreibregeln gelten nur relativ. Wechselt eine Rolle mit cd in einen Unterordner, lehnt die CLI ihre Schreibversuche ab (Kit-BL-292).")
         $wurzel = ''
     }
     $regeln = {
@@ -445,7 +445,7 @@ $TEAM_ROLE_HARDCAP_USD = Team-Default 'TEAM_ROLE_HARDCAP_USD' '40'
 # greift Franks und Axels harter Abbruch nie mehr — und nichts sagte es.
 try {
     if ([double]$TEAM_ROLE_HARDCAP_USD -le [double]$TEAM_ROLE_BUDGET_USD) {
-        [Console]::Error.WriteLine("[team-lib] WARNUNG: TEAM_ROLE_HARDCAP_USD ($TEAM_ROLE_HARDCAP_USD) liegt nicht über TEAM_ROLE_BUDGET_USD ($TEAM_ROLE_BUDGET_USD) — Frank und Axel haben damit KEINEN harten Abbruch mehr (BL-297). Wer den Soft-Cap hebt, hebt den Hard-Cap mit.")
+        [Console]::Error.WriteLine("[team-lib] WARNUNG: TEAM_ROLE_HARDCAP_USD ($TEAM_ROLE_HARDCAP_USD) liegt nicht über TEAM_ROLE_BUDGET_USD ($TEAM_ROLE_BUDGET_USD) — Frank und Axel haben damit KEINEN harten Abbruch mehr (Kit-BL-297). Wer den Soft-Cap hebt, hebt den Hard-Cap mit.")
     }
 } catch { }
 
@@ -494,7 +494,7 @@ function team_warnung_abo_key {
         # Prozessbaum gehoert dem echten Fall (~13,8 USD Leerlauf ueber API).
         Team-Fehler "Hinweis: ANTHROPIC_API_KEY liegt in der Prozess-Umgebung, gesetzt vom API-Fallback"
         Team-Fehler "  eines vorigen Aufrufs (nicht aus dem Profil). Er wird für diesen Abo-Aufruf"
-        Team-Fehler "  unmittelbar entfernt — kein Handlungsbedarf (BL-48)."
+        Team-Fehler "  unmittelbar entfernt — kein Handlungsbedarf (Kit-BL-48)."
         return $true
     }
 
@@ -1498,7 +1498,7 @@ function team_raw_pruefen {
     if (-not $abweichung.Count) { return $true }
     Team-Fehler "[$Rolle] ÜBERGRIFF in der Rohmaterial-Zone ($TEAM_ROHMATERIAL_ORDNER) — sie gehört dem Stakeholder, jede Rolle liest dort nur:"
     foreach ($z in @($abweichung | Sort-Object { $_.Substring(11) })) { Team-Fehler "  $z" }
-    Team-Fehler "  Nichts davon wurde angefasst (BL-263). Stammt eine Änderung nicht vom Stakeholder, hat die Rolle die Zone verletzt — von Hand prüfen."
+    Team-Fehler "  Nichts davon wurde angefasst (Kit-BL-263). Stammt eine Änderung nicht vom Stakeholder, hat die Rolle die Zone verletzt — von Hand prüfen."
     return $false
 }
 
@@ -1645,7 +1645,7 @@ function team_eigene_pfade {
     # wissen, dass hier fremde Arbeit lag — und dass sie unangetastet blieb.
     foreach ($pfad in $roh) {
         if ($eigene -notcontains $pfad) {
-            Team-Fehler "[guard] Nicht angefasst, lag vor dem Rollenstart im Baum (BL-206): $pfad"
+            Team-Fehler "[guard] Nicht angefasst, lag vor dem Rollenstart im Baum (Kit-BL-206): $pfad"
         }
     }
     Write-Output $eigene
@@ -1677,7 +1677,7 @@ function team_pfade_zuruecksetzen {
             # bleibt liegen, der Ordner bleibt unversioniert.
             & git cat-file -e "$($Hash):$pfad" 2>$null | Out-Null
             if ($LASTEXITCODE -ne 0) { & git rm -r --cached --quiet -- $pfad 2>$null | Out-Null }
-            Team-Fehler "[$Rolle] Guard: '$pfad' liegt in der Rohmaterial-Zone — Stakeholder-Eigentum, NICHT angefasst (BL-263)."
+            Team-Fehler "[$Rolle] Guard: '$pfad' liegt in der Rohmaterial-Zone — Stakeholder-Eigentum, NICHT angefasst (Kit-BL-263)."
             continue
         }
         & git cat-file -e "$($Hash):$pfad" 2>$null | Out-Null
@@ -1934,7 +1934,7 @@ function team_quittung_fehlt_melden {
     param([string]$Rolle, [string]$Datei, [string]$Was,
           [Parameter(ValueFromRemainingArguments = $true)][string[]]$Schritte = @())
     if (-not (team_result_meldet_erfolg $Datei)) { return $false }
-    Team-Fehler "[$Rolle] STUFE FERTIG, QUITTUNG FEHLT (BL-41) — $Was"
+    Team-Fehler "[$Rolle] STUFE FERTIG, QUITTUNG FEHLT (Kit-BL-41) — $Was"
     Team-Fehler "  Das Log meldet sich selbst als Erfolg (subtype=success, is_error=false), gibt aber"
     Team-Fehler "  keine Quittung. Das ist der benannte vierte Ausgang: Die Sitzung hat sich beendet,"
     Team-Fehler "  meist im Warten auf einen Hintergrund-Task/Monitor/Wakeup, den es headless nicht gibt."
@@ -2030,7 +2030,7 @@ function team_quittung_selbstpruefung {
     if ($env:TEAM_QUITTUNG_AUTO -eq '0') { return $false }
     $testOrdner = if ($TEAM_TEST_ORDNER) { $TEAM_TEST_ORDNER } else { 'tests/' }
 
-    Team-Fehler "[$Rolle] Selbstprüfung des vierten Ausgangs (BL-41) für Stufe ${Stufe}:"
+    Team-Fehler "[$Rolle] Selbstprüfung des vierten Ausgangs (Kit-BL-41) für Stufe ${Stufe}:"
 
     # (1) Hat die Sitzung ueberhaupt etwas hinterlassen? Ohne Arbeit gibt es
     #     nichts zu quittieren — dann ist es kein "fertig ohne Quittung",
@@ -2066,12 +2066,12 @@ function team_quittung_selbstpruefung {
     }
     $hatZusicherung = @($dateien | Where-Object { $_ -match "^`"?$([regex]::Escape($testOrdner))" }).Count -gt 0
     if (-not $hatZusicherung) {
-        Team-Fehler "    ✗ Keine Datei unter $testOrdner berührt (BL-135)."
+        Team-Fehler "    ✗ Keine Datei unter $testOrdner berührt (Kit-BL-135)."
         Team-Fehler "      Die Stufe hat keine nachweisbare Zusicherung — grüner Baum beweist hier"
         Team-Fehler "      nichts, weil der Bestand das Neue nicht prüft. Das gehört an den Menschen."
         return $false
     }
-    Team-Fehler "    ✓ Zusicherung vorhanden — mindestens eine Datei unter $testOrdner berührt (BL-135)."
+    Team-Fehler "    ✓ Zusicherung vorhanden — mindestens eine Datei unter $testOrdner berührt (Kit-BL-135)."
 
     # (3) Ist der Baum gruen? Der teuerste, aber unverzichtbare Schritt.
     if (-not $TEAM_SMOKE_TEST) {
@@ -2083,7 +2083,7 @@ function team_quittung_selbstpruefung {
     #     gleichzeitige Testlaeufe kollidieren, und das Ergebnis waere eine
     #     Eigenschaft der MASCHINE statt eine des Codes.
     if (team_smoke_parallel_lauf) {
-        Team-Fehler "    ? Es läuft bereits ein Verifikationslauf — Ergebnis UNBEKANNT, nicht rot (BL-207)."
+        Team-Fehler "    ? Es läuft bereits ein Verifikationslauf — Ergebnis UNBEKANNT, nicht rot (Kit-BL-207)."
         Team-Fehler "      Gefunden: $TEAM_SMOKE_PARALLEL_ZEILE"
         Team-Fehler "      Ein zweiter Lauf daneben kollidiert (Datenbankdateien, Ports,"
         Team-Fehler "      Nutzerverzeichnisse) und meldete ROT für einen Baum, der allein gefahren"
@@ -2097,13 +2097,13 @@ function team_quittung_selbstpruefung {
         Team-Fehler "    ✗ $TEAM_SMOKE_TEST ist ROT."
         Team-Fehler "      Das gehört an den Menschen: Erst prüfen, WO — sind ausschließlich die von"
         Team-Fehler "      DIESER Stufe neu angelegten Testdateien rot, ist der Testaufbau der"
-        Team-Fehler "      wahrscheinlichere Schuldige als der Produktivcode (BL-61)."
+        Team-Fehler "      wahrscheinlichere Schuldige als der Produktivcode (Kit-BL-61)."
         # BL-201: siehe die bash-Fassung — der Befund kann eine Eigenschaft
         # des LAUFS statt des Codes sein.
         Team-Fehler "      ABER: Dieser Befund ist nicht sicher. Wurde der Test vorher als"
         Team-Fehler "      Hintergrundlauf angestossen und nie zu Ende gefuehrt, misst du seinen"
         Team-Fehler "      halben Zustand statt deinen Code. Miss im VORDERGRUND nach, bevor du den"
-        Team-Fehler "      Befund verwendest — und lies das Feld ``result`` im Lauf-Log (BL-201)."
+        Team-Fehler "      Befund verwendest — und lies das Feld ``result`` im Lauf-Log (Kit-BL-201)."
         return $false
     }
     Team-Fehler "    ✓ $TEAM_SMOKE_TEST ist grün."

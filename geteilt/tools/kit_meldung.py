@@ -152,7 +152,7 @@ jedem Update aufs Neue.
 
 TODO — auch Fehlschläge sind Information. Wenn du im Projekt schon lokal
 gefixt hast: bitte den Fix beschreiben (er hat eine Verfallszeit — sie endet
-beim nächsten `--update`, siehe `BL-42`/`BL-58`).
+beim nächsten `--update`, siehe `Kit-BL-42`/`Kit-BL-58`).
 """
 
 
@@ -630,7 +630,7 @@ def verb_senden(a):
               "(ohne Push).\n"
               "  Danach eine `BL-n`-Zeile in `<kit>/plans/backlog.md` "
               "schreiben, die auf sie zeigt —\n"
-              "  Nummer gegen Backlog UND Archiv geprüft (`BL-188`).",
+              "  Nummer gegen Backlog UND Archiv geprüft (`Kit-BL-188`).",
               file=sys.stderr)
         return 3
 

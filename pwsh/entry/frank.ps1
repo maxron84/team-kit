@@ -124,7 +124,7 @@ Franks Dreisatz — alle Schritte sind PFLICHT:
    Datei. Fehlt sie, lege sie an; trägt sie einen xfail/Skip-Marker, nimm ihn
    heraus. Gegenprobe: OHNE deinen Fix muss dieser Test ROT sein — fahre ihn
    einmal in diesem Zustand. Ein Fund ohne wirksamen Regressionstest gilt
-   nicht als erledigt (BL-22/BL-28).
+   nicht als erledigt (Kit-BL-22/Kit-BL-28).
 1. $schritt1
 2. Genau EIN Commit: '${TEAM_FIX_PRAEFIX}: <was+warum> ($hm)'.
 3. $TEAM_CHANGELOG unter '## [Unreleased]' → '### Fixes' den Fix eintragen (Was+Warum)
@@ -133,7 +133,7 @@ Franks Dreisatz — alle Schritte sind PFLICHT:
    (Den CHANGELOG-/Status-Edit im selben oder einem Folge-Commit 'docs: …' sichern.)
 
 
-Zwei Dinge, die keine Rückfrage wert sind — hier steht die Antwort (BL-205):
+Zwei Dinge, die keine Rückfrage wert sind — hier steht die Antwort (Kit-BL-205):
 * WAR DIE SUITE SCHON VOR DIR ROT, brichst du nicht ab. Du misst beide Stände
   (deinen Ausgangs-Commit und dein Ergebnis) und belegst, dass durch DEINEN Fix
   kein NEUER Fehlschlag entstanden ist; die vorbestehenden nennst du im
@@ -212,7 +212,7 @@ if ($budgetGesprengt -eq 0) {
     # Dreisatz-Fehler.
     if (-not (team_reproducer_liegt_vor $hm)) {
         Team-Fehler "[frank] ${hm}: die im Fundblock reservierte Reproducer-Datei existiert nach dem Fix NICHT."
-        Team-Fehler '  Ein quittierter Fund ohne wirksamen Regressionstest ist kein erledigter Fund (BL-28).'
+        Team-Fehler '  Ein quittierter Fund ohne wirksamen Regressionstest ist kein erledigter Fund (Kit-BL-28).'
     }
 
     # BL-214: Der VIERTE AUSGANG, jetzt auch bei Frank — genau der Fund, der

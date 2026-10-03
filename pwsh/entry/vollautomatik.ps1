@@ -20,7 +20,7 @@
                              Muss >= TEAM_FRANK_MAX_VERSUCHE bleiben, sonst
                              greift die Bremse VOR Franks eigener Eskalation
                              an Axel.
-           TEAM_BUDGET_USD   Deckel fuer DIESEN Lauf (Default 15) — die harte
+           TEAM_BUDGET_USD   Deckel fuer DIESEN Lauf (Default 50, BL-304) — die harte
                              Durchsetzung misst nur die Kosten dieses einen
                              Laufs (A), nicht den lebenslangen Kontostand.
   Exit:    0 = Lauf durch · 1 = echter Fehler (inkl. Stagnation)
@@ -76,7 +76,7 @@ $stagnationMax = if ($env:TEAM_FIX_MAX_STAGNATION) { [int]$env:TEAM_FIX_MAX_STAG
                  elseif ($env:TEAM_FRANK_MAX_VERSUCHE) { [int]$env:TEAM_FRANK_MAX_VERSUCHE }
                  else { 3 }
 $budgetUserGesetzt = if ($env:TEAM_BUDGET_USD) { '1' } else { '0' }
-$budgetUsd = if ($env:TEAM_BUDGET_USD) { $env:TEAM_BUDGET_USD } else { '15' }
+$budgetUsd = if ($env:TEAM_BUDGET_USD) { $env:TEAM_BUDGET_USD } else { '50' }
 $logDir = '.team-logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $laufLog = Join-Path $logDir "vollautomatik-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
@@ -213,7 +213,7 @@ function Budget-Ok {
             $deckelKulant = $deckel * (1 + $kulanzProzent / 100)
             if ($jetzt -lt $deckelKulant) {
                 $script:KulanzGewaehrt = 1
-                Log "LAUF-BUDGET erreicht ($jetzt USD >= $budgetUsd USD), aber ein Fund ist in Bearbeitung — die angefangene Runde laeuft im Kulanzband bis $deckelKulant USD zu Ende (+$kulanzProzent %, BL-23). DANACH harter Stopp."
+                Log "LAUF-BUDGET erreicht ($jetzt USD >= $budgetUsd USD), aber ein Fund ist in Bearbeitung — die angefangene Runde laeuft im Kulanzband bis $deckelKulant USD zu Ende (+$kulanzProzent %, Kit-BL-23). DANACH harter Stopp."
                 return $true
             }
         }
@@ -287,7 +287,7 @@ function Phasen-Zeiger-Lesen {
         return
     }
     $script:abPhase = [int]$vermerkt
-    Log ("Faden aufgenommen bei " + (Phasen-Name $script:abPhase) + " — die Phasen davor werden uebersprungen (BL-217). .\vollautomatik.cmd --von-vorn beginnt stattdessen bei Phase 1.")
+    Log ("Faden aufgenommen bei " + (Phasen-Name $script:abPhase) + " — die Phasen davor werden uebersprungen (Kit-BL-217). .\vollautomatik.cmd --von-vorn beginnt stattdessen bei Phase 1.")
 }
 
 # BL-23 (3): Ein Abbruch endet nie ohne Weiterweg. Der Bericht kostet nichts,
@@ -363,7 +363,7 @@ if ($rc -eq 43) {
     # die bezahlte Arbeit ist mit hoher Wahrscheinlichkeit fertig, und ein
     # generisches "endete mit Fehler" hat im Feld viermal zum Neubau statt zum
     # Nachsehen gefuehrt (19,47 USD).
-    Log '⚠ Stufe fertig, Quittung fehlt (BL-41) — Lauf gestoppt. NICHT neu bauen, bevor die von Ralph genannten zwei Prüfungen gelaufen sind.'
+    Log '⚠ Stufe fertig, Quittung fehlt (Kit-BL-41) — Lauf gestoppt. NICHT neu bauen, bevor die von Ralph genannten zwei Prüfungen gelaufen sind.'
     exit 43
 }
 if ($rc -ne 0) {
@@ -375,7 +375,7 @@ if ($rc -ne 0) {
 Phasen-Naechste 2
 if (-not (Budget-Ok)) { Abbruch-Bericht 'Budget-Deckel'; exit 1 }
 } else {
-    Log '=== PHASE 1: Ralph — uebersprungen (Faden aufgenommen, BL-217) ==='
+    Log '=== PHASE 1: Ralph — uebersprungen (Faden aufgenommen, Kit-BL-217) ==='
 }
 
 # --- Phase 2+3: Red-Team-Sweeps -----------------------------------------------
@@ -383,7 +383,7 @@ $phaseNr = 1
 foreach ($rolle in @('harry', 'marv')) {
     $phaseNr++
     if (-not (Phasen-Faellig $phaseNr)) {
-        Log "=== PHASE Red Team: $rolle — uebersprungen (Faden aufgenommen, BL-217) ==="
+        Log "=== PHASE Red Team: $rolle — uebersprungen (Faden aufgenommen, Kit-BL-217) ==="
         continue
     }
     Log "=== PHASE Red Team: $rolle ==="
@@ -428,7 +428,7 @@ while ($runde -lt $maxRunden) {
         # Stagnations-Bremse, statt die Fix-Phase stumm zu beenden.
         5 {
             $getan = 1
-            Log "Runde ${runde}: Franks Auftrag am Kopf der Warteschlange ist unbrauchbar (BL-210) — der Fundblock gehoert nachgebessert. Dahinter liegende Funde bleiben ungesehen, solange er dort steht."
+            Log "Runde ${runde}: Franks Auftrag am Kopf der Warteschlange ist unbrauchbar (Kit-BL-210) — der Fundblock gehoert nachgebessert. Dahinter liegende Funde bleiben ungesehen, solange er dort steht."
         }
         42 {
             Log '⏸ Session-Limit erreicht — Lauf pausiert (Frank). Bitte später .\vollautomatik.cmd erneut starten. Kein Fehler, kein Datenverlust (State steht).'
@@ -436,7 +436,7 @@ while ($runde -lt $maxRunden) {
         }
         # BL-214: derselbe vierte Ausgang wie bei Ralph, dieselbe Behandlung.
         43 {
-            Log '⚠ Fix fertig, Quittung fehlt (BL-41/BL-214) — Lauf gestoppt. NICHT neu starten, bevor die von Frank genannten Prüfungen gelaufen sind.'
+            Log '⚠ Fix fertig, Quittung fehlt (Kit-BL-41/Kit-BL-214) — Lauf gestoppt. NICHT neu starten, bevor die von Frank genannten Prüfungen gelaufen sind.'
             exit 43
         }
         default { $getan = 1; Log "Runde ${runde}: Frank-Fehlversuch (ggf. Eskalation an Axel)." }
@@ -498,7 +498,7 @@ $frankRest = @(Team-Werkzeug $TEAM_BEUTEBUCH_TOOL @('list') 2>$null |
                Where-Object { $_ -match 'an Frank übergeben|Fix-Plan liegt vor' }).Count
 if ($frankRest -gt 0) {
     Log "WARNUNG: $frankRest Fund(e) warten weiter auf Frank — die Fix-Phase ist NICHT leergelaufen."
-    Log '  Steht ein unbrauchbarer Fundblock am Kopf der Warteschlange, bleibt alles dahinter ungesehen (BL-210).'
+    Log '  Steht ein unbrauchbarer Fundblock am Kopf der Warteschlange, bleibt alles dahinter ungesehen (Kit-BL-210).'
     Log '  Naechster Schritt:  .\frank.cmd   (nennt den Block, der nachgebessert gehoert)'
 }
 
@@ -523,7 +523,7 @@ if (Test-Path '.ralph-uebersprungen') {
                      Where-Object { $_ -match '^\d+$' } |
                      ForEach-Object { [int]$_ } | Sort-Object -Unique)
     if ($ausgelassen.Count) {
-        Log ("Planmäßig übersprungen: Stufe $($ausgelassen -join ', ') (BL-255) — " +
+        Log ("Planmäßig übersprungen: Stufe $($ausgelassen -join ', ') (Kit-BL-255) — " +
              "Abbruchbedingung des Plans, jeweils committet. Der vierte Ausgang " +
              "wurde dafür NICHT gemeldet.")
     }
@@ -547,7 +547,7 @@ if ($gateZeile) {
         Log "    $z"
     }
     Log '  Der Bau ist gelaufen, aber die Suite war es nicht — ein Lauf, der'
-    Log '  sich hier als fertig meldete, hätte ein rotes Gate überdeckt (BL-256).'
+    Log '  sich hier als fertig meldete, hätte ein rotes Gate überdeckt (Kit-BL-256).'
     Log '  Nächster Schritt: den roten Baum reparieren. Ist er grün, gehört'
     Log "  $TEAM_GATE_DATEI gelöscht — dann meldet sich der nächste Lauf wieder normal."
     Log 'Vollautomatik beendet — Gate ROT.'

@@ -2101,8 +2101,10 @@ Naechste Schritte im Zielprojekt:
   4. Team-Tests:         cd "$Ziel"; .\team-test.cmd
   5. Erste Kaskade planen — Sitzung im Projektordner, starke Stufe (Default Opus):
        "Du bist unser Architekt, lies team/prompts/rolle-architekt.md."
-  6. Lauf starten:       cd "$Ziel"; `$env:TEAM_BUDGET_USD='15'; .\vollautomatik.cmd
-     ^ Deckel fuer DIESEN Lauf. Lieber nachziehen als zu tief ansetzen: ein zu
+  6. Lauf starten:       cd "$Ziel"; `$env:TEAM_BUDGET_USD='50'; .\vollautomatik.cmd
+     ^ Deckel fuer DIESEN Lauf (50 USD ist auch der Default, BL-304). Er liegt
+       ueber dem Soft-Cap einer Rolle (20 USD), sonst stoppt er den Lauf vor
+       dem Rollen-Cap. Lieber nachziehen als zu tief ansetzen: ein zu
        tiefer Deckel wirft bezahlte Arbeit per Rollback weg und vervielfacht
        die Kosten, statt zu sparen (Feld-Lehre HM-32).
   7. NACH dem Lauf — Closeout, sonst sind die Kosten blind:

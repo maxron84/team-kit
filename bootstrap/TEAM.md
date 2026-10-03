@@ -186,11 +186,13 @@ einen stillen Fehlstart.
 ### 3. Laufen lassen
 
 ```bash
-TEAM_BUDGET_USD=15 {{RUF}}vollautomatik{{ENDUNG}}
+{{RUF}}vollautomatik{{ENDUNG}}
 ```
 
 Fährt die ganze Kaskade: Ralph baut → Red Team greift an → Frank fixt →
-Axel knackt die harten Fälle → Abschlussbericht.
+Axel knackt die harten Fälle → Abschlussbericht. Der Deckel für den Lauf
+liegt bei 50 USD; `TEAM_BUDGET_USD` übersteuert ihn, eine
+`BUDGET_EMPFEHLUNG_USD` im Plan hebt ihn an.
 
 Vorsichtiger, Schritt für Schritt mit Halt bei dir:
 

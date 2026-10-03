@@ -159,13 +159,13 @@ $urteil = [bool](team_guard_urteil 'axel' $guardUebergriff $ergebnis)
 # erstellt", der Fall blieb bei Axel, und die Schleife rief ihn erneut, bezahlt.
 # Exit 0 heisst "Akte erstellt", also wird das hier auch geprueft.
 if (-not $urteil -or $ergebnis -eq 0) {
-    if ($urteil) { Team-Fehler '[axel] KEINE Ermittlung geliefert — Akte oder Statuswechsel fehlt (BL-303).' }
+    if ($urteil) { Team-Fehler '[axel] KEINE Ermittlung geliefert — Akte oder Statuswechsel fehlt (Kit-BL-303).' }
     Team-Fehler "[axel] Akte vorhanden: $(if (Test-Path $akte) { 'ja' } else { 'nein' }) · Status ${hm}: $(if ($statusJetzt) { $statusJetzt } else { 'unbekannt' })"
     # BL-292, sinngemaess: Hat die CLI das Schreiben IM erlaubten Bereich
     # abgelehnt, steht die Ermittlung womoeglich vollstaendig im result des Logs.
     $verweigert = @(Team-Werkzeug $TEAM_KOSTEN_TOOL @('verweigert', $out, '--ordner', $TEAM_PLAN_ORDNER) 2>$null | Where-Object { $_ })
     if ($verweigert.Count) {
-        Team-Fehler '[axel] Die CLI hat Schreibversuche IM erlaubten Bereich abgelehnt (BL-292):'
+        Team-Fehler '[axel] Die CLI hat Schreibversuche IM erlaubten Bereich abgelehnt (Kit-BL-292):'
         foreach ($z in $verweigert) { Team-Fehler "  $z" }
         Team-Fehler "  Die Akte steht womöglich NUR im result des Logs: $out"
     }

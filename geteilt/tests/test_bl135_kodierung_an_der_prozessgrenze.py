@@ -239,6 +239,21 @@ def _dateien(muster):
 # Der Ausdruck, mit dem eine pwsh-Datei die Ausgabe eines Prozesses AUFFAENGT:
 # `$x = & befehl …` oder eine Umlenkung in eine Datei, die danach gelesen wird.
 _FAENGT_AUF = re.compile(r"^\s*\$\w+\s*=\s*&\s|\*>\s*\$|2>&1")
+# BL-246: Wer VERWIRFT, vergleicht nicht. `*> $null` und `2>&1 | Out-Null`
+# sind die idiomatische Art, einen Befehl nur wegen seines Exit-Codes zu
+# rufen — der Ausdruck oben traf sie mit, und in einem Feldprojekt war die
+# Team-Suite damit wegen eines Hilfsskripts dauerhaft rot, hinter dem es
+# keinen Defekt gab (drei Proben, alle negativ). Die Formen werden vor der
+# Pruefung aus der Zeile genommen; eine echte Umlenkung bleibt ein Treffer.
+_VERWIRFT = re.compile(
+    r"\*>\s*\$null\b|2>&1\s*\|\s*Out-Null\b|2>&1\s*>\s*\$null\b", re.I)
+
+
+def _faengt_auf(zeile):
+    code = _VERWIRFT.sub("", zeile.split("#", 1)[0])
+    return bool(_FAENGT_AUF.search(code))
+
+
 _IMPORTIERT_LIB = re.compile(r"Import-Module\s+\S*lib\.psm1", re.I)
 _SETZT_KODIERUNG = "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)"
 
@@ -268,8 +283,7 @@ def test_wer_prozessausgabe_auffaengt_liest_sie_als_utf8():
         text = pfad.read_text(encoding="utf-8-sig")
         if _IMPORTIERT_LIB.search(text) or _SETZT_KODIERUNG in text:
             continue
-        if any(_FAENGT_AUF.search(z.split("#", 1)[0])
-               for z in text.splitlines()):
+        if any(_faengt_auf(z) for z in text.splitlines()):
             funde.append(pfad.relative_to(WURZEL).as_posix())
     assert not funde, (
         "Diese Dateien fangen Prozessausgabe auf, ohne sie als UTF-8 zu "
@@ -277,3 +291,17 @@ def test_wer_prozessausgabe_auffaengt_liest_sie_als_utf8():
         "die OEM-Codepage der Konsole, und jeder Vergleich mit einem Muster "
         "aus Umlauten oder Geviertstrichen schlaegt fehl (BL-135):\n  "
         + "\n  ".join(funde))
+
+
+@pytest.mark.parametrize("zeile,erwartet", [
+    ("$antwort = & pwsh -File x.ps1", True),
+    ("& git status *> $log", True),
+    ("& pwsh -File x.ps1 2>&1 | Select-String 'Fehler'", True),
+    # BL-246: verworfen heisst nicht aufgefangen
+    (r"& pwsh -NoProfile -File .\pruefe.ps1 *> $null", False),
+    ("& git fetch 2>&1 | Out-Null", False),
+    ("& git fetch 2>&1 > $null", False),
+    ("& git fetch *> $NULL   # nur der Exit-Code zaehlt", False),
+])
+def test_verwerfen_ist_kein_auffangen(zeile, erwartet):
+    assert _faengt_auf(zeile) is erwartet, zeile

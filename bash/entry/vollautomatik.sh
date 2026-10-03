@@ -22,7 +22,7 @@
 #                            identisch mit; erst der eskalierende Versuch ändert den
 #                            Status und setzt die Stagnation zurück. Daher Default hier
 #                            an TEAM_FRANK_MAX_VERSUCHE gekoppelt statt unabhängig fest 2.
-#          TEAM_BUDGET_USD   Deckel für DIESEN Lauf (Default 15) — die harte
+#          TEAM_BUDGET_USD   Deckel für DIESEN Lauf (Default 50, BL-304) — die harte
 #                            Durchsetzung misst nur die Kosten dieses einen
 #                            Laufs (A), nicht den lebenslangen Kontostand (BL-18).
 #          TEAM_MODEL_LOOP / TEAM_MODEL_STRONG / AUTH_MODE  (siehe team/lib.sh)
@@ -69,7 +69,7 @@ MAX_RUNDEN="${TEAM_MAX_RUNDEN:-12}"
 STAGNATION_MAX="${TEAM_FIX_MAX_STAGNATION:-${TEAM_FRANK_MAX_VERSUCHE:-3}}"
 TEAM_BUDGET_USD_USER_GESETZT=0
 [ -n "${TEAM_BUDGET_USD:-}" ] && TEAM_BUDGET_USD_USER_GESETZT=1
-TEAM_BUDGET_USD="${TEAM_BUDGET_USD:-15}"
+TEAM_BUDGET_USD="${TEAM_BUDGET_USD:-50}"
 LOG_DIR=".team-logs"; mkdir -p "$LOG_DIR"
 LAUF_LOG="$LOG_DIR/vollautomatik-$(date +%Y%m%d-%H%M%S).log"
 # Startzeitpunkt dieses Laufs — die Pro-Lauf-Deckel-Durchsetzung (budget_ok)
@@ -155,7 +155,7 @@ budget_ok() {
         deckel_kulant="$("$TEAM_PYTHON" -c "print(float('$TEAM_BUDGET_USD') * (1 + $TEAM_BUDGET_KULANZ_PROZENT / 100))")"
         if "$TEAM_PYTHON" -c "import sys; sys.exit(0 if float('$jetzt') < float('$deckel_kulant') else 1)"; then
             KULANZ_GEWAEHRT=1
-            log "LAUF-BUDGET erreicht ($jetzt USD >= $TEAM_BUDGET_USD USD), aber ein Fund ist in Bearbeitung — die angefangene Runde laeuft im Kulanzband bis $deckel_kulant USD zu Ende (+$TEAM_BUDGET_KULANZ_PROZENT %, BL-23). DANACH harter Stopp."
+            log "LAUF-BUDGET erreicht ($jetzt USD >= $TEAM_BUDGET_USD USD), aber ein Fund ist in Bearbeitung — die angefangene Runde laeuft im Kulanzband bis $deckel_kulant USD zu Ende (+$TEAM_BUDGET_KULANZ_PROZENT %, Kit-BL-23). DANACH harter Stopp."
             return 0
         fi
     fi
@@ -241,7 +241,7 @@ phasen_zeiger_lesen() {
         return 0
     fi
     AB_PHASE="$vermerkt"
-    log "Faden aufgenommen bei $(phasen_name "$AB_PHASE") — die Phasen davor werden uebersprungen (BL-217). ./vollautomatik.sh --von-vorn beginnt stattdessen bei Phase 1."
+    log "Faden aufgenommen bei $(phasen_name "$AB_PHASE") — die Phasen davor werden uebersprungen (Kit-BL-217). ./vollautomatik.sh --von-vorn beginnt stattdessen bei Phase 1."
 }
 
 # BL-23 (3): Ein Abbruch endet nie ohne Weiterweg. Der Bericht kostet nichts,
@@ -318,7 +318,7 @@ if [ "$rc" -eq 43 ]; then
     # die bezahlte Arbeit ist mit hoher Wahrscheinlichkeit fertig, und ein
     # generisches "endete mit Fehler" hat im Feld viermal zum Neubau statt zum
     # Nachsehen geführt (19,47 USD).
-    log "⚠ Stufe fertig, Quittung fehlt (BL-41) — Lauf gestoppt. NICHT neu bauen, bevor die von Ralph genannten zwei Prüfungen gelaufen sind."
+    log "⚠ Stufe fertig, Quittung fehlt (Kit-BL-41) — Lauf gestoppt. NICHT neu bauen, bevor die von Ralph genannten zwei Prüfungen gelaufen sind."
     exit 43
 fi
 if [ "$rc" -ne 0 ]; then
@@ -330,14 +330,14 @@ fi
 phasen_naechste 2
 budget_ok || { abbruch_bericht "Budget-Deckel"; exit 1; }
 else
-    log "=== PHASE 1: Ralph — uebersprungen (Faden aufgenommen, BL-217) ==="
+    log "=== PHASE 1: Ralph — uebersprungen (Faden aufgenommen, Kit-BL-217) ==="
 fi
 
 # --- Phase 2+3: Red-Team-Sweeps ----------------------------------------------
 phase_nr=1
 for rolle in harry marv; do
     phase_nr=$((phase_nr + 1))
-    phasen_faellig "$phase_nr" || { log "=== PHASE Red Team: $rolle — uebersprungen (Faden aufgenommen, BL-217) ==="; continue; }
+    phasen_faellig "$phase_nr" || { log "=== PHASE Red Team: $rolle — uebersprungen (Faden aufgenommen, Kit-BL-217) ==="; continue; }
     log "=== PHASE Red Team: $rolle ==="
     ./"$rolle".sh; rc=$?
     case "$rc" in
@@ -378,12 +378,12 @@ while [ "$runde" -lt "$MAX_RUNDEN" ]; do
         # Stagnations-Bremse: Der Lauf dreht hoechstens STAGNATION_MAX Runden
         # leer und meldet den Fund benannt, statt ihn zu verschweigen.
         5) getan=1
-           log "Runde $runde: Franks Auftrag am Kopf der Warteschlange ist unbrauchbar (BL-210) — der Fundblock gehoert nachgebessert. Dahinter liegende Funde bleiben ungesehen, solange er dort steht." ;;
+           log "Runde $runde: Franks Auftrag am Kopf der Warteschlange ist unbrauchbar (Kit-BL-210) — der Fundblock gehoert nachgebessert. Dahinter liegende Funde bleiben ungesehen, solange er dort steht." ;;
         42) log "⏸ Session-Limit erreicht — Lauf pausiert (Frank). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."; exit 42 ;;
         # BL-214: derselbe vierte Ausgang wie bei Ralph, dieselbe Behandlung —
         # NICHT als Fehlversuch zaehlen und den Lauf stoppen, statt bezahlte,
         # wahrscheinlich fertige Arbeit wegzuwerfen.
-        43) log "⚠ Fix fertig, Quittung fehlt (BL-41/BL-214) — Lauf gestoppt. NICHT neu starten, bevor die von Frank genannten Pruefungen gelaufen sind."; exit 43 ;;
+        43) log "⚠ Fix fertig, Quittung fehlt (Kit-BL-41/Kit-BL-214) — Lauf gestoppt. NICHT neu starten, bevor die von Frank genannten Pruefungen gelaufen sind."; exit 43 ;;
         *) getan=1; log "Runde $runde: Frank-Fehlversuch (ggf. Eskalation an Axel)." ;;
     esac
     budget_ok kulanz || { abbruch_bericht "Budget-Deckel"; exit 1; }
@@ -434,7 +434,7 @@ FRANK_REST="$($TEAM_BEUTEBUCH_TOOL list 2>/dev/null \
               | grep -cE 'an Frank übergeben|Fix-Plan liegt vor' || true)"
 if [ "${FRANK_REST:-0}" -gt 0 ]; then
     log "WARNUNG: $FRANK_REST Fund(e) warten weiter auf Frank — die Fix-Phase ist NICHT leergelaufen."
-    log "  Steht ein unbrauchbarer Fundblock am Kopf der Warteschlange, bleibt alles dahinter ungesehen (BL-210)."
+    log "  Steht ein unbrauchbarer Fundblock am Kopf der Warteschlange, bleibt alles dahinter ungesehen (Kit-BL-210)."
     log "  Naechster Schritt:  ./frank.sh   (nennt den Block, der nachgebessert gehoert)"
 fi
 
@@ -456,7 +456,7 @@ $TEAM_KOSTEN_TOOL turns .ralph-logs 2>/dev/null | sed 's/^/  /' || true
 # "5 genommen" — und ohne diese Zeile stuende nirgends, dass eine Stufe
 # ueberhaupt ausgelassen wurde.
 if [ -s .ralph-uebersprungen ]; then
-    log "Planmäßig übersprungen: Stufe $(sort -n -u .ralph-uebersprungen | tr '\n' ' ' | sed 's/ $//; s/ /, /g') (BL-255) — Abbruchbedingung des Plans, jeweils committet. Der vierte Ausgang wurde dafür NICHT gemeldet."
+    log "Planmäßig übersprungen: Stufe $(sort -n -u .ralph-uebersprungen | tr '\n' ' ' | sed 's/ $//; s/ /, /g') (Kit-BL-255) — Abbruchbedingung des Plans, jeweils committet. Der vierte Ausgang wurde dafür NICHT gemeldet."
 fi
 
 command -v notify-send >/dev/null && \
@@ -479,7 +479,7 @@ if GATE_ZEILE="$(team_gate_rot_seit)"; then
         [ -n "$zeile" ] && log "    $zeile"
     done < "$TEAM_GATE_DATEI"
     log "  Der Bau ist gelaufen, aber die Suite war es nicht — ein Lauf, der"
-    log "  sich hier als fertig meldete, hätte ein rotes Gate überdeckt (BL-256)."
+    log "  sich hier als fertig meldete, hätte ein rotes Gate überdeckt (Kit-BL-256)."
     log "  Nächster Schritt: den roten Baum reparieren. Ist er grün, gehört"
     log "  $TEAM_GATE_DATEI gelöscht — dann meldet sich der nächste Lauf wieder normal."
     log "Vollautomatik beendet — Gate ROT."

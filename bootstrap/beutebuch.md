@@ -13,6 +13,7 @@ Jeder Fund des Read-Only Red Teams landet hier (Beutezug-Dreisatz, siehe
 - **Angreifer**: Harry | Marv
 - **Schweregrad**: kritisch | hoch | mittel | klein
 - **Status**: offen
+- **Stand**: <JJJJ-MM-TT> — <ein Halbsatz: was davon gebaut ist, was offen bleibt>
 - **Reproschritte**:
   1. …
 - **Erwartung**: …
@@ -23,6 +24,15 @@ Jeder Fund des Read-Only Red Teams landet hier (Beutezug-Dreisatz, siehe
 > Diesen Vorlage-Block **nicht löschen**. Harry und Marv richten ihre Funde
 > daran aus; ohne ihn divergieren die Formate ab dem zweiten Sweep und die
 > Zustandsmaschine findet die Status-Zeilen nicht mehr.
+
+> **Die `Stand`-Zeile steht oben, weil ein Fundblock nach unten wächst und von
+> oben gelesen wird** (`Kit-BL-277`). Im Feld wurde eine Kaskade auf dem Kopf
+> eines 183 Zeilen langen Blocks geplant; dass die Hälfte seit neun Tagen gebaut
+> war, stand in den Nachträgen darunter, und die Statuszeile stand formal
+> richtig auf `offen`. Wer einen Nachtrag schreibt, zieht die Zeile mit —
+> Datum UND Halbsatz. `beutebuch.py set` schreibt sie bei jedem
+> Statuswechsel selbst, und `beutebuch.py lint` weist auf eine Stand-Zeile
+> hin, die älter ist als der jüngste datierte Nachtrag.
 
 > **Ein neuer Fundblock wird ans ENDE geschrieben, nie zwischen zwei
 > bestehende** (`Kit-BL-254`). Im Feld landete ein regelkonformer Beifang-Fund

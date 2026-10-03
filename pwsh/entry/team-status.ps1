@@ -9,7 +9,7 @@
            .\team-status.cmd --budget   Kumulierter Kontostand (Ledger + Logs)
            .\team-status.cmd --architekt-abschluss <USD> <domaene> ["<notiz>"]
            .\team-status.cmd --akteur-abschluss <rolle> <auth> <USD> <domaene> ["<notiz>"]
-           .\team-status.cmd --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere] [--auch-neuere]
+           .\team-status.cmd --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere] [--auch-neuere] [--notiz-datei <pfad>] [--bau-notiz-datei <pfad>]
            .\team-status.cmd --ledger-pruefen [--kaskade N]
            .\team-status.cmd --altlast [N]
            .\team-status.cmd --beutebuch-archivieren [--dry-run]
@@ -115,7 +115,7 @@ function Status-Einmal {
         0 { [Console]::Out.WriteLine('  Pipeline: 🟢 läuft gerade (Sperre gehalten)') }
         2 {
             [Console]::Out.WriteLine("  Pipeline: 🟡 unbekannt — es liegt eine Sperre der anderen Bahn ($TEAM_LOCK_ORDNER),")
-            [Console]::Out.WriteLine('            deren Prozess von hier aus nicht prüfbar ist (BL-199). Vor einem')
+            [Console]::Out.WriteLine('            deren Prozess von hier aus nicht prüfbar ist (Kit-BL-199). Vor einem')
             [Console]::Out.WriteLine('            Start selbst nachsehen; ist der Lauf durch, den Ordner entfernen.')
         }
         default { [Console]::Out.WriteLine('  Pipeline: ⚪ idle') }
@@ -355,7 +355,7 @@ function Status-RollenAbschluss {
     $kaskade = if ($Argumente.Count -ge 1) { $Argumente[0] } else { '' }
     $domaene = if ($Argumente.Count -ge 2) { $Argumente[1] } else { '' }
     if (-not $kaskade -or -not $domaene) {
-        Team-Fehler 'Nutzung: team-status --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere] [--auch-neuere]'
+        Team-Fehler 'Nutzung: team-status --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> ["<notiz-rollen>"] ["<notiz-bau>"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere] [--auch-neuere] [--notiz-datei <pfad>] [--bau-notiz-datei <pfad>]'
         return 1
     }
     $rest = @()
@@ -371,10 +371,27 @@ function Status-RollenAbschluss {
     $erlaubt = @('--addieren', '--ersetzen', '--trotzdem', '--auch-aeltere',
                  '--auch-neuere')
     $schalter = @()
-    foreach ($s in @($rest)) {
+    $notizDatei = ''
+    $bauNotizDatei = ''
+    $liste = @($rest)
+    for ($i = 0; $i -lt $liste.Count; $i++) {
+        $s = $liste[$i]
         if (-not $s) { continue }
+        # BL-249/BL-245: Der Text kommt aus einer Datei und muss durch keine
+        # Shell — weder an die 8191-Zeichen-Grenze von cmd.exe noch durch eine
+        # zweite Zerlegung an einem Anfuehrungszeichen.
+        if ($s -in @('--notiz-datei', '--bau-notiz-datei')) {
+            if ($i + 1 -ge $liste.Count -or -not $liste[$i + 1]) {
+                Team-Fehler "$s braucht einen Pfad"
+                return 1
+            }
+            if ($s -eq '--notiz-datei') { $notizDatei = $liste[$i + 1] } else { $bauNotizDatei = $liste[$i + 1] }
+            $i++
+            continue
+        }
         if ($s -notin $erlaubt) {
-            Team-Fehler "Unbekannter Schalter '$s' — erlaubt: $($erlaubt -join ', ')"
+            Team-Fehler "Unbekannter Schalter '$s' — erlaubt: $($erlaubt -join ', '), --notiz-datei <pfad>, --bau-notiz-datei <pfad>"
+            Team-Fehler '  Stammt das Wort aus einer Notiz? Ein Anführungszeichen IM Notiztext zerlegt sie unterwegs in Einzelteile — die Notiz dann in eine Datei schreiben und mit --notiz-datei <pfad> übergeben (Kit-BL-245).'
             return 1
         }
         $schalter += $s
@@ -382,17 +399,40 @@ function Status-RollenAbschluss {
     # Nur ableiten, wenn der Mensch nichts eigenes gesagt hat. Bleibt die
     # Ableitung leer, schreibt kosten.py seinen eigenen Vorspann — ehrlich
     # unbeschriftet ist besser als falsch beschriftet.
-    if (-not $bauNotiz) { $bauNotiz = team_bau_notiz }
+    if (-not $bauNotiz -and -not $bauNotizDatei) { $bauNotiz = team_bau_notiz }
 
-    $rc = 0
-    foreach ($verb in @('rollen-abschluss', 'ralph-abschluss')) {
-        # BL-34: je Zielrolle der EIGENE Text, nie derselbe zweimal.
-        $zeilenNotiz = if ($verb -eq 'ralph-abschluss') { $bauNotiz } else { $notiz }
-        $a = @($verb, '--kaskade', $kaskade, '--domaene', $domaene)
-        if ($zeilenNotiz) { $a += @('--notiz', $zeilenNotiz) }
+    # BL-34: je Zielrolle der EIGENE Text, nie derselbe zweimal.
+    $verbArgumente = {
+        param([string]$Verb)
+        $a = @($Verb, '--kaskade', $kaskade, '--domaene', $domaene)
+        $datei = if ($Verb -eq 'ralph-abschluss') { $bauNotizDatei } else { $notizDatei }
+        $text = if ($Verb -eq 'ralph-abschluss') { $bauNotiz } else { $notiz }
+        if ($datei) { $a += @('--notiz-datei', $datei) }
+        elseif ($text) { $a += @('--notiz', $text) }
         $a += '--archivieren'
         if ($schalter.Count) { $a += $schalter }
-        Team-Werkzeug $TEAM_KOSTEN_TOOL $a
+        return , $a
+    }
+
+    # BL-239: ERST beide Haelften pruefen, DANN buchen. Bis hierher liefen die
+    # Verben unabhaengig: Hielt der BL-221-Riegel die eine Haelfte an, war die
+    # andere schon gebucht und archiviert — und die Meldung sagte "NICHTS
+    # gebucht, NICHTS archiviert". Der korrigierende Zweitaufruf traf dann
+    # einen leeren Ordner (BL-244). Die Vorpruefung faehrt jeden Riegel des
+    # Werkzeugs (`--nur-pruefen`) und schreibt nichts.
+    foreach ($verb in @('rollen-abschluss', 'ralph-abschluss')) {
+        $a = (& $verbArgumente $verb) + @('--nur-pruefen')
+        $pruefAus = @(Team-Werkzeug $TEAM_KOSTEN_TOOL $a 2>&1)
+        $pruefRc = $LASTEXITCODE
+        if ($pruefRc -ne 0) {
+            foreach ($z in $pruefAus) { Team-Fehler "$z" }
+            Team-Fehler 'Es wurde NICHTS gebucht und NICHTS archiviert — auch nicht die andere Hälfte: Beide werden vor dem Buchen geprüft (Kit-BL-239).'
+            return $pruefRc
+        }
+    }
+    $rc = 0
+    foreach ($verb in @('rollen-abschluss', 'ralph-abschluss')) {
+        Team-Werkzeug $TEAM_KOSTEN_TOOL (& $verbArgumente $verb)
         if ($LASTEXITCODE -ne 0) { $rc = $LASTEXITCODE }
     }
     return $rc

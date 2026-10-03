@@ -155,13 +155,13 @@ team_guard_urteil axel "$GUARD_UEBERGRIFF" "$ERGEBNIS" || URTEIL=1
 # erstellt", der Fall blieb bei Axel, und die Schleife rief ihn erneut, bezahlt.
 # Exit 0 heisst "Akte erstellt", also wird das hier auch geprueft.
 if [ "$URTEIL" -ne 0 ] || [ "$ERGEBNIS" -eq 0 ]; then
-    [ "$URTEIL" -eq 0 ] && echo "[axel] KEINE Ermittlung geliefert — Akte oder Statuswechsel fehlt (BL-303)." >&2
+    [ "$URTEIL" -eq 0 ] && echo "[axel] KEINE Ermittlung geliefert — Akte oder Statuswechsel fehlt (Kit-BL-303)." >&2
     echo "[axel] Akte vorhanden: $([ -f "$AKTE" ] && echo ja || echo nein) · Status $HM: ${STATUS_JETZT:-unbekannt}" >&2
     # BL-292, sinngemaess: Hat die CLI das Schreiben IM erlaubten Bereich
     # abgelehnt, steht die Ermittlung womoeglich vollstaendig im result des Logs.
     VERWEIGERT="$($TEAM_KOSTEN_TOOL verweigert "$OUT" --ordner "$TEAM_PLAN_ORDNER" 2>/dev/null || true)"
     if [ -n "$VERWEIGERT" ]; then
-        echo "[axel] Die CLI hat Schreibversuche IM erlaubten Bereich abgelehnt (BL-292):" >&2
+        echo "[axel] Die CLI hat Schreibversuche IM erlaubten Bereich abgelehnt (Kit-BL-292):" >&2
         printf '%s\n' "$VERWEIGERT" | sed 's/^/  /' >&2
         echo "  Die Akte steht womöglich NUR im result des Logs: $OUT" >&2
     fi

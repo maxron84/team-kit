@@ -125,7 +125,7 @@ status_einmal() {
     case "$sperre" in
         0) echo "  Pipeline: 🟢 läuft gerade (Lock gehalten)" ;;
         2) echo "  Pipeline: 🟡 unbekannt — es liegt eine Sperre der anderen Bahn ($TEAM_LOCK_ORDNER),"
-           echo "            deren Prozess von hier aus nicht prüfbar ist (BL-199). Vor einem"
+           echo "            deren Prozess von hier aus nicht prüfbar ist (Kit-BL-199). Vor einem"
            echo "            Start selbst nachsehen; ist der Lauf durch, den Ordner entfernen." ;;
         *) echo "  Pipeline: ⚪ idle" ;;
     esac
@@ -400,7 +400,7 @@ status_akteur_abschluss() {
 status_rollen_abschluss() {
     local kaskade="${1:-}" domaene="${2:-}"
     if [ -z "$kaskade" ] || [ -z "$domaene" ]; then
-        echo "Nutzung: $0 --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> [\"<notiz-rollen>\"] [\"<notiz-bau>\"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere] [--auch-neuere]" >&2
+        echo "Nutzung: $0 --rollen-abschluss <kaskade-nr, NICHT stufe> <domaene> [\"<notiz-rollen>\"] [\"<notiz-bau>\"] [--addieren|--ersetzen] [--trotzdem] [--auch-aeltere] [--auch-neuere] [--notiz-datei <pfad>] [--bau-notiz-datei <pfad>]" >&2
         return 1
     fi
     shift 2
@@ -413,12 +413,23 @@ status_rollen_abschluss() {
     # ein --trotzdem, das der Alias erbt, aber der Wrapper wegwirft, waere
     # derselbe Fehler.
     local -a schalter=()
+    local notiz_datei="" bau_notiz_datei=""
     while [ "$#" -gt 0 ]; do
         case "$1" in
             --addieren|--ersetzen|--trotzdem|--auch-aeltere|--auch-neuere)
                 schalter+=("$1"); shift ;;
+            # BL-249/BL-245: Der Text kommt aus einer Datei und muss durch
+            # keine Shell — weder an die Laengengrenze von cmd.exe noch durch
+            # eine zweite Zerlegung an einem Anfuehrungszeichen.
+            --notiz-datei|--bau-notiz-datei)
+                if [ "$#" -lt 2 ] || [ -z "$2" ]; then
+                    echo "$1 braucht einen Pfad" >&2; return 1
+                fi
+                if [ "$1" = "--notiz-datei" ]; then notiz_datei="$2"; else bau_notiz_datei="$2"; fi
+                shift 2 ;;
             "") shift ;;
-            *) echo "Unbekannter Schalter '$1' — erlaubt: --addieren, --ersetzen, --trotzdem, --auch-aeltere, --auch-neuere" >&2
+            *) echo "Unbekannter Schalter '$1' — erlaubt: --addieren, --ersetzen, --trotzdem, --auch-aeltere, --auch-neuere, --notiz-datei <pfad>, --bau-notiz-datei <pfad>" >&2
+               echo "  Stammt das Wort aus einer Notiz? Ein Anführungszeichen IM Notiztext zerlegt sie unterwegs in Einzelteile — die Notiz dann in eine Datei schreiben und mit --notiz-datei <pfad> übergeben (Kit-BL-245)." >&2
                return 1 ;;
         esac
     done
@@ -426,36 +437,53 @@ status_rollen_abschluss() {
     # Ableitung leer (kein erkennbarer Plannamen), schreibt kosten.py seinen
     # eigenen Vorspann "Bau — abo x / api y" — ehrlich unbeschriftet ist
     # besser als falsch beschriftet.
-    [ -n "$bau_notiz" ] || bau_notiz="$(team_bau_notiz)"
+    [ -n "$bau_notiz" ] || [ -n "$bau_notiz_datei" ] || bau_notiz="$(team_bau_notiz)"
 
     # BL-4: BEIDE Kostenquellen einer Kaskade abschliessen — .team-logs
     # (Harry/Marv/Frank/Axel -> rolle=roles) UND .ralph-logs (Bau -> rolle=
     # ralph). Zwei getrennte Ledger-Zeilen, EINE Bedienhandlung: Ralphs
     # Baukosten fielen im Feld nur deshalb aus dem committeten Ledger, weil
     # sie einen zweiten, nirgends vorgeschriebenen Befehl gebraucht haetten.
-    # Beide Verben laufen unabhaengig: Bricht einer ab (z. B. BL-5-Bestand),
-    # wird der andere trotzdem versucht und der Fehler am Ende gemeldet.
-    local rc=0 einzel_rc verb zeilen_notiz
+    #
+    # BL-239: ERST beide Haelften pruefen, DANN buchen. Bis hierher liefen die
+    # Verben unabhaengig: Hielt der BL-221-Riegel die eine Haelfte an, war die
+    # andere schon gebucht und archiviert — und die Meldung sagte "NICHTS
+    # gebucht, NICHTS archiviert". Der korrigierende Zweitaufruf traf dann
+    # einen leeren Ordner (BL-244). Die Vorpruefung faehrt jeden Riegel des
+    # Werkzeugs (`--nur-pruefen`) und schreibt nichts.
+    local rc=0 einzel_rc verb pruef_aus
     for verb in rollen-abschluss ralph-abschluss; do
         einzel_rc=0
-        # BL-34: je Zielrolle der EIGENE Text, nie derselbe zweimal.
-        if [ "$verb" = "ralph-abschluss" ]; then
-            zeilen_notiz="$bau_notiz"
-        else
-            zeilen_notiz="$notiz"
+        pruef_aus="$(status_abschluss_verb "$verb" --nur-pruefen 2>&1)" || einzel_rc=$?
+        if [ "$einzel_rc" -ne 0 ]; then
+            printf '%s\n' "$pruef_aus" >&2
+            echo "Es wurde NICHTS gebucht und NICHTS archiviert — auch nicht die andere Hälfte: Beide werden vor dem Buchen geprüft (Kit-BL-239)." >&2
+            return "$einzel_rc"
         fi
-        if [ -n "$zeilen_notiz" ]; then
-            $TEAM_KOSTEN_TOOL "$verb" --kaskade "$kaskade" \
-                --domaene "$domaene" --notiz "$zeilen_notiz" --archivieren \
-                ${schalter[@]+"${schalter[@]}"} || einzel_rc=$?
-        else
-            $TEAM_KOSTEN_TOOL "$verb" --kaskade "$kaskade" \
-                --domaene "$domaene" --archivieren \
-                ${schalter[@]+"${schalter[@]}"} || einzel_rc=$?
-        fi
+    done
+    for verb in rollen-abschluss ralph-abschluss; do
+        einzel_rc=0
+        status_abschluss_verb "$verb" || einzel_rc=$?
         [ "$einzel_rc" -eq 0 ] || rc="$einzel_rc"
     done
     return "$rc"
+}
+
+# status_abschluss_verb <verb> [zusatz...]: EIN Verb des Rollen-Abschlusses
+# mit den Werten aus status_rollen_abschluss (bash-Funktionen sehen die
+# lokalen Variablen ihres Aufrufers). BL-34: je Zielrolle der EIGENE Text.
+status_abschluss_verb() {
+    local verb="$1"; shift
+    local -a a=("$verb" --kaskade "$kaskade" --domaene "$domaene")
+    if [ "$verb" = "ralph-abschluss" ]; then
+        if [ -n "$bau_notiz_datei" ]; then a+=(--notiz-datei "$bau_notiz_datei")
+        elif [ -n "$bau_notiz" ]; then a+=(--notiz "$bau_notiz"); fi
+    else
+        if [ -n "$notiz_datei" ]; then a+=(--notiz-datei "$notiz_datei")
+        elif [ -n "$notiz" ]; then a+=(--notiz "$notiz"); fi
+    fi
+    a+=(--archivieren)
+    $TEAM_KOSTEN_TOOL "${a[@]}" ${schalter[@]+"${schalter[@]}"} "$@"
 }
 
 # status_altlast [N]: Produktivdateien, die seit N Kaskaden (Default 5) in

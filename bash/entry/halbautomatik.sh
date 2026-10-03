@@ -67,7 +67,7 @@ deute_exit() {  # $1=schritt $2=rc — menschliche Einordnung
         3) echo "  → $1: nichts zu tun (Exit 3)." ;;
         # BL-41: kein Fehler im gewohnten Sinn — die Arbeit ist meist fertig,
         # nur unquittiert. Die Rolle hat den Prüfweg bereits gedruckt.
-        43) echo "  → $1: Stufe fertig, Quittung fehlt (Exit 43, BL-41) — NICHT neu bauen, erst die oben genannten zwei Prüfungen fahren." ;;
+        43) echo "  → $1: Stufe fertig, Quittung fehlt (Exit 43, Kit-BL-41) — NICHT neu bauen, erst die oben genannten zwei Prüfungen fahren." ;;
         *) echo "  → $1 endete mit Fehler (Exit $2) — Logs prüfen (.team-logs/, .ralph-logs/)." ;;
     esac
 }
@@ -85,7 +85,7 @@ deckel_dialog_ralph() {
     if [ -n "$empfehlung" ]; then
         printf "  Architekten-Empfehlung: %s USD. [Enter]=übernehmen, oder Zahl eingeben > " "$empfehlung"
     else
-        empfehlung=15
+        empfehlung=50
         printf "  Keine Architekten-Empfehlung im aktiven Plan — Default %s USD. [Enter]=übernehmen, oder Zahl eingeben > " "$empfehlung"
     fi
     read -r eingabe || eingabe=""

@@ -78,7 +78,7 @@ function Deute-Exit {
         3 { [Console]::Out.WriteLine("  → ${Schritt}: nichts zu tun (Exit 3).") }
         # BL-41: kein Fehler im gewohnten Sinn — die Arbeit ist meist fertig,
         # nur unquittiert. Die Rolle hat den Pruefweg bereits gedruckt.
-        43 { [Console]::Out.WriteLine("  → ${Schritt}: Stufe fertig, Quittung fehlt (Exit 43, BL-41) — NICHT neu bauen, erst die oben genannten zwei Prüfungen fahren.") }
+        43 { [Console]::Out.WriteLine("  → ${Schritt}: Stufe fertig, Quittung fehlt (Exit 43, Kit-BL-41) — NICHT neu bauen, erst die oben genannten zwei Prüfungen fahren.") }
         default { [Console]::Out.WriteLine("  → $Schritt endete mit Fehler (Exit $Rc) — Logs prüfen (.team-logs\, .ralph-logs\).") }
     }
 }
@@ -93,7 +93,7 @@ function Deckel-Dialog-Ralph {
     if ($empfehlung) {
         $eingabe = Read-Host "  Architekten-Empfehlung: $empfehlung USD. [Enter]=übernehmen, oder Zahl eingeben"
     } else {
-        $empfehlung = '15'
+        $empfehlung = '50'
         $eingabe = Read-Host "  Keine Architekten-Empfehlung im aktiven Plan — Default $empfehlung USD. [Enter]=übernehmen, oder Zahl eingeben"
     }
     $env:TEAM_BUDGET_USD = if ($eingabe) { $eingabe } else { $empfehlung }

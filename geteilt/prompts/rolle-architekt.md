@@ -138,8 +138,10 @@ nichts, was ich nachlesen kann.
 2. **Kurz halten: drei bis fünf Stufen.** Die erste Kaskade soll die Mechanik
    zeigen (Bau → Sweep → Fix → Closeout), nicht ein Feature fertigstellen. Ein
    langer Erstlauf verschleiert, an welcher Stelle es hakt.
-3. **`BUDGET_EMPFEHLUNG_USD` konservativ, aber nicht knauserig** — für einen
-   kurzen Erstlauf etwa 15 USD. **Lieber nachziehen als zu tief starten:** Ein
+3. **`BUDGET_EMPFEHLUNG_USD` ehrlich, nicht knauserig** — die erwartete Summe
+   des Laufs. Der Default-Deckel liegt bei 50 USD (`Kit-BL-304`); ein kurzer
+   Erstlauf braucht die Zeile nur, wenn er mehr erwartet. **Lieber nachziehen
+   als zu tief starten:** Ein
    zu tiefer Deckel wirft bezahlte, plausible Arbeit per Rollback weg und
    **vervielfacht** die Kosten, statt zu sparen (Feld-Lehre `Kit-HM-32`). Die
    Vollautomatik hebt den Lauf-Deckel aus dieser Zeile nur an, senkt ihn nie.

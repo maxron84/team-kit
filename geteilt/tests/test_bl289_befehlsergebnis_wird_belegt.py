@@ -85,7 +85,8 @@ def _cli(*args):
 @pytest.mark.parametrize("rolle", ["harry", "marv"])
 def test_das_briefing_verlangt_den_beleg(rolle):
     text = kit_pfad("prompts", f"rolle-{rolle}.md").read_text(encoding="utf-8")
-    assert "Kit-BL-289" in text and "zitiere die" in text, (
+    assert ("Kit-BL-289" in text and "ausgeführt habe" in text
+            and "Erwartung" in text), (
         f"rolle-{rolle}.md verlangt fuer ein behauptetes Befehlsergebnis "
         f"keinen Beleg (BL-289).")
 

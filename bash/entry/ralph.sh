@@ -79,7 +79,7 @@ team_uebersprungen_zusatz() {
     local nummern
     nummern="$(sort -n -u "$UEBERSPRUNGEN_DATEI" | tr '\n' ' ' | sed 's/ $//; s/ /, /g')"
     [ -n "$nummern" ] || return 0
-    printf ' Planmäßig übersprungen: Stufe %s (BL-255) — der vierte Ausgang wurde dafür NICHT gemeldet.' "$nummern"
+    printf ' Planmäßig übersprungen: Stufe %s (Kit-BL-255) — der vierte Ausgang wurde dafür NICHT gemeldet.' "$nummern"
 }
 LOG_DIR=".ralph-logs"
 mkdir -p "$LOG_DIR"
@@ -108,7 +108,7 @@ while true; do
     # nicht beurteilt (team_plan_stufen liefert dann nichts).
     PLAN_STUFEN="$(team_plan_stufen "$PLAN_DATEI")"
     if [ -n "$PLAN_STUFEN" ] && ! printf '%s\n' "$PLAN_STUFEN" | grep -qx "$STUFE"; then
-        echo "Ralph: Stufe $STUFE steht nicht in $PLAN_DATEI — der Plan definiert die Stufen $(printf '%s\n' "$PLAN_STUFEN" | head -n1)–$(printf '%s\n' "$PLAN_STUFEN" | tail -n1) (BL-301)." >&2
+        echo "Ralph: Stufe $STUFE steht nicht in $PLAN_DATEI — der Plan definiert die Stufen $(printf '%s\n' "$PLAN_STUFEN" | head -n1)–$(printf '%s\n' "$PLAN_STUFEN" | tail -n1) (Kit-BL-301)." >&2
         echo "  Kein Aufruf, keine Kosten. Meist zeigt $STATE_FILE nach einem Closeout oder Planwechsel auf eine alte Nummer — oder $PLAN_ZEIGER auf den falschen Plan." >&2
         echo "  NICHT einfach eins weiterzählen: $STATE_FILE auf die erste noch nicht gebaute Stufe DIESES Plans setzen." >&2
         exit 1
@@ -138,7 +138,7 @@ Regeln:
 6. Schreibt der Plan für DIESE Stufe eine Abbruchbedingung aus und trifft sie
    zu, ist das KEIN Fehlschlag: Trage den Befund in den [Unreleased]-Block ein,
    committe ihn mit Begründung und beende deine Antwort mit exakt
-   <promise>STUFE_${STUFE}_UEBERSPRUNGEN</promise> (BL-255). Ohne Commit und
+   <promise>STUFE_${STUFE}_UEBERSPRUNGEN</promise> (Kit-BL-255). Ohne Commit und
    ohne die Abbruchbedingung im Plan gilt diese Form NICHT."
 
     # BL-255, Riegel (b): Die zweite Quittungsform verlangt einen COMMIT mit
@@ -205,7 +205,7 @@ Regeln:
         fi
         HEAD_NACHHER="$(git rev-parse HEAD 2>/dev/null || echo '')"
         if ! team_plan_erlaubt_uebersprung "$STUFE"; then
-            echo "Ralph: Stufe $STUFE meldet <promise>STUFE_${STUFE}_UEBERSPRUNGEN</promise>, aber $PLAN_DATEI schreibt für diese Stufe KEINE Abbruchbedingung aus (BL-255)." >&2
+            echo "Ralph: Stufe $STUFE meldet <promise>STUFE_${STUFE}_UEBERSPRUNGEN</promise>, aber $PLAN_DATEI schreibt für diese Stufe KEINE Abbruchbedingung aus (Kit-BL-255)." >&2
             echo "  Die zweite Quittungsform gilt nur dort, wo der Plan sie vorsieht — sonst wäre sie ein Weg, eine Stufe ohne Arbeit abzuhaken." >&2
             echo "  Weiterweg: Plan prüfen. Gehört die Bedingung hinein, trägt der Architekt sie nach; sonst ist die Stufe zu bauen." >&2
             exit 1
@@ -215,13 +215,13 @@ Regeln:
         # Uebersprung desselben Laufs, in jedem Projekt, dessen .gitignore die
         # Datei nicht kennt (das Update fasst die Projektdatei nicht an).
         if [ -n "$(git status --porcelain | cut -c4- | grep -Ev "$TEAM_GUARD_LAUFZEIT" | grep -Ev "$TEAM_GUARD_IGNORIERT" || true)" ]; then
-            echo "Ralph: Stufe $STUFE meldet sich als planmäßig übersprungen, lässt aber Uncommittetes liegen (BL-255)." >&2
+            echo "Ralph: Stufe $STUFE meldet sich als planmäßig übersprungen, lässt aber Uncommittetes liegen (Kit-BL-255)." >&2
             echo "  Ein Übersprung verlangt einen Commit mit Begründung — sonst ist nicht festgehalten, WARUM die Stufe nicht gebaut wurde." >&2
             echo "  Weiterweg: git status ansehen, von Hand committen, dann \`echo $((STUFE + 1)) > $STATE_FILE\`." >&2
             exit 1
         fi
         if [ "$HEAD_VORHER" = "$HEAD_NACHHER" ]; then
-            echo "Ralph: Stufe $STUFE meldet sich als planmäßig übersprungen, hat aber nichts committet (BL-255)." >&2
+            echo "Ralph: Stufe $STUFE meldet sich als planmäßig übersprungen, hat aber nichts committet (Kit-BL-255)." >&2
             echo "  Der Befund gehört in den [Unreleased]-Block und in einen Commit — ein Übersprung ohne Spur ist von 'nicht gelaufen' nicht zu unterscheiden." >&2
             exit 1
         fi
@@ -260,16 +260,16 @@ Regeln:
                 git add -A
                 git commit -q -m "${TEAM_FEAT_PRAEFIX:-feat}(stufe$STUFE): Arbeit der Stufe $STUFE, automatisch gesichert
 
-Die Sitzung endete als subtype=success ohne <promise> (BL-41, vierter
+Die Sitzung endete als subtype=success ohne <promise> (Kit-BL-41, vierter
 Ausgang) und ohne eigenen Commit. Die Selbstpruefung des Loops hat
-Arbeit, Zusicherung (BL-135) und gruenen Smoke-Test bestaetigt und
+Arbeit, Zusicherung (Kit-BL-135) und gruenen Smoke-Test bestaetigt und
 quittiert die Stufe deshalb selbst. Betreff bewusst generisch: Der
 Loop kennt den Inhalt der Stufe nicht - der Plan tut es."
                 echo "Ralph: Stufe $STUFE war uncommittet — automatisch gesichert."
             fi
             NEXT=$((STUFE + 1))
             echo "$NEXT" > "$STATE_FILE"
-            echo "Ralph: Quittung fehlte (BL-41), Selbstprüfung bestanden — Stufe $STUFE abgeschlossen, weiter mit $NEXT."
+            echo "Ralph: Quittung fehlte (Kit-BL-41), Selbstprüfung bestanden — Stufe $STUFE abgeschlossen, weiter mit $NEXT."
             continue
         fi
         # BL-301 (Befund 2): Hat die Sitzung NICHTS hinterlassen, ist das nicht
@@ -277,7 +277,7 @@ Loop kennt den Inhalt der Stufe nicht - der Plan tut es."
         # konkrete Befehl darin quittiert eine nie gebaute Stufe. Stattdessen:
         # das, was die Rolle selbst als Grund nennt.
         if [ "${TEAM_SELBSTPRUEFUNG_LEER:-0}" -eq 1 ]; then
-            echo "Ralph: Stufe $STUFE hat NICHTS hinterlassen — kein Commit, keine Änderung, kein Promise (BL-301)." >&2
+            echo "Ralph: Stufe $STUFE hat NICHTS hinterlassen — kein Commit, keine Änderung, kein Promise (Kit-BL-301)." >&2
             echo "  Das ist NICHT der vierte Ausgang: Die Stufe ist nicht gebaut. NICHT von Hand quittieren." >&2
             echo "  Warum, sagt die Rolle meist selbst — Anfang des result-Feldes ($TEAM_LAST_OUT):" >&2
             team_result_auszug "$TEAM_LAST_OUT" | fold -s -w 76 | sed 's/^/    /' >&2
@@ -288,7 +288,7 @@ Loop kennt den Inhalt der Stufe nicht - der Plan tut es."
             "Stufe $STUFE hat kein <promise>STUFE_${STUFE}_COMPLETE</promise> gegeben." \
             "git log -1 && git status — hat Ralph committet?" \
             "${TEAM_SMOKE_TEST:-(kein Smoke-Test konfiguriert)} — ist der Baum grün?" \
-            "$(if [ $((STUFE + 1)) -gt "$RALPH_CAP" ]; then printf 'Beides ja: Stufe %s WAR die letzte (RALPH_CAP=%s) — von Hand quittieren (`echo %s > %s`) beendet den Lauf, ein Neustart hat dann nichts mehr zu tun (BL-255).' "$STUFE" "$RALPH_CAP" "$((STUFE + 1))" "$STATE_FILE"; else printf 'Beides ja: von Hand quittieren — `echo %s > %s`, dann erneut starten.' "$((STUFE + 1))" "$STATE_FILE"; fi)" \
+            "$(if [ $((STUFE + 1)) -gt "$RALPH_CAP" ]; then printf 'Beides ja: Stufe %s WAR die letzte (RALPH_CAP=%s) — von Hand quittieren (`echo %s > %s`) beendet den Lauf, ein Neustart hat dann nichts mehr zu tun (Kit-BL-255).' "$STUFE" "$RALPH_CAP" "$((STUFE + 1))" "$STATE_FILE"; else printf 'Beides ja: von Hand quittieren — `echo %s > %s`, dann erneut starten.' "$((STUFE + 1))" "$STATE_FILE"; fi)" \
             "Baum ROT? Erst prüfen, WO: Sind ausschließlich die von DIESER Stufe neu angelegten Testdateien rot (\`git status\` zeigt sie als '??'), ist der Testaufbau der wahrscheinlichere Schuldige als der Produktivcode — dann den Aufbau von Hand reparieren, OHNE eine Zusicherung abzuschwächen, statt die Stufe neu zu bauen." \
             "Ist BESTEHENDER Testbestand rot, hat die Stufe etwas gebrochen: dann neu bauen." \
             "$CAP_ZEILE"; then

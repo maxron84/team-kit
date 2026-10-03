@@ -76,7 +76,7 @@ function Uebersprungen-Zusatz {
                  Where-Object { $_ -match '^\d+$' } |
                  ForEach-Object { [int]$_ } | Sort-Object -Unique)
     if ($nummern.Count -eq 0) { return '' }
-    return (" Planmäßig übersprungen: Stufe $($nummern -join ', ') (BL-255) — " +
+    return (" Planmäßig übersprungen: Stufe $($nummern -join ', ') (Kit-BL-255) — " +
             "der vierte Ausgang wurde dafür NICHT gemeldet.")
 }
 $logDir = '.ralph-logs'
@@ -103,7 +103,7 @@ while ($true) {
     # nicht beurteilt (team_plan_stufen liefert dann nichts).
     $planStufen = @(team_plan_stufen $planDatei)
     if ($planStufen.Count -and ($planStufen -notcontains $stufe)) {
-        Team-Fehler "Ralph: Stufe $stufe steht nicht in $planDatei — der Plan definiert die Stufen $($planStufen[0])–$($planStufen[-1]) (BL-301)."
+        Team-Fehler "Ralph: Stufe $stufe steht nicht in $planDatei — der Plan definiert die Stufen $($planStufen[0])–$($planStufen[-1]) (Kit-BL-301)."
         Team-Fehler "  Kein Aufruf, keine Kosten. Meist zeigt $stateFile nach einem Closeout oder Planwechsel auf eine alte Nummer — oder $planZeiger auf den falschen Plan."
         Team-Fehler "  NICHT einfach eins weiterzählen: $stateFile auf die erste noch nicht gebaute Stufe DIESES Plans setzen."
         exit 1
@@ -134,7 +134,7 @@ Regeln:
 6. Schreibt der Plan für DIESE Stufe eine Abbruchbedingung aus und trifft sie
    zu, ist das KEIN Fehlschlag: Trage den Befund in den [Unreleased]-Block ein,
    committe ihn mit Begründung und beende deine Antwort mit exakt
-   <promise>STUFE_${stufe}_UEBERSPRUNGEN</promise> (BL-255). Ohne Commit und
+   <promise>STUFE_${stufe}_UEBERSPRUNGEN</promise> (Kit-BL-255). Ohne Commit und
    ohne die Abbruchbedingung im Plan gilt diese Form NICHT.
 "@.TrimEnd()
 
@@ -191,7 +191,7 @@ Regeln:
         if ($capGesprengt -eq 1) { exit 1 }
         $headNachher = (& git rev-parse HEAD 2>$null)
         if (-not (team_plan_erlaubt_uebersprung $stufe)) {
-            Team-Fehler "Ralph: Stufe $stufe meldet <promise>STUFE_${stufe}_UEBERSPRUNGEN</promise>, aber $planDatei schreibt für diese Stufe KEINE Abbruchbedingung aus (BL-255)."
+            Team-Fehler "Ralph: Stufe $stufe meldet <promise>STUFE_${stufe}_UEBERSPRUNGEN</promise>, aber $planDatei schreibt für diese Stufe KEINE Abbruchbedingung aus (Kit-BL-255)."
             Team-Fehler "  Die zweite Quittungsform gilt nur dort, wo der Plan sie vorsieht — sonst wäre sie ein Weg, eine Stufe ohne Arbeit abzuhaken."
             Team-Fehler "  Weiterweg: Plan prüfen. Gehört die Bedingung hinein, trägt der Architekt sie nach; sonst ist die Stufe zu bauen."
             exit 1
@@ -205,13 +205,13 @@ Regeln:
                    Where-Object { $_ -notmatch $TEAM_GUARD_LAUFZEIT -and
                                   $_ -notmatch $TEAM_GUARD_IGNORIERT })
         if ($liegt.Count) {
-            Team-Fehler "Ralph: Stufe $stufe meldet sich als planmäßig übersprungen, lässt aber Uncommittetes liegen (BL-255)."
+            Team-Fehler "Ralph: Stufe $stufe meldet sich als planmäßig übersprungen, lässt aber Uncommittetes liegen (Kit-BL-255)."
             Team-Fehler "  Ein Übersprung verlangt einen Commit mit Begründung — sonst ist nicht festgehalten, WARUM die Stufe nicht gebaut wurde."
             Team-Fehler "  Weiterweg: git status ansehen, von Hand committen, dann `"$($stufe + 1)`" > $stateFile."
             exit 1
         }
         if ($headVorher -eq $headNachher) {
-            Team-Fehler "Ralph: Stufe $stufe meldet sich als planmäßig übersprungen, hat aber nichts committet (BL-255)."
+            Team-Fehler "Ralph: Stufe $stufe meldet sich als planmäßig übersprungen, hat aber nichts committet (Kit-BL-255)."
             Team-Fehler "  Der Befund gehört in den [Unreleased]-Block und in einen Commit — ein Übersprung ohne Spur ist von 'nicht gelaufen' nicht zu unterscheiden."
             exit 1
         }
@@ -253,9 +253,9 @@ Regeln:
             $botschaft = @"
 $TEAM_FEAT_PRAEFIX(stufe$stufe): Arbeit der Stufe $stufe, automatisch gesichert
 
-Die Sitzung endete als subtype=success ohne <promise> (BL-41, vierter
+Die Sitzung endete als subtype=success ohne <promise> (Kit-BL-41, vierter
 Ausgang) und ohne eigenen Commit. Die Selbstpruefung des Loops hat
-Arbeit, Zusicherung (BL-135) und gruenen Smoke-Test bestaetigt und
+Arbeit, Zusicherung (Kit-BL-135) und gruenen Smoke-Test bestaetigt und
 quittiert die Stufe deshalb selbst. Betreff bewusst generisch: Der
 Loop kennt den Inhalt der Stufe nicht - der Plan tut es.
 "@
@@ -264,7 +264,7 @@ Loop kennt den Inhalt der Stufe nicht - der Plan tut es.
         }
         $next = $stufe + 1
         Set-Content -Path $stateFile -Value $next -Encoding ascii
-        [Console]::Out.WriteLine("Ralph: Quittung fehlte (BL-41), Selbstprüfung bestanden — Stufe $stufe abgeschlossen, weiter mit $next.")
+        [Console]::Out.WriteLine("Ralph: Quittung fehlte (Kit-BL-41), Selbstprüfung bestanden — Stufe $stufe abgeschlossen, weiter mit $next.")
         continue
     }
 
@@ -273,7 +273,7 @@ Loop kennt den Inhalt der Stufe nicht - der Plan tut es.
     # konkrete Befehl darin quittiert eine nie gebaute Stufe. Stattdessen:
     # das, was die Rolle selbst als Grund nennt.
     if ($TEAM_SELBSTPRUEFUNG_LEER -eq 1) {
-        Team-Fehler "Ralph: Stufe $stufe hat NICHTS hinterlassen — kein Commit, keine Änderung, kein Promise (BL-301)."
+        Team-Fehler "Ralph: Stufe $stufe hat NICHTS hinterlassen — kein Commit, keine Änderung, kein Promise (Kit-BL-301)."
         Team-Fehler "  Das ist NICHT der vierte Ausgang: Die Stufe ist nicht gebaut. NICHT von Hand quittieren."
         Team-Fehler "  Warum, sagt die Rolle meist selbst — Anfang des result-Feldes ($TEAM_LAST_OUT):"
         Team-Fehler "    $(team_result_auszug $TEAM_LAST_OUT)"
@@ -284,7 +284,7 @@ Loop kennt den Inhalt der Stufe nicht - der Plan tut es.
             "Stufe $stufe hat kein <promise>STUFE_${stufe}_COMPLETE</promise> gegeben." `
             'git log -1 && git status — hat Ralph committet?' `
             "$smokeHinweis — ist der Baum grün?" `
-            $(if (($stufe + 1) -gt $ralphCap) { "Beides ja: Stufe $stufe WAR die letzte (RALPH_CAP=$ralphCap) — von Hand quittieren (`"$($stufe + 1)`" > $stateFile) beendet den Lauf, ein Neustart hat dann nichts mehr zu tun (BL-255)." } else { "Beides ja: von Hand quittieren — `"$($stufe + 1)`" > $stateFile, dann erneut starten." }) `
+            $(if (($stufe + 1) -gt $ralphCap) { "Beides ja: Stufe $stufe WAR die letzte (RALPH_CAP=$ralphCap) — von Hand quittieren (`"$($stufe + 1)`" > $stateFile) beendet den Lauf, ein Neustart hat dann nichts mehr zu tun (Kit-BL-255)." } else { "Beides ja: von Hand quittieren — `"$($stufe + 1)`" > $stateFile, dann erneut starten." }) `
             "Baum ROT? Erst prüfen, WO: Sind ausschließlich die von DIESER Stufe neu angelegten Testdateien rot (git status zeigt sie als '??'), ist der Testaufbau der wahrscheinlichere Schuldige als der Produktivcode — dann den Aufbau von Hand reparieren, OHNE eine Zusicherung abzuschwächen, statt die Stufe neu zu bauen." `
             'Ist BESTEHENDER Testbestand rot, hat die Stufe etwas gebrochen: dann neu bauen.' `
             $capZeile) {

@@ -2036,9 +2036,10 @@ Nächste Schritte im Zielprojekt:
      Er härtet eine Skizze aus ${PLAN_ORDNER}roadmap-skizzen.md zu
      ${PLAN_ORDNER}team-kaskade-1-….md aus (mit RALPH_CAP= und
      BUDGET_EMPFEHLUNG_USD=) und gibt die Scharfschalt-Sequenz aus.
-  6. Lauf starten:      cd "$ZIEL" && TEAM_BUDGET_USD=15 ./vollautomatik.sh
-     ^ Deckel für DIESEN Lauf. Für einen kurzen Erstlauf sind 15 USD ein
-       vernünftiger Start. Lieber nachziehen als zu tief ansetzen: ein zu
+  6. Lauf starten:      cd "$ZIEL" && TEAM_BUDGET_USD=50 ./vollautomatik.sh
+     ^ Deckel für DIESEN Lauf (50 USD ist auch der Default, BL-304). Er liegt
+       über dem Soft-Cap einer Rolle (20 USD), sonst stoppt er den Lauf vor
+       dem Rollen-Cap. Lieber nachziehen als zu tief ansetzen: ein zu
        tiefer Deckel wirft bezahlte Arbeit per Rollback weg und vervielfacht
        die Kosten, statt zu sparen (Feld-Lehre HM-32).
   7. NACH dem Lauf — Closeout, sonst sind die Kosten blind:

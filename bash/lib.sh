@@ -117,15 +117,15 @@ if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
    Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe. Starte ihn
    NIEMALS als Hintergrund-Task oder Monitor und plane keinen Wakeup darauf:
    Diese Sitzung ist headless, es kommt keine Benachrichtigung, und du wartest
-   bis zum Zeitlimit auf ein Ereignis, das nicht eintreten kann (BL-265).
+   bis zum Zeitlimit auf ein Ereignis, das nicht eintreten kann (Kit-BL-265).
    Er darf dafür bis zu ${TEAM_SMOKE_TEST_TIMEOUT} Sekunden brauchen: Erhöhe das
    Zeitlimit deines Werkzeugs entsprechend, statt in den Hintergrund
    auszuweichen — viele Werkzeuge erwarten MILLISEKUNDEN, das wären
-   ${TEAM_SMOKE_TEST_TIMEOUT}000 (BL-258). Läuft er länger, ist das ein Befund
+   ${TEAM_SMOKE_TEST_TIMEOUT}000 (Kit-BL-258). Läuft er länger, ist das ein Befund
    für den Menschen — melde ihn, weiche nicht aus.
    War der Baum schon VOR deiner Arbeit rot, hänge eine Zeile
    '<ISO-Zeit> | <deine Rolle> | <Namen der roten Tests>' an
-   ${TEAM_GATE_DATEI} an (BL-256). Dein Auftrag scheitert daran NICHT — aber
+   ${TEAM_GATE_DATEI} an (Kit-BL-256). Dein Auftrag scheitert daran NICHT — aber
    ohne diese Zeile meldet sich der Lauf am Ende als fertig, während das Gate
    aus ist. Ist der Baum am Ende grün, lösche die Datei wieder."
     # BL-207: Frank bekommt NUR diesen Nachsatz, nicht SMOKE_ZEILE — und er
@@ -136,7 +136,7 @@ if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
     # Fehlversuch (.frank-attempts) und eskaliert ab dem dritten an Axel —
     # das teure Modell wird also fuer einen Formfehler gerufen. Deshalb
     # steht die Auflage hier ausgeschrieben statt nur bei Ralph.
-    SMOKE_SUFFIX=" Smoke-Test grün: ${TEAM_SMOKE_TEST}. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu ${TEAM_SMOKE_TEST_TIMEOUT} Sekunden brauchen, erhöhe das Zeitlimit deines Werkzeugs entsprechend (viele Werkzeuge erwarten MILLISEKUNDEN — das wären ${TEAM_SMOKE_TEST_TIMEOUT}000, BL-258). NIEMALS als Hintergrund-Task, als Monitor oder mit einem Wakeup darauf (BL-265): Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (BL-41). War die Suite schon VOR deinem Fix rot, brich nicht ab: Miss beide Staende und belege, dass durch DEINEN Fix kein NEUER Fehlschlag entsteht (BL-205) — und haenge die Zeile '<ISO-Zeit> | frank | <Namen der roten Tests>' an ${TEAM_GATE_DATEI} an, sonst meldet sich der Lauf am Ende als fertig, waehrend das Gate aus ist (BL-256). Ist der Baum am Ende gruen, loesche die Datei wieder."
+    SMOKE_SUFFIX=" Smoke-Test grün: ${TEAM_SMOKE_TEST}. Führe ihn im VORDERGRUND aus und warte auf seine Ausgabe — er darf bis zu ${TEAM_SMOKE_TEST_TIMEOUT} Sekunden brauchen, erhöhe das Zeitlimit deines Werkzeugs entsprechend (viele Werkzeuge erwarten MILLISEKUNDEN — das wären ${TEAM_SMOKE_TEST_TIMEOUT}000, Kit-BL-258). NIEMALS als Hintergrund-Task, als Monitor oder mit einem Wakeup darauf (Kit-BL-265): Diese Sitzung ist headless, es kommt keine Benachrichtigung, und der Lauf endet als Erfolg ohne Quittung (Kit-BL-41). War die Suite schon VOR deinem Fix rot, brich nicht ab: Miss beide Staende und belege, dass durch DEINEN Fix kein NEUER Fehlschlag entsteht (Kit-BL-205) — und haenge die Zeile '<ISO-Zeit> | frank | <Namen der roten Tests>' an ${TEAM_GATE_DATEI} an, sonst meldet sich der Lauf am Ende als fertig, waehrend das Gate aus ist (Kit-BL-256). Ist der Baum am Ende gruen, loesche die Datei wieder."
 else
     SMOKE_ZEILE="(Kein Smoke-Test konfiguriert — Schritt entfällt. Das Team arbeitet ohne Sicherheitsnetz; TEAM_SMOKE_TEST in team.config.sh nachtragen.)"
     SMOKE_SUFFIX=""
@@ -159,7 +159,7 @@ team_smoke_auffrischen() {
     [ -n "$neu" ] || return 0
     TEAM_SMOKE_TEST="$neu"
     team_smoke_bausteine
-    echo "[team-lib] Smoke-Test seit dieser Stufe konfiguriert: $neu — die folgenden Stufen bauen mit ihm (BL-283)." >&2
+    echo "[team-lib] Smoke-Test seit dieser Stufe konfiguriert: $neu — die folgenden Stufen bauen mit ihm (Kit-BL-283)." >&2
     return 0
 }
 
@@ -252,7 +252,7 @@ team_allowed_tools() {
     esac
     wurzel="${wurzel%/}"
     case "$wurzel" in
-        *" "*) echo "[team-lib] WARNUNG: Der Projektpfad enthält ein Leerzeichen — die Schreibregeln gelten nur relativ. Wechselt eine Rolle mit cd in einen Unterordner, lehnt die CLI ihre Schreibversuche ab (BL-292)." >&2
+        *" "*) echo "[team-lib] WARNUNG: Der Projektpfad enthält ein Leerzeichen — die Schreibregeln gelten nur relativ. Wechselt eine Rolle mit cd in einen Unterordner, lehnt die CLI ihre Schreibversuche ab (Kit-BL-292)." >&2
                wurzel="" ;;
     esac
     local plan; plan="$(team_schreibregeln "$TEAM_PLAN_ORDNER" "$wurzel")"
@@ -308,7 +308,7 @@ TEAM_ROLE_HARDCAP_USD="${TEAM_ROLE_HARDCAP_USD:-40}"
 # Feld fiel es nur auf, weil vorher jemand in den Quelltext sah.
 if awk -v s="$TEAM_ROLE_BUDGET_USD" -v h="$TEAM_ROLE_HARDCAP_USD" \
        'BEGIN { exit !(h + 0 <= s + 0) }' 2>/dev/null; then
-    echo "[team-lib] WARNUNG: TEAM_ROLE_HARDCAP_USD ($TEAM_ROLE_HARDCAP_USD) liegt nicht über TEAM_ROLE_BUDGET_USD ($TEAM_ROLE_BUDGET_USD) — Frank und Axel haben damit KEINEN harten Abbruch mehr (BL-297). Wer den Soft-Cap hebt, hebt den Hard-Cap mit." >&2
+    echo "[team-lib] WARNUNG: TEAM_ROLE_HARDCAP_USD ($TEAM_ROLE_HARDCAP_USD) liegt nicht über TEAM_ROLE_BUDGET_USD ($TEAM_ROLE_BUDGET_USD) — Frank und Axel haben damit KEINEN harten Abbruch mehr (Kit-BL-297). Wer den Soft-Cap hebt, hebt den Hard-Cap mit." >&2
 fi
 
 # --- Auth-Modus --------------------------------------------------------------
@@ -367,7 +367,7 @@ team_warnung_abo_key() {
         # Leerlauf über API), nicht diesem Fehlalarm.
         echo "Hinweis: ANTHROPIC_API_KEY liegt in der Prozess-Umgebung, gesetzt vom API-Fallback" >&2
         echo "  eines vorigen Aufrufs (nicht aus .bashrc). Er wird für diesen Abo-Aufruf" >&2
-        echo "  unmittelbar entfernt — kein Handlungsbedarf (BL-48)." >&2
+        echo "  unmittelbar entfernt — kein Handlungsbedarf (Kit-BL-48)." >&2
         return 0
     fi
     if [ -n "${ANTHROPIC_API_KEY:-}" ] \
@@ -954,7 +954,7 @@ sys.exit(0 if data.get("subtype") == "success" else 1)
 team_quittung_fehlt_melden() {
     local rolle="$1" out="$2" was="$3"; shift 3
     team_result_meldet_erfolg "$out" || return 1
-    echo "[$rolle] STUFE FERTIG, QUITTUNG FEHLT (BL-41) — $was" >&2
+    echo "[$rolle] STUFE FERTIG, QUITTUNG FEHLT (Kit-BL-41) — $was" >&2
     echo "  Das Log meldet sich selbst als Erfolg (subtype=success, is_error=false), gibt aber" >&2
     echo "  keine Quittung. Das ist der benannte vierte Ausgang: Die Sitzung hat sich beendet," >&2
     echo "  meist im Warten auf einen Hintergrund-Task/Monitor/Wakeup, den es headless nicht gibt." >&2
@@ -1055,7 +1055,7 @@ team_quittung_selbstpruefung() {
         return 1
     fi
 
-    echo "[$rolle] Selbstprüfung des vierten Ausgangs (BL-41) für Stufe $stufe:" >&2
+    echo "[$rolle] Selbstprüfung des vierten Ausgangs (Kit-BL-41) für Stufe $stufe:" >&2
 
     # (1) Hat die Sitzung überhaupt etwas hinterlassen? Ohne Arbeit gibt es
     #     nichts zu quittieren — dann ist es kein "fertig ohne Quittung",
@@ -1091,12 +1091,12 @@ team_quittung_selbstpruefung() {
         dateien="$(git show --name-only --pretty=format: HEAD 2>/dev/null)"
     fi
     if ! printf '%s\n' "$dateien" | grep -q "^\"\?${test_ordner}"; then
-        echo "    ✗ Keine Datei unter ${test_ordner} berührt (BL-135)." >&2
+        echo "    ✗ Keine Datei unter ${test_ordner} berührt (Kit-BL-135)." >&2
         echo "      Die Stufe hat keine nachweisbare Zusicherung — grüner Baum beweist hier" >&2
         echo "      nichts, weil der Bestand das Neue nicht prüft. Das gehört an den Menschen." >&2
         return 1
     fi
-    echo "    ✓ Zusicherung vorhanden — mindestens eine Datei unter ${test_ordner} berührt (BL-135)." >&2
+    echo "    ✓ Zusicherung vorhanden — mindestens eine Datei unter ${test_ordner} berührt (Kit-BL-135)." >&2
 
     # (3) Ist der Baum grün? Der teuerste, aber unverzichtbare Schritt — er
     #     ist derselbe Befehl, den die Prüfliste dem Menschen nennt.
@@ -1109,7 +1109,7 @@ team_quittung_selbstpruefung() {
     #     gleichzeitige Testlaeufe kollidieren, und das Ergebnis waere eine
     #     Eigenschaft der MASCHINE statt eine des Codes.
     if team_smoke_parallel_lauf; then
-        echo "    ? Es läuft bereits ein Verifikationslauf — Ergebnis UNBEKANNT, nicht rot (BL-207)." >&2
+        echo "    ? Es läuft bereits ein Verifikationslauf — Ergebnis UNBEKANNT, nicht rot (Kit-BL-207)." >&2
         echo "      Gefunden: $TEAM_SMOKE_PARALLEL_ZEILE" >&2
         echo "      Ein zweiter Lauf daneben kollidiert (Datenbankdateien, Ports," >&2
         echo "      Nutzerverzeichnisse) und meldete ROT für einen Baum, der allein gefahren" >&2
@@ -1122,7 +1122,7 @@ team_quittung_selbstpruefung() {
         echo "    ✗ $smoke ist ROT." >&2
         echo "      Das gehört an den Menschen: Erst prüfen, WO — sind ausschließlich die von" >&2
         echo "      DIESER Stufe neu angelegten Testdateien rot, ist der Testaufbau der" >&2
-        echo "      wahrscheinlichere Schuldige als der Produktivcode (BL-61)." >&2
+        echo "      wahrscheinlichere Schuldige als der Produktivcode (Kit-BL-61)." >&2
         # BL-201: Der Befund kann eine Eigenschaft des LAUFS statt des Codes
         # sein. Ein Hintergrundlauf, den die Rolle angestossen und nie zu Ende
         # gefuehrt hat, hinterlaesst einen halben Zustand (halb geschriebene
@@ -1133,7 +1133,7 @@ team_quittung_selbstpruefung() {
         echo "      ABER: Dieser Befund ist nicht sicher. Wurde der Test vorher als" >&2
         echo "      Hintergrundlauf angestossen und nie zu Ende gefuehrt, misst du seinen" >&2
         echo "      halben Zustand statt deinen Code. Miss im VORDERGRUND nach, bevor du den" >&2
-        echo "      Befund verwendest — und lies das Feld \`result\` im Lauf-Log (BL-201)." >&2
+        echo "      Befund verwendest — und lies das Feld \`result\` im Lauf-Log (Kit-BL-201)." >&2
         return 1
     fi
     echo "    ✓ $smoke ist grün." >&2
@@ -1384,7 +1384,7 @@ team_raw_pruefen() {
         | LC_ALL=C sort -k2)"
     echo "[$rolle] ÜBERGRIFF in der Rohmaterial-Zone (${TEAM_ROHMATERIAL_ORDNER}) — sie gehört dem Stakeholder, jede Rolle liest dort nur:" >&2
     printf '%s\n' "$abweichung" | sed 's/^/  /' >&2
-    echo "  Nichts davon wurde angefasst (BL-263). Stammt eine Änderung nicht vom Stakeholder, hat die Rolle die Zone verletzt — von Hand prüfen." >&2
+    echo "  Nichts davon wurde angefasst (Kit-BL-263). Stammt eine Änderung nicht vom Stakeholder, hat die Rolle die Zone verletzt — von Hand prüfen." >&2
     return 1
 }
 
@@ -1465,7 +1465,7 @@ team_eigene_pfade() {
     while IFS= read -r pfad; do
         [ -z "$pfad" ] && continue
         if ! echo "$eigene" | grep -Fxq -- "$pfad"; then
-            echo "[guard] Nicht angefasst, lag vor dem Rollenstart im Baum (BL-206): $pfad" >&2
+            echo "[guard] Nicht angefasst, lag vor dem Rollenstart im Baum (Kit-BL-206): $pfad" >&2
         fi
     done <<< "$roh"
     echo "$eigene"
@@ -1497,7 +1497,7 @@ team_pfade_zuruecksetzen() {
             if ! git cat-file -e "$hash:$pfad" 2>/dev/null; then
                 git rm -r --cached --quiet -- "$pfad" >/dev/null 2>&1 || true
             fi
-            echo "[$rolle] Guard: '$pfad' liegt in der Rohmaterial-Zone — Stakeholder-Eigentum, NICHT angefasst (BL-263)." >&2
+            echo "[$rolle] Guard: '$pfad' liegt in der Rohmaterial-Zone — Stakeholder-Eigentum, NICHT angefasst (Kit-BL-263)." >&2
             continue
         fi
         if git cat-file -e "$hash:$pfad" 2>/dev/null; then
@@ -1772,7 +1772,7 @@ team_flock_vorhanden() {
 # unter TEAM_LOCK_HELD=1 und kommen hier nie an.
 team_flock_fehlt_melden() {
     echo "[${1:-team}] Hinweis: 'flock' ist auf dieser Maschine nicht vorhanden." >&2
-    echo "  Die Sperre läuft deshalb über den Ordner $TEAM_LOCK_ORDNER (gleichwertig, BL-190)." >&2
+    echo "  Die Sperre läuft deshalb über den Ordner $TEAM_LOCK_ORDNER (gleichwertig, Kit-BL-190)." >&2
     echo "  Das ist KEIN Sperrkonflikt — es läuft keine zweite Pipeline." >&2
 }
 

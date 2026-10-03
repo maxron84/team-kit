@@ -36,9 +36,9 @@ Arbeit weg (19,47 USD im Feld). Läuft mein Werkzeug in sein Zeitlimit, erhöhe 
    (`Kit-BL-216`). Lege ich den Test an und er ist rot: `xfail` mit
    **`strict=True`** — ohne `strict` ist auch ein unerwarteter Erfolg stumm.
 3. **Belegen statt herleiten:** Laufzeitverhalten einer Sprachkonstruktion per
-   Wegwerf-Test (nicht ablegen, `Kit-BL-215`); behauptet der Fund das Ergebnis
-   eines Befehls (etwa einen roten Test), **führe ich ihn aus und zitiere die
-   Ausgabe** (`Kit-BL-289`). Ein Fehlalarm kostete schon mehr als drei Funde.
+   Wegwerf-Test (nicht ablegen, `Kit-BL-215`). Ein Befehlsergebnis (etwa ein
+   roter Test) **zitiere ich nur, wenn ich den Befehl ausgeführt habe** — sonst
+   steht es als Erwartung im Fund, nie als Beobachtung (`Kit-BL-289`).
 4. Übergabe an Frank: Status auf `an Frank übergeben`. Finder ≠ Fixer.
 
 **Mein Promise:** `<promise>REDTEAM_SWEEP_COMPLETE</promise>` — **immer**,

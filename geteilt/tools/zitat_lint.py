@@ -31,8 +31,15 @@ Wegsehen erzieht. Deshalb zwei Beschraenkungen, beide aus dem Probelauf:
      frisch geschriebene Meldezeile "gemeldet ans Kit als `BL-49`" als
      veraltetes Zitat, weil er die Kit-Nummer im Projekt-Backlog nachschlug.
 
+Seit BL-234 zaehlen auch Fund- und Aktenzitate (`HM-<N>`, `AX-<N>`, mit
+`Kit-HM-`/`Kit-AX-` ebenso ausgenommen); Statusquelle ist das Beutebuch samt
+Archiv, eine Akte gilt ueber den Fund ihrer Kopfzeile. Seit BL-282 werden
+Treffer in Rueckblicken (`*abschluss*.md`, `*-archiv.md`) nur GEZAEHLT.
+
 Aufruf:
-  zitat_lint.py [--backlog DATEI] [--archiv DATEI] [PLANDATEI...]
+  zitat_lint.py [--backlog DATEI] [--archiv DATEI] [--beutebuch DATEI]
+                [--beutebuch-archiv DATEI] [--akten ORDNER] [--rueckblicke]
+                [PLANDATEI...]
 
 Exit 0 = nichts gefunden · 3 = Befunde (auf stderr) · 1 = Bedienfehler.
 Bewusst KEIN harter Blocker: Der Lint urteilt ueber Prosa.
@@ -71,7 +78,15 @@ BACKLOG = REPO_ROOT / "plans" / "backlog.md"
 ARCHIV = REPO_ROOT / "plans" / "backlog-archiv.md"
 
 # `BL-12`, nicht `Kit-BL-12` — das Lookbehind haelt fremde Nummernraeume drau3en.
-REFERENZ_RE = re.compile(r"(?<!Kit-)\bBL-(\d+)\b")
+#
+# BL-234: Dazu Fund- und Aktenzitate (`HM-`, `AX-`), mit `Kit-HM-`/`Kit-AX-`
+# ebenso ausgenommen. Das Werkzeug las ausschliesslich den Backlog — im Feld
+# begruendete eine Roadmap-Skizze ihre HARTE Vorbedingung mit drei Fund-
+# Nummern, die eine Fixphase derselben Kaskade Stunden zuvor erledigt hatte,
+# und der Lint meldete fuenf andere Faelle und diesen nicht. Ein Fund ist die
+# wahrscheinlichere Sperre (er legt den Loop still), und Fundzitate veralten
+# schneller (eine Fixphase erledigt mehrere in einer Nacht).
+REFERENZ_RE = re.compile(r"(?<!Kit-)\b(BL|HM|AX)-(\d+)\b")
 # Der Status ist das LETZTE Feld einer Backlog-Zeile. Codespans koennen ein
 # `|` enthalten (BL-16), deshalb werden sie vor dem Zerlegen maskiert.
 ZEILE_RE = re.compile(r"^\|\s*BL-(\d+)\s*\|")
@@ -170,7 +185,7 @@ def _felder(zeile):
 
 
 def status_je_nummer(*pfade):
-    """{"12": "**erledigt** …"} ueber Backlog UND Archiv — beide zusammen
+    """{"BL-12": "**erledigt** …"} ueber Backlog UND Archiv — beide zusammen
     bilden den vollstaendigen Nummernraum."""
     stand = {}
     for pfad in pfade:
@@ -181,7 +196,53 @@ def status_je_nummer(*pfade):
             if not treffer:
                 continue
             felder = _felder(zeile)
-            stand[treffer.group(1)] = felder[-1] if felder else ""
+            stand[f"BL-{treffer.group(1)}"] = felder[-1] if felder else ""
+    return stand
+
+
+HM_KOPF_RE = re.compile(r"^###\s+(HM-\d+)")
+HM_STATUS_RE = re.compile(r"^-\s+\*\*Status\*\*:\s*(.+?)\s*$")
+AX_BEZUG_RE = re.compile(r"\(Bezug:\s*(HM-\d+)\)")
+ERLEDIGTE_FUNDE = ("erledigt", "überholt")
+
+
+def status_der_funde(beutebuecher=(), akten_ordner=None):
+    """{"HM-3": "**erledigt (Frank-Fix, abc)**", "AX-2": "…"} — BL-234.
+
+    Die Statusquelle eines Fundes ist sein Block im Beutebuch (aktiv ODER
+    Archiv, beide zusammen bilden den Nummernraum). Eine Akte traegt keinen
+    eigenen Status; sie gehoert zu dem Fund, den ihre Kopfzeile nennt
+    (`# AX-2 — … (Bezug: HM-3)`), und ist erledigt, wenn er es ist. Die
+    Statuswerte werden fett gesetzt, damit dieselbe ERLEDIGT_RE greift wie
+    beim Backlog."""
+    stand = {}
+    for pfad in beutebuecher:
+        if not pfad or not os.path.isfile(pfad):
+            continue
+        aktuell = None
+        for zeile in open(pfad, encoding="utf-8"):
+            kopf = HM_KOPF_RE.match(zeile)
+            if kopf:
+                aktuell = kopf.group(1)
+                continue
+            status = HM_STATUS_RE.match(zeile)
+            if status and aktuell:
+                wert = status.group(1)
+                if wert.lower().startswith(ERLEDIGTE_FUNDE):
+                    stand[aktuell] = f"**{wert}**"
+                else:
+                    stand[aktuell] = wert
+                aktuell = None
+    if akten_ordner and os.path.isdir(akten_ordner):
+        for akte in sorted(Path(akten_ordner).glob("AX-*.md")):
+            try:
+                kopf = akte.read_text(encoding="utf-8").splitlines()[:3]
+            except (OSError, IndexError):
+                continue
+            bezug = next((m.group(1) for z in kopf
+                          for m in [AX_BEZUG_RE.search(z)] if m), None)
+            if bezug and bezug in stand:
+                stand[akte.stem] = f"{stand[bezug]} (über {bezug})"
     return stand
 
 
@@ -213,12 +274,13 @@ def _befunde_im_text(text, stand, zeilennr_start=1, ausser=None):
         for satz in saetze(absatz):
             if not _offene_erwartung(satz):
                 continue
-            for nummer in sorted(set(REFERENZ_RE.findall(satz))):
-                if ausser and nummer == ausser:
+            kennungen = {f"{art}-{nr}" for art, nr in REFERENZ_RE.findall(satz)}
+            for kennung in sorted(kennungen):
+                if ausser and kennung == ausser:
                     continue        # eine Zeile zitiert sich nicht selbst
-                status = stand.get(nummer)
+                status = stand.get(kennung)
                 if status and ERLEDIGT_RE.search(status):
-                    befunde.append((zeilennr + zeilennr_start - 1, nummer,
+                    befunde.append((zeilennr + zeilennr_start - 1, kennung,
                                     status[:60], satz.strip()[:120]))
     return befunde
 
@@ -252,25 +314,58 @@ def pruefe_backlog(pfad, stand):
         if not felder:
             continue
         for zeilennr, nummer, status, auszug in _befunde_im_text(
-                felder[-1], stand, nr, ausser=treffer.group(1)):
+                felder[-1], stand, nr, ausser=f"BL-{treffer.group(1)}"):
             befunde.append((nr, nummer, status, auszug))
     return befunde
 
 
+# BL-282: Rueckblicke. Ein Abschluss-Protokoll und ein Archiv sind
+# ABGESCHLOSSENE Dokumente — dass sie einen Punkt zitieren, der damals offen
+# war, ist ihr Inhalt, kein Fehler. Im Feld meldete der Lint im Closeout zehn
+# veraltete Zitate, alle zehn in Rueckblicken, null in den vorwaerts
+# gerichteten Dateien; einer davon in einem Protokoll, das ausdruecklich
+# festhielt, der Punkt sei "vom zitat_lint gemeldet, bewusster Rueckblick".
+# Die Trefferzahl waechst damit monoton mit der Zahl der Kaskaden, und eine
+# Ausgabe aus 100 % Nicht-Befunden wird nicht mehr gelesen. NICHT
+# ausgeschlossen, sondern getrennt gezaehlt: Die Zahl bleibt sichtbar.
+RUECKBLICK_RE = re.compile(r"(?:^|[-_])abschluss[^/\\]*\.md$|-archiv\.md$", re.I)
+
+
+def ist_rueckblick(pfad):
+    return bool(RUECKBLICK_RE.search(Path(pfad).name))
+
+
 def main(argv):
     backlog, archiv, dateien = str(BACKLOG), str(ARCHIV), []
+    beutebuch = beutebuch_archiv = akten = None
+    rueckblicke_zeigen = False
     i = 0
     while i < len(argv):
         if argv[i] == "--backlog" and i + 1 < len(argv):
             backlog, i = argv[i + 1], i + 2
         elif argv[i] == "--archiv" and i + 1 < len(argv):
             archiv, i = argv[i + 1], i + 2
+        elif argv[i] == "--beutebuch" and i + 1 < len(argv):
+            beutebuch, i = argv[i + 1], i + 2
+        elif argv[i] == "--beutebuch-archiv" and i + 1 < len(argv):
+            beutebuch_archiv, i = argv[i + 1], i + 2
+        elif argv[i] == "--akten" and i + 1 < len(argv):
+            akten, i = argv[i + 1], i + 2
+        elif argv[i] == "--rueckblicke":
+            rueckblicke_zeigen, i = True, i + 1
         elif argv[i].startswith("--"):
             print(f"FEHLER: unbekanntes Argument '{argv[i]}'", file=sys.stderr)
             return 1
         else:
             dateien.append(argv[i])
             i += 1
+
+    # BL-234: Die Quellen fuer Fund- und Aktenzitate liegen im selben
+    # Planordner wie der Backlog — dort legt der Installer sie an.
+    plan_ordner = Path(backlog).parent
+    beutebuch = beutebuch or str(plan_ordner / "beutebuch.md")
+    beutebuch_archiv = beutebuch_archiv or str(plan_ordner / "beutebuch-archiv.md")
+    akten = akten or str(plan_ordner / "ermittlungsakten")
 
     stand = status_je_nummer(backlog, archiv)
     if not stand:
@@ -289,30 +384,51 @@ def main(argv):
         print(f"FEHLER: kein Backlog unter '{backlog}' lesbar.", file=sys.stderr)
         return 1
 
-    if not dateien:
-        plan_ordner = Path(backlog).parent
-        dateien = [str(p) for p in sorted(plan_ordner.glob("*.md"))
-                   if p.name not in (Path(backlog).name, Path(archiv).name)]
+    stand.update(status_der_funde((beutebuch, beutebuch_archiv), akten))
 
-    gesamt = 0
+    if not dateien:
+        # Die Statusquellen selbst sind keine Plandateien: Backlog und
+        # Beutebuch werden ueber ihre Statusfelder geprueft (BL-184), nicht
+        # als Prosa.
+        quellen = {Path(p).name for p in (backlog, archiv, beutebuch,
+                                          beutebuch_archiv)}
+        dateien = [str(p) for p in sorted(plan_ordner.glob("*.md"))
+                   if p.name not in quellen]
+
+    gesamt = rueckblick = 0
     for datei in dateien:
-        for zeilennr, nummer, status, auszug in pruefe_datei(datei, stand):
-            gesamt += 1
-            print(f"{datei}:{zeilennr}: zitiert BL-{nummer} als offene Frage, "
-                  f"Status ist aber '{status}'", file=sys.stderr)
+        zurueck = ist_rueckblick(datei)
+        for zeilennr, kennung, status, auszug in pruefe_datei(datei, stand):
+            if zurueck:
+                rueckblick += 1
+                if not rueckblicke_zeigen:
+                    continue
+            else:
+                gesamt += 1
+            print(f"{datei}:{zeilennr}: zitiert {kennung} als offene Frage, "
+                  f"Status ist aber '{status}'"
+                  + (" (Rueckblick, nicht mitgezaehlt)" if zurueck else ""),
+                  file=sys.stderr)
             print(f"    … {auszug} …", file=sys.stderr)
     # BL-184: Der Backlog prueft jetzt seine EIGENEN Statusfelder mit — sie
     # veralten genauso still wie ein Plan-Zitat.
-    for zeilennr, nummer, status, auszug in pruefe_backlog(backlog, stand):
+    for zeilennr, kennung, status, auszug in pruefe_backlog(backlog, stand):
         gesamt += 1
-        print(f"{backlog}:{zeilennr}: das Statusfeld nennt BL-{nummer} als "
+        print(f"{backlog}:{zeilennr}: das Statusfeld nennt {kennung} als "
               f"offenen Punkt, Status ist aber '{status}'", file=sys.stderr)
         print(f"    … {auszug} …", file=sys.stderr)
+    # BL-282: Die Rueckblicke stehen als ZAHL da, nicht als Befund.
+    zusatz = (f" ({rueckblick} weitere in Abschlussprotokollen und Archiven — "
+              f"Rueckblicke, nicht mitgezaehlt; `--rueckblicke` zeigt sie.)"
+              if rueckblick else "")
     if gesamt:
-        print(f"-- {gesamt} veraltete(s) Zitat(e). Der Lint urteilt ueber "
-              f"Prosa: Ein bewusster Rueckblick ist kein Befund, dann die "
-              f"Zukunftsform aus dem Satz nehmen.", file=sys.stderr)
+        print(f"-- {gesamt} veraltete(s) Zitat(e) in aktiven Planungsdateien."
+              f"{zusatz} Der Lint urteilt ueber Prosa: Ein bewusster "
+              f"Rueckblick ist kein Befund, dann die Zukunftsform aus dem Satz "
+              f"nehmen.", file=sys.stderr)
         return 3
+    if zusatz:
+        print(f"0 Befunde in aktiven Planungsdateien.{zusatz}")
     # BL-184: Die Reihenfolge gehoert in die Ausgabe, nicht nur in den Kopf.
     # Der Lint liest die STATUSFELDER des Backlogs — vor dem Abtragen
     # aufgerufen, stehen die erledigten Eintraege dort noch als offen, und er

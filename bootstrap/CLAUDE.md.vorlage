@@ -201,8 +201,10 @@ und jedes Feldprojekt ihn so führen):
    **Dasselbe gilt für das Ergebnis eines Befehls** (`Kit-BL-289`): Behauptet
    ein Fund, was ein Befehl ausgibt, den der Finder selbst ausführen kann —
    „`pytest <datei>` zeigt den roten Fall", ein Exit-Code, eine Fehlermeldung
-   —, dann **führt er ihn aus und zitiert die Ausgabe** im Fund. Dort versagt
-   Lesen genauso: Im Feld behauptete ein Fund einen roten Test, den niemand
+   —, dann **führt er ihn aus und zitiert die Ausgabe** im Fund. Darf er ihn
+   nicht ausführen (im Loop-Sweep startet das Red Team nur den Smoke-Test),
+   steht das Ergebnis als **Erwartung** im Fund — „soll rot werden" —, nie als
+   Beobachtung. Dort versagt Lesen genauso: Im Feld behauptete ein Fund einen roten Test, den niemand
    ausgeführt hatte; die Herleitung aus dem Kontrollfluss übersah eine
    Datendatei, der Test war grün, und der Fix-Lauf kostete trotzdem 1,42 USD.
 4. **Übergabe an Frank**: Status von `offen` auf `an Frank übergeben` setzen —
@@ -238,6 +240,7 @@ jede Rolle es beim Schreiben vor Augen hat:
 - **Angreifer**: Harry | Marv
 - **Schweregrad**: kritisch | hoch | mittel | klein
 - **Status**: offen
+- **Stand**: <JJJJ-MM-TT> — <ein Halbsatz: was davon gebaut ist, was offen bleibt>
 - **Reproschritte**:
   1. …
 - **Erwartung**: …
@@ -597,10 +600,11 @@ divergierender Defaults.
 Schwellen hängen zusammen** (`Kit-BL-297`): Liegt der Hard-Cap nicht über dem
 Soft-Cap, greift Franks und Axels harter Abbruch nie — wer den Soft-Cap hebt,
 hebt den Hard-Cap mit; die Bibliothek warnt sonst bei jedem Start.
-**Der Soft-Cap liegt über dem Default des Lauf-Deckels** (`TEAM_BUDGET_USD`,
-15 USD, `Kit-BL-286`): Ohne Budget-Empfehlung im Plan stoppt einen teuren
-Aufruf von Ralph, Harry oder Marv deshalb in der Regel der **Lauf-Deckel**,
-nicht der Rollen-Cap — gemessen wird beides erst nach dem Aufruf.
+**Der Lauf-Deckel liegt über dem Soft-Cap** (`TEAM_BUDGET_USD`, Default
+50 USD, `Kit-BL-304`): Ein teurer Einzelaufruf stößt zuerst an den Rollen-Cap,
+der Lauf-Deckel begrenzt die Summe des Laufs. Mit dem alten Default (15 USD)
+war es umgekehrt, seit die Rollen 20/40 USD dürfen (`Kit-BL-286`). Gemessen
+wird beides erst nach dem Aufruf.
 
 **Grundregeln (stets aktiv):**
 
