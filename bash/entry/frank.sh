@@ -118,10 +118,13 @@ Franks Dreisatz — alle Schritte sind PFLICHT:
    nicht als erledigt (Kit-BL-22/Kit-BL-28).
 1. $SCHRITT1
 2. Genau EIN Commit: '${TEAM_FIX_PRAEFIX}: <was+warum> ($HM)'.
+   Stage dabei namentlich, was du selbst angefasst hast — nie 'git add -A' und
+   keinen Ordner blanko (Kit-BL-274).
 3. ${TEAM_CHANGELOG} unter '## [Unreleased]' → '### Fixes' den Fix eintragen (Was+Warum)
    UND den Beutebuch-Status setzen:
    $TEAM_BEUTEBUCH_TOOL set $HM 'erledigt (Frank-Fix, <commit-kurzhash>)'
-   (Den CHANGELOG-/Status-Edit im selben oder einem Folge-Commit 'docs: …' sichern.)
+   (Den CHANGELOG-/Status-Edit im selben oder einem Folge-Commit 'docs: … ($HM)' sichern —
+   die Fundnummer gehört in JEDE deiner Commit-Nachrichten, Kit-BL-236.)
 
 
 Zwei Dinge, die keine Rückfrage wert sind — hier steht die Antwort (Kit-BL-205):
@@ -159,7 +162,7 @@ echo "Frank: $HM Versuch $VERSUCH kostete $TEAM_LAST_COST USD."
 # Pause wird unverändert an vollautomatik.sh durchgereicht.
 if [ "$RC_CLAUDE" -eq 42 ]; then
     echo "[frank] Session-Limit — Fix pausiert (Reset: ${TEAM_LAST_RESET:-unbekannt}). Kein Fehlversuch, Zähler unverändert." >&2
-    team_rollback_rolle frank "$START_HASH" || true
+    team_rollback_rolle frank "$START_HASH" "$HM" || true
     exit 42
 fi
 
@@ -274,17 +277,17 @@ fi
 # Netz endlos.
 if [ "${TEAM_LAST_KEIN_ZUG:-0}" = "1" ]; then
     echo "[frank] $HM — kein Modell kam zum Zug (0 Turns, 0.0000 USD): Netz/Proxy. Rollback, aber KEIN Fehlversuch — Zähler bleibt bei $((VERSUCH - 1)), keine Eskalation an Axel." >&2
-    team_rollback_rolle frank "$START_HASH" || true
+    team_rollback_rolle frank "$START_HASH" "$HM" || true
     exit 1
 fi
 
 echo "[frank] $HM Versuch $VERSUCH gescheitert (Budget/Promise/Commit/Dreisatz/Substanzbezug unvollständig) — Rollback." >&2
-team_rollback_rolle frank "$START_HASH" || true
+team_rollback_rolle frank "$START_HASH" "$HM" || true
 printf '%s %s\n' "$HM" "$VERSUCH" > "$ATTEMPTS_FILE"
 
 if [ "$VERSUCH" -ge "$MAX_VERSUCHE" ]; then
     $TEAM_BEUTEBUCH_TOOL set "$HM" "an Axel übergeben"
-    git add "$TEAM_BEUTEBUCH"
+    team_eigene_stagen "$TEAM_BEUTEBUCH" || true   # BL-274
     git commit -q -m "docs(beute): $HM nach $VERSUCH Frank-Versuchen an Axel übergeben"
     rm -f "$ATTEMPTS_FILE"
     echo "[frank] $HM nach $MAX_VERSUCHE Versuchen an Axel eskaliert."

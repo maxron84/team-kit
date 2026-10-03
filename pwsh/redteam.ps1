@@ -241,7 +241,7 @@ if ($rc -eq 42) {
     Team-Fehler "[$Rolle] Session-Limit — Sweep pausiert (Reset: $(if ($TEAM_LAST_RESET) { $TEAM_LAST_RESET } else { 'unbekannt' })). Kein Fehler, $stateFile bleibt unverändert; halbfertige $TEAM_TEST_ORDNER/$TEAM_PLAN_ORDNER-Seiteneffekte werden verworfen."
     # BL-114: wie in axel.ps1 — der `git clean` war eingeschraenkt, das
     # `git reset --hard` daneben nicht. Jetzt derselbe chirurgische Weg.
-    team_rollback_rolle $Rolle $headHash | Out-Null
+    team_rollback_rolle $Rolle $headHash '-' | Out-Null
     exit 42
 } elseif ($rc -ne 0) {
     Team-Fehler "[$Rolle] Aufruf fehlgeschlagen."

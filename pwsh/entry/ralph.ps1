@@ -115,6 +115,9 @@ while ($true) {
     team_smoke_auffrischen
 
     [Console]::Out.WriteLine("=== Ralph: Stufe $stufe (Plan: $planDatei, Budget: $ralphBudget USD) ===")
+    # BL-274: Der Startschnappschuss der Stufe — der Auffangpfad unten staged
+    # nur, was sich seither geaendert hat, nicht was schon schmutzig war.
+    team_stufen_schnappschuss
     $out = Join-Path $logDir "stufe-$stufe-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
 
     $prompt = @"
@@ -128,6 +131,8 @@ Regeln:
 2. Keine Features aus späteren Stufen vorwegnehmen.
 3. $SMOKE_ZEILE
 4. Genau EIN Commit: '$TEAM_FEAT_PRAEFIX(stufe$stufe): <kurzbeschreibung>'.
+   Stage dabei namentlich, was du selbst angefasst hast — nie 'git add -A' und
+   keinen Ordner blanko (Kit-BL-274).
 5. NUR wenn Umsetzung + Verifikation der Stufe vollständig erfüllt sind,
    beende deine Antwort mit exakt: <promise>STUFE_${stufe}_COMPLETE</promise>
    Andernfalls beschreibe, was fehlt, und gib das Promise NICHT aus.
@@ -248,8 +253,10 @@ Regeln:
         # Committen, falls die Stufe ihre Arbeit uncommittet liegen liess: Ohne
         # Commit liefe die naechste Stufe auf einem schmutzigen Baum, und der
         # Read-Only-Guard der Sweep-Phase saehe fremde Aenderungen.
-        if (@(& git status --porcelain | Where-Object { $_ }).Count) {
-            & git add -A | Out-Null
+        # BL-274: namentlich, was seit dem Stufenstart geaendert wurde — minus
+        # dem, was beim Start schon schmutzig war. `git add -A` nahm die
+        # Handarbeit eines Menschen im selben Baum mit.
+        if (@(& git status --porcelain | Where-Object { $_ }).Count -and (team_eigene_stagen '.')) {
             $botschaft = @"
 $TEAM_FEAT_PRAEFIX(stufe$stufe): Arbeit der Stufe $stufe, automatisch gesichert
 

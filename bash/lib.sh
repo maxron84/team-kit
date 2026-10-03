@@ -1265,11 +1265,22 @@ team_guard_schnappschuss() {
     git status --porcelain 2>/dev/null | cut -c4- | while IFS= read -r pfad; do
         [ -z "$pfad" ] && continue
         if [ -f "$pfad" ]; then
-            printf '%s %s\n' "$(git hash-object -- "$pfad" 2>/dev/null || echo -)" "$pfad"
+            # BL-271 (2): `-w` legt den Blob in die Objektdatenbank — der
+            # Rollback kann damit auf den Stand VOR der Rolle zurueck statt auf
+            # den Start-Commit. `--no-filters`: die Bytes des Arbeitsbaums, wie
+            # sie dastehen (unter autocrlf sonst die normalisierte Fassung).
+            printf '%s %s\n' "$(git hash-object -w --no-filters -- "$pfad" 2>/dev/null || echo -)" "$pfad"
         else
             printf '%s %s\n' "-" "$pfad"
         fi
     done
+}
+
+# team_stufen_schnappschuss: nur der Blob-Schnappschuss, ohne Warnung und ohne
+# Rohmaterial-Erfassung — fuer Ralph, der je STUFE festhaelt, was schon
+# schmutzig war, damit sein Auffangpfad nur Eigenes staged (BL-274).
+team_stufen_schnappschuss() {
+    TEAM_GUARD_VORHER="$(team_guard_schnappschuss)"
 }
 
 team_guard_begin() {
@@ -1300,7 +1311,7 @@ team_guard_fremdpfade() {
         hash="${eintrag%% *}"
         pfad="${eintrag#* }"
         if [ -f "$pfad" ]; then
-            jetzt="$(git hash-object -- "$pfad" 2>/dev/null || echo -)"
+            jetzt="$(git hash-object --no-filters -- "$pfad" 2>/dev/null || echo -)"
         else
             jetzt="-"
         fi
@@ -1529,6 +1540,30 @@ team_eigene_pfade() {
     return 0
 }
 
+# team_eigene_stagen <pathspec…>
+#   Staged NAMENTLICH, was dieser Lauf unter <pathspec…> angefasst hat —
+#   ohne fremde Pfade (team_eigene_pfade) und ohne Laufzeitartefakte.
+#   Exit 0 = etwas gestaged, 1 = nichts Eigenes.
+#
+#   BL-274: Drei von vier Commit-Stellen umgingen den Fremdfilter, den das
+#   Kit fuer genau diesen Zweck hat — Axel stagte den Plan-Ordner blanko (dort
+#   liegt die uncommittete Closeout-Ausgabe des Architekten und der Entwurf
+#   einer Kit-Meldung), Frank sein Beutebuch, Ralphs Auffangpfad `git add -A`.
+#   Ein Mensch konnte waehrend eines Laufs keine Doku-Datei ablegen, ohne dass
+#   sie unter einer fremden Botschaft im Commit landete.
+team_eigene_stagen() {
+    local eigene pfad
+    local -a liste=()
+    eigene="$(team_eigene_pfade "$@" | grep -Ev "$TEAM_GUARD_LAUFZEIT" \
+              | grep -Ev "$TEAM_GUARD_IGNORIERT" || true)"
+    while IFS= read -r pfad; do
+        [ -n "$pfad" ] && liste+=("$pfad")
+    done <<< "$eigene"
+    [ "${#liste[@]}" -gt 0 ] || return 1
+    git add -- "${liste[@]}" || return 1
+    return 0
+}
+
 # team_pfade_zuruecksetzen <rolle> <hash> <pfadliste>
 #   Setzt JEDEN uebergebenen Pfad EINZELN auf den Stand von <hash> zurueck:
 #   beim Start getrackt → `git checkout <hash> -- <pfad>`, neu entstanden →
@@ -1556,6 +1591,21 @@ team_pfade_zuruecksetzen() {
             fi
             echo "[$rolle] Guard: '$pfad' liegt in der Rohmaterial-Zone — Stakeholder-Eigentum, NICHT angefasst (Kit-BL-263)." >&2
             continue
+        fi
+        # BL-271 (2), BL-206 (2): War der Pfad beim Rollenstart schon
+        # geaendert (fremde, uncommittete Arbeit), gehoert der Stand VOR der
+        # Rolle hierher — nicht der des Start-COMMITS. Bis hierher holte
+        # `git checkout <start> -- <pfad>` den Commit zurueck, und die fremde
+        # Arbeit an dieser Datei war weg, nicht wiederherstellbar.
+        local blob
+        blob="$(printf '%s\n' "${TEAM_GUARD_VORHER:-}" | awk -v p="$pfad" \
+                '{ i = index($0, " "); if (i && substr($0, i + 1) == p) { print substr($0, 1, i - 1); exit } }')"
+        if [ -n "$blob" ] && [ "$blob" != "-" ] && git cat-file -e "$blob" 2>/dev/null; then
+            if git cat-file blob "$blob" > "$pfad" 2>/dev/null; then
+                git reset -q -- "$pfad" >/dev/null 2>&1 || true
+                echo "[$rolle] Guard: '$pfad' auf den Stand VOR der Rolle zurückgesetzt — er war beim Start schon geändert, diese Arbeit bleibt (Kit-BL-271)." >&2
+                continue
+            fi
         fi
         if git cat-file -e "$hash:$pfad" 2>/dev/null; then
             # War beim Start getrackt → auf Startstand zurückholen.
@@ -1614,7 +1664,31 @@ team_pfade_zuruecksetzen() {
 #   Pfadliste weiter: `git status --porcelain` meldet jede nicht ignorierte
 #   neue Datei im ganzen Repo — nur eben namentlich statt pauschal.
 team_rollback_rolle() {
-    local rolle="$1" start="$2" pfade rest
+    local rolle="$1" start="$2" eigen="${3:-}" pfade rest fremde="" c betreff
+    # BL-236: Der Rollback setzte HEAD auf den beim Start gemerkten Commit
+    # zurueck — und warf damit jeden Commit weg, den waehrenddessen ein Mensch
+    # in einer zweiten Sitzung gemacht hatte. Im Feld verschwand so ein reiner
+    # Doku-Commit (eine Fundliste) still aus der Historie; zurueckgeholt per
+    # cherry-pick aus dem Reflog. Die dritte Angabe sagt, welche Commits
+    # EIGEN sind: eine Kennung, die ihre Nachricht traegt (bei Frank die
+    # Fundnummer, so verlangt es sein Auftrag), oder "-" fuer eine Rolle, die
+    # nie committet (Axel, Red Team) — dann ist JEDER Commit fremd. Liegt ein
+    # fremder vor, wird nichts zurueckgerollt; der Fall geht an den Menschen.
+    # Ohne Angabe bleibt es beim alten Verhalten (alles gilt als eigen).
+    while IFS= read -r c; do
+        [ -z "$c" ] && continue
+        [ -z "$eigen" ] && break
+        betreff="$(git log -1 --format=%B "$c" 2>/dev/null)"
+        if [ "$eigen" = "-" ] || [ "${betreff#*"$eigen"}" = "$betreff" ]; then
+            fremde="$fremde  $(git log -1 --format='%h %s' "$c")"$'\n'
+        fi
+    done <<< "$(git rev-list "$start..HEAD" 2>/dev/null)"
+    if [ -n "$fremde" ]; then
+        echo "[$rolle] ROLLBACK ANGEHALTEN — seit dem Rollenstart liegen Commits auf dem Zweig, die nicht diesem Lauf gehören:" >&2
+        printf '%s' "$fremde" >&2
+        echo "  Ein Zurückrollen würfe sie mit weg (Kit-BL-236). NICHTS angefasst — von Hand prüfen: git log --oneline $start..HEAD" >&2
+        return 1
+    fi
     pfade="$( { git diff --name-only "$start" HEAD 2>/dev/null;
                 git status --porcelain | cut -c4-; } | sort -u \
               | grep -Ev "$TEAM_GUARD_LAUFZEIT" \

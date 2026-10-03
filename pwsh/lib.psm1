@@ -1535,12 +1535,21 @@ function team_guard_schnappschuss {
         if (-not $z -or $z.Length -lt 4) { continue }
         $pfad = $z.Substring(3)
         if (Test-Path -LiteralPath $pfad -PathType Leaf) {
-            $hash = & git hash-object -- $pfad 2>$null
+            # BL-271 (2): -w legt den Blob ab (Rollback auf den Stand VOR der
+            # Rolle), --no-filters nimmt die Bytes des Arbeitsbaums.
+            $hash = & git hash-object -w --no-filters -- $pfad 2>$null
             if (-not $hash) { $hash = '-' }
         } else { $hash = '-' }
         $zeilen += "$hash $pfad"
     }
     Write-Output $zeilen
+}
+
+function team_stufen_schnappschuss {
+    # Nur der Blob-Schnappschuss, ohne Warnung und ohne Rohmaterial-Erfassung —
+    # fuer Ralph, der je STUFE festhaelt, was schon schmutzig war (BL-274).
+    # Im MODUL gesetzt: Ein `$script:` im Entrypoint saehe die Bibliothek nicht.
+    $script:TEAM_GUARD_VORHER = @(team_guard_schnappschuss)
 }
 
 function team_guard_begin {
@@ -1592,7 +1601,7 @@ function team_guard_fremdpfade {
         $hash = $eintrag.Substring(0, $trenn)
         $pfad = $eintrag.Substring($trenn + 1)
         if (Test-Path -LiteralPath $pfad -PathType Leaf) {
-            $jetzt = & git hash-object -- $pfad 2>$null
+            $jetzt = & git hash-object --no-filters -- $pfad 2>$null
             if (-not $jetzt) { $jetzt = '-' }
         } else { $jetzt = '-' }
         if ($jetzt -eq $hash) { $treffer += $pfad }
@@ -1675,6 +1684,23 @@ function team_eigene_pfade {
     Write-Output $eigene
 }
 
+function team_eigene_stagen {
+    <#
+      Staged NAMENTLICH, was dieser Lauf unter den Pfadangaben angefasst hat —
+      ohne fremde Pfade (team_eigene_pfade) und ohne Laufzeitartefakte.
+      $true = etwas gestaged, $false = nichts Eigenes.
+
+      BL-274: Drei von vier Commit-Stellen umgingen den Fremdfilter — Axel
+      stagte den Plan-Ordner blanko, Frank sein Beutebuch, Ralphs Auffangpfad
+      `git add -A`. Begruendung ausfuehrlich in der bash-Fassung.
+    #>
+    $liste = @(team_eigene_pfade @args | Where-Object {
+        $_ -and $_ -notmatch $TEAM_GUARD_LAUFZEIT -and $_ -notmatch $TEAM_GUARD_IGNORIERT })
+    if (-not $liste.Count) { return $false }
+    & git add -- @liste 2>$null | Out-Null
+    return ($LASTEXITCODE -eq 0)
+}
+
 function team_pfade_zuruecksetzen {
     <#
       Setzt JEDEN uebergebenen Pfad EINZELN auf den Stand von <Hash> zurueck:
@@ -1703,6 +1729,31 @@ function team_pfade_zuruecksetzen {
             if ($LASTEXITCODE -ne 0) { & git rm -r --cached --quiet -- $pfad 2>$null | Out-Null }
             Team-Fehler "[$Rolle] Guard: '$pfad' liegt in der Rohmaterial-Zone — Stakeholder-Eigentum, NICHT angefasst (Kit-BL-263)."
             continue
+        }
+        # BL-271 (2), BL-206 (2): War der Pfad beim Rollenstart schon geaendert
+        # (fremde, uncommittete Arbeit), gehoert der Stand VOR der Rolle
+        # hierher — nicht der des Start-COMMITS. Bis hierher war die fremde
+        # Arbeit an dieser Datei nach dem Rollback weg.
+        $blob = $null
+        foreach ($eintrag in @($script:TEAM_GUARD_VORHER)) {
+            if (-not $eintrag) { continue }
+            $i = $eintrag.IndexOf(' ')
+            if ($i -gt 0 -and $eintrag.Substring($i + 1) -eq $pfad) { $blob = $eintrag.Substring(0, $i); break }
+        }
+        if ($blob -and $blob -ne '-') {
+            & git cat-file -e $blob 2>$null | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                $ziel = Team-Pfad $pfad
+                $tmp = "$ziel.team-rollback"
+                $prozess = Start-Process -FilePath git -ArgumentList @('cat-file', 'blob', $blob) -NoNewWindow -Wait -PassThru -RedirectStandardOutput $tmp
+                if ($prozess.ExitCode -eq 0) {
+                    Move-Item -LiteralPath $tmp -Destination $ziel -Force
+                    & git reset -q -- $pfad 2>$null | Out-Null
+                    Team-Fehler "[$Rolle] Guard: '$pfad' auf den Stand VOR der Rolle zurückgesetzt — er war beim Start schon geändert, diese Arbeit bleibt (Kit-BL-271)."
+                    continue
+                }
+                Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+            }
         }
         & git cat-file -e "$($Hash):$pfad" 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0) {
@@ -1765,7 +1816,30 @@ function team_rollback_rolle {
 
       $true = vollzogen · $false = Reste geblieben (gemeldet)
     #>
-    param([string]$Rolle, [string]$StartHash)
+    param([string]$Rolle, [string]$StartHash, [string]$Eigen = '')
+
+    # BL-236: Der Rollback setzte HEAD auf den beim Start gemerkten Commit
+    # zurueck — und warf damit jeden Commit weg, den waehrenddessen ein Mensch
+    # in einer zweiten Sitzung gemacht hatte (im Feld ein Doku-Commit, still
+    # weg, zurueckgeholt aus dem Reflog). $Eigen sagt, welche Commits EIGEN
+    # sind: eine Kennung in der Nachricht (bei Frank die Fundnummer) oder '-'
+    # fuer eine Rolle, die nie committet (Axel, Red Team) — dann ist JEDER
+    # Commit fremd. Liegt ein fremder vor, wird nichts zurueckgerollt. Ohne
+    # Angabe bleibt es beim alten Verhalten (alles gilt als eigen).
+    $fremde = @()
+    foreach ($c in @(& git rev-list "$StartHash..HEAD" 2>$null)) {
+        if (-not $c -or -not $Eigen) { continue }
+        $nachricht = (@(& git log -1 --format=%B $c 2>$null) -join "`n")
+        if ($Eigen -eq '-' -or -not $nachricht.Contains($Eigen)) {
+            $fremde += (@(& git log -1 --format='%h %s' $c 2>$null) -join ' ')
+        }
+    }
+    if ($fremde.Count) {
+        Team-Fehler "[$Rolle] ROLLBACK ANGEHALTEN — seit dem Rollenstart liegen Commits auf dem Zweig, die nicht diesem Lauf gehören:"
+        foreach ($f in $fremde) { Team-Fehler "  $f" }
+        Team-Fehler "  Ein Zurückrollen würfe sie mit weg (Kit-BL-236). NICHTS angefasst — von Hand prüfen: git log --oneline $StartHash..HEAD"
+        return $false
+    }
 
     $pfade = @()
     foreach ($p in @(& git diff --name-only $StartHash HEAD 2>$null)) {

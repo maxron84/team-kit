@@ -811,6 +811,24 @@ function Gitignore-Abgleich {
         Gruen "  [ok] .gitignore ergaenzt"
         return
     }
+    # BL-233 (2): Eine Datei, die schon im INDEX liegt, ignoriert Git nicht —
+    # eine reine Vorlagenaenderung erreicht ein Bestandsprojekt dort nie.
+    # Gemeldet, nicht ausgetragen: -Update fasst den Index nicht an.
+    $imIndex = @()
+    foreach ($zeile in ([System.IO.File]::ReadAllLines($fragment))) {
+        $z = $zeile.Trim()
+        if (-not $z -or $z.StartsWith('#') -or $z.StartsWith('!')) { continue }
+        # Ein fuehrender Schraegstrich verankert an der Wurzel — als Pathspec
+        # waere er ein absoluter Pfad.
+        $imIndex += @(& git -C $Ziel ls-files -- $z.TrimStart('/') 2>$null | Where-Object { $_ })
+    }
+    $imIndex = @($imIndex | Sort-Object -Unique)
+    if ($imIndex.Count) {
+        Gelb "  [!] Diese Laufzeitdateien liegen im Git-Index — die .gitignore greift fuer sie NICHT (Kit-BL-233):"
+        foreach ($z in $imIndex) { Gelb "        $z" }
+        Gelb '      Austragen (die Dateien bleiben liegen):'
+        Gelb "        git -C `"$Ziel`" rm --cached -- $($imIndex -join ' ')"
+    }
     # Zeile fuer Zeile, nicht der Block als Ganzes: Der Block kann seit Jahren
     # dastehen und trotzdem die Haelfte der Vorlage vermissen.
     $bestand = @($vorhanden -split "`r?`n")

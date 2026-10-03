@@ -474,6 +474,25 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Der Rollback warf fremde Commits und fremde Arbeit weg** (`BL-236`,
+  `BL-271`, `BL-206`, alle `Feld B`, beide Bahnen). Ein Fix-Lauf setzte HEAD
+  auf seinen Startcommit zurueck und nahm einen Doku-Commit mit, den eine
+  zweite Sitzung waehrenddessen gemacht hatte; eine beim Start schon
+  geaenderte Datei ging auf den Start-COMMIT zurueck, und die uncommittete
+  fremde Arbeit war weg. Jetzt haelt der Rollback an, sobald ein Commit seit
+  dem Start nicht die Kennung des Laufs traegt (bei Frank die Fundnummer), und
+  ein beim Start schmutziger Pfad geht auf seinen Stand VOR der Rolle zurueck
+  (der Schnappschuss legt die Blobs dafuer ab).
+
+- **Drei von vier Commit-Stellen stagten blanko** (`BL-274`, `Feld B`, beide
+  Bahnen). Axel, Franks Eskalation und Ralphs Auffangpfad stagen jetzt
+  namentlich, was der Lauf angefasst hat; die Auftraege von Ralph und Frank
+  sagen es ebenso.
+
+- **`--update` meldet Laufzeitdateien im Git-Index** (`BL-233`, `Feld B`,
+  beide Bahnen). Fuer eine getrackte Datei greift die `.gitignore` nicht;
+  das Update nennt sie und den Befehl zum Austragen.
+
 - **Die Vollautomatik hing endlos an einem ueberlebenden GUI-Enkel**
   (`BL-248`, `Feld B`, pwsh-Bahn). `Rolle-Starten` wartete ueber eine
   Pipeline auf EOF, und ein `electron.exe` mit Fehlerdialog hielt die Leitung

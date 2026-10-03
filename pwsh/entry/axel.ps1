@@ -118,7 +118,7 @@ if ($rc -eq 42) {
     # das `git reset --hard` daneben aber nicht, und es verwirft jede
     # uncommittete Aenderung an getrackten Dateien im ganzen Baum. Beides
     # erledigt jetzt derselbe chirurgische Weg wie im Guard.
-    team_rollback_rolle 'axel' $startHash | Out-Null
+    team_rollback_rolle 'axel' $startHash '-' | Out-Null
     exit 42
 } elseif ($rc -ne 0) {
     Team-Fehler '[axel] Aufruf fehlgeschlagen.'
@@ -173,8 +173,8 @@ if (-not $urteil -or $ergebnis -eq 0) {
 }
 
 # Akte + Status-Update deterministisch committen (Axel selbst darf nicht).
-if (@(& git status --porcelain -- $TEAM_PLAN_ORDNER | Where-Object { $_ }).Count) {
-    & git add $TEAM_PLAN_ORDNER | Out-Null
+# BL-274: namentlich, was DIESER Lauf angefasst hat — nie den Ordner blanko.
+if (team_eigene_stagen $TEAM_PLAN_ORDNER) {
     & git commit -q -m "docs(akte): AX-$axNr zu $hm — Root-Cause + Fix-Plan für Frank" | Out-Null
 }
 [Console]::Out.WriteLine("[axel] Ermittlungsakte AX-$axNr erstellt, $hm zurück an Frank ('Fix-Plan liegt vor').")

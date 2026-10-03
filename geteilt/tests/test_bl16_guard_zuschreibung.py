@@ -110,8 +110,12 @@ def test_vorab_schmutzige_datei_bleibt_belastbar_wenn_die_rolle_sie_anfasst(tmp_
 
     assert "URTEIL=verletzung" in ergebnis.stdout, ergebnis.stderr
     assert "src/app.py" in ergebnis.stderr
-    assert (repo / "src" / "app.py").read_text(encoding="utf-8") == "original\n", (
-        "Der Uebergriff wurde nicht auf den Startstand zurueckgerollt."
+    # BL-271 (2): Zurueckgerollt wird auf den Stand VOR der Rolle — die
+    # fremde, uncommittete Arbeit an dieser Datei bleibt. Bis hierher holte
+    # der Rollback den Start-COMMIT zurueck, und die fremde Arbeit war weg.
+    assert (repo / "src" / "app.py").read_text(encoding="utf-8") == "fremde arbeit\n", (
+        "Der Uebergriff wurde nicht auf den Stand vor der Rolle zurueckgerollt "
+        "(BL-271)."
     )
 
 

@@ -120,6 +120,9 @@ while true; do
     team_smoke_auffrischen
 
     echo "=== Ralph: Stufe $STUFE (Plan: $PLAN_DATEI, Budget: $RALPH_BUDGET_USD USD) ==="
+    # BL-274: Der Startschnappschuss der Stufe — der Auffangpfad unten staged
+    # nur, was sich seither geaendert hat, nicht was schon schmutzig war.
+    team_stufen_schnappschuss
     OUT="$LOG_DIR/stufe-$STUFE-$(date +%Y%m%d-%H%M%S).json"
 
     PROMPT="$(team_briefing ralph)
@@ -132,6 +135,8 @@ Regeln:
 2. Keine Features aus späteren Stufen vorwegnehmen.
 3. ${SMOKE_ZEILE}
 4. Genau EIN Commit: '${TEAM_FEAT_PRAEFIX}(stufe$STUFE): <kurzbeschreibung>'.
+   Stage dabei namentlich, was du selbst angefasst hast — nie 'git add -A' und
+   keinen Ordner blanko (Kit-BL-274).
 5. NUR wenn Umsetzung + Verifikation der Stufe vollständig erfüllt sind,
    beende deine Antwort mit exakt: <promise>STUFE_${STUFE}_COMPLETE</promise>
    Andernfalls beschreibe, was fehlt, und gib das Promise NICHT aus.
@@ -256,8 +261,10 @@ Regeln:
             # Committen, falls die Stufe ihre Arbeit uncommittet liegen ließ:
             # Ohne Commit liefe die nächste Stufe auf einem schmutzigen Baum,
             # und der Read-Only-Guard der Sweep-Phase sähe fremde Änderungen.
-            if [ -n "$(git status --porcelain)" ]; then
-                git add -A
+            # BL-274: namentlich, was seit dem Stufenstart geaendert wurde —
+            # minus dem, was beim Start schon schmutzig war. `git add -A` nahm
+            # die Handarbeit eines Menschen im selben Baum mit.
+            if [ -n "$(git status --porcelain)" ] && team_eigene_stagen .; then
                 git commit -q -m "${TEAM_FEAT_PRAEFIX:-feat}(stufe$STUFE): Arbeit der Stufe $STUFE, automatisch gesichert
 
 Die Sitzung endete als subtype=success ohne <promise> (Kit-BL-41, vierter

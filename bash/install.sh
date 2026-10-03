@@ -216,6 +216,24 @@ gitignore_abgleich() {  # gitignore_abgleich <ergaenzen|melden>
         gruen "  ✓ .gitignore ergänzt"
         return 0
     fi
+    # BL-233 (2): Eine Datei, die schon im INDEX liegt, ignoriert Git nicht —
+    # eine reine Vorlagenaenderung erreicht ein Bestandsprojekt dort nie. Im
+    # Feld lag `.vollautomatik-state` getrackt im Projekt, und der Guard
+    # forderte bei jedem Rollenstart "bitte committen". Gemeldet, nicht
+    # ausgetragen: --update fasst den Index des Projekts nicht an.
+    local im_index
+    im_index="$(cd "$ZIEL" 2>/dev/null && while IFS= read -r z || [ -n "$z" ]; do
+                    case "$z" in ''|'#'*|'!'*) continue ;; esac
+                    # Ein fuehrender Schraegstrich verankert in der .gitignore an
+                    # der Wurzel — als Pathspec waere er ein absoluter Pfad.
+                    git ls-files -- "${z#/}" 2>/dev/null || true
+                done < "$KIT/bootstrap/gitignore.fragment" | sort -u)"
+    if [ -n "$im_index" ]; then
+        gelb "  ! Diese Laufzeitdateien liegen im Git-Index — die .gitignore greift für sie NICHT (Kit-BL-233):"
+        printf '%s\n' "$im_index" | while IFS= read -r z; do gelb "      $z"; done
+        gelb "    Austragen (die Dateien bleiben liegen):"
+        gelb "      git -C \"$ZIEL\" rm --cached -- $(printf '%s ' $im_index)"
+    fi
     # Verglichen wird Zeile fuer Zeile, nicht der Block als Ganzes: Der Block
     # kann seit Jahren dastehen und trotzdem die Haelfte der Vorlage vermissen.
     while IFS= read -r zeile || [ -n "$zeile" ]; do

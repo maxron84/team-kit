@@ -240,7 +240,7 @@ if [ "$RC" -eq 42 ]; then
     echo "[$ROLLE] Session-Limit — Sweep pausiert (Reset: ${TEAM_LAST_RESET:-unbekannt}). Kein Fehler, $STATE_FILE bleibt unverändert; halbfertige ${TEAM_TEST_ORDNER}/${TEAM_PLAN_ORDNER}-Seiteneffekte werden verworfen." >&2
     # BL-114: wie in axel.sh — der `git clean` war eingeschränkt, das
     # `git reset --hard` daneben nicht. Jetzt derselbe chirurgische Weg.
-    team_rollback_rolle "$ROLLE" "$HEAD_HASH" || true
+    team_rollback_rolle "$ROLLE" "$HEAD_HASH" - || true
     exit 42
 elif [ "$RC" -ne 0 ]; then
     echo "[$ROLLE] Aufruf fehlgeschlagen." >&2

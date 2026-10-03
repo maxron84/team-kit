@@ -127,7 +127,7 @@ und ein Gleichstands-Prüfer, der **an seinem eigenen Befund starb**, weil `diff
 mit 1 endet, wenn es etwas findet. Keiner der fallenden Fälle wurde grün
 gedreht.
 
-**Offen sind 19 Einträge**, und keiner davon ist ein Rest dieser Version.
+**Offen sind 14 Einträge**, und keiner davon ist ein Rest dieser Version.
 **Fünf warten auf eine Entscheidung**, die die Einträge selbst dem Owner
 vorbehalten — welche der beiden Bauformen gefahren wird (`BL-194`), ob der
 Lückenfinder eine Formatänderung am Ledger wert ist (`BL-193`), wie der
@@ -147,7 +147,7 @@ nach Wirkung sortiert, statt in Sitzungsprotokollen zu verschwinden. Der
 Engpass ist nicht das Melden.
 
 Alles in [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (222 Einträge).
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (227 Einträge).
 
 ---
 
@@ -442,7 +442,7 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen sieben Quellen
 kommen die Backlog-Einträge `BL-1`…`BL-304`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (222 Einträge), der Rest in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (227 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors

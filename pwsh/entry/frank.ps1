@@ -127,10 +127,13 @@ Franks Dreisatz — alle Schritte sind PFLICHT:
    nicht als erledigt (Kit-BL-22/Kit-BL-28).
 1. $schritt1
 2. Genau EIN Commit: '${TEAM_FIX_PRAEFIX}: <was+warum> ($hm)'.
+   Stage dabei namentlich, was du selbst angefasst hast — nie 'git add -A' und
+   keinen Ordner blanko (Kit-BL-274).
 3. $TEAM_CHANGELOG unter '## [Unreleased]' → '### Fixes' den Fix eintragen (Was+Warum)
    UND den Beutebuch-Status setzen:
    $TEAM_BEUTEBUCH_TOOL set $hm 'erledigt (Frank-Fix, <commit-kurzhash>)'
-   (Den CHANGELOG-/Status-Edit im selben oder einem Folge-Commit 'docs: …' sichern.)
+   (Den CHANGELOG-/Status-Edit im selben oder einem Folge-Commit 'docs: … ($hm)' sichern —
+   die Fundnummer gehört in JEDE deiner Commit-Nachrichten, Kit-BL-236.)
 
 
 Zwei Dinge, die keine Rückfrage wert sind — hier steht die Antwort (Kit-BL-205):
@@ -166,7 +169,7 @@ team_raw_pruefen 'frank' | Out-Null
 # also weder Rollback noch Versuchszaehler noch Axel-Eskalation.
 if ($rcClaude -eq 42) {
     Team-Fehler "[frank] Session-Limit — Fix pausiert (Reset: $(if ($TEAM_LAST_RESET) { $TEAM_LAST_RESET } else { 'unbekannt' })). Kein Fehlversuch, Zähler unverändert."
-    team_rollback_rolle 'frank' $startHash | Out-Null
+    team_rollback_rolle 'frank' $startHash $hm | Out-Null
     exit 42
 }
 
@@ -266,17 +269,17 @@ if ($budgetGesprengt -eq 0) {
 # Netz endlos.
 if ($TEAM_LAST_KEIN_ZUG -eq 1) {
     Team-Fehler "[frank] $hm — kein Modell kam zum Zug (0 Turns, 0.0000 USD): Netz/Proxy. Rollback, aber KEIN Fehlversuch — Zähler bleibt bei $($versuch - 1), keine Eskalation an Axel."
-    team_rollback_rolle 'frank' $startHash | Out-Null
+    team_rollback_rolle 'frank' $startHash $hm | Out-Null
     exit 1
 }
 
 Team-Fehler "[frank] $hm Versuch $versuch gescheitert (Budget/Promise/Commit/Dreisatz/Substanzbezug unvollständig) — Rollback."
-team_rollback_rolle 'frank' $startHash | Out-Null
+team_rollback_rolle 'frank' $startHash $hm | Out-Null
 Set-Content -Path $attemptsFile -Value "$hm $versuch" -Encoding ascii
 
 if ($versuch -ge $maxVersuche) {
     Team-Werkzeug $TEAM_BEUTEBUCH_TOOL @('set', $hm, 'an Axel übergeben') | Out-Null
-    & git add $TEAM_BEUTEBUCH | Out-Null
+    team_eigene_stagen $TEAM_BEUTEBUCH | Out-Null   # BL-274
     & git commit -q -m "docs(beute): $hm nach $versuch Frank-Versuchen an Axel übergeben" | Out-Null
     Remove-Item -Force $attemptsFile -ErrorAction SilentlyContinue
     [Console]::Out.WriteLine("[frank] $hm nach $maxVersuche Versuchen an Axel eskaliert.")
