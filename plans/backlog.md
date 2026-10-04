@@ -29,6 +29,16 @@ Funde ab `BL-6`. Verweise auf den Backlog eines **anderen** Projekts werden
 > Begründung jedes erledigten Punktes — sie wird nachgeschlagen, nicht
 > mitgelesen. Diese Datei trägt nur, woran noch Arbeit hängt (`BL-53`).
 
+**Stand 2026-10-04 — das erste Update eines Bestandsprojekts mit
+Prüfsummenliste (`Feld F`) endete mit rotem Selbsttest, ohne Defekt im
+Projekt.** Zwei Bauarten (`BL-307`): Ein Werkzeug las die Kaskaden des
+umgebenden Projekts statt der Fixture, und Tests suchten neue Regeln in
+Projektdateien, die das Update nicht anfasst. Eine Sandbox mit Vorgeschichte
+fand 43 solche Fälle, eine frische Installation keinen. Dazu `BL-308` (der
+pwsh-Installer nannte einbahnig „mitinstallierte" .sh-Dateien) und die
+Beifänge `BL-309` und `BL-310`. Alle vier am selben Tag abgetragen; der Selbsttest fährt
+seither eine vierte Konfiguration, das gealterte Bestandsprojekt.
+
 **Stand 2026-10-03 — Triage: 28 Meldungen vom 2026-09-17 bis 2026-10-02 lagen
 ohne Nummer da.** Sie bekommen `BL-269` bis `BL-292`; zwei davon sind
 Nachträge zu einer anderen Meldung und teilen deren Nummer (`BL-270`,

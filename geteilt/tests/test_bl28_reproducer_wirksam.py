@@ -32,6 +32,7 @@ from pathlib import Path
 import pytest
 
 from conftest import Ruf, kit_pfad, werkzeug_wert
+from conftest import quelle as _quelle
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TEAM_LIB = kit_pfad("lib.sh")
@@ -189,23 +190,13 @@ def test_fund_ohne_reproducer_zeile_blockiert_nicht(tmp_path, schale):
 
 # --- BL-22: die ausgelieferte Regel -----------------------------------------
 
-def _quelle(*kandidaten):
-    """Kit-Ablage und installierte Ablage — die Regeldatei heisst hier
-    bootstrap/CLAUDE.md.vorlage und dort CLAUDE.md."""
-    for kandidat in kandidaten:
-        pfad = REPO_ROOT / kandidat
-        if pfad.is_file():
-            return pfad
-    raise AssertionError(f"keine der Quellen existiert: {kandidaten}")
-
-
 # BL-171: `strict` als BEGRIFF, `strict=True` als pytest-SCHREIBWEISE. Der
 # Unterschied ist im Kit unsichtbar und im Feld entscheidend — siehe unten.
 STRICT_BEGRIFF = re.compile(r"stri[ck]t", re.IGNORECASE)
 
 
 @pytest.mark.parametrize("traeger", [
-    ("bootstrap/CLAUDE.md.vorlage", "CLAUDE.md"),
+    ("bootstrap/CLAUDE.md.vorlage",),
     ("geteilt/prompts/rolle-harry.md", "team/prompts/rolle-harry.md",),
     ("geteilt/prompts/rolle-marv.md", "team/prompts/rolle-marv.md",),
 ], ids=["Regeldatei", "rolle-harry", "rolle-marv"])
@@ -228,10 +219,15 @@ def test_briefings_verlangen_strict(traeger):
 
     Geprueft wird darum getrennt: Die Kit-Fassung liefert die konkrete
     Schreibweise aus (sie ist ein BEISPIEL, das jemand abtippt, und muss
-    lauffaehig bleiben). Die Regeldatei eines Projekts muss den BEGRIFF
+    lauffaehig bleiben). Ein installiertes Briefing muss den BEGRIFF
     tragen — dass ein Marker, der in beide Richtungen stumm ist, hier nicht
-    zaehlt. Was sie verliert, wenn die Zeile ersatzlos verschwindet, faengt
-    dieselbe Pruefung weiterhin.
+    zaehlt.
+
+    BL-307: Die Regeldatei des Projekts prueft dieser Fall nicht mehr. Ob die
+    Regel dort steht, entscheidet der Mensch beim Handabgleich, den das
+    Update meldet — ein Selbsttest, der bis dahin rot ist, meldet einen Fehler
+    ohne Defekt. Geprueft wird die Vorlage; im Projekt wird sichtbar
+    uebersprungen (conftest.quelle).
     """
     quelle = _quelle(*traeger)
     text = quelle.read_text(encoding="utf-8")

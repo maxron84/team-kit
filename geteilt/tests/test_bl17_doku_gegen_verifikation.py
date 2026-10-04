@@ -23,26 +23,17 @@ Auftrag ohne Regel wirken je fuer sich nicht.
 """
 
 import sys
-from pathlib import Path
 
 import pytest
 
 from conftest import kit_pfad
-
-WURZEL = Path(__file__).resolve().parents[2]
-
-
-def _quelle(*kandidaten):
-    """Kit-Vorlage oder installierte Zieldatei — je nachdem, wo wir laufen."""
-    for kandidat in kandidaten:
-        pfad = WURZEL / kandidat
-        if pfad.is_file():
-            return pfad
-    raise AssertionError(f"keine der Quellen existiert: {kandidaten}")
+from conftest import quelle as _quelle
 
 
+# Die Regeldatei an der Vorlage: Im Projekt ist sie Projektdatei (Kit-BL-307).
+# TEAM.md dagegen hebt das Update mit an — sie gilt in beiden Ablagen.
 REGELTRAEGER = {
-    "Regeldatei": ("bootstrap/CLAUDE.md.vorlage", "CLAUDE.md"),
+    "Regeldatei": ("bootstrap/CLAUDE.md.vorlage",),
     "Bedienanleitung": ("bootstrap/TEAM.md", "TEAM.md"),
 }
 

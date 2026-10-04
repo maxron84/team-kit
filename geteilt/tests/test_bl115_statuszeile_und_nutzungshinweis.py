@@ -28,13 +28,11 @@ stumm gruen und der Test wertlos.
 import importlib.util
 import subprocess
 import sys
-from pathlib import Path
 
 import pytest
 
 from conftest import kit_pfad
-
-WURZEL = Path(__file__).resolve().parents[2]
+from conftest import quelle as _quelle
 TOOL = kit_pfad("tools", "beutebuch.py")
 
 BUCH = """# Beutebuch
@@ -79,18 +77,11 @@ def _lauf(*args):
                           capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
-def _quelle(*kandidaten):
-    """Kit-Vorlage oder installierte Zieldatei — je nachdem, wo wir laufen."""
-    for kandidat in kandidaten:
-        pfad = WURZEL / kandidat
-        if pfad.is_file():
-            return pfad
-    raise AssertionError(f"keine der Quellen existiert: {kandidaten}")
-
-
 # ---------------------------------------------------------------- (1) Vorlage
+# Die Regeldatei wird an der VORLAGE geprueft — im Projekt ist sie Projektdatei
+# und kommt dort von Hand an (Kit-BL-307, siehe conftest.quelle).
 def test_regeldatei_lehrt_den_feldwert_statt_des_uebergangs():
-    text = _quelle("bootstrap/CLAUDE.md.vorlage", "CLAUDE.md").read_text(encoding="utf-8")
+    text = _quelle("bootstrap/CLAUDE.md.vorlage").read_text(encoding="utf-8")
     assert "Status auf `offen → an Frank übergeben` setzen" not in text, (
         "Die Regeldatei schreibt den UEBERGANG in Feldwert-Schreibweise vor — "
         "genau daraus entstand HM-106."
@@ -109,7 +100,7 @@ def test_die_status_kette_bleibt_als_kette_lesbar():
 
     Ohne diese Probe waere "alle Pfeile entfernen" ein gruener Weg — und die
     Kette, die den Ablauf beschreibt, waere zerstoert."""
-    text = _quelle("bootstrap/CLAUDE.md.vorlage", "CLAUDE.md").read_text(encoding="utf-8")
+    text = _quelle("bootstrap/CLAUDE.md.vorlage").read_text(encoding="utf-8")
     assert "offen → an Frank übergeben → an Axel übergeben" in text, (
         "Die Status-Kette selbst fehlt — sie beschreibt den Ablauf und bleibt."
     )

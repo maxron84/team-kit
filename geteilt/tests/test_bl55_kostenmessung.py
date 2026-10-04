@@ -30,17 +30,12 @@ import subprocess
 import time
 from pathlib import Path
 
-from conftest import BASH, basis_umgebung, entrypoint_pfad, kit_pfad, werkzeug_wert
+from conftest import (BASH, basis_umgebung, entrypoint_pfad, kit_pfad, quelle,
+                      werkzeug_wert)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # team/tests/ -> Repo-Wurzel
 TEAM_LIB = kit_pfad("lib.sh")
 VOLLAUTOMATIK = entrypoint_pfad("vollautomatik.sh")
-
-# Die Regeldatei heisst in der INSTALLATION `CLAUDE.md`; im Kit liegt sie als
-# `bootstrap/CLAUDE.md.vorlage` — dieselbe Datei, einen Installationsschritt
-# frueher. Geprueft wird die Regel, nicht der Dateiname.
-REGELDATEI = (REPO_ROOT / "CLAUDE.md" if (REPO_ROOT / "CLAUDE.md").is_file()
-              else REPO_ROOT / "bootstrap" / "CLAUDE.md.vorlage")
 
 # BL-133-Bauart: Der Harnisch sagt der Bibliothek, wie das Werkzeug auf DIESER
 # Maschine und in DIESER Ablage heisst — im Feld tut das team.config.sh. Ohne
@@ -178,8 +173,11 @@ def test_kontostand_gesamt_zaehlt_das_archiv_nicht_mit():
 
 def test_kein_kostenabschluss_mehr_in_einer_ralph_stufe():
     """Die Regel, die den Fund ueberhaupt ausgeloest hat: der Kostenabschluss
-    gehoert in den Architekten-Closeout nach dem Lauf."""
-    claude_md = REGELDATEI.read_text(encoding="utf-8")
+    gehoert in den Architekten-Closeout nach dem Lauf.
+
+    Geprueft wird die VORLAGE: In der Installation ist `CLAUDE.md` eine
+    Projektdatei, die das Update nicht anfasst (Kit-BL-307)."""
+    claude_md = quelle("bootstrap/CLAUDE.md.vorlage").read_text(encoding="utf-8")
     # T.E.A.M.-Starterkit: zusaetzlich Markdown-Hervorhebungen entfernen. Ohne
     # das scheitert die Pruefung an einem **nie** mitten im Satz, obwohl die
     # Regel woertlich dasteht — ein Fehlalarm, kein Regelverstoss.

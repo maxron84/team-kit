@@ -3738,11 +3738,17 @@ def _main(argv):
 
         ledger_pfad = pfad if os.path.isabs(pfad) or repo == "." \
             else os.path.join(repo, pfad)
+        # BL-307: Zeiger und Plandateien gehoeren zu dem Projekt, dessen
+        # Ledger geprueft wird (die Regel aus BL-226) -- nicht zu dem, in dem
+        # der Prozess gerade steht. Im echten Aufruf ist das dasselbe; in
+        # einem Test mit Wegwerf-Ledger hielt P1b/P4 sonst die Kaskaden des
+        # umgebenden PROJEKTS gegen ein Ledger, das sie nie kennen kann.
+        plan_repo = os.path.dirname(ledger_pfad) or "."
         if kaskade is None:
-            kaskade = kaskade_aus_plan(repo)
+            kaskade = kaskade_aus_plan(plan_repo)
         befunde = ledger_pruefen(ledger_pfad, ralph_logs=ralph_logs,
                                   team_logs=team_logs,
-                                  aktuelle_kaskade=kaskade, repo=repo)
+                                  aktuelle_kaskade=kaskade, repo=plan_repo)
         warnungen = [b for b in befunde if b["schwere"] == "warnung"]
         if not befunde:
             print("Ledger konsistent: keine Befunde.")
@@ -4636,7 +4642,16 @@ def _main(argv):
         # Kaskaden liegen Out-of-Loop-Fixe (Frank, `--kaskade vor-N`), und
         # ein Lauf, der nach der letzten Buchung und vor dem naechsten
         # Kaskadenbeginn endet, faellt zwangslaeufig in diese Luecke.
-        _beginn, _zu_alt = logs_vor_kaskadenbeginn(files, kaskade, repo)
+        #
+        # BL-307: Die Plandateien kommen aus `plan_repo`, nicht aus `repo` --
+        # dieselbe Regel wie BL-226 oben, und sie fehlte hier, weil dieser
+        # Riegel sie nie brauchte: Frische Logs sind nie AELTER als ein
+        # Kaskadenbeginn. Der Spiegel darunter (BL-266) faengt dagegen JEDES
+        # frische Log, sobald im Arbeitsverzeichnis eine Kaskade N+1 liegt.
+        # Im Feld war das der erste Update-Selbsttest nach BL-266: ein
+        # Wegwerf-Ledger unter /tmp, `--kaskade 1`, und gegengehalten wurde
+        # der Beginn der Kaskade 2 des PROJEKTS.
+        _beginn, _zu_alt = logs_vor_kaskadenbeginn(files, kaskade, plan_repo)
         if _zu_alt:
             from datetime import datetime as _dt
             marke = "Hinweis" if auch_aeltere else "WARNUNG"
@@ -4688,7 +4703,7 @@ def _main(argv):
         # daneben, und `--rollen-abschluss 28` haette beide Saetze unter 28
         # gebucht. Das Ende von N ist der Beginn von N+1 —
         # `fenster_schliessende_kaskade` kennt beide Faelle.
-        _ende, _zu_neu = logs_nach_fenster_ende(files, kaskade, repo)
+        _ende, _zu_neu = logs_nach_fenster_ende(files, kaskade, plan_repo)
         if _zu_neu:
             from datetime import datetime as _dt
             naechste = fenster_schliessende_kaskade(kaskade)

@@ -379,6 +379,58 @@ def entrypoint_pfad(name):
     return installiert
 
 
+# --- Projektdateien: was das Update nicht anfasst (BL-307) -------------------
+# Ein `--update` ersetzt die Infrastruktur und laesst die PROJEKTDATEN stehen:
+# Regeldatei, Konfiguration, Plan-Ordner, Ledger (BL-8). Ab der Installation
+# gehoeren sie dem Projekt — die CLAUDE.md traegt Projekt-Spezifika und
+# gefuellte TODOs, die Konfiguration die Werte des Projekts. Neue Regeln der
+# Kit-Fassung kommen dort von Hand an; das Update meldet die Abweichung
+# ("bitte von Hand abgleichen", fehlende Konfigurationswerte nach BL-200).
+#
+# Ob eine Regel DASTEHT, ist deshalb eine Zusicherung ueber die VORLAGE im Kit,
+# nicht ueber die Datei im Projekt. Bis hierher fielen 18 Faelle in 12 Dateien
+# auf die Projektdatei zurueck: gruen in jeder FRISCHEN Installation, rot in
+# jedem Bestandsprojekt, dessen Regeldatei aelter ist als die Regel. Im Feld
+# (`Feld F`, 2026-10-04) war das der erste rote Update-Selbsttest nach BL-243 —
+# gesucht wurde der neue Abschnitt 0 in genau der CLAUDE.md, die das Update
+# eine Zeile darueber zum Handabgleich gemeldet hatte. Ein Selbsttest, der bis
+# zum Handabgleich rot ist, meldet "Fehler" ueber eine Installation ohne
+# Defekt — und verdeckt den naechsten echten.
+#
+# Wie eine VORHANDENE Zeile geformt ist, darf weiter am Projekt geprueft
+# werden (test_bl15): Fehlt sie dort, gibt es nichts zu pruefen.
+
+VORLAGE_EINER_PROJEKTDATEI = {
+    "bootstrap/CLAUDE.md.vorlage": "CLAUDE.md",
+    "bootstrap/beutebuch.md": "das Beutebuch im Plan-Ordner",
+    "bash/entry/team.config.sh": "team.config.sh",
+    "pwsh/entry/team.config.ps1": "team.config.ps1",
+}
+
+
+def quelle(*kandidaten):
+    """Die erste vorhandene Quelle unter `kandidaten` (relativ zur Wurzel) —
+    die Kit-Ablage zuerst, dann die installierte.
+
+    Fuer die Vorlage einer PROJEKTDATEI gibt es keinen installierten Ersatz:
+    Fehlt sie, laufen wir in einem Projekt, und dort wird sichtbar
+    UEBERSPRUNGEN (BL-307). Fehlt dagegen eine Datei der Infrastruktur, ist
+    das ein Befund.
+    """
+    for kandidat in kandidaten:
+        pfad = REPO_ROOT / kandidat
+        if pfad.is_file():
+            return pfad
+    projektdateien = [VORLAGE_EINER_PROJEKTDATEI[k] for k in kandidaten
+                      if k in VORLAGE_EINER_PROJEKTDATEI]
+    if projektdateien:
+        pytest.skip(
+            f"{projektdateien[0]} ist eine Projektdatei — das Update fasst sie "
+            f"nicht an und meldet die Abweichung selbst. Ob die Regel dasteht, "
+            f"prueft die Vorlage im Kit (Kit-BL-307).")
+    raise AssertionError(f"keine der Quellen existiert: {kandidaten}")
+
+
 def bahnen_in_der_ablage():
     """Welche Bahnen liegen hier ueberhaupt? — Rueckgabe z. B. {"bash"}.
 

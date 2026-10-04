@@ -152,6 +152,19 @@ def test_ohne_smoke_test_bleibt_der_baustein_leer(tmp_path, schale):
 
 # --- (2) Die Selbstpruefung stellt keinen zweiten Lauf daneben ---------------
 
+# BL-310: Der Smoke-Test der Fixtures heisst je pytest-PROZESS anders. Die
+# Erkennung aus BL-207 sucht den konfigurierten Befehl maschinenweit in der
+# Prozesstabelle — so ist sie gebaut, und im Feld ist das richtig. Liefen aber
+# zwei Suiten nebeneinander (die Selbsttests beider Bahnen, zwei Updates),
+# sah die eine den 30-Sekunden-Hintergrundlauf der anderen: `./smoke.ps1`
+# stand in beiden. Die Selbstpruefung meldete dann UNBEKANNT statt ihres
+# eigenen Ergebnisses, und ein Fall wurde rot, der allein gefahren gruen ist.
+_SMOKE_STAMM = f"smoke-{os.getpid()}"
+
+
+def _smoke_datei(schale):
+    return f"{_SMOKE_STAMM}.sh" if schale.ist_bash else f"{_SMOKE_STAMM}.ps1"
+
 
 def _projekt(tmp_path, schale, smoke_rc=0, dauer=0):
     """Wegwerf-Repo mit Arbeit, Zusicherung und einem Smoke-Test.
@@ -167,14 +180,15 @@ def _projekt(tmp_path, schale, smoke_rc=0, dauer=0):
     (repo / "src" / "app.py").write_text("x = 1\n", encoding="utf-8")
     (repo / "tests" / "test_bestand.py").write_text(
         "def test_bestand(): pass\n", encoding="utf-8")
+    smoke = repo / _smoke_datei(schale)
     if schale.ist_bash:
-        (repo / "smoke.sh").write_text(
+        smoke.write_text(
             "#!/usr/bin/env bash\n"
             + (f"sleep {dauer}\n" if dauer else "")
             + f"exit {smoke_rc}\n", encoding="utf-8")
-        (repo / "smoke.sh").chmod(0o755)
+        smoke.chmod(0o755)
     else:
-        (repo / "smoke.ps1").write_text(
+        smoke.write_text(
             (f"Start-Sleep -Seconds {dauer}\n" if dauer else "")
             + f"exit {smoke_rc}\n", encoding="utf-8")
     _git(repo, "init", "-q")
@@ -186,7 +200,16 @@ def _projekt(tmp_path, schale, smoke_rc=0, dauer=0):
 
 
 def _smoke_befehl(schale):
-    return "./smoke.sh" if schale.ist_bash else "./smoke.ps1"
+    return f"./{_smoke_datei(schale)}"
+
+
+def test_der_smoke_test_der_fixtures_heisst_je_suite_anders():
+    """BL-310: Der Name traegt die Prozess-ID der Suite. Gegenprobe beim Bau:
+    Mit einem fremden `./smoke.ps1` daneben waren fuenf Faelle rot, die
+    allein gefahren gruen sind — mit eigenem Namen keiner."""
+    from conftest import Schale
+    for bahn in ("bash", "pwsh"):
+        assert str(os.getpid()) in _smoke_befehl(Schale(bahn)), bahn
 
 
 def _selbstpruefung(repo, schale, extra=()):
@@ -237,10 +260,10 @@ def _hintergrundlauf(repo, schale):
     ist die Spur, an der die Selbstpruefung ihn erkennt.
     """
     if schale.ist_bash:
-        befehl = [BASH or "bash", "./smoke.sh"]
+        befehl = [BASH or "bash", _smoke_befehl(schale)]
     else:
         befehl = ["pwsh", "-NoProfile", "-NonInteractive", "-Command",
-                  "& './smoke.ps1'"]
+                  f"& '{_smoke_befehl(schale)}'"]
     return subprocess.Popen(befehl, cwd=str(repo),
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL)

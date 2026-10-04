@@ -27,7 +27,7 @@ from pathlib import Path
 import pytest
 
 import test_bl241_fixphase_hat_einen_eigenen_einstieg as v
-from conftest import (Variable, entrypoint_pfad, kit_pfad, verlange_bash,
+from conftest import (Variable, kit_pfad, quelle, verlange_bash,
                       verlange_pwsh)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -45,7 +45,9 @@ def _architekt():
 
 
 def _erste(*kandidaten):
-    """Die Vorlage im Kit, die gerenderte Datei im Projekt."""
+    """Die Vorlage im Kit, die gerenderte Datei im Projekt — nur fuer Dateien,
+    die das Update mitnimmt (TEAM.md). Eine Projektdatei wie die CLAUDE.md
+    laeuft ueber `conftest.quelle` (Kit-BL-307)."""
     for teile in kandidaten:
         p = REPO_ROOT.joinpath(*teile)
         if p.is_file():
@@ -75,7 +77,10 @@ def test_die_abnahme_misst_am_auftrag_nicht_an_der_verifikation():
 
 
 def test_die_vorlage_des_abschluss_docs_hat_beide_stellen():
-    t = _erste(("bootstrap", "CLAUDE.md.vorlage"), ("CLAUDE.md",))
+    # Die Vorlage, nicht die CLAUDE.md des Projekts: die ist Projektdatei und
+    # bekommt neue Abschnitte von Hand (Kit-BL-307). Genau hier war der erste
+    # Update-Selbsttest nach BL-243 im Feld rot.
+    t = quelle("bootstrap/CLAUDE.md.vorlage").read_text(encoding="utf-8-sig")
     assert "## 0. Für Menschen" in t, "BL-243: Abschnitt 0 fehlt in der Vorlage"
     assert "ABNAHME" in t and "Kit-BL-219" in t, "BL-219: die Abnahme fehlt"
 
@@ -143,9 +148,12 @@ def test_ohne_zielstand_kein_satz(tmp_path, schale):
 
 
 def test_beide_konfigurationen_kennen_den_platz():
-    for name in ("team.config.sh", "team.config.ps1"):
-        t = _lies(entrypoint_pfad(name))
-        assert "TEAM_ZIELSTAND_PRUEFUNG" in t, f"{name} kennt den Platz nicht"
+    # Die Vorlagen: Die Konfiguration eines Projekts waechst von Hand nach —
+    # das Update meldet den fehlenden Wert (BL-200), es traegt ihn nicht ein
+    # (Kit-BL-307).
+    for rel in ("bash/entry/team.config.sh", "pwsh/entry/team.config.ps1"):
+        t = quelle(rel).read_text(encoding="utf-8-sig")
+        assert "TEAM_ZIELSTAND_PRUEFUNG" in t, f"{rel} kennt den Platz nicht"
 
 
 def _ziel(repo, bahn, code):

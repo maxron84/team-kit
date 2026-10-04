@@ -24,25 +24,17 @@ Produktivcode; ihr Rueckbau gehoert in dieselbe Bearbeitung.
 """
 
 import sys
-from pathlib import Path
 
 import pytest
 
-WURZEL = Path(__file__).resolve().parents[2]
+from conftest import quelle as _quelle
 
 
-def _quelle(*kandidaten):
-    for kandidat in kandidaten:
-        pfad = WURZEL / kandidat
-        if pfad.is_file():
-            return pfad
-    raise AssertionError(f"keine der Quellen existiert: {kandidaten}")
-
-
+# Die Regeldatei an der Vorlage: Im Projekt ist sie Projektdatei (Kit-BL-307).
 TRAEGER = {
     "rolle-ralph": ("geteilt/prompts/rolle-ralph.md", "team/prompts/rolle-ralph.md",),
     "rolle-frank": ("geteilt/prompts/rolle-frank.md", "team/prompts/rolle-frank.md",),
-    "Regeldatei": ("bootstrap/CLAUDE.md.vorlage", "CLAUDE.md"),
+    "Regeldatei": ("bootstrap/CLAUDE.md.vorlage",),
 }
 
 

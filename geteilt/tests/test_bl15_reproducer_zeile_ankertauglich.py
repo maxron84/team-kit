@@ -126,7 +126,17 @@ QUELLEN = _quellen()
 
 @pytest.mark.parametrize("name, pfad", QUELLEN, ids=[n for n, _ in QUELLEN])
 def test_quelle_liefert_die_zeile_ueberhaupt(name, pfad):
-    """Eine still geloeschte Zeile ist derselbe Fund noch einmal."""
+    """Eine still geloeschte Zeile ist derselbe Fund noch einmal.
+
+    BL-307: OB die Zeile dasteht, gilt fuer die Vorlagen im Kit und fuer die
+    Briefings. Regeldatei und Beutebuch eines installierten Projekts gehoeren
+    dem Projekt, das Update fasst sie nicht an — dort pruefen die beiden Faelle
+    unten die FORM der Zeilen, die es gibt."""
+    rel = pfad.relative_to(WURZEL).as_posix()
+    if name in ("Beutebuch-Vorlage", "Regeldatei") and \
+            not rel.startswith("bootstrap/"):
+        pytest.skip(f"{rel} ist eine Projektdatei — ob die Zeile dasteht, "
+                    f"prueft die Vorlage im Kit (Kit-BL-307).")
     assert _feldzeilen(pfad), (
         f"{name} ({pfad.relative_to(WURZEL)}) enthaelt keine "
         f"'{FELD}'-Zeile mehr — Harry/Marv bekommen das Feld nicht zu sehen."
@@ -218,6 +228,8 @@ if __name__ == "__main__":
             try:
                 pruefung(name, pfad)
                 print(f"OK   {pruefung.__name__}[{name}]")
+            except pytest.skip.Exception as e:
+                print(f"SKIP {pruefung.__name__}[{name}]: {e}")
             except AssertionError as e:
                 fehler.append(f"{pruefung.__name__}[{name}]")
                 print(f"FAIL {pruefung.__name__}[{name}]: {e}")

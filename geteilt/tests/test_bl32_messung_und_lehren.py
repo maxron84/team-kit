@@ -27,6 +27,7 @@ from pathlib import Path
 import pytest
 
 from conftest import kit_pfad
+from conftest import quelle as _quelle
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -41,16 +42,9 @@ for _tools in (REPO_ROOT / "geteilt" / "tools", kit_pfad("tools")):
 import kosten  # noqa: E402
 
 
-def _quelle(*kandidaten):
-    for kandidat in kandidaten:
-        pfad = REPO_ROOT / kandidat
-        if pfad.is_file():
-            return pfad
-    raise AssertionError(f"keine der Quellen existiert: {kandidaten}")
-
-
 ANHANG_A = ("doku/anhang-a.md",)
-REGELDATEI = ("bootstrap/CLAUDE.md.vorlage", "CLAUDE.md")
+# Die Vorlage — im Projekt ist die Regeldatei Projektdatei (Kit-BL-307).
+REGELDATEI = ("bootstrap/CLAUDE.md.vorlage",)
 ARCHITEKT = ("geteilt/prompts/rolle-architekt.md", "team/prompts/rolle-architekt.md",)
 
 

@@ -1647,8 +1647,13 @@ if ($Update) {
         if ($syntax) { Rot "  [x] Syntaxfehler: $($f.Name)"; $fehler = 1 }
     }
     if ($fehler -eq 0) { Gruen "  [ok] Alle PowerShell-Skripte syntaktisch korrekt" }
-    Gelb "  [!] Die .sh-Entrypoints wurden NICHT geprueft — hier liegt keine bash."
-    Gelb "      Sie sind mitinstalliert und gelten unveraendert aus dem Kit."
+    # BL-308: wie in der Erstinstallation unten — einbahnig gibt es keine .sh.
+    if (@(Get-ChildItem $Ziel -Filter '*.sh' -File).Count -eq 0) {
+        Gruen "  [ok] keine .sh zu pruefen (Bash-Bahn abgewaehlt)"
+    } else {
+        Gelb "  [!] Die .sh-Entrypoints wurden NICHT geprueft — hier liegt keine bash."
+        Gelb "      Sie sind mitinstalliert und gelten unveraendert aus dem Kit."
+    }
 
     $pt = if ($OhneSelbsttest) { $null } else { Finde-Pytest }
     if ($OhneSelbsttest) {
@@ -1665,7 +1670,9 @@ if ($Update) {
         }
         try {
             Push-Location $Ziel
-            $log = Join-Path ([System.IO.Path]::GetTempPath()) 'team-update-pytest.log'
+            # BL-309: je Lauf eine eigene Datei, wie seit BL-306 bei der
+            # Erstinstallation — der feste Name war hier stehengeblieben.
+            $log = Join-Path ([System.IO.Path]::GetTempPath()) "team-update-pytest-$PID-$(Get-Date -Format 'yyyyMMddHHmmss').log"
             $rc = Pytest-Mitschnitt -Pt $pt -Log $log
             if ($rc -eq 0) {
                 $zeile = (Select-String -Path $log -Pattern '\d+ passed' | Select-Object -First 1)
@@ -2117,8 +2124,15 @@ foreach ($f in (Get-ChildItem $Ziel -Filter '*.ps1' -File)) {
     }
 }
 if ($fehler -eq 0) { Gruen "  [ok] Alle PowerShell-Skripte syntaktisch korrekt" }
-Gelb "  [!] Die .sh-Entrypoints wurden NICHT geprueft — hier liegt keine bash."
-Gelb "      Sie sind mitinstalliert und gelten unveraendert aus dem Kit."
+# BL-308: Das Gegenstueck zu BL-128 in install.sh. In einer mit -NurPwsh
+# installierten Ablage gibt es keine .sh — der Satz "Sie sind
+# mitinstalliert" war dort schlicht falsch.
+if (@(Get-ChildItem $Ziel -Filter '*.sh' -File).Count -eq 0) {
+    Gruen "  [ok] keine .sh zu pruefen (Bash-Bahn abgewaehlt)"
+} else {
+    Gelb "  [!] Die .sh-Entrypoints wurden NICHT geprueft — hier liegt keine bash."
+    Gelb "      Sie sind mitinstalliert und gelten unveraendert aus dem Kit."
+}
 
 $py = Finde-Python
 if (-not $py) {

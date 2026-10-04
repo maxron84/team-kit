@@ -151,8 +151,14 @@ def test_die_konfiguration_die_der_regeltext_nennt_wird_auch_gelesen():
 def test_die_zwei_bahnen_regionen_sind_noch_da():
     """Gegenrichtung: Die Ausnahme darf nicht dadurch gruen werden, dass jemand
     die Region umbenennt — dann pruefte der Test sie zwar mit, aber die
-    Absicht der Region waere verloren und niemand saehe es."""
+    Absicht der Region waere verloren und niemand saehe es.
+
+    BL-307: nur an TEAM.md. Die CLAUDE.md eines Projekts gehoert dem Projekt;
+    fehlt ihr die Region, prueft `_tote_pfade` dort den GANZEN Text — strenger,
+    nicht laxer."""
     for datei in _regeltexte():
+        if datei.name == "CLAUDE.md":
+            continue
         anfang, ende = SCHUTZ[datei.name]
         text = datei.read_text(encoding="utf-8-sig")
         assert anfang in text and ende in text, (

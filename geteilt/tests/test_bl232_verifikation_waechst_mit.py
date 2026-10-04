@@ -100,13 +100,15 @@ def _projekt_flackernd(tmp_path, schale):
     """Erster Lauf rot, jeder weitere gruen — die Lage aus dem Feld."""
     repo = h._projekt(tmp_path, schale)
     marke = repo / ".einmal-rot"
+    # Der Dateiname kommt aus dem Helfer — er ist je Suite eigen (Kit-BL-310).
+    smoke = repo / h._smoke_datei(schale)
     if schale.ist_bash:
-        (repo / "smoke.sh").write_text(
+        smoke.write_text(
             "#!/usr/bin/env bash\n"
             "if [ ! -f .einmal-rot ]; then : > .einmal-rot; exit 1; fi\nexit 0\n",
             encoding="utf-8")
     else:
-        (repo / "smoke.ps1").write_text(
+        smoke.write_text(
             "if (-not (Test-Path .einmal-rot)) { New-Item .einmal-rot | Out-Null; exit 1 }\nexit 0\n",
             encoding="utf-8")
     h._git(repo, "add", "-A")

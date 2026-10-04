@@ -1430,11 +1430,16 @@ PY
         gelb "  ! Regressionstests AUF VERLANGEN uebersprungen (--ohne-selbsttest)."
         gelb "    Das ist KEIN gruenes Ergebnis, sondern eine fehlende Probe."
     elif PYTEST_AUFRUF="$(team_pytest)"; then
-        if (cd "$ZIEL" && unset "${!TEAM_@}" && pytest_mitschnitt /tmp/team-update-pytest.log $PYTEST_AUFRUF); then
-            gruen "  ✓ Regressionstests grün ($(grep -oE '[0-9]+ passed' /tmp/team-update-pytest.log | head -1))"
+        # BL-309: dieselbe Regel wie BL-306 bei der Erstinstallation — je Lauf
+        # eine EIGENE Datei. Der feste Name war hier stehengeblieben, und wer
+        # mehrere Projekte nebeneinander hebt, liess zwei Updates in dieselbe
+        # Datei schreiben.
+        UPDATE_LOG="$(mktemp "${TMPDIR:-/tmp}/team-update-pytest.XXXXXX")"
+        if (cd "$ZIEL" && unset "${!TEAM_@}" && pytest_mitschnitt "$UPDATE_LOG" $PYTEST_AUFRUF); then
+            gruen "  ✓ Regressionstests grün ($(grep -oE '[0-9]+ passed' "$UPDATE_LOG" | head -1))"
         else
-            rot "  ✗ Regressionstests NICHT grün — Log: /tmp/team-update-pytest.log"
-            tail -3 /tmp/team-update-pytest.log
+            rot "  ✗ Regressionstests NICHT grün — Log: $UPDATE_LOG"
+            tail -3 "$UPDATE_LOG"
             # BL-261: Wem gehoert der rote Fall? Die Suite prueft in einer
             # INSTALLATION auch den Code des Projekts; ein roter Fall dort
             # liest sich ohne diesen Hinweis wie ein gescheitertes Update.

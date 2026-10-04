@@ -34,16 +34,9 @@ from pathlib import Path
 import pytest
 
 from conftest import entrypoint_aufruf, kit_pfad, pfad_voran, werkzeug_wert
+from conftest import quelle as _quelle
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-
-
-def _quelle(*kandidaten):
-    for kandidat in kandidaten:
-        pfad = REPO_ROOT / kandidat
-        if pfad.is_file():
-            return pfad
-    raise AssertionError(f"keine der Quellen existiert: {kandidaten}")
 
 
 def _entrypoint(name):
@@ -85,8 +78,9 @@ def test_projekt_uebersteuerung_ist_vorgesehen(rolle):
     eine Aenderung im Skript nicht (BL-12)."""
     text = _entrypoint(f"{rolle}.sh").read_text(encoding="utf-8")
     assert f"TEAM_REDTEAM_AUFTRAG_{rolle.upper()}" in text
-    config = _quelle("bash/entry/team.config.sh", "team.config.sh").read_text(
-        encoding="utf-8")
+    # Die Vorlage, nicht die Konfiguration des Projekts — die ist Projektdatei
+    # und waechst von Hand nach (Kit-BL-307).
+    config = _quelle("bash/entry/team.config.sh").read_text(encoding="utf-8")
     assert f"TEAM_REDTEAM_AUFTRAG_{rolle.upper()}" in config
 
 
@@ -247,7 +241,7 @@ def test_ohne_je_gesetzten_fokus_bleibt_alles_still(tmp_path):
 # --- BL-43/BL-44: die Bauform des Fokus in der Regel ------------------------
 
 @pytest.mark.parametrize("traeger", [
-    ("bootstrap/CLAUDE.md.vorlage", "CLAUDE.md"),
+    ("bootstrap/CLAUDE.md.vorlage",),
     ("geteilt/prompts/rolle-architekt.md", "team/prompts/rolle-architekt.md",),
 ], ids=["Regeldatei", "rolle-architekt"])
 def test_regel_gibt_die_bauform_des_fokus_vor(traeger):
@@ -260,7 +254,7 @@ def test_regel_gibt_die_bauform_des_fokus_vor(traeger):
 
 
 @pytest.mark.parametrize("traeger", [
-    ("bootstrap/CLAUDE.md.vorlage", "CLAUDE.md"),
+    ("bootstrap/CLAUDE.md.vorlage",),
     ("geteilt/prompts/rolle-architekt.md", "team/prompts/rolle-architekt.md",),
 ], ids=["Regeldatei", "rolle-architekt"])
 def test_regel_verlangt_pruefpunkte_im_string(traeger):

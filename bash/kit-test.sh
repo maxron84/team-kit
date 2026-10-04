@@ -204,11 +204,18 @@ if ! "$KIT_PYTHON" -m pytest --version >/dev/null 2>&1; then
 fi
 
 ZIEL="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-selbsttest.XXXXXX")"
+BESTAND=""   # Schritt 5c (BL-307): die gealterte Kopie
 aufraeumen() {
     if [ "$BEHALTEN" -eq 1 ]; then
         printf '\nWegwerf-Repo behalten: %s\n' "$ZIEL"
+        if [ -n "$BESTAND" ]; then
+            printf 'Bestandsprojekt behalten: %s\n' "$BESTAND"
+        fi
     else
         rm -rf "$ZIEL"
+        if [ -n "$BESTAND" ]; then
+            rm -rf "$BESTAND" "$BESTAND.log"
+        fi
     fi
 }
 trap aufraeumen EXIT
@@ -220,7 +227,9 @@ gruen "  ✓ $ZIEL"
 # BL-195: Die Installer- und Update-Aufrufe unten laufen mit
 # --ohne-selbsttest — bis auf den ERSTEN in Schritt 2. Dort haengt BL-127:
 # Der Selbsttest des INSTALLERS muss seine Regressionstests wirklich fahren,
-# und diese Zusicherung darf ein Laufzeit-Schalter nicht aushebeln.
+# und diese Zusicherung darf ein Laufzeit-Schalter nicht aushebeln. Die zweite
+# Ausnahme ist Schritt 5c (BL-307): Dort IST der Selbsttest des Updates die
+# Pruefung — er laeuft in einem Bestandsprojekt, das keine andere Stufe kennt.
 #
 # Alle weiteren wiederholen ihn nur. Bei rund 19 Minuten je Durchgang war das
 # der groesste einzelne Posten in der Laufzeit dieses Skripts.
@@ -533,6 +542,35 @@ if [ "$RC" -ne 0 ]; then
     echo "  den BEGRIFF statt der Schreibweise (Vorbild: test_bl15, test_bl28)." >&2
     exit "$RC"
 fi
+
+# BL-307: Die vierte Konfiguration — ein BESTANDSPROJEKT. Alle Laeufe oben
+# fahren die Suite in einer FRISCHEN Installation: keine Kaskade, kein Ledger,
+# jede Projektdatei die aktuelle Vorlage. Der erste Update-Selbsttest eines
+# echten Bestandsprojekts (`Feld F`, 2026-10-04) war rot, weil ein Werkzeug die
+# Plandateien des PROJEKTS las und ein Test eine neue Regel in dessen
+# CLAUDE.md suchte — in einer Sandbox mit Vorgeschichte waren es 43 Faelle,
+# in einer frischen keiner. Gefahren wird hier, was der Anwender faehrt: das
+# Update eines gealterten Projekts, MIT Selbsttest. Auf einer Kopie, damit die
+# Schritte unten ihre Ausgangslage behalten; das Log liegt neben der Kopie,
+# nicht darin — eine fremde Datei im Arbeitsbaum ist selbst ein Befund.
+kopf "5c/11 — Update eines Bestandsprojekts, mit Selbsttest (BL-307)"
+BESTAND="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-bestand.XXXXXX")"
+cp -a "$ZIEL/." "$BESTAND/"
+"$KIT_PYTHON" "$KIT/geteilt/kit-projekt-altern.py" "$BESTAND" || exit 1
+RC=0
+bash "$KIT/bash/install.sh" "$BESTAND" --update > "$BESTAND.log" 2>&1 || RC=$?
+if ! grep -q 'Regressionstests grün' "$BESTAND.log"; then
+    rot "
+✗ Das Update eines Bestandsprojekts endet ohne grünen Selbsttest (Exit $RC)."
+    echo "  Das ist der BL-307-Fall: Ein Test liest den Zustand des PROJEKTS statt" >&2
+    echo "  seiner Fixture (Kaskaden, Ledger, Logs) — oder sucht eine Regel des Kits" >&2
+    echo "  in einer Projektdatei, die das Update nicht anfasst. Werkzeuge nehmen den" >&2
+    echo "  Plan aus dem Projekt des LEDGERS (kosten.py, plan_repo); Regeltexte" >&2
+    echo "  prueft die Vorlage im Kit (conftest.quelle)." >&2
+    tail -15 "$BESTAND.log" >&2
+    exit 1
+fi
+gruen "  ✓ $(grep -oE 'Regressionstests grün \([0-9]+ passed' "$BESTAND.log" | head -1))"
 
 # BL-8: --update ist der einzige sichere Weg, ein gelebtes Projekt auf eine
 # neue Kit-Version zu heben. Der Beweis dafuer gehoert ins Gate, nicht in ein

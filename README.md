@@ -4,7 +4,7 @@
 [![macOS — nicht belegt](https://img.shields.io/badge/macOS-nicht_belegt-9f9f9f?style=flat-square&logo=apple&logoColor=white)](doku/einrichtung.md#belegstand)
 
 [![Version 2.13.1](https://img.shields.io/badge/Version-2.13.1-007ec6?style=flat-square)](CHANGELOG.md)
-[![Regressionstests 1829](https://img.shields.io/badge/Regressionstests-1829-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
+[![Regressionstests 1840](https://img.shields.io/badge/Regressionstests-1840-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
 [![Selbsttest 11 Stufen](https://img.shields.io/badge/Selbsttest-11_Stufen-2ea44f?style=flat-square)](bash/kit-test.sh)
 [![Lizenz MIT](https://img.shields.io/badge/Lizenz-MIT-007ec6?style=flat-square)](LICENSE)
 
@@ -88,10 +88,10 @@ im Linux-Dateisystem. Die ganze Routine für beide Plattformen, mit IDE (VS
 Codium bzw. VS Code) und Agenten-Werkzeug, steht in
 [doku/einrichtung.md](doku/einrichtung.md).
 
-Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 248 Dateien im
+Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 250 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
-`TEAM.md` und 1829 Regressionstests.
+`TEAM.md` und 1840 Regressionstests.
 
 > **Was „Version" hier heißt.** Das Kit veröffentlicht **keine Releases**;
 > ausgeliefert wird der **Quellstand** dieses Repos. Die Versionsnummer ist die
@@ -143,7 +143,7 @@ erfasst, begründet und nach Wirkung sortiert, statt in Sitzungsprotokollen zu
 verschwinden.
 
 Alles in [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (241 Einträge).
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (245 Einträge).
 
 ---
 
@@ -433,12 +433,12 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 | **`Feld C`** | Fremde, **gewachsene** Codebasis: Python/tkinter, Einstiegspunkt in der Wurzel, `src/`, `bin/`, gewachsene `tests/`, belegtes `plans/` | Gelesen (2026-08-11) und installiert (2026-08-13). **Keine** Kaskade — belegt ist der Einzug, nicht der Betrieb |
 | **`Feld D`** | Greenfield, Linux, bash-Bahn: Electron + Python 3 + SQLite — Neubau, dessen tkinter-Vorgänger als reine Lesereferenz danebenliegt | Erste Kaskade geplant und gebaut (2026-08-23), Stufen 1–4 grün, Stufe 5 an der Umgebung blockiert. `BL-149`…`BL-151` — **drei Erstlauf-Funde**, alle aus dem Zeitfenster, das ein laufendes Projekt gar nicht mehr hat |
 | **`Feld E`** | Greenfield, Linux, bash-Bahn: Dart/Flutter + SQLite für ein **Android-Tablet** — Neubau, dessen Python/tkinter-Vorgänger (~25.500 LOC, 17 Spec-Dokumente) als reine Lesereferenz danebenliegt | **Zwei Kaskaden geplant, gebaut und abgeschlossen** (2026-08-24): Datenfundament und Einrichtungs-Wizard, zusammen 10 Stufen ohne Fehlversuch, 86 Tests in `Feld E`, 5 Red-Team-Funde, rund 50 USD Abo-Gegenwert — vollständig geledgert. `BL-158`…`BL-168` — **elf Funde**: die ersten acht vor der ersten gebauten Stufe, aus dem Lesen der Kopplungen zwischen Konfiguration, Testläufer und Rollen-Prompt; die letzten drei aus dem Betrieb (Preistabelle, Zeitpunkt der Gegenprobe, Rückkanal). Der erste Stack ohne pytest: Was das Kit an Python-Annahmen mitträgt, wird hier zum ersten Mal sichtbar. Zugleich der erste Beleg für den Rückkanal als Werkzeug statt als Handarbeit |
-| **`Feld F`** | Greenfield, Windows 11, beide Bahnen installiert, gefahren wird pwsh: ein Spielskript-Stack ohne eigene Testinfrastruktur, dazu ein Prüfwerkzeug in Python — der Smoke-Test entsteht erst in Stufe 1 der ersten Kaskade | Sechs Kaskaden bis 2026-10-02, dazu eine Handprobe mit 45 Frank-Fixen außerhalb des Loops. `BL-264` und `BL-283`…`BL-292` — **elf Funde**, darunter der erste, der das **Modell** der Rollen betrifft: Alle 126 Rollenläufe in `Feld F` über fünf Kaskaden liefen auf einer älteren Sonnet-Version, weil die CLI im `PATH` älter war als die der IDE (`BL-264`). Zugleich das erste Feld mit beiden Bahnen in einer Ablage, in der `test_bl117` sie gegeneinander hielt — so fiel `BL-285` auf |
+| **`Feld F`** | Greenfield, Windows 11, beide Bahnen installiert, gefahren wird pwsh: ein Spielskript-Stack ohne eigene Testinfrastruktur, dazu ein Prüfwerkzeug in Python — der Smoke-Test entsteht erst in Stufe 1 der ersten Kaskade | Sechs Kaskaden bis 2026-10-02, dazu eine Handprobe mit 45 Frank-Fixen außerhalb des Loops. `BL-264` und `BL-283`…`BL-292` — **elf Funde**, darunter der erste, der das **Modell** der Rollen betrifft: Alle 126 Rollenläufe in `Feld F` über fünf Kaskaden liefen auf einer älteren Sonnet-Version, weil die CLI im `PATH` älter war als die der IDE (`BL-264`). Zugleich das erste Feld mit beiden Bahnen in einer Ablage, in der `test_bl117` sie gegeneinander hielt — so fiel `BL-285` auf. Seit 2026-09-30 einbahnig pwsh; das erste Update mit Prüfsummenliste (2026-10-04) brachte `BL-307` und `BL-308` — den ersten roten Update-Selbsttest eines Bestandsprojekts, ohne Defekt im Projekt |
 
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen sieben Quellen
-kommen die Backlog-Einträge `BL-1`…`BL-306`; was davon behoben ist, steht im
+kommen die Backlog-Einträge `BL-1`…`BL-310`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (241 Einträge), der Rest in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (245 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors
@@ -638,8 +638,10 @@ bash/                   ALLES, was die Bash-Bahn ausmacht
 │                       Bordmittel, Zeilenenden, Dateisystem (WSL!), Auth —
 │                       prüft mit Proben statt Annahmen, kostet nichts
 ├── kit-test.sh         Selbstverifikation in 11 Stufen: installiert in ein
-│                       Wegwerf-Repo, fährt dort die Tests zweimal (Ausliefe-
-│                       rungswerte und angepasste team.config.sh), prüft
+│                       Wegwerf-Repo, fährt dort die Tests in vier Konfigu-
+│                       rationen (Auslieferungswerte, angepasste
+│                       team.config.sh, verdrehte Sprachmarken, gealtertes
+│                       Bestandsprojekt nach dem Update), prüft
 │                       Update-Pfad, Bestandslage, Bahn-Abwahl samt
 │                       Rueckweg, Regel-Inventar und die Einrichtungs-
 │                       routine — DAS Gate vor jedem Push
@@ -675,7 +677,7 @@ geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 │                       in denselben Dateien. Die pwsh-Bahn ist eine zweite
 │                       ORCHESTRIERUNG, kein zweiter Zustandscode
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-├── tests/              184 Testdateien, 1829 Fälle — der Doppelbahn-Harnisch
+├── tests/              186 Testdateien, 1840 Fälle — der Doppelbahn-Harnisch
 │                       fährt jeden Fall gegen BEIDE Bahnen, aus EINEM
 │                       Testkörper
 ├── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
@@ -683,9 +685,13 @@ geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 ├── kit-readme-pruefen.py Prüfer für dieses README (Stufe 5). Kit-only — jede
 │                       Zahl gegen die frische Installation, jeder genannte
 │                       Pfad gegen das Dateisystem
-└── kit-marken-verdrehen.py  Dritte Konfiguration des Selbsttests (Stufe 5b):
-                        verdreht die Sprachmarken einer Installation —
-                        Test-Endung, strict-Schreibweise, Smoke-Befehl
+├── kit-marken-verdrehen.py  Dritte Konfiguration des Selbsttests (Stufe 5b):
+│                       verdreht die Sprachmarken einer Installation —
+│                       Test-Endung, strict-Schreibweise, Smoke-Befehl
+└── kit-projekt-altern.py  Vierte Konfiguration (Stufe 5c): gibt einer Kopie
+                        der Installation Vorgeschichte — 30 Kaskaden, Ledger,
+                        Logs, CLAUDE.md und Konfiguration in älterer Fassung —,
+                        dann läuft das Update mit Selbsttest
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
 plans/                  Roadmap und Backlog DES KITS (nicht die Vorlagen —
@@ -800,7 +806,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 ## Der Rückkanal Feld → Kit
 
 **Jeder Lauf in einem echten Projekt fördert Kit-Fehler zutage** — `BL-1` bis
-`BL-306` sind fast alle so entstanden. Damit das nicht von der Disziplin
+`BL-310` sind fast alle so entstanden. Damit das nicht von der Disziplin
 einzelner abhängt, ist der Weg zurück ein Befehl aus dem installierten Projekt
 heraus:
 
@@ -853,7 +859,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   `Feld D` **eine** und `Feld E` **zwei** auf der bash-Bahn — `Feld C` gar
   keine. Zwei Plattformen und zwei Bahnen sind damit berührt, aber nur **eine**
   Kombination ist eingelaufen. Jeder Lauf hat Kit-Fehler zutage gefördert —
-  `BL-1`…`BL-306`, von der toten Fixphase über zwei Löcher in der
+  `BL-1`…`BL-310`, von der toten Fixphase über zwei Löcher in der
   Kostenerfassung und die Zeilenenden bis zur vierten Fehlerklasse „Stufe
   fertig, Quittung fehlt". Die Erwartung ist nicht, dass das aufhört; die
   Mechanik dafür ist der [Rückkanal Feld → Kit](#der-rückkanal-feld--kit) —
@@ -908,16 +914,21 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   was dieses Kit *belegen* könnte. Was eine Übersetzung wirklich kostet, steht
   in der [Roadmap](plans/roadmap-skizzen.md) als **Skizze G**: Nicht die Prosa
   ist die Arbeit, sondern die Kopplungen — das Regel-Inventar zitiert
-  **wörtlich**, `zitat_lint.py` prüft Zitate, und 1829 Regressionstests
+  **wörtlich**, `zitat_lint.py` prüft Zitate, und 1840 Regressionstests
   greifen auf deutsche Zeichenketten zu. Der Name bleibt in jeder Fassung
   `T.E.A.M.`; die Auflösungen dafür stehen in `TEAM.md`.
 - **Selbstverifikation**: `bash bash/kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 1829 Tests — **zweimal**: einmal mit den
-  Auslieferungswerten, einmal mit angepasster `team.config.sh` (Caps,
-  Commit-Präfixe, zwei Domänen). Der zweite Lauf ist die Lehre aus `BL-58`: In
+  Wegwerf-Repo und fährt dort die 1840 Tests — in **vier Konfigurationen**:
+  mit den Auslieferungswerten, mit angepasster `team.config.sh` (Caps,
+  Commit-Präfixe, zwei Domänen), mit verdrehten Sprachmarken (`BL-194`) und
+  als gealtertes Bestandsprojekt nach einem Update (`BL-307`). Der zweite
+  Lauf ist die Lehre aus `BL-58`: In
   einer frischen Installation stehen dieselben Werte wie in `team/lib.sh`, ein
   Test, der die Zusicherung am *aufgelösten* Wert misst statt an der
-  Bibliothek, ist dort immer grün — und wird erst im Feldprojekt rot.
+  Bibliothek, ist dort immer grün — und wird erst im Feldprojekt rot. Der
+  vierte ist dieselbe Lehre für die Vorgeschichte: Kaskaden, Ledger und eine
+  CLAUDE.md, die älter ist als die neueste Regel, gibt es in einer frischen
+  Installation nicht.
   `pytest team/tests` **im Kit-Repo** schlägt dagegen erwartungsgemäß fehl —
   die Tests setzen die installierte Ablage voraus (Entrypoints in der Wurzel
   statt unter `bash/entry/` bzw. `pwsh/entry/`).
@@ -945,7 +956,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
 
 Benutzen, ändern, weitergeben und in eigene Projekte einziehen ist ausdrücklich
 erlaubt, kommerziell wie privat; es bleibt nur die Namensnennung. Das gilt
-**auch für die 248 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
+**auch für die 250 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
 lösen keine Lizenzpflicht für den Code des Zielprojekts aus. Der Code stammt aus
 einem eigenen Projekt des Autors; das Urheberrecht liegt vollständig bei ihm.
 

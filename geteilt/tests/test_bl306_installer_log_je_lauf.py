@@ -12,7 +12,8 @@ DER BEFUND (Kit, 2026-10-03)
 
 DIE PROBE
     Am Quelltext beider Installer: kein fester Logname mehr, sondern einer je
-    Lauf (`mktemp` bzw. Prozess-ID und Zeit).
+    Lauf (`mktemp` bzw. Prozess-ID und Zeit) — seit BL-309 auch im Update,
+    das seinen festen Namen behalten hatte.
 """
 import re
 from pathlib import Path
@@ -43,3 +44,25 @@ def test_pwsh_installer_nimmt_einen_eigenen_lognamen():
         "install.ps1 schreibt das Selbsttest-Log wieder unter festem Namen "
         "(Kit-BL-306)")
     assert re.search(r'team-init-pytest-\$PID-', code)
+
+
+# --- BL-309: dieselbe Regel im Update ----------------------------------------
+# BL-306 hatte nur die Erstinstallation umgestellt. Das Update schrieb weiter
+# nach `team-update-pytest.log` — und wer mehrere Projekte nebeneinander hebt,
+# oder der Selbsttest mit seinem Bestandsprojekt (BL-307), liess zwei Laeufe
+# in dieselbe Datei schreiben.
+
+def test_bash_update_nimmt_einen_eigenen_lognamen():
+    code = _code(REPO_ROOT / "bash" / "install.sh")
+    assert "/tmp/team-update-pytest.log" not in code, (
+        "install.sh --update schreibt das Selbsttest-Log unter festem Namen "
+        "(Kit-BL-309)")
+    assert re.search(r'UPDATE_LOG="\$\(mktemp ', code)
+
+
+def test_pwsh_update_nimmt_einen_eigenen_lognamen():
+    code = _code(REPO_ROOT / "pwsh" / "install.ps1")
+    assert "'team-update-pytest.log'" not in code, (
+        "install.ps1 -Update schreibt das Selbsttest-Log unter festem Namen "
+        "(Kit-BL-309)")
+    assert re.search(r'team-update-pytest-\$PID-', code)

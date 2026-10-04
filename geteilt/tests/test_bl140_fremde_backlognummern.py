@@ -84,7 +84,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import kit_pfad
+from conftest import kit_pfad, quelle
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -289,17 +289,16 @@ def test_jede_ausnahme_ist_noch_da_und_traegt_einen_grund():
 
 def test_die_regel_steht_auch_im_regeltext():
     """Ein Lint, der eine Regel durchsetzt, die nirgends geschrieben steht,
-    erzieht niemanden — er ueberrascht nur beim naechsten Textumbau."""
-    for kandidat in (REPO_ROOT / "bootstrap" / "CLAUDE.md.vorlage",
-                     REPO_ROOT / "CLAUDE.md"):
-        if not kandidat.is_file():
-            continue
-        text = kandidat.read_text(encoding="utf-8-sig")
-        assert "Kit-BL-" in text, (
-            f"{kandidat.name} stellt die Kit-BL-Regel auf, benutzt sie aber "
-            "selbst kein einziges Mal — genau der Zustand, den BL-140 "
-            "beschreibt.")
-        return
+    erzieht niemanden — er ueberrascht nur beim naechsten Textumbau.
+
+    An der Vorlage: Die CLAUDE.md eines Projekts ist Projektdatei (Kit-BL-307).
+    Was dort an Verweisen steht, haelt der Lint oben trotzdem in Form."""
+    kandidat = quelle("bootstrap/CLAUDE.md.vorlage")
+    text = kandidat.read_text(encoding="utf-8-sig")
+    assert "Kit-BL-" in text, (
+        f"{kandidat.name} stellt die Kit-BL-Regel auf, benutzt sie aber "
+        "selbst kein einziges Mal — genau der Zustand, den BL-140 "
+        "beschreibt.")
     pytest.skip("keine CLAUDE.md in dieser Ablage")
 
 

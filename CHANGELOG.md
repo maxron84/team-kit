@@ -11,6 +11,12 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **Vierte Konfiguration im Selbsttest: ein Bestandsprojekt** (`BL-307`,
+  `Feld F`, beide Bahnen). Eine Kopie der Installation bekommt 30 Kaskaden
+  Vorgeschichte, Ledger und Logs, eine von Hand gepflegte CLAUDE.md und eine
+  Konfiguration ohne neuere Werte; dann laeuft das Update mit Selbsttest — wie
+  beim Anwender. Alle anderen Laeufe sehen nur frische Installationen.
+
 - **Das Update sichert und nennt, was es an Aenderungen im Projekt ersetzt**
   (`BL-270`, `Feld B`, beide Bahnen). `team/.kit-stand` haelt je Kit-Datei
   die Pruefsumme, die das letzte Update schrieb; eine seither geaenderte
@@ -529,6 +535,26 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   die Umgebungsvariable nicht.* Still bleibt es, wo nichts abweicht.
 
 ### Fixed
+
+- **Der Update-Selbsttest war in Bestandsprojekten rot, ohne dass etwas
+  kaputt war** (`BL-307`, `Feld F`, beide Bahnen). `kosten.py` nahm den
+  Kaskadenbeginn fuer die Fensterriegel aus dem Arbeitsverzeichnis statt aus
+  dem Projekt des Ledgers, und 18 Tests suchten neue Regeln in CLAUDE.md und
+  Konfiguration des Projekts — Dateien, die das Update bewusst nicht anfasst.
+  Ob eine Regel dasteht, prueft jetzt die Vorlage im Kit.
+
+- **Der pwsh-Installer meldete in einer einbahnigen Ablage "mitinstallierte"
+  .sh-Entrypoints** (`BL-308`, `Feld F`). Jetzt wie `install.sh`: "keine .sh
+  zu pruefen (Bash-Bahn abgewaehlt)".
+
+- **Zwei Testlaeufe nebeneinander sahen gegenseitig ihren Smoke-Test**
+  (`BL-310`, Kit). Die Fixtures tragen die Prozess-ID im Namen; ein
+  paralleler Selbsttest oder ein zweites Update auf derselben Maschine
+  macht keinen Fall mehr rot.
+
+- **Das Update schrieb sein Selbsttest-Log unter festem Namen** (`BL-309`,
+  Kit, beide Bahnen). Je Lauf eine eigene Datei, wie seit `BL-306` bei der
+  Erstinstallation.
 
 - **Zwei gleichzeitige Installationen teilten sich das Selbsttest-Log**
   (`BL-306`, Kit, beide Bahnen). Jetzt je Lauf eine eigene Datei; unter

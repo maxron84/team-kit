@@ -161,9 +161,10 @@ function Dateien-Mit-Endung {
 # uebersprungen wird, aendert die Zahl — und ein Selbsttest, der weniger
 # geprueft hat als er soll, hat nicht bestanden, sondern nur nichts gemerkt.
 # BL-198 hat fuenf dazugelegt (README-Schritt 5/9), BL-196 eine (das
-# Aufraeumen der Abgleichsablage). Wer eine Pruefung ergaenzt, zieht die
+# Aufraeumen der Abgleichsablage), BL-307 eine (das Update eines
+# Bestandsprojekts, 6c). Wer eine Pruefung ergaenzt, zieht die
 # Zahl nach — sonst meldet der Lauf am Ende, ein Schritt sei uebersprungen.
-$script:PruefungenSoll = 67
+$script:PruefungenSoll = 68
 
 # BL-195: Die Installer- und Update-Aufrufe ab Schritt 5 laufen mit
 # -OhneSelbsttest. Der Installer wuerde sonst jedes Mal die volle Suite
@@ -172,7 +173,8 @@ $script:PruefungenSoll = 67
 # NICHT der erste Aufruf in Schritt 2: Dort haelt BL-127 fest, dass der
 # Selbsttest des INSTALLERS seine Regressionstests wirklich faehrt. Diese
 # Zusicherung darf ein Laufzeit-Schalter nicht aushebeln, und sie wird gleich
-# darunter geprueft.
+# darunter geprueft. Und nicht das Update in Schritt 6c (BL-307): Dort IST der
+# Selbsttest des Updates die Pruefung, in einem Bestandsprojekt.
 #
 # Geprueft wird die Suite ausserdem dreimal AUSDRUECKLICH: Schritt 4
 # (Auslieferungswerte), Schritt 5 (angepasste Konfiguration), Schritt 7
@@ -545,6 +547,38 @@ if ($ptBefehl) {
     }
 } else {
     Gelb 'Python fehlt — der Lauf mit verdrehten Marken ist UNGEPRÜFT.'
+    $script:Fehler = 1
+}
+
+# BL-307: Die vierte Konfiguration — ein BESTANDSPROJEKT (siehe kit-test.sh,
+# Schritt 5c). Alle Laeufe oben fahren die Suite in einer FRISCHEN
+# Installation: keine Kaskade, kein Ledger, jede Projektdatei die aktuelle
+# Vorlage. Der erste Update-Selbsttest eines echten Bestandsprojekts war rot,
+# weil ein Werkzeug die Plandateien des PROJEKTS las und ein Test eine neue
+# Regel in dessen CLAUDE.md suchte. Gefahren wird hier, was der Anwender
+# faehrt: das Update eines gealterten Projekts, MIT Selbsttest — auf einer
+# Kopie, damit die Schritte unten ihre Ausgangslage behalten.
+Kopf '6c/9 — Update eines Bestandsprojekts, mit Selbsttest (BL-307)'
+if ($ptBefehl) {
+    $bestandOrdner = Join-Path $basis 'bestand'
+    Copy-Item -Recurse -Force -LiteralPath $ziel -Destination $bestandOrdner
+    & $ptBefehl (Join-Path $KIT 'geteilt\kit-projekt-altern.py') $bestandOrdner
+    if ($LASTEXITCODE -ne 0) { Rot 'Die Alterung hat nicht gegriffen.'; exit 1 }
+    $altLog = Join-Path $basis 'update-bestand.log'
+    $script:SuiteLaeufe++
+    & (Join-Path $KIT 'pwsh\install.ps1') $bestandOrdner -Update *> $altLog
+    $altGruen = (Treffer $altLog 'Regressionstests gruen') -ge 1
+    Pruefe 'Update eines Bestandsprojekts: Selbsttest grün (BL-307)' $altGruen $true
+    if (-not $altGruen) {
+        Zeile 'Das ist der BL-307-Fall: Ein Test liest den Zustand des PROJEKTS statt'
+        Zeile 'seiner Fixture (Kaskaden, Ledger, Logs) — oder sucht eine Regel des Kits'
+        Zeile 'in einer Projektdatei, die das Update nicht anfasst. Werkzeuge nehmen den'
+        Zeile 'Plan aus dem Projekt des LEDGERS (kosten.py, plan_repo); Regeltexte'
+        Zeile 'prueft die Vorlage im Kit (conftest.quelle).'
+        Get-Content -Tail 15 $altLog | ForEach-Object { Zeile $_ }
+    }
+} else {
+    Gelb 'Python fehlt — das Update eines Bestandsprojekts ist UNGEPRÜFT.'
     $script:Fehler = 1
 }
 
@@ -974,15 +1008,16 @@ Kopf 'Ergebnis'
 # BL-195: Die Zahl der wirklich gefahrenen Suite-Durchgaenge gehoert ins
 # Ergebnis. Ohne sie waere ein Schalter, der versehentlich auch einen echten
 # Durchgang abstellt, von einem gruenen Lauf nicht zu unterscheiden.
-if ($script:SuiteLaeufe -ne 5) {
-    Rot "$($script:SuiteLaeufe) statt 5 Suite-Durchgängen gefahren."
-    Zeile 'Die fuenf sind: der Selbsttest des Installers (2, BL-127),'
+if ($script:SuiteLaeufe -ne 6) {
+    Rot "$($script:SuiteLaeufe) statt 6 Suite-Durchgängen gefahren."
+    Zeile 'Die sechs sind: der Selbsttest des Installers (2, BL-127),'
     Zeile 'Auslieferungswerte (4), angepasste Konfiguration (6), verdrehte'
-    Zeile 'Sprachmarken (6b, BL-194), einbahnige Ablage (8). Fehlt einer, ist'
-    Zeile 'die Zusicherung dahinter offen.'
+    Zeile 'Sprachmarken (6b, BL-194), das Update eines Bestandsprojekts (6c,'
+    Zeile 'BL-307), einbahnige Ablage (8). Fehlt einer, ist die Zusicherung'
+    Zeile 'dahinter offen.'
     $script:Fehler = 1
 } else {
-    Zeile 'Suite-Durchgänge: 5 — die uebrigen Installer-Aufrufe liefen mit'
+    Zeile 'Suite-Durchgänge: 6 — die uebrigen Installer-Aufrufe liefen mit'
     Zeile '-OhneSelbsttest (BL-195); sie haetten nur wiederholt.'
 }
 if ($script:Gepruefte -lt $script:PruefungenSoll) {
