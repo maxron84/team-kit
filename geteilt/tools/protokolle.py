@@ -21,9 +21,11 @@ DER WEG
 
 DIE DREI AUFLAGEN DER MELDUNG
     (1) Unkommittiert. In einem Protokoll steht alles, was je in eine Sitzung
-        eingefuegt wurde — Token, Kennwoerter, Kundennamen. Die
-        `.gitignore`-Zeile kommt mit `--update`; liegt der Ordner NICHT unter
-        `.gitignore`, bricht `ablegen` ab, statt zu schreiben.
+        eingefuegt wurde — Token, Kennwoerter, Kundennamen. Die Zeile steht
+        in der `.gitignore`-Vorlage; ein `--update` MELDET sie, wo sie fehlt,
+        eingetragen wird sie von Hand (das Update aendert die `.gitignore`
+        nie selbst, BL-109). Liegt der Ordner NICHT unter `.gitignore`,
+        bricht `ablegen` ab, statt zu schreiben.
     (2) Nie automatisch in einen Kontext. Kein Briefing und kein Werkzeug liest
         den Ordner von sich aus — nur auf ausdrueckliche Nachfrage. Sonst
         zahlt jedes Projekt seine Historie in jedem Rollenaufruf mit.
@@ -101,8 +103,9 @@ def ablegen(projekt=".", ziel=None):
     if ignoriert(projekt, ziel) is False:
         print(f"Fehler: {ziel} liegt NICHT unter .gitignore — es wird nichts "
               f"abgelegt (Kit-BL-242). In einem Protokoll steht alles, was je "
-              f"in eine Sitzung eingefuegt wurde. Die Zeile `{ORDNER}/` "
-              f"bringt `--update` mit; von Hand: in die .gitignore eintragen.",
+              f"in eine Sitzung eingefuegt wurde. Die Zeile `{ORDNER}/` in "
+              f"die .gitignore des Projekts eintragen (ein --update meldet "
+              f"sie, traegt sie aber nicht selbst ein), dann erneut ablegen.",
               file=sys.stderr)
         return 1
     transkripte = sorted(kosten.transkripte_aus_projekt(projekt),

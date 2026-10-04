@@ -153,8 +153,9 @@ def test_die_gitignore_vorlage_nimmt_den_ordner_heraus():
         pytest.skip("Vorlage liegt nur im Kit")
     zeilen = vorlage.read_text(encoding="utf-8").splitlines()
     assert ".team-protokolle/" in zeilen, (
-        "Ohne die Zeile in der Vorlage traegt --update sie nie in ein "
-        "Bestandsprojekt ein — und protokolle.py legt dort nichts ab")
+        "Ohne die Zeile in der Vorlage bekommt ein neues Projekt sie nicht, "
+        "und --update meldet sie in keinem Bestandsprojekt als fehlend — "
+        "protokolle.py legt dort dann nichts ab")
 
 
 # --- BL-278 -------------------------------------------------------------------
