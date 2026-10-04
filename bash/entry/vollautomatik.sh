@@ -30,6 +30,10 @@
 #                                       Angreifer mit eigenem Fokus ueber
 #                                       denselben Bau (BL-296) — fuer eine
 #                                       grosse Kaskade; ohne ihn ein Durchgang.
+#          TEAM_BENACHRICHTIGUNG  0 unterdrueckt die Desktop-Meldung am Ende
+#                                 des Laufs (BL-312); Default 1. Der
+#                                 Testharnisch setzt 0 — sonst meldet jede
+#                                 Testkaskade dem Menschen einen fertigen Lauf.
 #          TEAM_VOLLAUTOMATIK_AB_PHASE  1 wirkt wie --von-vorn (BL-217);
 #                                       2, 3 oder 4 startet dort (4 = nur die
 #                                       Fix-Phase, wie fixphase); alles andere
@@ -603,8 +607,18 @@ if [ -s .ralph-uebersprungen ]; then
     log "Planmäßig übersprungen: Stufe $(sort -n -u .ralph-uebersprungen | tr '\n' ' ' | sed 's/ $//; s/ /, /g') (Kit-BL-255) — Abbruchbedingung des Plans, jeweils committet. Der vierte Ausgang wurde dafür NICHT gemeldet."
 fi
 
-command -v notify-send >/dev/null && \
+# Kit-BL-312: Die Meldung gilt dem Menschen am Schreibtisch — und NUR ihm.
+# Die Kaskadentests starten diesen Entrypoint mit der ECHTEN Umgebung des
+# Wirts (`env=dict(os.environ, …)`), also samt PATH und D-Bus; fuer den
+# Desktop ist ein Testlauf deshalb ein fertiger Lauf. Gemessen auf Debian:
+# EIN Suitenlauf setzte 20 Benachrichtigungen ab (19 davon ueber 0.0000 USD),
+# und `kit-test.sh` faehrt die Suite fuenfmal. Der Schalter steht auf 1, damit
+# ein echter Lauf weiter meldet; der Testharnisch setzt ihn auf 0 (conftest.py).
+# Die pwsh-Bahn kennt keine Benachrichtigung und braucht deshalb kein
+# Gegenstueck.
+if [ "${TEAM_BENACHRICHTIGUNG:-1}" != "0" ] && command -v notify-send >/dev/null; then
     notify-send "T.E.A.M. Vollautomatik fertig" "Kaskade durch. Dieser Lauf: $(lauf_kosten) USD · Gesamt: $(kontostand_gesamt) USD" 2>/dev/null || true
+fi
 
 # BL-256: Der Lauf darf sich nicht als fertig melden, solange das Gate aus ist.
 #

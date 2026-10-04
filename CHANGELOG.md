@@ -544,6 +544,16 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Die Testsuite meldete jede Stub-Kaskade an den Desktop** (`BL-312`,
+  `Feld F`, bash-Bahn). Der Abschlussblock von `vollautomatik.sh` rief
+  `notify-send` ungefiltert, und die Kaskadentests starten den Entrypoint mit
+  der echten Umgebung des Wirts — gemessen 20 Benachrichtigungen je
+  Suitenlauf, und `kit-test.sh` faehrt die Suite fuenfmal. Betroffen war
+  jedes Feldprojekt auf einem Linux-Desktop, das `./team-test.sh` aufruft.
+  `TEAM_BENACHRICHTIGUNG` riegelt sie ab (Default `1` — ein echter Lauf
+  meldet weiter); der Testharnisch setzt `0`. Die pwsh-Bahn kennt keine
+  Benachrichtigung.
+
 - **Der Update-Selbsttest war in Bestandsprojekten rot, ohne dass etwas
   kaputt war** (`BL-307`, `Feld F`, beide Bahnen). `kosten.py` nahm den
   Kaskadenbeginn fuer die Fensterriegel aus dem Arbeitsverzeichnis statt aus
