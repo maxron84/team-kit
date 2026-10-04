@@ -544,6 +544,22 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Ein Lauf mit rotem Gate meldete dem Desktop „Kaskade durch"** (`BL-313`,
+  Kit, bash-Bahn). Die Benachrichtigung stand vor der Gate-Pruefung aus
+  `BL-256` — derselbe Lauf endete zwei Bloecke weiter mit Exit 44. Sie wird
+  jetzt erst abgesetzt, wenn der Ausgang feststeht, und nennt ihn: bei rotem
+  Gate `GATE ROT` samt Zeitpunkt, sonst wie bisher `Kaskade durch`.
+
+- **Die Testsuite meldete jede Stub-Kaskade an den Desktop** (`BL-312`,
+  `Feld F`, bash-Bahn). Der Abschlussblock von `vollautomatik.sh` rief
+  `notify-send` ungefiltert, und die Kaskadentests starten den Entrypoint mit
+  der echten Umgebung des Wirts — gemessen 20 Benachrichtigungen je
+  Suitenlauf, und `kit-test.sh` faehrt die Suite fuenfmal. Betroffen war
+  jedes Feldprojekt auf einem Linux-Desktop, das `./team-test.sh` aufruft.
+  `TEAM_BENACHRICHTIGUNG` riegelt sie ab (Default `1` — ein echter Lauf
+  meldet weiter); der Testharnisch setzt `0`. Die pwsh-Bahn kennt keine
+  Benachrichtigung.
+
 - **Der Update-Selbsttest war in Bestandsprojekten rot, ohne dass etwas
   kaputt war** (`BL-307`, `Feld F`, beide Bahnen). `kosten.py` nahm den
   Kaskadenbeginn fuer die Fensterriegel aus dem Arbeitsverzeichnis statt aus

@@ -255,6 +255,17 @@ def werkzeug_wert(relativer_pfad):
 # dasselbe; die dreizehn Aufrufe in `lib.sh` hatte niemand nachgezogen.
 os.environ.setdefault("TEAM_PYTHON", PYTHON_BEFEHL)
 
+# BL-312: Ein Testlauf meldet sich NICHT am Desktop des Menschen.
+# Die Kaskadentests starten die Entrypoints mit `env=dict(os.environ, …)` —
+# also mit der echten Umgebung des Wirts samt PATH und D-Bus. Der
+# Abschlussblock von `vollautomatik.sh` ruft dort `notify-send`, und fuer die
+# Sitzung ist jede Testkaskade ein fertiger Lauf: Auf Debian gemessen, EIN
+# Suitenlauf = 20 Benachrichtigungen, `kit-test.sh` faehrt die Suite fuenfmal.
+# Anders als bei TEAM_PYTHON ist das KEIN `setdefault`: Was der Wirt gesetzt
+# hat, darf den Harnisch hier nicht uebersteuern — eine Suite, die den
+# Schreibtisch vollschreibt, ist in keiner Sitzung gewollt.
+os.environ["TEAM_BENACHRICHTIGUNG"] = "0"
+
 
 # Die Variablen, ohne die ein Windows-Kindprozess nicht arbeiten kann. Die
 # Minimal-Umgebung in `Schale.lauf` ist Absicht — sie haelt TEAM_*-Werte der
@@ -284,7 +295,11 @@ def basis_umgebung(**zusatz):
                 # Installer in team.config.sh schreibt. Ohne sie faellt
                 # `lib.sh` auf ihren POSIX-Default `python3` zurueck, und der
                 # ist unter Windows der Store-Alias (BL-131).
-                "TEAM_PYTHON": os.environ.get("TEAM_PYTHON", PYTHON_BEFEHL)}
+                "TEAM_PYTHON": os.environ.get("TEAM_PYTHON", PYTHON_BEFEHL),
+                # BL-312: auch in der Minimal-Umgebung — sie erbt os.environ
+                # bewusst NICHT, und ohne diese Zeile faellt der Entrypoint
+                # auf seinen Default 1 zurueck und meldet sich am Desktop.
+                "TEAM_BENACHRICHTIGUNG": "0"}
     if IST_WINDOWS:
         for name in _WINDOWS_GRUNDAUSSTATTUNG:
             wert = os.environ.get(name)

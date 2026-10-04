@@ -143,7 +143,7 @@ erfasst, begründet und nach Wirkung sortiert, statt in Sitzungsprotokollen zu
 verschwinden.
 
 Alles in [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (246 Einträge).
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (248 Einträge).
 
 ---
 
@@ -436,9 +436,9 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 | **`Feld F`** | Greenfield, Windows 11, beide Bahnen installiert, gefahren wird pwsh: ein Spielskript-Stack ohne eigene Testinfrastruktur, dazu ein Prüfwerkzeug in Python — der Smoke-Test entsteht erst in Stufe 1 der ersten Kaskade | Sechs Kaskaden bis 2026-10-02, dazu eine Handprobe mit 45 Frank-Fixen außerhalb des Loops. `BL-264` und `BL-283`…`BL-292` — **elf Funde**, darunter der erste, der das **Modell** der Rollen betrifft: Alle 126 Rollenläufe in `Feld F` über fünf Kaskaden liefen auf einer älteren Sonnet-Version, weil die CLI im `PATH` älter war als die der IDE (`BL-264`). Zugleich das erste Feld mit beiden Bahnen in einer Ablage, in der `test_bl117` sie gegeneinander hielt — so fiel `BL-285` auf. Seit 2026-09-30 einbahnig pwsh; das erste Update mit Prüfsummenliste (2026-10-04) brachte `BL-307` und `BL-308` — den ersten roten Update-Selbsttest eines Bestandsprojekts, ohne Defekt im Projekt |
 
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen sieben Quellen
-kommen die Backlog-Einträge `BL-1`…`BL-311`; was davon behoben ist, steht im
+kommen die Backlog-Einträge `BL-1`…`BL-313`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (246 Einträge), der Rest in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (248 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors
@@ -813,7 +813,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 ## Der Rückkanal Feld → Kit
 
 **Jeder Lauf in einem echten Projekt fördert Kit-Fehler zutage** — `BL-1` bis
-`BL-311` sind fast alle so entstanden. Damit das nicht von der Disziplin
+`BL-313` sind fast alle so entstanden. Damit das nicht von der Disziplin
 einzelner abhängt, ist der Weg zurück ein Befehl aus dem installierten Projekt
 heraus:
 
@@ -866,7 +866,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   `Feld D` **eine** und `Feld E` **zwei** auf der bash-Bahn — `Feld C` gar
   keine. Zwei Plattformen und zwei Bahnen sind damit berührt, aber nur **eine**
   Kombination ist eingelaufen. Jeder Lauf hat Kit-Fehler zutage gefördert —
-  `BL-1`…`BL-311`, von der toten Fixphase über zwei Löcher in der
+  `BL-1`…`BL-313`, von der toten Fixphase über zwei Löcher in der
   Kostenerfassung und die Zeilenenden bis zur vierten Fehlerklasse „Stufe
   fertig, Quittung fehlt". Die Erwartung ist nicht, dass das aufhört; die
   Mechanik dafür ist der [Rückkanal Feld → Kit](#der-rückkanal-feld--kit) —

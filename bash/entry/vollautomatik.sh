@@ -30,6 +30,10 @@
 #                                       Angreifer mit eigenem Fokus ueber
 #                                       denselben Bau (BL-296) — fuer eine
 #                                       grosse Kaskade; ohne ihn ein Durchgang.
+#          TEAM_BENACHRICHTIGUNG  0 unterdrueckt die Desktop-Meldung am Ende
+#                                 des Laufs (BL-312); Default 1. Der
+#                                 Testharnisch setzt 0 — sonst meldet jede
+#                                 Testkaskade dem Menschen einen fertigen Lauf.
 #          TEAM_VOLLAUTOMATIK_AB_PHASE  1 wirkt wie --von-vorn (BL-217);
 #                                       2, 3 oder 4 startet dort (4 = nur die
 #                                       Fix-Phase, wie fixphase); alles andere
@@ -603,8 +607,28 @@ if [ -s .ralph-uebersprungen ]; then
     log "Planmäßig übersprungen: Stufe $(sort -n -u .ralph-uebersprungen | tr '\n' ' ' | sed 's/ $//; s/ /, /g') (Kit-BL-255) — Abbruchbedingung des Plans, jeweils committet. Der vierte Ausgang wurde dafür NICHT gemeldet."
 fi
 
-command -v notify-send >/dev/null && \
-    notify-send "T.E.A.M. Vollautomatik fertig" "Kaskade durch. Dieser Lauf: $(lauf_kosten) USD · Gesamt: $(kontostand_gesamt) USD" 2>/dev/null || true
+# Kit-BL-312: Die Meldung gilt dem Menschen am Schreibtisch — und NUR ihm.
+# Die Kaskadentests starten diesen Entrypoint mit der ECHTEN Umgebung des
+# Wirts (`env=dict(os.environ, …)`), also samt PATH und D-Bus; fuer den
+# Desktop ist ein Testlauf deshalb ein fertiger Lauf. Gemessen auf Debian:
+# EIN Suitenlauf setzte 20 Benachrichtigungen ab (19 davon ueber 0.0000 USD),
+# und `kit-test.sh` faehrt die Suite fuenfmal. Der Schalter steht auf 1, damit
+# ein echter Lauf weiter meldet; der Testharnisch setzt ihn auf 0 (conftest.py).
+# Die pwsh-Bahn kennt keine Benachrichtigung und braucht deshalb kein
+# Gegenstueck.
+benachrichtige() {
+    [ "${TEAM_BENACHRICHTIGUNG:-1}" != "0" ] || return 0
+    command -v notify-send >/dev/null || return 0
+    notify-send "$1" "$2" 2>/dev/null || true
+}
+
+# Kit-BL-313: Die Meldung wird ERST ABGESETZT, wenn der Ausgang feststeht.
+# Sie stand hier vor der Gate-Pruefung und sagte dem Menschen "Kaskade durch",
+# waehrend derselbe Lauf zwei Bloecke weiter mit Exit 44 und "LAUF BEENDET —
+# GATE ROT" endete. Die Benachrichtigung ist fuer den Abwesenden gebaut: Sie
+# erreicht genau den, der den Bericht NICHT liest, weil er nicht am Schirm
+# sass — ihm die eine Lage zu verschweigen, die seine Aufmerksamkeit braucht,
+# dreht BL-256 an der Stelle wieder zu, an der es am leisesten auffaellt.
 
 # BL-256: Der Lauf darf sich nicht als fertig melden, solange das Gate aus ist.
 #
@@ -627,7 +651,11 @@ if GATE_ZEILE="$(team_gate_rot_seit)"; then
     log "  Nächster Schritt: den roten Baum reparieren. Ist er grün, gehört"
     log "  $TEAM_GATE_DATEI gelöscht — dann meldet sich der nächste Lauf wieder normal."
     log "Vollautomatik beendet — Gate ROT."
+    benachrichtige "T.E.A.M. Vollautomatik — GATE ROT" \
+        "Lauf beendet, die Suite ist rot. Erste Meldung: ${GATE_ZEILE}. Dieser Lauf: $(lauf_kosten) USD · Gesamt: $(kontostand_gesamt) USD"
     exit 44
 fi
 
+benachrichtige "T.E.A.M. Vollautomatik fertig" \
+    "Kaskade durch. Dieser Lauf: $(lauf_kosten) USD · Gesamt: $(kontostand_gesamt) USD"
 log "Vollautomatik beendet."
