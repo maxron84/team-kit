@@ -608,6 +608,13 @@ sed -i '/^\.team-focus-harry$/d; /^\.team-focus-marv$/d' "$ZIEL/.gitignore"
 # Zeilen der Vorlage fehlen. Ohne diesen Griff faehrt der Melde-Zweig von
 # gitattributes_abgleich() in der bash-Bahn ueberhaupt nie.
 sed -i '/^\*\.psm1[[:space:]]/d; /^\*\.bat[[:space:]]/d' "$ZIEL/.gitattributes"
+# Kit-BL-311: Das Projekt sieht aus wie mit einer aelteren Kit-Fassung
+# installiert — drei Dinge fehlen in der Basis UND im Projekt, und an der
+# CLAUDE.md hat das Projekt die Stelle daneben selbst geaendert (ein Konflikt).
+# Das Update traegt .gitignore-Zeile und Konfigurationswert nach; die
+# CLAUDE.md bleibt, wie sie ist, mit einem Vorschlag daneben. Die Gegenprobe
+# unten loest den Konflikt auf.
+"$KIT_PYTHON" "$KIT/geteilt/kit-basis-zurueckdrehen.py" "$ZIEL" --konflikt || exit 1
 
 if ! bash "$KIT/bash/install.sh" "$ZIEL" --update --ohne-selbsttest > "$ZIEL/.update.log" 2>&1; then
     rot "  ✗ install.sh --update schlug fehl:"
@@ -681,6 +688,27 @@ pruefe "der Befehl laeuft und zeigt Unterschiede" \
 # sieht fuer den Read-Only-Guard aus wie ein Regelbruch.
 pruefe "die Kit-Fassung liegt NICHT im Projekt" \
        "$(case "$ABGLEICH_QUELLE" in "$ZIEL"/*) echo drin ;; *) echo draussen ;; esac)" "draussen"
+# Kit-BL-311: Nachgetragen wird, was die Basis nicht kannte; was sie kannte und
+# dem Projekt fehlt (die zwei .team-focus-Zeilen unten), bleibt draussen. Bei
+# der CLAUDE.md haben Kit und Projekt dieselbe Stelle geaendert: nichts
+# uebernehmen, nichts raten — aber einen Vorschlag bereitlegen, und die Basis
+# NICHT vorruecken, sonst boete das naechste Update die Regel nie wieder an.
+pruefe "neue .gitignore-Zeile nachgetragen (Kit-BL-311)" \
+       "$(grep -cx '\.team-protokolle/' "$ZIEL/.gitignore" || true)" "1"
+pruefe "neuer Konfigurationswert nachgetragen" \
+       "$(grep -c '^TEAM_ZIELSTAND_PRUEFUNG=' "$ZIEL/team.config.sh" || true)" "1"
+pruefe "auch in der pwsh-Konfiguration" \
+       "$(grep -c '^\$TEAM_ZIELSTAND_PRUEFUNG = ' "$ZIEL/team.config.ps1" || true)" "1"
+pruefe "CLAUDE.md mit Konflikt bleibt unangetastet" \
+       "$(grep -c 'eigene Fassung des Projekts' "$ZIEL/CLAUDE.md" || true)" "1"
+pruefe "und der Konflikt wird benannt" \
+       "$(grep -c 'uebernommen wird nichts (Kit-BL-311)' "$ZIEL/.update.log" || true)" "1"
+VORSCHLAG="$(grep -oE '[^ "]*team-kit-abgleich-[^ "/]*/CLAUDE\.md\.vorschlag' \
+               "$ZIEL/.update.log" | head -1 || true)"
+pruefe "der Vorschlag liegt bereit, mit Konfliktmarken" \
+       "$(grep -c '^<<<<<<< Projekt' "$VORSCHLAG" 2>/dev/null || true)" "1"
+pruefe "die Basis rueckt bei einem Konflikt NICHT vor" \
+       "$(grep -c '^## 0\. F' "$ZIEL/team/.kit-basis/CLAUDE.md" || true)" "0"
 # Aufraeumen NUR bei einem plausiblen Pfad. Ohne diese Schranke waere
 # ABGLEICH_QUELLE bei einem fehlgeschlagenen Match leer, `dirname ""` ergaebe
 # "." — und `rm -rf .` raeumte das Arbeitsverzeichnis ab.
@@ -732,6 +760,9 @@ pruefe ".gitattributes wird NICHT von selbst ergaenzt" \
 # Mit vollstaendigem Fragment muss derselbe Lauf schweigen.
 printf '.team-focus-harry\n.team-focus-marv\n' >> "$ZIEL/.gitignore"
 printf '*.psm1  text eol=lf\n*.bat   text eol=crlf\n' >> "$ZIEL/.gitattributes"
+# Kit-BL-311, die zweite Haelfte: Der Konflikt ist aufgeloest — jetzt arbeitet
+# das Update den Abschnitt ein, sichert die alte Fassung und rueckt die Basis vor.
+"$KIT_PYTHON" "$KIT/geteilt/kit-basis-zurueckdrehen.py" "$ZIEL" --aufloesen || exit 1
 if ! bash "$KIT/bash/install.sh" "$ZIEL" --update --ohne-selbsttest > "$ZIEL/.update2.log" 2>&1; then
     rot "  ✗ zweiter install.sh --update (Gegenprobe) schlug fehl:"
     tail -20 "$ZIEL/.update2.log" >&2
@@ -745,6 +776,12 @@ pruefe "vollstaendige .gitattributes wird nicht angemahnt" \
        "$(grep -c '\.gitattributes liegt .* hinter der Vorlage' "$ZIEL/.update2.log")" "0"
 pruefe "und ausdruecklich als vollstaendig quittiert" \
        "$(grep -c '\.gitattributes enthält den Block vollständig' "$ZIEL/.update2.log")" "1"
+pruefe "nach dem Aufloesen: Abschnitt 0 eingearbeitet (Kit-BL-311)" \
+       "$(grep -c '^## 0\. F' "$ZIEL/CLAUDE.md" || true)" "1"
+pruefe "und die alte Fassung gesichert" \
+       "$(ls "$ZIEL"/backups/update-*/CLAUDE.md 2>/dev/null | wc -l | tr -d ' ')" "1"
+pruefe "die Basis rueckt auf die aufgenommene Fassung vor" \
+       "$(grep -c '^## 0\. F' "$ZIEL/team/.kit-basis/CLAUDE.md" || true)" "1"
 # Auch dieser Lauf legt eine Kit-Fassung zum Abgleich ab — mit aufraeumen,
 # sonst bleibt je Selbsttest ein Verzeichnis in /tmp liegen.
 ABGLEICH2="$(grep -oE 'diff [^"]*-u "[^"]+"' "$ZIEL/.update2.log" | head -1 \

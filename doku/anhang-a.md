@@ -1053,7 +1053,9 @@ Projekt da, ohne es zu merken. Beim ersten Bau ist genau das passiert, und
 der Haken saß an einer Stelle, die man leicht übersieht:
 
 > Die Entrypoints kamen zurück, die **Konfiguration** nicht. Ein Update fasst
-> `team.config.*` grundsätzlich nicht an (Projektdaten, wie das Ledger).
+> `team.config.*` grundsätzlich nicht an (Projektdaten, wie das Ledger; seit
+> `BL-311` ergänzt es dort nur, was die Kit-Fassung seit dem letzten Update
+> neu hat).
 > Richtig — solange sie da ist. **Fehlt** sie, ist „nicht anfassen" kein
 > Schutz mehr, sondern eine halbe Bahn: `ralph.ps1` läge da und fände keine
 > Werte.

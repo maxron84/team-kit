@@ -959,6 +959,41 @@ function Konfig-Abgleich {
     return (-not $hart)
 }
 
+function Basis-Werkzeug {
+    <#
+      Kit-BL-311: Das Update traegt Neues aus der Kit-Fassung selbst nach — was
+      seit dem letzten Update in .gitignore-Fragment, Konfigurationsvorlage
+      oder CLAUDE.md-Vorlage dazugekommen ist. Was damals schon da war und im
+      Projekt fehlt, ist bewusst entfernt und wird weiter nur gemeldet
+      (BL-109, BL-200). Die Logik steht EINMAL in geteilt/tools/kit_basis.py,
+      fuer beide Bahnen; hier nur die Darstellung (Gegenstueck zu
+      basis_werkzeug in install.sh).
+
+      Rueckgabe: der Exit-Code des Werkzeugs (11: keine Basis oder kein
+      Python — dann gilt der bisherige Weg).
+    #>
+    param([string[]]$Argumente)
+    $py = Finde-Python
+    if (-not $py) { return 11 }
+    # Das Werkzeug schreibt UTF-8 (BL-133); ohne diese Umstellung laese
+    # PowerShell seine Ausgabe in der OEM-Codepage, und jeder Pfad mit Umlaut
+    # kaeme verstuemmelt an.
+    $gemerkt = [Console]::OutputEncoding
+    try {
+        [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+        $zeilen = @(& $py (Join-Path $KIT 'geteilt\tools\kit_basis.py') @Argumente 2>&1)
+        $rc = $LASTEXITCODE
+    } finally { [Console]::OutputEncoding = $gemerkt }
+    foreach ($z in $zeilen) {
+        $t = "$z"
+        if ($t -match '^ok (.*)$')     { Gruen "  [ok] $($Matches[1])" }
+        elseif ($t -match '^! (.*)$')  { Gelb "  [!] $($Matches[1])" }
+        elseif ($t -match '^- (.*)$')  { Write-Host "  $($Matches[1])" }
+        elseif ($t)                    { Write-Host "  $t" }
+    }
+    return $rc
+}
+
 function Python-Abgleich {
     <#
       BL-133, derselbe Schnitt wie BL-109 bei der .gitignore: "-Update fasst
@@ -1493,13 +1528,21 @@ if ($Update) {
         Write-Host "  melden) oder Rest einer Altversion (dann loeschen)."
     }
 
-    Kopf "Unangetastet geblieben (Projektdaten)"
+    # Seit Kit-BL-311 ERGAENZT das Update .gitignore, Konfiguration und
+    # CLAUDE.md um das, was die Kit-Fassung seit dem letzten Update neu hat;
+    # ersetzt wird keine davon. Die Abschnitte unten nennen jede Ergaenzung.
+    Kopf "Nicht ersetzt (Projektdaten)"
     foreach ($d in @('team.config.sh', 'team.config.ps1', 'CLAUDE.md', 'CHANGELOG.md',
                      '.budget-ledger', '.ralph-state', '.gitignore', $PlanOrdner)) {
         if (Test-Path (Join-Path $Ziel $d)) { Write-Host "  - $d" }
     }
+    Write-Host "  Neues aus der Kit-Fassung tragen die Abschnitte unten nach —"
+    Write-Host "  ergaenzt, nie ueberschrieben (Kit-BL-311)."
 
     Kopf ".gitignore gegen die Vorlage (BL-109)"
+    # Kit-BL-311: zuerst eintragen, was seit dem letzten Update NEU ist — was
+    # danach noch fehlt, stand damals schon da und ist bewusst entfernt.
+    Basis-Werkzeug @('gitignore', '--ziel', $Ziel, '--kit', $KIT) | Out-Null
     Gitignore-Abgleich melden
 
     # BL-136: dieselbe Bauart, dieselbe Begruendung. Ein Projekt ohne diese
@@ -1520,6 +1563,9 @@ if ($Update) {
     # die Vorlage neu einfuehrt, eine bestehende Installation nie, und der
     # zugehoerige Fix wird im Feld ab dem Update zum Regress.
     Kopf 'Werte der Vorlage in der Konfiguration (BL-200)'
+    # Kit-BL-311: dieselbe Regel fuer die Schluessel — neu seit dem letzten
+    # Update wird mit dem Vorgabewert der Vorlage eingetragen.
+    Basis-Werkzeug @('konfig', '--ziel', $Ziel, '--kit', $KIT) | Out-Null
     Konfig-Abgleich | Out-Null
 
     # BL-133: Die Abwahl einer Bahn wirkt bisher nur bei der ERSTinstallation.
@@ -1588,6 +1634,7 @@ if ($Update) {
     $abgleichDir = Join-Path ([System.IO.Path]::GetTempPath()) `
                              ("team-kit-abgleich-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
     New-Item -ItemType Directory -Force -Path $abgleichDir | Out-Null
+    $vorschlaege = 0
     foreach ($paar in @(
         @{ Quelle = 'bootstrap/TEAM.md';           Name = 'TEAM.md' },
         @{ Quelle = 'bootstrap/CLAUDE.md.vorlage'; Name = 'CLAUDE.md' })) {
@@ -1596,6 +1643,20 @@ if ($Update) {
         $gerendert = Join-Path $abgleichDir $paar.Name
         Copy-Item (Join-Path $KIT $paar.Quelle) $gerendert -Force
         Fuelle-Datei $gerendert
+        # Kit-BL-311: Die CLAUDE.md geht zuerst durch den Dreiwege-Abgleich
+        # (Projekt, Kit-Fassung beim letzten Update, Kit-Fassung jetzt). 0:
+        # erledigt — eingearbeitet oder nichts Neues. 10: ein Vorschlag liegt
+        # in der Ablage; der Vergleich darunter steht trotzdem da, als zweiter
+        # Weg zum selben Ziel. Sonst (keine Basis, keine Kit-Geschichte): der
+        # Weg darunter allein, wie bisher.
+        if ($paar.Name -eq 'CLAUDE.md') {
+            $basisRc = Basis-Werkzeug @('claude', '--ziel', $Ziel, '--kit', $KIT,
+                '--neu', $gerendert,
+                '--sicherung', (Join-Path $Ziel "backups\update-$standStempel"),
+                '--ablage', $abgleichDir, '--bahn', 'ps1')
+            if ($basisRc -eq 0) { Remove-Item -LiteralPath $gerendert -Force; continue }
+            if ($basisRc -eq 10) { $vorschlaege++ }
+        }
         # Die Begruendung zu Zeilenenden und Mengenvergleich steht bei
         # Abgleich-Unterschiede — dort, wo sie auch unter Test steht.
         $unterschied = Abgleich-Unterschiede $gerendert $installiert
@@ -1614,20 +1675,22 @@ if ($Update) {
             Remove-Item -LiteralPath $gerendert -Force
         }
     }
-    if ($abgleich -eq 0) {
+    if ($abgleich -eq 0 -and $vorschlaege -eq 0) {
         Remove-Item -LiteralPath $abgleichDir -Force -Recurse -ErrorAction SilentlyContinue
         Gruen "  [ok] nichts offen"
     } else {
-        # Ohne diesen Absatz ist der Block eine Warnung, die man wegklickt
-        # (BL-14): Bei CLAUDE.md ist eine Abweichung der NORMALFALL, und wer
-        # das nicht weiss, haelt den Befund fuer Rauschen.
-        Gelb "  Bei CLAUDE.md ist eine Abweichung normal (Projektanpassungen,"
-        Gelb "  gefuellte TODOs). Entscheidend ist, ob dir REGELN aus der neuen"
-        Gelb "  Kit-Fassung fehlen — die Mechanik ist aktualisiert, die Regeln"
-        Gelb "  im Projekt sind es nicht (das war die Haelfte von BL-4)."
-        Write-Host "  Die gerenderte Kit-Fassung liegt unter $abgleichDir\ bereit;"
-        Write-Host "  sie traegt bereits deine Werte. Behalte deine Projekt-Spezifika"
-        Write-Host "  und eigene Regeln, uebernimm den Rest."
+        if ($abgleich) {
+            # Ohne diesen Absatz ist der Block eine Warnung, die man wegklickt
+            # (BL-14): Bei CLAUDE.md ist eine Abweichung der NORMALFALL, und
+            # wer das nicht weiss, haelt den Befund fuer Rauschen.
+            Gelb "  Bei CLAUDE.md ist eine Abweichung normal (Projektanpassungen,"
+            Gelb "  gefuellte TODOs). Entscheidend ist, ob dir REGELN aus der neuen"
+            Gelb "  Kit-Fassung fehlen — die Mechanik ist aktualisiert, die Regeln"
+            Gelb "  im Projekt sind es nicht (das war die Haelfte von BL-4)."
+            Write-Host "  Die gerenderte Kit-Fassung liegt unter $abgleichDir\ bereit;"
+            Write-Host "  sie traegt bereits deine Werte. Behalte deine Projekt-Spezifika"
+            Write-Host "  und eigene Regeln, uebernimm den Rest."
+        }
         # BL-196: Die Lebensdauer der Ablage BENENNEN und den Loeschbefehl
         # kopierfertig danebenstellen — in der Schreibweise DIESER Bahn.
         # Vorher stand hier nur "temporaer — nach dem Abgleich loeschen": ein
@@ -1638,6 +1701,10 @@ if ($Update) {
         Write-Host "  Projekts. Wenn du fertig verglichen hast, weg damit:"
         Write-Host "      Remove-Item -Recurse -Force -LiteralPath $abgleichDir"
     }
+    # Kit-BL-311: die Kit-Seite fuer das naechste Update — NACH den
+    # Abgleichen, die die alte noch brauchten. Die CLAUDE.md-Basis setzt der
+    # Abgleich selbst, und nur, wenn das Projekt die Kit-Fassung aufgenommen hat.
+    Basis-Werkzeug @('schreiben', '--ziel', $Ziel, '--kit', $KIT) | Out-Null
 
     Kopf "Selbsttest"
     $fehler = 0
@@ -2071,6 +2138,10 @@ if ($NurBahn) {
 
 # ------------------------------------------------------------- A.0 Bootstrap
 Kopf "A.0 — Bootstrap-Dateien"
+# Kit-BL-311: Schreibt dieser Lauf die CLAUDE.md, ist sie danach genau die
+# gerenderte Vorlage — die Basis fuer den Abgleich des naechsten Updates. Eine
+# vorgefundene CLAUDE.md ist es nicht; dann schaetzt das erste Update.
+$claudeFrisch = $Force -or -not (Test-Path (Join-Path $Ziel 'CLAUDE.md'))
 Kopiere (Join-Path $KIT 'bootstrap\CLAUDE.md.vorlage') 'CLAUDE.md'
 Kopiere (Join-Path $KIT 'bootstrap\TEAM.md')           'TEAM.md'
 Kopiere (Join-Path $KIT 'bootstrap\CHANGELOG.md')      'CHANGELOG.md'
@@ -2110,6 +2181,11 @@ if ($standPyErst) {
     & $standPyErst (Join-Path $KIT 'geteilt\tools\kit_stand.py') schreiben --ziel $Ziel --kit $KIT
     if ($LASTEXITCODE -ne 0) { Gelb "  [!] team/.kit-stand nicht geschrieben (Kit-BL-270) — das erste Update sichert dann alles." }
 }
+# Kit-BL-311: die Kit-Seite von .gitignore, Konfiguration und CLAUDE.md, wie
+# sie heute ist — das erste Update traegt nach, was danach dazukommt.
+$basisArgumente = @('schreiben', '--ziel', $Ziel, '--kit', $KIT)
+if ($claudeFrisch) { $basisArgumente += @('--claude', (Join-Path $Ziel 'CLAUDE.md')) }
+Basis-Werkzeug $basisArgumente | Out-Null
 
 # ----------------------------------------------------------------- Selbsttest
 Kopf "Selbsttest"

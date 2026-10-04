@@ -162,9 +162,10 @@ function Dateien-Mit-Endung {
 # geprueft hat als er soll, hat nicht bestanden, sondern nur nichts gemerkt.
 # BL-198 hat fuenf dazugelegt (README-Schritt 5/9), BL-196 eine (das
 # Aufraeumen der Abgleichsablage), BL-307 eine (das Update eines
-# Bestandsprojekts, 6c). Wer eine Pruefung ergaenzt, zieht die
+# Bestandsprojekts, 6c), BL-311 elf (Nachtrag, Konflikt und Einarbeiten in
+# Schritt 7). Wer eine Pruefung ergaenzt, zieht die
 # Zahl nach — sonst meldet der Lauf am Ende, ein Schritt sei uebersprungen.
-$script:PruefungenSoll = 68
+$script:PruefungenSoll = 79
 
 # BL-195: Die Installer- und Update-Aufrufe ab Schritt 5 laufen mit
 # -OhneSelbsttest. Der Installer wuerde sonst jedes Mal die volle Suite
@@ -661,6 +662,14 @@ try {
     $ga = (Get-Content '.gitattributes') |
           Where-Object { $_ -notmatch '^\*\.(psm1|bat)\s' }
     Set-Content -Path '.gitattributes' -Value $ga -Encoding utf8
+    # (d) Kit-BL-311: Das Projekt sieht aus wie mit einer aelteren Kit-Fassung
+    #     installiert — drei Dinge fehlen in der Basis UND im Projekt, und an
+    #     der CLAUDE.md hat das Projekt die Stelle daneben selbst geaendert
+    #     (ein Konflikt). Das Update traegt .gitignore-Zeile und
+    #     Konfigurationswert nach; die CLAUDE.md bleibt, wie sie ist, mit einem
+    #     Vorschlag daneben. Die Gegenprobe unten loest den Konflikt auf.
+    & $pyKit (Join-Path $KIT 'geteilt\kit-basis-zurueckdrehen.py') $ziel --konflikt
+    if ($LASTEXITCODE -ne 0) { Rot 'Das Zurueckdrehen der Kit-Basis hat nicht gegriffen.'; exit 1 }
     & git add -A | Out-Null
     & git commit -q -m 'projektstand' | Out-Null
 } finally { Pop-Location }
@@ -708,6 +717,29 @@ try {
     # ist so wertlos wie einer, der nichts meldet (BL-14).
     Pruefe 'Abgleich meldet TEAM.md NICHT' `
         ($abgleichLog -match 'TEAM\.md weicht von der Kit-Fassung ab') $false
+
+    # --- Kit-BL-311: was seit dem letzten Update neu ist --------------------
+    # Nachgetragen wird, was die Basis nicht kannte; was sie kannte und dem
+    # Projekt fehlt (die zwei .team-focus-Zeilen unten), bleibt draussen.
+    Pruefe 'neue .gitignore-Zeile nachgetragen (Kit-BL-311)' `
+        (@(Get-Content '.gitignore' | Where-Object { $_ -eq '.team-protokolle/' }).Count) 1
+    Pruefe 'neuer Konfigurationswert nachgetragen' `
+        (Treffer 'team.config.ps1' '(?m)^\$TEAM_ZIELSTAND_PRUEFUNG = ') 1
+    Pruefe 'auch in der bash-Konfiguration' `
+        (Treffer 'team.config.sh' '(?m)^TEAM_ZIELSTAND_PRUEFUNG=') 1
+    # Kit und Projekt haben dieselbe Stelle geaendert: nichts uebernehmen,
+    # nichts raten — aber einen Vorschlag bereitlegen, und die Basis NICHT
+    # vorruecken, sonst boete das naechste Update die Regel nie wieder an.
+    Pruefe 'CLAUDE.md mit Konflikt bleibt unangetastet' `
+        (Treffer 'CLAUDE.md' 'eigene Fassung des Projekts') 1
+    Pruefe 'und der Konflikt wird benannt' `
+        (Treffer $updateLog 'uebernommen wird nichts \(Kit-BL-311\)') 1
+    $vorschlag = [regex]::Match($abgleichLog,
+        '\S*team-kit-abgleich-[0-9a-f]+[\\/]CLAUDE\.md\.vorschlag').Value
+    Pruefe 'der Vorschlag liegt bereit, mit Konfliktmarken' `
+        (Treffer $vorschlag '(?m)^<<<<<<< Projekt') 1
+    Pruefe 'die Basis rückt bei einem Konflikt NICHT vor' `
+        (Treffer 'team/.kit-basis/CLAUDE.md' '(?m)^## 0\. F') 0
 
     # BL-196: Die Ablage wegraeumen, wie es kit-test.sh nach jedem Update tut.
     # Sonst bleibt je Selbsttest-Lauf ein Verzeichnis im Temp-Bereich liegen —
@@ -807,6 +839,10 @@ Add-Content -Path (Join-Path $ziel '.gitignore') `
     -Value ".team-focus-harry`n.team-focus-marv" -Encoding utf8
 Add-Content -Path (Join-Path $ziel '.gitattributes') `
     -Value "*.psm1  text eol=lf`n*.bat   text eol=crlf" -Encoding utf8
+# Kit-BL-311, die zweite Haelfte: Der Konflikt ist aufgeloest — jetzt arbeitet
+# das Update den Abschnitt ein, sichert die alte Fassung und rueckt die Basis vor.
+& $pyKit (Join-Path $KIT 'geteilt\kit-basis-zurueckdrehen.py') $ziel --aufloesen
+if ($LASTEXITCODE -ne 0) { Rot 'Das Aufloesen des Konflikts hat nicht gegriffen.'; exit 1 }
 Git-Zwischenstand $ziel 'chore: Fragmente vervollstaendigt'
 
 $update2Log = Join-Path $basis 'update2.log'
@@ -824,6 +860,14 @@ Pruefe 'vollständige .gitattributes wird nicht angemahnt' `
     (Treffer $update2Log '\.gitattributes liegt .* hinter der Vorlage') 0
 Pruefe 'und ausdrücklich als vollständig quittiert' `
     (Treffer $update2Log '\.gitattributes enthaelt den Block vollstaendig') 1
+Pruefe 'nach dem Auflösen: Abschnitt 0 eingearbeitet (Kit-BL-311)' `
+    (Treffer (Join-Path $ziel 'CLAUDE.md') '(?m)^## 0\. F') 1
+Pruefe 'die eigene Projektregel bleibt dabei stehen' `
+    (Treffer (Join-Path $ziel 'CLAUDE.md') 'Eigene Projektregel dieses Projekts') 1
+Pruefe 'und die alte Fassung ist gesichert' `
+    (@(Get-ChildItem -Path (Join-Path $ziel 'backups') -Recurse -Filter 'CLAUDE.md' -File -ErrorAction SilentlyContinue).Count) 1
+Pruefe 'die Basis rückt auf die aufgenommene Fassung vor' `
+    (Treffer (Join-Path $ziel 'team/.kit-basis/CLAUDE.md') '(?m)^## 0\. F') 1
 
 # ------------- 8/9 Abwahl einer Bahn, ihr Bestand und ihr Rueckweg (BL-145)
 Kopf '8/9 — Abwahl einer Bahn, ihr Bestand und ihr Rückweg (BL-119/BL-126/BL-129/BL-147)'

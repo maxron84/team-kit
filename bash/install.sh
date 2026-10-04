@@ -429,6 +429,33 @@ konfig_abgleich() {
     [ "$hart" -eq 0 ]
 }
 
+# --- basis_werkzeug (Kit-BL-311) ----------------------------------------------
+# Das Update traegt Neues aus der Kit-Fassung selbst nach: was seit dem letzten
+# Update in .gitignore-Fragment, Konfigurationsvorlage oder CLAUDE.md-Vorlage
+# dazugekommen ist. Was damals schon da war und im Projekt fehlt, ist bewusst
+# entfernt und wird weiter nur gemeldet (BL-109, BL-200). Die Logik steht EINMAL
+# in geteilt/tools/kit_basis.py, fuer beide Bahnen; hier nur die Darstellung:
+# `ok` gruen, `!` gelb, `-` als eingerueckte Folgezeile. Rueckgabe ist der
+# Exit-Code des Werkzeugs (11: keine Basis — dann gilt der bisherige Weg).
+basis_werkzeug() {  # basis_werkzeug <verb> <argumente>...
+    local ausgabe zeile rc=0
+    [ "${PYTHON_GEFUNDEN:-0}" -eq 1 ] || return 11
+    ausgabe="$("$PYTHON" "$KIT/geteilt/tools/kit_basis.py" "$@" 2>&1)" || rc=$?
+    while IFS= read -r zeile; do
+        # Ein Python unter Windows schreibt CRLF in die Pipe; der
+        # Wagenruecklauf bliebe sonst am Zeilenende haengen.
+        zeile="${zeile%$'\r'}"
+        case "$zeile" in
+            'ok '*) gruen "  ✓ ${zeile#ok }" ;;
+            '! '*)  gelb  "  ! ${zeile#! }" ;;
+            '- '*)  echo  "  ${zeile#- }" ;;
+            '')     ;;
+            *)      echo  "  $zeile" ;;
+        esac
+    done <<< "$ausgabe"
+    return "$rc"
+}
+
 python_abgleich() {
     local datei name gefunden=0 kaputt=0
     for datei in "$ZIEL/team.config.sh" "$ZIEL/team.config.ps1"; do
@@ -1254,21 +1281,29 @@ PY
         echo "  melden) oder Rest einer Altversion (dann loeschen)."
     fi
 
-    kopf "Unangetastet geblieben (Projektdaten)"
+    kopf "Nicht ersetzt (Projektdaten)"
     # team.config.ps1 steht hier aus demselben Grund wie team.config.sh: Sie
     # traegt die Projektwerte (Smoke-Test!) und ist damit Projektdatum, nicht
     # Infrastruktur. Beide werden vom Installer erzeugt, aber nur bei der
-    # ERSTINSTALLATION — ein Update darf sie so wenig anfassen wie das Ledger.
+    # ERSTINSTALLATION — ein Update ersetzt sie so wenig wie das Ledger.
+    # Seit Kit-BL-311 ERGAENZT es .gitignore, Konfiguration und CLAUDE.md um
+    # das, was die Kit-Fassung seit dem letzten Update neu hat; die Abschnitte
+    # unten nennen jede Ergaenzung.
     for d in team.config.sh team.config.ps1 CLAUDE.md CHANGELOG.md .budget-ledger .ralph-state \
              .gitignore "${PLAN_ORDNER}"; do
         [ -e "$ZIEL/$d" ] && echo "  · $d"
     done
+    echo "  Neues aus der Kit-Fassung tragen die Abschnitte unten nach —"
+    echo "  ergaenzt, nie ueberschrieben (Kit-BL-311)."
 
     # BL-109: .gitignore bleibt unangetastet — aber "unangetastet" darf nicht
     # "ungeprueft" heissen. Bis hierher sah der Update-Pfad die Datei gar nicht
     # an; ein Projekt blieb auf dem Fragmentstand seines Installationstages,
     # waehrend der Installer Erfolg meldete. Gemeldet, nicht ergaenzt.
     kopf ".gitignore gegen die Vorlage (BL-109)"
+    # Kit-BL-311: zuerst eintragen, was seit dem letzten Update NEU ist — was
+    # danach noch fehlt, stand damals schon da und ist bewusst entfernt.
+    basis_werkzeug gitignore --ziel "$ZIEL" --kit "$KIT" || true
     gitignore_abgleich melden
 
     # BL-136: dieselbe Bauart, dieselbe Begruendung. Ein Projekt ohne diese
@@ -1289,6 +1324,9 @@ PY
     # die Vorlage neu einfuehrt, eine bestehende Installation nie, und der
     # zugehoerige Fix wird im Feld ab dem Update zum Regress.
     kopf "Werte der Vorlage in der Konfiguration (BL-200)"
+    # Kit-BL-311: dieselbe Regel fuer die Schluessel — neu seit dem letzten
+    # Update wird mit dem Vorgabewert der Vorlage eingetragen.
+    basis_werkzeug konfig --ziel "$ZIEL" --kit "$KIT" || true
     konfig_abgleich || true
 
     # BL-133: Die Abwahl einer Bahn wirkt bisher nur bei der ERSTinstallation.
@@ -1356,12 +1394,29 @@ PY
     # ausserhalb der Whitelist sieht fuer den Read-Only-Guard aus wie ein
     # Regelbruch.
     ABGLEICH_DIR="$(mktemp -d "${TMPDIR:-/tmp}/team-kit-abgleich-XXXXXX")"
+    VORSCHLAEGE=0
     for paar in "bootstrap/TEAM.md:TEAM.md" "bootstrap/CLAUDE.md.vorlage:CLAUDE.md"; do
         quelle="$KIT/${paar%%:*}"; ziel="$ZIEL/${paar##*:}"; name="${paar##*:}"
         [ -f "$ziel" ] || continue
         gerendert="$ABGLEICH_DIR/$name"
         cp "$quelle" "$gerendert"
         fuelle_abs "$gerendert"
+        # Kit-BL-311: Die CLAUDE.md geht zuerst durch den Dreiwege-Abgleich
+        # (Projekt, Kit-Fassung beim letzten Update, Kit-Fassung jetzt). 0:
+        # erledigt — eingearbeitet oder nichts Neues. 10: ein Vorschlag liegt
+        # in der Ablage; der Vergleich darunter steht trotzdem da, als zweiter
+        # Weg zum selben Ziel. Sonst (keine Basis, keine Kit-Geschichte): der
+        # Weg darunter allein, wie bisher.
+        if [ "$name" = "CLAUDE.md" ]; then
+            BASIS_RC=0
+            basis_werkzeug claude --ziel "$ZIEL" --kit "$KIT" --neu "$gerendert" \
+                --sicherung "$ZIEL/backups/update-$STAND_STEMPEL" \
+                --ablage "$ABGLEICH_DIR" --bahn sh || BASIS_RC=$?
+            case "$BASIS_RC" in
+                0)  rm -f "$gerendert"; continue ;;
+                10) VORSCHLAEGE=$((VORSCHLAEGE + 1)) ;;
+            esac
+        fi
         # BL-137: --strip-trailing-cr, weil der Vergleich sonst am Zeilenende
         # haengenbleibt statt am Inhalt. Die frisch gerenderte Fassung traegt
         # seit diesem Fix LF; eine VOR dem Fix unter Windows installierte
@@ -1384,16 +1439,18 @@ PY
         fi
     done
     rmdir "$ABGLEICH_DIR" 2>/dev/null || true
-    if [ "$ABGLEICH" -eq 0 ]; then
+    if [ "$ABGLEICH" -eq 0 ] && [ "$VORSCHLAEGE" -eq 0 ]; then
         gruen "  ✓ nichts offen"
     else
-        gelb "  Bei CLAUDE.md ist eine Abweichung normal (Projektanpassungen,"
-        gelb "  gefuellte TODOs). Entscheidend ist, ob dir REGELN aus der neuen"
-        gelb "  Kit-Fassung fehlen — die Mechanik ist aktualisiert, die Regeln"
-        gelb "  im Projekt sind es nicht (das war die Haelfte von BL-4)."
-        echo "  Die gerenderte Kit-Fassung liegt unter $ABGLEICH_DIR/ bereit;"
-        echo "  sie traegt bereits deine Werte. Behalte deine Projekt-Spezifika"
-        echo "  und eigene Regeln, uebernimm den Rest."
+        if [ "$ABGLEICH" -gt 0 ]; then
+            gelb "  Bei CLAUDE.md ist eine Abweichung normal (Projektanpassungen,"
+            gelb "  gefuellte TODOs). Entscheidend ist, ob dir REGELN aus der neuen"
+            gelb "  Kit-Fassung fehlen — die Mechanik ist aktualisiert, die Regeln"
+            gelb "  im Projekt sind es nicht (das war die Haelfte von BL-4)."
+            echo "  Die gerenderte Kit-Fassung liegt unter $ABGLEICH_DIR/ bereit;"
+            echo "  sie traegt bereits deine Werte. Behalte deine Projekt-Spezifika"
+            echo "  und eigene Regeln, uebernimm den Rest."
+        fi
         # BL-196: Die Lebensdauer der Ablage BENENNEN und den Loeschbefehl
         # kopierfertig danebenstellen. Vorher stand hier nur "temporaer —
         # nach dem Abgleich loeschen": ein Verzeichnis, dessen Lebensdauer
@@ -1405,6 +1462,10 @@ PY
         echo "  Projekts. Wenn du fertig verglichen hast, weg damit:"
         echo "      rm -rf \"$ABGLEICH_DIR\""
     fi
+    # Kit-BL-311: die Kit-Seite fuer das naechste Update — NACH den Abgleichen,
+    # die die alte noch brauchten. Die CLAUDE.md-Basis setzt der Abgleich
+    # selbst, und nur, wenn das Projekt die Kit-Fassung aufgenommen hat.
+    basis_werkzeug schreiben --ziel "$ZIEL" --kit "$KIT" || true
 
     kopf "Selbsttest"
     FEHLER=0
@@ -2007,6 +2068,11 @@ fi
 
 # ---------------------------------------------------------------- A.0 Bootstrap
 kopf "A.0 — Bootstrap-Dateien"
+# Kit-BL-311: Schreibt dieser Lauf die CLAUDE.md, ist sie danach genau die
+# gerenderte Vorlage — die Basis fuer den Abgleich des naechsten Updates. Eine
+# vorgefundene CLAUDE.md ist es nicht; dann schaetzt das erste Update.
+CLAUDE_FRISCH=1
+[ -e "$ZIEL/CLAUDE.md" ] && [ "$FORCE" -eq 0 ] && CLAUDE_FRISCH=0
 kopiere "$KIT/bootstrap/CLAUDE.md.vorlage"    "CLAUDE.md"
 kopiere "$KIT/bootstrap/TEAM.md"               "TEAM.md"
 kopiere "$KIT/bootstrap/CHANGELOG.md"          "CHANGELOG.md"
@@ -2044,6 +2110,13 @@ gitattributes_abgleich ergaenzen
 # Rendern. Das erste --update erkennt daran eine Aenderung im Projekt.
 "$PYTHON" "$KIT/geteilt/tools/kit_stand.py" schreiben --ziel "$ZIEL" --kit "$KIT" \
     || gelb "  ! team/.kit-stand nicht geschrieben (Kit-BL-270) — das erste Update sichert dann alles."
+# Kit-BL-311: die Kit-Seite von .gitignore, Konfiguration und CLAUDE.md, wie
+# sie heute ist — das erste Update traegt nach, was danach dazukommt.
+if [ "$CLAUDE_FRISCH" -eq 1 ]; then
+    basis_werkzeug schreiben --ziel "$ZIEL" --kit "$KIT" --claude "$ZIEL/CLAUDE.md" || true
+else
+    basis_werkzeug schreiben --ziel "$ZIEL" --kit "$KIT" || true
+fi
 
 # ---------------------------------------------------------------- Selbsttest
 kopf "Selbsttest"

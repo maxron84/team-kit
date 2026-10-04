@@ -566,35 +566,46 @@ git add -A; git commit -m "chore: vor Kit-Update"     # erst committen!
 pwsh -File <kit-pfad>\pwsh\install.ps1 . -Update
 ```
 
-**`--update` fasst nur die Infrastruktur an** — Entrypoints, `{{LIB}}`,
+**`--update` ersetzt nur die Infrastruktur** — Entrypoints, `{{LIB}}`,
 die Werkzeuge, die Rollen-Briefings, die Team-Tests. **Die Bahn wechselt es
-nicht**: Was einbahnig ist, bleibt einbahnig (`Kit-BL-147`). **Unangetastet
-bleiben**
-deine Projektdaten: deine Konfiguration (`team.config.*` — je Bahn eine),
-`CLAUDE.md`, `CHANGELOG.md`,
-`.budget-ledger`, `.ralph-state` und der ganze Plan-Ordner. Der Lauf listet am
-Ende beides auf.
+nicht**: Was einbahnig ist, bleibt einbahnig (`Kit-BL-147`). **Nicht ersetzt
+werden** deine Projektdaten: deine Konfiguration (`team.config.*` — je Bahn
+eine), `CLAUDE.md`, `CHANGELOG.md`, `.budget-ledger`, `.ralph-state` und der
+ganze Plan-Ordner. Der Lauf listet am Ende beides auf.
 
 > ⚠ **Nimm niemals `--force`.** Das ist kein Update: Es leert das Ledger
 > (Kostenhistorie weg), setzt `.ralph-state` auf 1 zurück (Kaskadenstand weg)
 > und ersetzt das Beutebuch durch die leere Vorlage (**alle Funde weg**).
 > `--force` ist nur für eine kaputte **Erst**installation gedacht.
 
-**Der Schritt, den nur du machen kannst: die Regeln nachziehen.** Weil
-`CLAUDE.md` deine Projektwerte und womöglich eigene Regeln trägt, schreibt der
-Updater sie **nicht** um — er meldet nur, dass die Kit-Fassung sich geändert
-hat, und legt sie **mit deinen Werten gerendert** zum Vergleich bereit:
+**Neues aus der Kit-Fassung trägt das Update selbst nach** (`Kit-BL-311`). Es
+merkt sich in `team/.kit-basis/`, wie die Kit-Seite von `.gitignore`,
+Konfiguration und `CLAUDE.md` beim letzten Mal aussah. Was seither neu ist,
+trägt es ein: eine `.gitignore`-Zeile, einen Konfigurationswert mit seinem
+Vorgabewert, eine neue Regel in der `CLAUDE.md`. Was damals schon da war und
+bei dir fehlt, hast du bewusst entfernt — das meldet es nur. Die `CLAUDE.md`
+geht durch einen Dreiwege-Abgleich: Deine Anpassungen bleiben, die alte Fassung
+liegt unter `backups/update-<zeit>/`, und `git diff -- CLAUDE.md` zeigt, was
+dazukam. Ersetzt wird keine dieser Dateien, nur ergänzt.
+
+**Der Schritt, den nur du machen kannst: Konflikte auflösen.** Hast du an einer
+Stelle der `CLAUDE.md` selbst etwas geändert, die auch die Kit-Fassung geändert
+hat, übernimmt das Update **nichts**. Es legt einen Vorschlag mit
+Konfliktmarken in den Temp-Bereich und nennt den Befehl, ihn zu übernehmen:
 
 ```
-! CLAUDE.md weicht von der Kit-Fassung ab (412 Zeilen)
-    diff -u "/tmp/team-kit-abgleich-…/CLAUDE.md" "…/CLAUDE.md"
+! CLAUDE.md: 1 Stelle(n) haben Kit-Fassung und Projekt beide geaendert — uebernommen wird nichts (Kit-BL-311).
+    Vorschlag mit den Regeln der jetzigen Kit-Fassung, 1 Stelle(n) mit Konfliktmarken:
+      …/team-kit-abgleich-…/CLAUDE.md.vorschlag
 ```
 
-Diesen Befehl kannst du direkt kopieren. Beim Durchsehen gilt: **deine**
-Projekt-Spezifika und eigenen Regeln behalten, geänderte oder neue **Kit-Regeln
-übernehmen.** Überspringst du das, läuft die Mechanik der Doku davon — die
-Skripte können dann etwas, wovon die Regeln nichts wissen. Genau daran ist im
-Feld schon einmal die halbe Kostenerfassung gescheitert.
+Beim Auflösen gilt: **deine** Projekt-Spezifika und eigenen Regeln behalten,
+geänderte oder neue **Kit-Regeln übernehmen.** Überspringst du das, läuft die
+Mechanik der Doku davon — die Skripte können dann etwas, wovon die Regeln
+nichts wissen. Genau daran ist im Feld schon einmal die halbe Kostenerfassung
+gescheitert. Dasselbe gilt beim **ersten** Update eines Projekts, das älter ist
+als dieser Abgleich: Dann gibt es noch keine Basis, sie wird aus der Geschichte
+des Kits geschätzt, und es gibt nur einen Vorschlag, keinen Schreibzugriff.
 
 **Was du an Kit-Dateien geändert hast, geht nicht mehr still verloren**
 (`Kit-BL-270`). Das Update merkt sich in `team/.kit-stand`, was es geschrieben

@@ -37,7 +37,10 @@ Projektdateien, die das Update nicht anfasst. Eine Sandbox mit Vorgeschichte
 fand 43 solche Fälle, eine frische Installation keinen. Dazu `BL-308` (der
 pwsh-Installer nannte einbahnig „mitinstallierte" .sh-Dateien) und die
 Beifänge `BL-309` und `BL-310`. Alle vier am selben Tag abgetragen; der Selbsttest fährt
-seither eine vierte Konfiguration, das gealterte Bestandsprojekt.
+seither eine vierte Konfiguration, das gealterte Bestandsprojekt. Aus der
+Frage danach, warum das Update die gemeldeten Handgriffe nicht selbst
+erledigt, wurde `BL-311`: Es trägt jetzt nach, was die Kit-Fassung seit dem
+letzten Update neu hat; von Hand bleiben nur echte Konflikte.
 
 **Stand 2026-10-03 — Triage: 28 Meldungen vom 2026-09-17 bis 2026-10-02 lagen
 ohne Nummer da.** Sie bekommen `BL-269` bis `BL-292`; zwei davon sind

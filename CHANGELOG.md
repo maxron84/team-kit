@@ -11,6 +11,14 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **Das Update traegt Neues aus der Kit-Fassung selbst nach** (`BL-311`,
+  `Feld F`, beide Bahnen). Es merkt sich in `team/.kit-basis/`, wie die
+  Kit-Seite von `.gitignore`, Konfiguration und CLAUDE.md beim letzten Mal
+  war. Neue Zeilen und Werte traegt es ein, bewusst entfernte bleiben
+  draussen; die CLAUDE.md geht durch einen Dreiwege-Abgleich und wird
+  gesichert. Von Hand bleibt nur, was Kit und Projekt an derselben Stelle
+  geaendert haben — dafuer liegt ein Vorschlag mit Konfliktmarken bereit.
+
 - **Vierte Konfiguration im Selbsttest: ein Bestandsprojekt** (`BL-307`,
   `Feld F`, beide Bahnen). Eine Kopie der Installation bekommt 30 Kaskaden
   Vorgeschichte, Ledger und Logs, eine von Hand gepflegte CLAUDE.md und eine

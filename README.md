@@ -4,7 +4,7 @@
 [![macOS — nicht belegt](https://img.shields.io/badge/macOS-nicht_belegt-9f9f9f?style=flat-square&logo=apple&logoColor=white)](doku/einrichtung.md#belegstand)
 
 [![Version 2.13.1](https://img.shields.io/badge/Version-2.13.1-007ec6?style=flat-square)](CHANGELOG.md)
-[![Regressionstests 1840](https://img.shields.io/badge/Regressionstests-1840-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
+[![Regressionstests 1855](https://img.shields.io/badge/Regressionstests-1855-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
 [![Selbsttest 11 Stufen](https://img.shields.io/badge/Selbsttest-11_Stufen-2ea44f?style=flat-square)](bash/kit-test.sh)
 [![Lizenz MIT](https://img.shields.io/badge/Lizenz-MIT-007ec6?style=flat-square)](LICENSE)
 
@@ -88,10 +88,10 @@ im Linux-Dateisystem. Die ganze Routine für beide Plattformen, mit IDE (VS
 Codium bzw. VS Code) und Agenten-Werkzeug, steht in
 [doku/einrichtung.md](doku/einrichtung.md).
 
-Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 250 Dateien im
+Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 252 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
-`TEAM.md` und 1840 Regressionstests.
+`TEAM.md` und 1855 Regressionstests.
 
 > **Was „Version" hier heißt.** Das Kit veröffentlicht **keine Releases**;
 > ausgeliefert wird der **Quellstand** dieses Repos. Die Versionsnummer ist die
@@ -143,7 +143,7 @@ erfasst, begründet und nach Wirkung sortiert, statt in Sitzungsprotokollen zu
 verschwinden.
 
 Alles in [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (245 Einträge).
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (246 Einträge).
 
 ---
 
@@ -436,9 +436,9 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 | **`Feld F`** | Greenfield, Windows 11, beide Bahnen installiert, gefahren wird pwsh: ein Spielskript-Stack ohne eigene Testinfrastruktur, dazu ein Prüfwerkzeug in Python — der Smoke-Test entsteht erst in Stufe 1 der ersten Kaskade | Sechs Kaskaden bis 2026-10-02, dazu eine Handprobe mit 45 Frank-Fixen außerhalb des Loops. `BL-264` und `BL-283`…`BL-292` — **elf Funde**, darunter der erste, der das **Modell** der Rollen betrifft: Alle 126 Rollenläufe in `Feld F` über fünf Kaskaden liefen auf einer älteren Sonnet-Version, weil die CLI im `PATH` älter war als die der IDE (`BL-264`). Zugleich das erste Feld mit beiden Bahnen in einer Ablage, in der `test_bl117` sie gegeneinander hielt — so fiel `BL-285` auf. Seit 2026-09-30 einbahnig pwsh; das erste Update mit Prüfsummenliste (2026-10-04) brachte `BL-307` und `BL-308` — den ersten roten Update-Selbsttest eines Bestandsprojekts, ohne Defekt im Projekt |
 
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen sieben Quellen
-kommen die Backlog-Einträge `BL-1`…`BL-310`; was davon behoben ist, steht im
+kommen die Backlog-Einträge `BL-1`…`BL-311`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (245 Einträge), der Rest in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (246 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors
@@ -503,13 +503,16 @@ Bahn erscheint als **sichtbarer** Vermerk in der Testzusammenfassung
 („einbahnige Ablage"), nicht als Fehlschlag und nicht als stiller Übersprung.
 
 **Ein bestehendes Projekt auf eine neue Kit-Version heben:** `--update`. Es
-fasst **nur** die Infrastruktur an (Entrypoints außer `team.config.sh`,
+ersetzt **nur** die Infrastruktur (Entrypoints außer `team.config.sh`,
 `team/lib.sh`, `team/redteam.sh`, `team/tools/`, `team/prompts/`,
 `team/tests/`) und lässt Ledger, Kaskadenstand, Beutebuch, CHANGELOG, `plans/`,
-`CLAUDE.md` und `team.config.sh` unberührt. **Die Bahn ändert es nicht** — eine
-einbahnige Ablage bleibt einbahnig (`BL-147`). Zum Schluss meldet es, welche
-Doku-Dateien von der Kit-Fassung abweichen — die **Regeln** müssen von Hand
-nachgezogen werden, sonst läuft die Doku der Mechanik hinterher.
+`CLAUDE.md` und `team.config.sh` stehen. **Die Bahn ändert es nicht** — eine
+einbahnige Ablage bleibt einbahnig (`BL-147`). Was die Kit-Fassung **seit dem
+letzten Update** in `.gitignore`, Konfiguration und `CLAUDE.md` neu hat, trägt
+es selbst nach; die `CLAUDE.md` geht dafür durch einen Dreiwege-Abgleich, die
+alte Fassung wird gesichert (`BL-311`). Von Hand bleibt nur, was Kit und
+Projekt an derselben Stelle geändert haben — dafür liegt ein Vorschlag mit
+Konfliktmarken bereit.
 
 > ⚠ **`--force` ist kein Update.** Es überschreibt auch Projektdaten:
 > `.budget-ledger` wird geleert (Kostenhistorie weg), `.ralph-state` auf `1`
@@ -672,12 +675,13 @@ pwsh/                   ALLES, was die pwsh-Bahn ausmacht — spiegelbildlich
 geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 ├── tools/              kosten.py, beutebuch.py, zitat_lint.py,
 │                       kit_meldung.py, smoke_warten.py, protokolle.py,
-│                       prozesse.py, schreibzone.py, kit_stand.py — Ledger,
+│                       prozesse.py, schreibzone.py, kit_stand.py,
+│                       kit_basis.py — Ledger,
 │                       Beutebuch und Kostenrechnung liegen auf beiden Wegen
 │                       in denselben Dateien. Die pwsh-Bahn ist eine zweite
 │                       ORCHESTRIERUNG, kein zweiter Zustandscode
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-├── tests/              186 Testdateien, 1840 Fälle — der Doppelbahn-Harnisch
+├── tests/              187 Testdateien, 1855 Fälle — der Doppelbahn-Harnisch
 │                       fährt jeden Fall gegen BEIDE Bahnen, aus EINEM
 │                       Testkörper
 ├── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
@@ -688,10 +692,13 @@ geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 ├── kit-marken-verdrehen.py  Dritte Konfiguration des Selbsttests (Stufe 5b):
 │                       verdreht die Sprachmarken einer Installation —
 │                       Test-Endung, strict-Schreibweise, Smoke-Befehl
-└── kit-projekt-altern.py  Vierte Konfiguration (Stufe 5c): gibt einer Kopie
-                        der Installation Vorgeschichte — 30 Kaskaden, Ledger,
-                        Logs, CLAUDE.md und Konfiguration in älterer Fassung —,
-                        dann läuft das Update mit Selbsttest
+├── kit-projekt-altern.py  Vierte Konfiguration (Stufe 5c): gibt einer Kopie
+│                       der Installation Vorgeschichte — 30 Kaskaden, Ledger,
+│                       Logs, CLAUDE.md und Konfiguration in älterer Fassung —,
+│                       dann läuft das Update mit Selbsttest
+└── kit-basis-zurueckdrehen.py  Für die Update-Stufe (6): stellt ein Projekt
+                        nach, das mit einer älteren Kit-Fassung installiert
+                        wurde — samt Konflikt in der CLAUDE.md (`BL-311`)
 
 bootstrap/              CLAUDE.md- und TEAM.md-Vorlage, CHANGELOG, Beutebuch, Roadmap, …
 plans/                  Roadmap und Backlog DES KITS (nicht die Vorlagen —
@@ -766,7 +773,7 @@ nur `raw/`; die anderen beiden tauchen auf, sobald du sie benutzt.
 | `./team-status.sh --ledger-pruefen` | `.\team-status.cmd --ledger-pruefen` | Ist für jede Kaskade alles gebucht? Gegenprobe gegen die archivierten Rohlogs (Exit `4` = Warnbefunde) |
 | `./team-status.sh --altlast [N]` | `.\team-status.cmd --altlast [N]` | Produktivdateien, die seit N Kaskaden in keinem Diff lagen — die Auswahlhilfe für einen Altlast-Sweep (`BL-40`) |
 | `./team-test.sh` | `.\team-test.cmd` | Regressionstests der Team-Infrastruktur (pytest) |
-| `bash <kit>/bash/install.sh . --update` | `pwsh -File <kit>\pwsh\install.ps1 . -Update` | Auf eine neue Kit-Version heben, ohne Projektdaten anzufassen — und ohne die Bahn zu wechseln (`BL-147`) |
+| `bash <kit>/bash/install.sh . --update` | `pwsh -File <kit>\pwsh\install.ps1 . -Update` | Auf eine neue Kit-Version heben, ohne Projektdaten zu ersetzen — Neues der Kit-Fassung wird ergänzt (`BL-311`), die Bahn bleibt (`BL-147`) |
 | `bash <kit>/bash/install.sh . --update --beide-bahnen` | `pwsh -File <kit>\pwsh\install.ps1 . -Update -BeideBahnen` | Eine abgewählte Bahn zurückholen (`BL-119`) |
 | `python3 team/tools/beutebuch.py list` | `python team\tools\beutebuch.py list` | Alle Funde mit Status |
 | `python3 team/tools/beutebuch.py lint` | `python team\tools\beutebuch.py lint` | Prüft **jeden** Fundblock auf das, was die Fixphase auswertet; `--alle` bezieht das Archiv mit ein. Findet auch den Block, den ein fremder Anhang zerschnitten hat (`BL-254`) |
@@ -806,7 +813,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 ## Der Rückkanal Feld → Kit
 
 **Jeder Lauf in einem echten Projekt fördert Kit-Fehler zutage** — `BL-1` bis
-`BL-310` sind fast alle so entstanden. Damit das nicht von der Disziplin
+`BL-311` sind fast alle so entstanden. Damit das nicht von der Disziplin
 einzelner abhängt, ist der Weg zurück ein Befehl aus dem installierten Projekt
 heraus:
 
@@ -859,7 +866,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   `Feld D` **eine** und `Feld E` **zwei** auf der bash-Bahn — `Feld C` gar
   keine. Zwei Plattformen und zwei Bahnen sind damit berührt, aber nur **eine**
   Kombination ist eingelaufen. Jeder Lauf hat Kit-Fehler zutage gefördert —
-  `BL-1`…`BL-310`, von der toten Fixphase über zwei Löcher in der
+  `BL-1`…`BL-311`, von der toten Fixphase über zwei Löcher in der
   Kostenerfassung und die Zeilenenden bis zur vierten Fehlerklasse „Stufe
   fertig, Quittung fehlt". Die Erwartung ist nicht, dass das aufhört; die
   Mechanik dafür ist der [Rückkanal Feld → Kit](#der-rückkanal-feld--kit) —
@@ -914,11 +921,11 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   was dieses Kit *belegen* könnte. Was eine Übersetzung wirklich kostet, steht
   in der [Roadmap](plans/roadmap-skizzen.md) als **Skizze G**: Nicht die Prosa
   ist die Arbeit, sondern die Kopplungen — das Regel-Inventar zitiert
-  **wörtlich**, `zitat_lint.py` prüft Zitate, und 1840 Regressionstests
+  **wörtlich**, `zitat_lint.py` prüft Zitate, und 1855 Regressionstests
   greifen auf deutsche Zeichenketten zu. Der Name bleibt in jeder Fassung
   `T.E.A.M.`; die Auflösungen dafür stehen in `TEAM.md`.
 - **Selbstverifikation**: `bash bash/kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 1840 Tests — in **vier Konfigurationen**:
+  Wegwerf-Repo und fährt dort die 1855 Tests — in **vier Konfigurationen**:
   mit den Auslieferungswerten, mit angepasster `team.config.sh` (Caps,
   Commit-Präfixe, zwei Domänen), mit verdrehten Sprachmarken (`BL-194`) und
   als gealtertes Bestandsprojekt nach einem Update (`BL-307`). Der zweite
@@ -956,7 +963,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
 
 Benutzen, ändern, weitergeben und in eigene Projekte einziehen ist ausdrücklich
 erlaubt, kommerziell wie privat; es bleibt nur die Namensnennung. Das gilt
-**auch für die 250 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
+**auch für die 252 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
 lösen keine Lizenzpflicht für den Code des Zielprojekts aus. Der Code stammt aus
 einem eigenen Projekt des Autors; das Urheberrecht liegt vollständig bei ihm.
 

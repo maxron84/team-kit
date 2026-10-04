@@ -367,8 +367,9 @@ ein projekteigenes `deploy.ps1` macht aus deinem Projekt keine pwsh-Ablage.
 
 Das Update **mit** dem Schalter macht das Projekt wieder vollständig — Entrypoints, Bibliothek **und
 die fehlende Konfiguration**. Die Konfiguration ist der Teil, der beim ersten
-Bau vergessen wurde: Ein Update fasst `team.config.*` grundsätzlich nicht an,
-also kamen die Entrypoints zurück und die Werte nicht. Der Update-Pfad
+Bau vergessen wurde: Ein Update fasst `team.config.*` grundsätzlich nicht an
+(seit `BL-311` ergänzt es dort nur, was die Kit-Fassung neu hat), also kamen
+die Entrypoints zurück und die Werte nicht. Der Update-Pfad
 **erzeugt** eine fehlende Bahn-Konfiguration heute neu — aus den Werten der
 **vorhandenen**, nicht aus den Auslieferungswerten. Sonst bekäme die
 zurückgeholte Bahn eine andere Guard-Grenze als die, die schon läuft, und der
