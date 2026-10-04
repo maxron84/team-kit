@@ -616,9 +616,19 @@ fi
 # ein echter Lauf weiter meldet; der Testharnisch setzt ihn auf 0 (conftest.py).
 # Die pwsh-Bahn kennt keine Benachrichtigung und braucht deshalb kein
 # Gegenstueck.
-if [ "${TEAM_BENACHRICHTIGUNG:-1}" != "0" ] && command -v notify-send >/dev/null; then
-    notify-send "T.E.A.M. Vollautomatik fertig" "Kaskade durch. Dieser Lauf: $(lauf_kosten) USD · Gesamt: $(kontostand_gesamt) USD" 2>/dev/null || true
-fi
+benachrichtige() {
+    [ "${TEAM_BENACHRICHTIGUNG:-1}" != "0" ] || return 0
+    command -v notify-send >/dev/null || return 0
+    notify-send "$1" "$2" 2>/dev/null || true
+}
+
+# Kit-BL-313: Die Meldung wird ERST ABGESETZT, wenn der Ausgang feststeht.
+# Sie stand hier vor der Gate-Pruefung und sagte dem Menschen "Kaskade durch",
+# waehrend derselbe Lauf zwei Bloecke weiter mit Exit 44 und "LAUF BEENDET —
+# GATE ROT" endete. Die Benachrichtigung ist fuer den Abwesenden gebaut: Sie
+# erreicht genau den, der den Bericht NICHT liest, weil er nicht am Schirm
+# sass — ihm die eine Lage zu verschweigen, die seine Aufmerksamkeit braucht,
+# dreht BL-256 an der Stelle wieder zu, an der es am leisesten auffaellt.
 
 # BL-256: Der Lauf darf sich nicht als fertig melden, solange das Gate aus ist.
 #
@@ -641,7 +651,11 @@ if GATE_ZEILE="$(team_gate_rot_seit)"; then
     log "  Nächster Schritt: den roten Baum reparieren. Ist er grün, gehört"
     log "  $TEAM_GATE_DATEI gelöscht — dann meldet sich der nächste Lauf wieder normal."
     log "Vollautomatik beendet — Gate ROT."
+    benachrichtige "T.E.A.M. Vollautomatik — GATE ROT" \
+        "Lauf beendet, die Suite ist rot. Erste Meldung: ${GATE_ZEILE}. Dieser Lauf: $(lauf_kosten) USD · Gesamt: $(kontostand_gesamt) USD"
     exit 44
 fi
 
+benachrichtige "T.E.A.M. Vollautomatik fertig" \
+    "Kaskade durch. Dieser Lauf: $(lauf_kosten) USD · Gesamt: $(kontostand_gesamt) USD"
 log "Vollautomatik beendet."

@@ -544,6 +544,12 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Ein Lauf mit rotem Gate meldete dem Desktop „Kaskade durch"** (`BL-313`,
+  Kit, bash-Bahn). Die Benachrichtigung stand vor der Gate-Pruefung aus
+  `BL-256` — derselbe Lauf endete zwei Bloecke weiter mit Exit 44. Sie wird
+  jetzt erst abgesetzt, wenn der Ausgang feststeht, und nennt ihn: bei rotem
+  Gate `GATE ROT` samt Zeitpunkt, sonst wie bisher `Kaskade durch`.
+
 - **Die Testsuite meldete jede Stub-Kaskade an den Desktop** (`BL-312`,
   `Feld F`, bash-Bahn). Der Abschlussblock von `vollautomatik.sh` rief
   `notify-send` ungefiltert, und die Kaskadentests starten den Entrypoint mit
