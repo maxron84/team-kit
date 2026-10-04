@@ -668,7 +668,9 @@ pruefe "Abgleich-Hinweis nennt keinen Platzhalter mehr" \
 # --strip-trailing-cr zwischen Kommando und Flagge. Ein Muster, das den
 # Befehl bis aufs Zeichen festnagelt, prueft nicht den Hinweis, sondern
 # seine Schreibweise, und macht jede Verbesserung daran zum Testfehler.
-ABGLEICH_BEFEHL="$(grep -oE 'diff [^"]*-u "[^"]+" "[^"]+"' "$ZIEL/.update.log" | head -1)"
+# `|| true`: Findet grep nichts, soll die Pruefung darunter das sagen — nicht
+# `set -e` den Lauf stumm beenden.
+ABGLEICH_BEFEHL="$(grep -oE 'diff [^"]*-u "[^"]+" "[^"]+"' "$ZIEL/.update.log" | head -1 || true)"
 pruefe "Abgleich-Hinweis nennt einen diff-Befehl" \
        "$([ -n "$ABGLEICH_BEFEHL" ] && echo ja || echo nein)" "ja"
 # Die genannte gerenderte Vorlage muss existieren UND gefuellt sein — ein Pfad
@@ -783,9 +785,12 @@ pruefe "und die alte Fassung gesichert" \
 pruefe "die Basis rueckt auf die aufgenommene Fassung vor" \
        "$(grep -c '^## 0\. F' "$ZIEL/team/.kit-basis/CLAUDE.md" || true)" "1"
 # Auch dieser Lauf legt eine Kit-Fassung zum Abgleich ab — mit aufraeumen,
-# sonst bleibt je Selbsttest ein Verzeichnis in /tmp liegen.
+# sonst bleibt je Selbsttest ein Verzeichnis in /tmp liegen. Seit Kit-BL-311
+# kann er auch OHNE Ablage enden (alles eingearbeitet); dann findet grep
+# nichts, und ohne `|| true` beendete `set -e` den Selbsttest an dieser Zeile —
+# nach lauter gruenen Pruefungen, mit Exit 1 und ohne ein Wort.
 ABGLEICH2="$(grep -oE 'diff [^"]*-u "[^"]+"' "$ZIEL/.update2.log" | head -1 \
-             | sed -E 's/^diff [^"]*-u "([^"]+)"/\1/')"
+             | sed -E 's/^diff [^"]*-u "([^"]+)"/\1/' || true)"
 case "$ABGLEICH2" in
     */team-kit-abgleich-*/*) rm -rf "$(dirname "$ABGLEICH2")" ;;
 esac
