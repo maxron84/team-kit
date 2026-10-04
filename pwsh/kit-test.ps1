@@ -577,6 +577,21 @@ if ($ptBefehl) {
         Zeile 'prueft die Vorlage im Kit (conftest.quelle).'
         Get-Content -Tail 15 $altLog | ForEach-Object { Zeile $_ }
     }
+    # Auch dieses Update legt eine Kit-Fassung zum Abgleich in den
+    # Temp-Bereich (BL-196) — weg damit, sonst bleibt je Selbsttest ein
+    # Verzeichnis liegen. Dieselbe Schranke wie in Schritt 7: nur ein
+    # plausibler Name.
+    $altText = Get-Content -Raw -LiteralPath $altLog -ErrorAction SilentlyContinue
+    $altWeg = 0
+    foreach ($name in @([regex]::Matches("$altText", "team-kit-abgleich-[0-9a-f]+") |
+                        ForEach-Object { $_.Value } | Select-Object -Unique)) {
+        $kandidat = Join-Path ([System.IO.Path]::GetTempPath()) $name
+        if (Test-Path -LiteralPath $kandidat -PathType Container) {
+            Remove-Item -LiteralPath $kandidat -Recurse -Force -ErrorAction SilentlyContinue
+            $altWeg++
+        }
+    }
+    if (-not $altWeg) { Gelb '(kein Abgleich-Verzeichnis erkannt — nichts weggeraeumt)' }
 } else {
     Gelb 'Python fehlt — das Update eines Bestandsprojekts ist UNGEPRÜFT.'
     $script:Fehler = 1

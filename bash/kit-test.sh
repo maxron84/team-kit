@@ -571,6 +571,14 @@ if ! grep -q 'Regressionstests grün' "$BESTAND.log"; then
     exit 1
 fi
 gruen "  ✓ $(grep -oE 'Regressionstests grün \([0-9]+ passed' "$BESTAND.log" | head -1))"
+# Auch dieses Update legt eine Kit-Fassung zum Abgleich ab (BL-196) — weg
+# damit, sonst bleibt je Selbsttest ein Verzeichnis in /tmp liegen.
+ABGLEICH_BESTAND="$(grep -oE 'diff [^"]*-u "[^"]+"' "$BESTAND.log" | head -1 \
+                    | sed -E 's/^diff [^"]*-u "([^"]+)"/\1/' || true)"
+case "$ABGLEICH_BESTAND" in
+    */team-kit-abgleich-*/*) rm -rf "$(dirname "$ABGLEICH_BESTAND")" ;;
+    *) gelb "  (kein Abgleich-Verzeichnis erkannt — nichts aufgeraeumt)" ;;
+esac
 
 # BL-8: --update ist der einzige sichere Weg, ein gelebtes Projekt auf eine
 # neue Kit-Version zu heben. Der Beweis dafuer gehoert ins Gate, nicht in ein
