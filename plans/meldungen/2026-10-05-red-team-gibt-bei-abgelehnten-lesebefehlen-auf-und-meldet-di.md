@@ -83,3 +83,34 @@ nächste Sweep. Vorschläge fürs Kit:
 3. `kosten.py verweigert` meldet heute nur abgelehnte Schreibversuche im erlaubten Bereich. Eine
    Zeile „N Lesebefehle abgelehnt“ im Bericht des Sweeps würde den Menschen auf das `result`
    schicken, statt dass er es nur findet, wenn er es von sich aus liest.
+
+## Nachtrag (2026-10-05): was der Satz im nächsten Sweep bewirkt hat
+
+Bei Lesebefehlen wirkt er. Harry wiederholte im nächsten Sweep beide abgelehnten Lesebefehle sofort
+in erlaubter Form (`git diff` ohne `cd`, Grep). Marv las nach vier abgelehnten `git diff` (mit
+`cd`, mit `Set-Location` oder mit einer Shell-Variablen) über `git diff <von>..HEAD -- ':/<pfad>'`.
+Beide nannten, was ungelesen blieb, in ihrer Abdeckungszeile als nicht geprüft. Zwei Lücken
+blieben:
+
+1. **Ein durchgelassenes `cd` verschiebt die Shell für alle folgenden Befehle.** Marvs
+   `cd <produktivcode>/<unterordner>; cat …` lief ohne Ablehnung durch, weil die CLI `cd` und
+   `cat` als Lesebefehle freigibt. Danach stand die Shell im Unterordner, und „die Shell steht
+   schon in der Wurzel“ stimmte nicht mehr. Das ist die Bauart von `Kit-BL-292` (relative
+   Schreibregeln nach einem `cd`), hier bei Lesebefehlen und relativen Pfaden.
+2. **Der Smoke-Test ist nur in seiner wörtlichen Form freigegeben.** `team_allowed_tools` legt
+   `Bash($TEAM_SMOKE_TEST)` ohne `:*` an. Harry startete den Smoke-Test mit `-x` und `2>&1`,
+   nachgeschaltet `tail -8`. Die CLI lehnte ab, und er wiederholte ihn nicht in der wörtlichen
+   Form. Seine Abdeckungszeile meldete das ehrlich als nicht geprüft, nannte als Grund aber, Bash
+   habe den Smoke-Test abgelehnt, als wäre der Test selbst gesperrt.
+
+Im Projekt steht seither im Grundauftrag beider Rollen (Freigabe des Menschen am 2026-10-05):
+„Wechsle nie das Verzeichnis, weder mit cd noch mit Set-Location, auch nicht vor cat oder grep: Die
+Shell steht in der Wurzel und bliebe nach einem cd für alle folgenden Befehle im anderen Ordner.
+Den Smoke-Test startest du nur wörtlich als `$TEAM_SMOKE_TEST`, ohne weitere Schalter, ohne
+Umleitung und ohne nachgeschaltetes tail oder grep, denn nur diese Form ist freigegeben.“ Ob das
+wirkt, zeigt der nächste Sweep. Zwei Vorschläge fürs Kit, zusätzlich zu den drei oben:
+
+4. Der Satz zu Lesebefehlen im Prompt von `redteam.ps1` verbietet `cd` und `Set-Location` vor
+   jedem Befehl, nicht nur vor `git`, mit dem Grund: Die Shell bleibt danach im anderen Ordner.
+5. Der Prompt nennt den Smoke-Test in genau der Form, die `team_allowed_tools` freigibt
+   (`$TEAM_SMOKE_TEST`, eingesetzt), und sagt, dass jede andere Form abgelehnt wird.
