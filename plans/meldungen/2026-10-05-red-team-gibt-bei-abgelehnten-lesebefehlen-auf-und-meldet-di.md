@@ -114,3 +114,26 @@ wirkt, zeigt der nächste Sweep. Zwei Vorschläge fürs Kit, zusätzlich zu den 
    jedem Befehl, nicht nur vor `git`, mit dem Grund: Die Shell bleibt danach im anderen Ordner.
 5. Der Prompt nennt den Smoke-Test in genau der Form, die `team_allowed_tools` freigibt
    (`$TEAM_SMOKE_TEST`, eingesetzt), und sagt, dass jede andere Form abgelehnt wird.
+
+## Nachtrag (2026-10-07): der übernächste Sweep und eine Lücke beim Werkzeug
+
+Den Satz gegen `cd` hielten beide Rollen nicht ein. Harry setzte sieben Befehle mit `cd` ab, Marv
+einen, danach nur noch absolute Pfade. Abgelehnt wurde davon nur einer, wegen eines `grep -v`
+hinter einer Pipe, und Harry holte ihn mit Grep nach. Marv wiederholte ein abgelehntes
+`git -C . diff …` richtig als `git diff …`. Bei Lesebefehlen wirkt der Satz also weiter.
+
+Neu ist eine Lücke beim Smoke-Test, und sie liegt am Werkzeug, nicht an der Form. Marv startete
+ihn wörtlich als `$TEAM_SMOKE_TEST`, aber im PowerShell-Werkzeug der CLI. `team_allowed_tools`
+gibt ihn nur als `Bash($TEAM_SMOKE_TEST)` frei, die CLI lehnte ab, und Marv wiederholte ihn nicht
+im Bash-Werkzeug. Seine Abdeckungszeile meldete das ehrlich als nicht geprüft. Harry startete den
+Smoke-Test gar nicht. In diesem Lauf lief damit in keinem Sweep der Smoke-Test, obwohl der Fokus
+verlangte, jede behauptete rote oder grüne Probe auszuführen.
+
+Im Projekt steht seither im Grundauftrag beider Rollen (Freigabe des Menschen am 2026-10-07):
+„Den Smoke-Test startest du nur im Bash-Werkzeug und nur wörtlich als `$TEAM_SMOKE_TEST`, … ; im
+PowerShell-Werkzeug lehnt die CLI ihn ab.“ Ob das wirkt, zeigt der nächste Sweep. Ein Vorschlag
+fürs Kit, zusätzlich zu den fünf oben:
+
+6. `team_allowed_tools` gibt jeden freigegebenen Befehl in beiden Shell-Werkzeugen der CLI frei
+   (`Bash(…)` und `PowerShell(…)`), oder der Prompt von `redteam.ps1` nennt das Werkzeug, in dem
+   die Freigabe gilt. Auf der pwsh-Bahn liegt das PowerShell-Werkzeug für die Rolle näher als Bash.
