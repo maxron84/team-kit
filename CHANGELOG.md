@@ -544,6 +544,14 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Der Waechter behauptete die Zuordnung blanker Backlognummern** (`BL-314`,
+  `Feld B`/`Feld F`, beide Bahnen). *„Diese blanken Nummern meinen den
+  KIT-Backlog … Kit- davorsetzen"* traf bei drei von vier Feldfaellen nicht zu
+  — einmal war die geruegte Zeile die, die die Regel vorbildlich anwendet. Der
+  Waechter uebergeht jetzt Saetze, die daneben schon eine `Kit-`Nummer
+  schreiben, und belegt den Rest mit dem Gegenstand aus beiden Backlogs, statt
+  eine Anweisung zu geben. `HM-`Nummern schlaegt er im Beutebuch nach.
+
 - **Ein Lauf mit rotem Gate meldete dem Desktop „Kaskade durch"** (`BL-313`,
   Kit, bash-Bahn). Die Benachrichtigung stand vor der Gate-Pruefung aus
   `BL-256` — derselbe Lauf endete zwei Bloecke weiter mit Exit 44. Sie wird

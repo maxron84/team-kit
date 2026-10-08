@@ -677,7 +677,7 @@ melde_veralteten_regeltext() {
     # Die Zwei-Bahnen-Region ausschneiden: Dort ist das Nennen BEIDER Bahnen
     # die Aufgabe, kein Fehler. An ihrem TEXT erkannt, nicht an Zeilennummern
     # — die verschieben sich beim naechsten Absatz (BL-139).
-    "$PYTHON" - "$datei" "$KIT/bootstrap/CLAUDE.md.vorlage" > "$arbeit" <<'PY'
+    "$PYTHON" - "$datei" "$KIT/bootstrap/CLAUDE.md.vorlage" "$KIT" > "$arbeit" <<'PY'
 import re, sys
 from pathlib import Path
 text = Path(sys.argv[1]).read_text(encoding="utf-8-sig")
@@ -698,17 +698,70 @@ for m in muster.finditer(text):
         continue
     if not (wurzel / rel).exists():
         tot.append(rel)
+# BL-314: Eine blanke Nummer, die das Kit auch kennt, MEINT nicht deshalb das
+# Kit. Gemessen an einem gelebten Feldprojekt traf die alte Form bei vier
+# genannten Nummern einmal zu und dreimal nicht — und die eine Zeile, die die
+# Regel VORBILDLICH anwendet (eigene Nummer blank, Kit-Nummern mit Praefix),
+# stand mit in der Liste. Deshalb zwei Aenderungen:
+#   (1) Ein Satz, der daneben schon eine Nummer MIT `Kit-` schreibt, wird
+#       uebergangen — dort unterscheidet der Autor nachweislich bewusst.
+#   (2) Was uebrig bleibt, wird nicht behauptet, sondern BELEGT: Zu jeder
+#       Nummer wird der Gegenstand im Kit-Backlog und — wenn es sie dort gibt
+#       — im EIGENEN Backlog danebengestellt. Zuordnen tut der Mensch.
+def _satz_um(treffer, voll):
+    """Der Satz um eine Fundstelle — grob, aber genug fuer die Frage."""
+    a = max(voll.rfind(".", 0, treffer.start()), voll.rfind("\n\n", 0, treffer.start()))
+    b = voll.find(".", treffer.end())
+    return voll[(a + 1 if a >= 0 else 0):(b if b >= 0 else len(voll))]
+
+
+def _quellen(wurzel, nr):
+    """WO eine Nummer steht, haengt an ihrem Praefix, nicht am Projekt.
+
+    `BL-` fuehrt der Backlog als Tabellenzeile, `HM-` das Beutebuch als
+    Ueberschrift. Im Backlog nach einer HM-Nummer zu suchen, findet
+    zuverlaessig nichts und meldet "keine solche Nummer" — eine Aussage, die
+    dann falsch ist.
+    """
+    stamm = "beutebuch" if nr.startswith("HM-") else "backlog"
+    return [wurzel / "plans" / f"{stamm}.md",
+            wurzel / "plans" / f"{stamm}-archiv.md"]
+
+
+def _gegenstand(wurzel, nr):
+    """Die ersten Worte des Eintrags <nr> — Tabellenzeile oder Ueberschrift."""
+    for pfad in _quellen(wurzel, nr):
+        if not pfad.is_file():
+            continue
+        inhalt = pfad.read_text(encoding="utf-8-sig")
+        for muster in (r"^\|\s*" + re.escape(nr) + r"\s*\|(.{0,160})",
+                       r"^#+\s*" + re.escape(nr) + r"\s*[—-]?(.{0,160})"):
+            m = re.search(muster, inhalt, re.M)
+            if m:
+                roh = re.sub(r"[*`]", "", m.group(1)).strip()
+                return re.sub(r"\s+", " ", roh)
+    return ""
+
+
 blank = []
 vorlage = Path(sys.argv[2])
+kit_wurzel = Path(sys.argv[3])
 if vorlage.is_file():
     for m in re.finditer(r"Kit-((?:BL|HM)-\d+)", vorlage.read_text(encoding="utf-8-sig")):
         nr = m.group(1)
-        if nr in blank:
+        if any(z.startswith(nr + "\t") for z in blank):
             continue
-        if re.search(r"(?<!Kit-)\b" + re.escape(nr) + r"\b", text):
-            blank.append(nr)
+        treffer = re.search(r"(?<!Kit-)\b" + re.escape(nr) + r"\b", text)
+        if not treffer:
+            continue
+        # (1) Der Autor unterscheidet in diesem Satz schon selbst.
+        if "Kit-" in _satz_um(treffer, text):
+            continue
+        blank.append(nr + "\t" + _gegenstand(kit_wurzel, nr)
+                     + "\t" + _gegenstand(wurzel, nr))
 print("TOT " + " ".join(tot))
-print("BLANK " + " ".join(blank))
+for z in blank:
+    print("BLANK " + z)
 PY
     local tot blank
     tot="$(sed -n 's/^TOT //p' "$arbeit")"
@@ -732,10 +785,24 @@ PY
         echo  "        $BAHN_RUF<name>$BAHN_ENDUNG  <- Entrypoints in der Wurzel"
     fi
     if [ -n "$blank" ]; then
-        rot "  ✗ Diese blanken Backlognummern meinen den KIT-Backlog:"
-        echo "        $blank"
-        gelb "      Blank gelesen zeigen sie auf deinen eigenen Backlog — dort"
-        gelb "      steht etwas anderes oder gar nichts. Kit- davorsetzen."
+        # BL-314: Nicht behaupten, belegen. Welche Nummer welchen Traeger
+        # meint, entscheidet der Satz, in dem sie steht — und den liest hier
+        # niemand. Gezeigt wird deshalb, womit sie verwechselbar ist.
+        gelb "  ! Diese blanken Nummern sind mehrdeutig — das Kit kennt sie auch:"
+        while IFS="$(printf '\t')" read -r nr kitgegenstand eigen; do
+            [ -n "$nr" ] || continue
+            echo "        $nr"
+            [ -n "$kitgegenstand" ] && echo "          im Kit:  $kitgegenstand"
+            if [ -n "$eigen" ]; then
+                echo "          bei dir: $eigen"
+            else
+                echo "          bei dir: keine solche Nummer"
+            fi
+        done <<< "$blank"
+        gelb "      Meint die Stelle das KIT, gehoert \`Kit-\` davor (Kit-BL-140)."
+        gelb "      Meint sie DEINEN Backlog, ist sie richtig, wie sie ist."
+        gelb "      Meint sie ein DRITTES Projekt, nenne es im Satz (Kit-BL-180)."
+        gelb "      Zuordnen kann das nur, wer den Satz gelesen hat."
     fi
     gelb "  Nicht automatisch ersetzt (Lehre BL-12): In CLAUDE.md steckt deine"
     gelb "  Arbeit. Die Zwei-Bahnen-Region ('Ablage:') bleibt ausdruecklich, wie"

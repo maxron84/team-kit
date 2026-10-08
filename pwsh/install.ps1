@@ -527,6 +527,41 @@ function Finde-Pytest {
     return $null
 }
 
+# BL-314: Wo eine Nummer steht, haengt an ihrem Praefix, nicht am Projekt.
+# `BL-` fuehrt der Backlog als Tabellenzeile, `HM-` das Beutebuch als
+# Ueberschrift. Im Backlog nach einer HM-Nummer zu suchen, findet zuverlaessig
+# nichts und meldet "keine solche Nummer" — eine Aussage, die dann falsch ist.
+function Gegenstand {
+    param([string]$Wurzel, [string]$Nummer)
+    $stamm = if ($Nummer.StartsWith('HM-')) { 'beutebuch' } else { 'backlog' }
+    foreach ($name in @("$stamm.md", "$stamm-archiv.md")) {
+        $pfad = Join-Path (Join-Path $Wurzel 'plans') $name
+        if (-not (Test-Path $pfad)) { continue }
+        $inhalt = [System.IO.File]::ReadAllText($pfad)
+        foreach ($muster in @(('(?m)^\|\s*' + [regex]::Escape($Nummer) + '\s*\|(.{0,160})'),
+                              ('(?m)^#+\s*' + [regex]::Escape($Nummer) + '\s*[\u2014-]?(.{0,160})'))) {
+            $m = [regex]::Match($inhalt, $muster)
+            if ($m.Success) {
+                $roh = ($m.Groups[1].Value -replace '[*`]', '').Trim()
+                return ($roh -replace '\s+', ' ')
+            }
+        }
+    }
+    return ''
+}
+
+# BL-314: Der Satz um eine Fundstelle — grob, aber genug fuer die Frage, ob
+# der Autor an dieser Stelle schon selbst zwischen den Traegern unterscheidet.
+function Satz-Um {
+    param([string]$Voll, [System.Text.RegularExpressions.Match]$Treffer)
+    $a = [Math]::Max($Voll.LastIndexOf('.', $Treffer.Index),
+                     $Voll.LastIndexOf("`n`n", $Treffer.Index))
+    $b = $Voll.IndexOf('.', $Treffer.Index + $Treffer.Length)
+    $von = if ($a -ge 0) { $a + 1 } else { 0 }
+    $bis = if ($b -ge 0) { $b } else { $Voll.Length }
+    return $Voll.Substring($von, $bis - $von)
+}
+
 function Melde-VeraltetenRegeltext {
     <#
       BL-177. Der Rest, den BL-175 ausgewiesen hat.
@@ -586,6 +621,13 @@ function Melde-VeraltetenRegeltext {
     # (2) Blanke Backlognummern, die die VORLAGE inzwischen `Kit-` schreibt.
     # Die Vorlage ist der Massstab, nicht eine Liste hier: Eine Liste waere ab
     # der naechsten neuen Nummer falsch (BL-154).
+    # BL-314: Eine blanke Nummer, die das Kit auch kennt, MEINT nicht deshalb
+    # das Kit. Gemessen an einem gelebten Feldprojekt traf die alte Form bei
+    # vier Nummern einmal zu und dreimal nicht — und die eine Zeile, die die
+    # Regel VORBILDLICH anwendet (eigene Nummer blank, Kit-Nummern mit
+    # Praefix), stand mit in der Liste. Deshalb: Saetze uebergehen, die daneben
+    # schon eine Nummer MIT `Kit-` schreiben, und den Rest nicht behaupten,
+    # sondern belegen.
     $blank = [System.Collections.Generic.List[string]]::new()
     $vorlage = Join-Path $KIT 'bootstrap\CLAUDE.md.vorlage'
     if (Test-Path $vorlage) {
@@ -593,9 +635,10 @@ function Melde-VeraltetenRegeltext {
         foreach ($m in [regex]::Matches($vorlagentext, 'Kit-((?:BL|HM)-\d+)')) {
             $nummer = $m.Groups[1].Value
             if ($blank.Contains($nummer)) { continue }
-            if ([regex]::IsMatch($text, '(?<!Kit-)\b' + [regex]::Escape($nummer) + '\b')) {
-                $blank.Add($nummer)
-            }
+            $treffer = [regex]::Match($text, '(?<!Kit-)\b' + [regex]::Escape($nummer) + '\b')
+            if (-not $treffer.Success) { continue }
+            if ((Satz-Um $text $treffer) -match 'Kit-') { continue }
+            $blank.Add($nummer)
         }
     }
 
@@ -617,10 +660,19 @@ function Melde-VeraltetenRegeltext {
         Write-Host "        $($script:Werte['{{RUF}}'])<name>$($script:Werte['{{ENDUNG}}'])  <- Entrypoints in der Wurzel"
     }
     if ($blank.Count) {
-        Rot "  [x] $($blank.Count) blanke Backlognummern meinen den KIT-Backlog:"
-        Write-Host "        $($blank -join ', ')"
-        Gelb "      Blank gelesen zeigen sie auf deinen eigenen Backlog — dort"
-        Gelb '      steht etwas anderes oder gar nichts. Kit- davorsetzen.'
+        Gelb "  ! $($blank.Count) blanke Nummern sind mehrdeutig — das Kit kennt sie auch:"
+        foreach ($nummer in $blank) {
+            Write-Host "        $nummer"
+            $imKit = Gegenstand $KIT $nummer
+            $beiDir = Gegenstand $Ziel $nummer
+            if ($imKit)  { Write-Host "          im Kit:  $imKit" }
+            if ($beiDir) { Write-Host "          bei dir: $beiDir" }
+            else         { Write-Host "          bei dir: keine solche Nummer" }
+        }
+        Gelb '      Meint die Stelle das KIT, gehoert `Kit-` davor (Kit-BL-140).'
+        Gelb '      Meint sie DEINEN Backlog, ist sie richtig, wie sie ist.'
+        Gelb '      Meint sie ein DRITTES Projekt, nenne es im Satz (Kit-BL-180).'
+        Gelb '      Zuordnen kann das nur, wer den Satz gelesen hat.'
     }
     Gelb "  Nicht automatisch ersetzt (Lehre BL-12): In CLAUDE.md steckt deine"
     Gelb "  Arbeit. Die Zwei-Bahnen-Region ('Ablage:') bleibt ausdruecklich, wie"
