@@ -110,10 +110,19 @@ def test_team_claude_setzt_last_cost_aus_allen_versuchen():
         "Jeder der drei claude-Aufrufe (Abo, API-Fallback, 429-Retry) muss sein "
         "Log in versuch_logs eintragen."
     )
-    assert koerper.count('team_summe_cost_usd "${versuch_logs[@]}"') == 2, (
-        "Beide TEAM_LAST_COST-Zuweisungen (Pausen-Pfad und Normalpfad) muessen "
-        "ueber die Summe aller Versuche laufen."
-    )
+    # Geprueft wird JEDE Zuweisung, nicht ihre Zahl: Seit BL-316 haelt auch
+    # eine abgelaufene Abo-Anmeldung den Aufruf an (dritter Pfad), und eine
+    # feste Zahl haette den naechsten Pfad entweder abgelehnt oder ungeprueft
+    # durchgelassen. Ausgenommen ist nur der Trockenlauf mit seinem Stubwert.
+    zuweisungen = [z.strip() for z in koerper.splitlines()
+                   if "TEAM_LAST_COST=" in z and '"0.01"' not in z]
+    assert len(zuweisungen) >= 2, (
+        "Pausen-Pfad und Normalpfad setzen TEAM_LAST_COST nicht mehr — die "
+        f"Pruefung greift ins Leere: {zuweisungen}")
+    for zuweisung in zuweisungen:
+        assert 'team_summe_cost_usd "${versuch_logs[@]}"' in zuweisung, (
+            "Jede TEAM_LAST_COST-Zuweisung (Pausen-Pfade und Normalpfad) muss "
+            f"ueber die Summe aller Versuche laufen, nicht: {zuweisung}")
     assert 'TEAM_LAST_OUT="$out"' in koerper, (
         "TEAM_LAST_OUT muss das FINALE Log bleiben — die Promise-Pruefung haengt "
         "daran (HM-20)."

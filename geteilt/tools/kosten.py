@@ -59,10 +59,25 @@ Nutzung:
                                         IM erlaubten Bereich aus dem Log
                                         einer Rolle (permission_denials).
                                         Exit 3 = es gibt welche.
+    kosten.py lesen-verweigert LOG      BL-319: die uebrigen abgelehnten
+                                        Aufrufe (Lesebefehle in der Shell,
+                                        Read, Grep, Glob) — ein Hinweis zum
+                                        Gegenlesen der Abdeckung. Exit 0.
     kosten.py abdeckung [DIR...] [--since EPOCH]
                                         BL-299: die Abdeckungszeilen
                                         (`ABDECKUNG <Nr>: …`) aus dem result
                                         der Sweep-Logs, fuer den Bericht.
+                                        BL-319: „nicht"/„teilweise geprueft"
+                                        hervorgehoben, abgelehnte Lesebefehle
+                                        daneben.
+    kosten.py fallbacks [DIR...] [--since EPOCH]
+                                        BL-316: je API-Fallback eines Laufs
+                                        Aufruf, Grund und API-Betrag — fuer
+                                        den Abschlussbericht.
+    kosten.py fehlergrund LOG           BL-316: "anmeldung",
+                                        "schutzregeln[ <kategorie>]" oder
+                                        nichts — der Grund eines
+                                        gescheiterten Aufrufs (fuer lib.sh).
     kosten.py modelle [DIR...] [--cli BEFEHL]
                                         BL-264: je Rolle das Modell, das
                                         die Logs in DIR tragen (Default
