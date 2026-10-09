@@ -34,9 +34,16 @@ zweiten Produktteils. Er fuhr nur den Reproducer und quittierte:
 > confined to [dem zweiten Produktteil] and documentation.
 
 Er hat den Auftrag wörtlich befolgt. Die Datei, die er geändert hat, wird von
-mehreren positionsgenauen Tests der Suite gelesen. Diesmal ging es gut: Der
-nächste Volllauf auf diesem Stand war grün (bis auf einen bekannten Flake
-unter Last). Geprüft hat das aber erst der Mensch am nächsten Morgen.
+mehreren positionsgenauen Tests der Suite gelesen. Der nächste Volllauf auf
+diesem Stand war grün (bis auf einen bekannten Flake unter Last). Geprüft hat
+das aber erst der Mensch am nächsten Morgen.
+
+**Was die fehlende Suite verdeckt hat:** Der Fund war ein Fehlalarm. Ein Test
+aus dem Bau derselben Kaskade prüfte genau diese Zusicherung schon. Franks
+Gegenprobe (eine der beiden Stellen verstellen, den Reproducer rot sehen)
+hätte in der vollen Suite auch diesen Test rot gemacht und den Doppelfund
+gezeigt. Ohne Suite blieb er unbemerkt: 1,75 USD für einen zweiten Test
+derselben Zusicherung.
 
 ## Wo es steckt
 
