@@ -295,6 +295,9 @@ $TEAM_SMOKE_TEST_TIMEOUT = Team-Default 'TEAM_SMOKE_TEST_TIMEOUT' '600'
 $TEAM_SMOKE_TEST_SCHNELL = Team-Default 'TEAM_SMOKE_TEST_SCHNELL' ''
 # BL-300: Die Zielstand-Pruefung (siehe team.config.ps1). Leer = aus.
 $TEAM_ZIELSTAND_PRUEFUNG = Team-Default 'TEAM_ZIELSTAND_PRUEFUNG' ''
+# BL-325: Wo das laufende Programm seine Belege schreibt (siehe team.config.ps1).
+# Leer = aus.
+$TEAM_LAUFZEIT_BELEG = Team-Default 'TEAM_LAUFZEIT_BELEG' ''
 
 # --- Der Suitenstand ueberlebt die Rolle, die ihn gemessen hat (BL-256) -------
 # WARUM ES DIESE DATEI GIBT. Im Feld aktivierte ein KORREKTER Frank-Fix einen
@@ -393,6 +396,15 @@ $SMOKE_ZEILE
    $zielstand
 "@
     $SMOKE_SUFFIX = "$SMOKE_SUFFIX $zielstand"
+}
+# BL-325: Was ein Programm erst im LAUF zeigt, belegt das Log (siehe lib.sh).
+if ($TEAM_LAUFZEIT_BELEG) {
+    $laufzeit = "Laufzeit-Belege (Kit-BL-325): Was dieses Programm tut, zeigt sich erst im Lauf; seine Belege stehen in: $TEAM_LAUFZEIT_BELEG. Baust oder fixt du Laufzeitverhalten, schreib an jedem Entscheidungspunkt eine kurze Logzeile mit festem Präfix und wenigen Werten und liefere die Auswerteregel mit, die sie liest — geprüft an einer Testdatei im ECHTEN Logformat und mit einer Mutation, die sie rot macht. Ein Fix an Laufzeitverhalten bringt die Logzeile mit, an der der nächste Lauf ihn belegt. Was nur ein Mensch sehen kann (Look and Feel), meldest du als Frage an ihn, nicht als erledigt."
+    $SMOKE_ZEILE = @"
+$SMOKE_ZEILE
+   $laufzeit
+"@
+    $SMOKE_SUFFIX = "$SMOKE_SUFFIX $laufzeit"
 }
 $script:SMOKE_ZEILE = $SMOKE_ZEILE
 $script:SMOKE_SUFFIX = $SMOKE_SUFFIX
@@ -1198,6 +1210,16 @@ function team_redteam_auftrag {
     #>
     param([string]$Grundauftrag, [string]$Standard)
     $basis = if ($Grundauftrag) { $Grundauftrag } else { $Standard }
+    # BL-325: siehe lib.sh — eine Laufzeitbehauptung ohne Beleg ist ein
+    # eigener Fund, gleich, was der Fokus sagt.
+    if ($TEAM_LAUFZEIT_BELEG) {
+        $basis = $basis + "`n`nLAUFZEIT-BELEGE (Kit-BL-325): Dieses Projekt belegt sein " +
+                 "Laufzeitverhalten über $TEAM_LAUFZEIT_BELEG. Eigene Fundklasse: " +
+                 "Laufzeitverhalten, das der Code behauptet, ohne dass eine Logzeile es " +
+                 "belegt oder eine Auswerteregel sie liest — und eine Auswerteregel, die " +
+                 "nur gegen eine nachgeahmte Testdatei geprüft ist statt gegen eine Zeile " +
+                 "im echten Format."
+    }
     $fokus = [Environment]::GetEnvironmentVariable('TEAM_REDTEAM_FOCUS')
     if ($fokus) {
         return ($basis + "`n`nSCHWERPUNKT DIESER KASKADE (zusaetzlich, nicht " +
@@ -2615,7 +2637,7 @@ $script:TEAM_SMOKE_PARALLEL_ZEILE = ''
 
 Export-ModuleMember -Function * -Variable @(
     'SMOKE_ZEILE', 'SMOKE_SUFFIX', 'TEAM_SMOKE_TEST_TIMEOUT', 'TEAM_SMOKE_TEST_SCHNELL',
-    'TEAM_ZIELSTAND_PRUEFUNG',
+    'TEAM_ZIELSTAND_PRUEFUNG', 'TEAM_LAUFZEIT_BELEG',
     'TEAM_SMOKE_PARALLEL_ZEILE',
     'TEAM_MODEL_LOOP', 'TEAM_MODEL_STRONG',
     'TEAM_ROLE_BUDGET_USD', 'TEAM_ROLE_HARDCAP_USD',

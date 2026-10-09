@@ -331,6 +331,26 @@ TEAM_LEDGER="${TEAM_LEDGER:-.budget-ledger}"
 TEAM_PREISE="${TEAM_PREISE:-}"
 export TEAM_PREISE   # die Python-Werkzeuge lesen sie aus der Umgebung
 
+# --- Laufzeit-Belege (BL-325) -------------------------------------------------
+# Fuer Projekte, deren Verhalten sich erst im LAUFENDEN Programm zeigt: ein
+# Spiel, eine App im Emulator oder auf dem Geraet, eine Oberflaeche. Der
+# Smoke-Test prueft dort nur, was statisch pruefbar ist — was das Programm tut,
+# sah bisher nur der Mensch, und er wurde zum Debugger: Werte am Bildschirm
+# ablesen, beschreiben, wiederholen.
+#
+# Hier steht in einem Satz, WO das laufende Programm seine Belege schreibt:
+#
+#     TEAM_LAUFZEIT_BELEG="Log der Engine unter logs/engine.log"
+#     TEAM_LAUFZEIT_BELEG="adb logcat -s MeinSpiel, Emulator ohne Fenster"
+#
+# Gesetzt, bauen Ralph und Frank an jedem Entscheidungspunkt eine Logzeile mit
+# Auswerteregel ein, das Red Team sucht Laufzeitbehauptungen ohne Beleg, und
+# der Architekt plant Abnahmen aus dem Log statt vom Bildschirm. Der Mensch
+# beobachtet und beraet — Look and Feel, Entscheidungen. Leer lassen, wenn
+# Tests und Smoke-Test das Verhalten zeigen. Das Verfahren steht im Kit-Repo
+# unter doku/laufzeit-belege.md.
+TEAM_LAUFZEIT_BELEG="${TEAM_LAUFZEIT_BELEG:-}"
+
 # --- Abgeleitet: Read-Only-Whitelist für Guard Linie 3 ------------------------
 # Regex der Pfade, die Harry/Marv schreiben dürfen. Axel bekommt nur den
 # Plan-Ordner (enger, siehe axel.sh).

@@ -575,6 +575,19 @@ Der Installer füllt beides beim Einzug und warnt, wenn Plan- oder Test-Ordner
 belegt sind. **Die harte Variante** bleibt der eigene, leere Plan-Ordner
 (`team-plans/`): Dann ist die Grenze Mechanik statt Prompt-Auflage.
 
+### Zeigt dein Programm erst im Lauf, was es tut?
+
+Ein Spiel, eine App im Emulator, eine Oberfläche: Der Smoke-Test prüft dort nur,
+was statisch prüfbar ist. Dann trag in `{{KONFIG}}` bei `TEAM_LAUFZEIT_BELEG`
+in einem Satz ein, **wo** das laufende Programm seine Belege schreibt (etwa das
+Log der Engine oder `adb logcat -s <Tag>`). Ab dann bauen die Rollen
+Logzeilen samt Auswerteregel ein, das Red Team sucht Behauptungen ohne Beleg,
+und der Architekt belegt die Abnahme aus dem Log (`Kit-BL-325`). **Du
+beobachtest und berätst** — Look and Feel und Entscheidungen; Werte abzulesen
+und mitzuschreiben ist nicht mehr deine Arbeit. Eine Handabnahme bekommst du
+als kopierfertigen Block mit einer Frage je Zeile. Das Verfahren steht im
+Kit-Repo unter `doku/laufzeit-belege.md`.
+
 ---
 
 ## Auf eine neue Kit-Version heben

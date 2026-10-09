@@ -11,6 +11,19 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **Laufzeit-Belege: Was ein Programm erst im Lauf zeigt, belegt das Log, nicht
+  der Bildschirm** (`BL-325`, Wunsch des Owners aus `Feld F`, beide Bahnen).
+  Fuer Spiele, Apps im Emulator und Oberflaechen gibt es `TEAM_LAUFZEIT_BELEG`
+  in `team.config.*` (ein Satz: wo das laufende Programm seine Belege
+  schreibt; ein Update traegt ihn leer nach). Gesetzt, liefern Ralph und Frank
+  zu jedem Laufzeitverhalten eine Logzeile samt Auswerteregel mit — geprueft an
+  einer Testdatei im echten Logformat und mit Mutation —, das Red Team hat eine
+  eigene Fundklasse fuer Behauptungen ohne Beleg, und der Architekt plant die
+  Belege je Stufe, prueft tragende Annahmen vorher mit einer Probe, faehrt
+  automatisierbare Proben selbst und belegt die Abnahme aus dem Log. Der
+  Mensch beobachtet und beraet. Das Verfahren mit Feldbeispiel, Android-
+  Variante und Vorlage fuer Handabnahmen: `doku/laufzeit-belege.md`.
+
 - **Das Update traegt Neues aus der Kit-Fassung selbst nach** (`BL-311`,
   `Feld F`, beide Bahnen). Es merkt sich in `team/.kit-basis/`, wie die
   Kit-Seite von `.gitignore`, Konfiguration und CLAUDE.md beim letzten Mal

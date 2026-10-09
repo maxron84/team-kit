@@ -69,6 +69,9 @@ TEAM_SMOKE_TEST_TIMEOUT="${TEAM_SMOKE_TEST_TIMEOUT:-600}"
 TEAM_SMOKE_TEST_SCHNELL="${TEAM_SMOKE_TEST_SCHNELL:-}"
 # BL-300: Die Zielstand-Pruefung (siehe team.config.sh). Leer = aus.
 TEAM_ZIELSTAND_PRUEFUNG="${TEAM_ZIELSTAND_PRUEFUNG:-}"
+# BL-325: Wo das laufende Programm seine Belege schreibt (siehe team.config.sh).
+# Leer = aus.
+TEAM_LAUFZEIT_BELEG="${TEAM_LAUFZEIT_BELEG:-}"
 
 # --- Der Suitenstand ueberlebt die Rolle, die ihn gemessen hat (BL-256) -------
 # WARUM ES DIESE DATEI GIBT. Im Feld aktivierte ein KORREKTER Frank-Fix einen
@@ -176,6 +179,16 @@ if [ -n "${TEAM_ZIELSTAND_PRUEFUNG:-}" ]; then
     SMOKE_ZEILE="${SMOKE_ZEILE}
    ${zielstand}"
     SMOKE_SUFFIX="${SMOKE_SUFFIX} ${zielstand}"
+fi
+# BL-325: Was ein Programm erst im LAUF zeigt, belegt das Log, nicht der
+# Bildschirm. Wunsch des Owners: Der Mensch beobachtet und beraet, er liest
+# keine Werte ab. Die bauenden Rollen bekommen die Auflage zur Laufzeit, wie
+# die Zielstand-Pruefung — ihre Briefings liegen am 45-Zeilen-Limit.
+if [ -n "${TEAM_LAUFZEIT_BELEG:-}" ]; then
+    local laufzeit="Laufzeit-Belege (Kit-BL-325): Was dieses Programm tut, zeigt sich erst im Lauf; seine Belege stehen in: ${TEAM_LAUFZEIT_BELEG}. Baust oder fixt du Laufzeitverhalten, schreib an jedem Entscheidungspunkt eine kurze Logzeile mit festem Präfix und wenigen Werten und liefere die Auswerteregel mit, die sie liest — geprüft an einer Testdatei im ECHTEN Logformat und mit einer Mutation, die sie rot macht. Ein Fix an Laufzeitverhalten bringt die Logzeile mit, an der der nächste Lauf ihn belegt. Was nur ein Mensch sehen kann (Look and Feel), meldest du als Frage an ihn, nicht als erledigt."
+    SMOKE_ZEILE="${SMOKE_ZEILE}
+   ${laufzeit}"
+    SMOKE_SUFFIX="${SMOKE_SUFFIX} ${laufzeit}"
 fi
 }
 team_smoke_bausteine
@@ -2753,6 +2766,13 @@ team_logs_archivieren() {
 team_redteam_auftrag() {
     local grund="${1:-}" standard="${2:-}" fokus="${TEAM_REDTEAM_FOCUS:-}"
     local basis="${grund:-$standard}"
+    # BL-325: Belegt das Projekt sein Laufzeitverhalten ueber ein Log, ist
+    # eine Behauptung ohne Beleg ein eigener Fund — gleich, was der Fokus sagt.
+    if [ -n "${TEAM_LAUFZEIT_BELEG:-}" ]; then
+        basis="${basis}
+
+LAUFZEIT-BELEGE (Kit-BL-325): Dieses Projekt belegt sein Laufzeitverhalten über ${TEAM_LAUFZEIT_BELEG}. Eigene Fundklasse: Laufzeitverhalten, das der Code behauptet, ohne dass eine Logzeile es belegt oder eine Auswerteregel sie liest — und eine Auswerteregel, die nur gegen eine nachgeahmte Testdatei geprüft ist statt gegen eine Zeile im echten Format."
+    fi
     if [ -n "$fokus" ]; then
         printf '%s\n\nSCHWERPUNKT DIESER KASKADE (zusaetzlich, nicht statt des Obigen): %s\n' \
                "$basis" "$fokus"

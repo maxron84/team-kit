@@ -102,6 +102,9 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | **„welche bestehenden Verträge berührt das Neue?"** |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | Jeder davon gehört in den |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | rolle-architekt | **Den Fokus setze ich bei jeder Kaskade** |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | rolle-architekt | **Die Abnahme belegt jeden Punkt aus dem Log** |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | rolle-architekt | **Was ohne den Menschen laufen kann, läuft ohne ihn:** |
+| Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | rolle-architekt | **Jede Stufe, die Laufzeitverhalten baut, nennt ihre Belege:** |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | rolle-architekt | ich zähle die Nähte auf |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | Regeldatei | **5. Abschluss-Doc ist Pflicht pro gebauter Kaskade** |
 | Kaskaden-Planungsregeln (verbindlich für den Architekten)  ✅ erprobt | NORM | rolle-architekt | Textvolumen-gebundene Prosa-Arbeit (Doku umbauen, verdichten, umziehen) plane ich als **eigene Handarbeit** |

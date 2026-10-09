@@ -4,7 +4,7 @@
 [![macOS — nicht belegt](https://img.shields.io/badge/macOS-nicht_belegt-9f9f9f?style=flat-square&logo=apple&logoColor=white)](doku/einrichtung.md#belegstand)
 
 [![Version 2.13.1](https://img.shields.io/badge/Version-2.13.1-007ec6?style=flat-square)](CHANGELOG.md)
-[![Regressionstests 1997](https://img.shields.io/badge/Regressionstests-1997-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
+[![Regressionstests 2010](https://img.shields.io/badge/Regressionstests-2010-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
 [![Selbsttest 11 Stufen](https://img.shields.io/badge/Selbsttest-11_Stufen-2ea44f?style=flat-square)](bash/kit-test.sh)
 [![Lizenz MIT](https://img.shields.io/badge/Lizenz-MIT-007ec6?style=flat-square)](LICENSE)
 
@@ -88,10 +88,10 @@ im Linux-Dateisystem. Die ganze Routine für beide Plattformen, mit IDE (VS
 Codium bzw. VS Code) und Agenten-Werkzeug, steht in
 [doku/einrichtung.md](doku/einrichtung.md).
 
-Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 264 Dateien im
+Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 265 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
-`TEAM.md` und 1997 Regressionstests.
+`TEAM.md` und 2010 Regressionstests.
 
 > **Was „Version" hier heißt.** Das Kit veröffentlicht **keine Releases**;
 > ausgeliefert wird der **Quellstand** dieses Repos. Die Versionsnummer ist die
@@ -127,9 +127,7 @@ und ein Gleichstands-Prüfer, der **an seinem eigenen Befund starb**, weil `diff
 mit 1 endet, wenn es etwas findet. Keiner der fallenden Fälle wurde grün
 gedreht.
 
-**Offen sind 3 Einträge.** Einer davon kommt aus der Triage vom
-2026-10-09 (`BL-315` bis `BL-325`, zwölf Meldungen aus `Feld B` und `Feld F`;
-zehn sind am selben Tag abgetragen); zwei sind mit Absicht zur Hälfte gebaut.
+**Offen sind 2 Einträge**, und beide sind mit Absicht zur Hälfte gebaut.
 `BL-247` hat seinen ersten Schritt: Das Ledger trägt jetzt die Messung — Token
 je Modell und Sorte — statt nur ihres Dollarwerts. Den zweiten Schritt, die
 Dollar aus den Token nachzurechnen, verschiebt die Meldung selbst, bis es
@@ -137,15 +135,18 @@ Ledger-Zeilen gibt, gegen die er sich prüfen lässt. `BL-243` hat seinen kleine
 Vorschlag (zehn Sätze für Menschen vorneweg in jedem Abschluss-Doc); das
 Projekttagebuch mit eigener Rolle kommt erst nach einer Probeausgabe von Hand.
 
-**Alle übrigen sind am 2026-10-03 abgetragen** — auch die fünf, die auf eine
-Entscheidung warteten (`BL-193`, `BL-194`, `BL-204`, `BL-206`, `BL-219`). Die
-Begründung jeder Entscheidung steht im Archiv bei ihrem Eintrag. Dass
+**Alle übrigen sind abgetragen** — die aus der Triage vom 2026-10-03 am
+selben Tag, auch die fünf, die auf eine Entscheidung warteten (`BL-193`,
+`BL-194`, `BL-204`, `BL-206`, `BL-219`); die elf aus der Triage vom
+2026-10-09 (`BL-315` bis `BL-325`, zwölf Meldungen aus `Feld B` und
+`Feld F`) ebenfalls am selben Tag. Die Begründung jeder Entscheidung steht
+im Archiv bei ihrem Eintrag. Dass
 Feldmeldungen offen *dastehen*, ist die Absicht des Rückkanals: Sie sind
 erfasst, begründet und nach Wirkung sortiert, statt in Sitzungsprotokollen zu
 verschwinden.
 
 Alles in [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (259 Einträge).
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (260 Einträge).
 
 ---
 
@@ -184,6 +185,7 @@ die Bedienanleitung fürs Zielprojekt ist `TEAM.md`:
 | **[doku/einrichtung.md](doku/einrichtung.md)** | **wer das Kit auf eine Maschine holt** | **Die Routine: Klonen, Bordmittel, WSL, IDE, Auth, Einbinden, Fehlerbilder, Belegstand** |
 | [doku/faq.md](doku/faq.md) | wer beim Aufsetzen oder im Betrieb hängt | Vier ganze Fragen statt Symptomzeilen: CLI nicht gefunden, Exit `42`/`43`, abgewählte Bahn zurückholen, Kosten höher als geschätzt |
 | [doku/anhang-a.md](doku/anhang-a.md) | wer wissen will, *warum* es so gebaut ist | Die Warum-Schicht: Bauentscheide und Feld-Betriebslehren (A.0–A.13) |
+| [doku/laufzeit-belege.md](doku/laufzeit-belege.md) | wer ein Programm baut, das erst im Lauf zeigt, was es tut | Spiele, Apps, Oberflächen: Belege aus dem Log statt vom Bildschirm, Proben ohne den Menschen, Vorlage für Handabnahmen (`TEAM_LAUFZEIT_BELEG`) |
 | [doku/regel-inventar.md](doku/regel-inventar.md) | wer eine Regel der Vorlage ändert | Jede Regel als NORM/HERLEITUNG/HISTORIE, mit Träger und wörtlichem Zitat |
 | [CHANGELOG.md](CHANGELOG.md) | wer eine bestehende Installation nachzieht | Jede Änderung mit Begründung und Feldbeleg |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | wer einen Fund am Kit zurückmelden will | Der Meldeweg, die Redaktionsregel, was ein Code-PR nachweisen muss |
@@ -440,7 +442,7 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen sieben Quellen
 kommen die Backlog-Einträge `BL-1`…`BL-325`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (259 Einträge), der Rest in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (260 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors
@@ -686,7 +688,7 @@ geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 │                       in denselben Dateien. Die pwsh-Bahn ist eine zweite
 │                       ORCHESTRIERUNG, kein zweiter Zustandscode
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-├── tests/              199 Testdateien, 1997 Fälle — der Doppelbahn-Harnisch
+├── tests/              200 Testdateien, 2010 Fälle — der Doppelbahn-Harnisch
 │                       fährt jeden Fall gegen BEIDE Bahnen, aus EINEM
 │                       Testkörper
 ├── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
@@ -926,11 +928,11 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   was dieses Kit *belegen* könnte. Was eine Übersetzung wirklich kostet, steht
   in der [Roadmap](plans/roadmap-skizzen.md) als **Skizze G**: Nicht die Prosa
   ist die Arbeit, sondern die Kopplungen — das Regel-Inventar zitiert
-  **wörtlich**, `zitat_lint.py` prüft Zitate, und 1997 Regressionstests
+  **wörtlich**, `zitat_lint.py` prüft Zitate, und 2010 Regressionstests
   greifen auf deutsche Zeichenketten zu. Der Name bleibt in jeder Fassung
   `T.E.A.M.`; die Auflösungen dafür stehen in `TEAM.md`.
 - **Selbstverifikation**: `bash bash/kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 1997 Tests — in **vier Konfigurationen**:
+  Wegwerf-Repo und fährt dort die 2010 Tests — in **vier Konfigurationen**:
   mit den Auslieferungswerten, mit angepasster `team.config.sh` (Caps,
   Commit-Präfixe, zwei Domänen), mit verdrehten Sprachmarken (`BL-194`) und
   als gealtertes Bestandsprojekt nach einem Update (`BL-307`). Der zweite
@@ -968,7 +970,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
 
 Benutzen, ändern, weitergeben und in eigene Projekte einziehen ist ausdrücklich
 erlaubt, kommerziell wie privat; es bleibt nur die Namensnennung. Das gilt
-**auch für die 264 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
+**auch für die 265 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
 lösen keine Lizenzpflicht für den Code des Zielprojekts aus. Der Code stammt aus
 einem eigenen Projekt des Autors; das Urheberrecht liegt vollständig bei ihm.
 

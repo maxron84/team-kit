@@ -367,6 +367,33 @@ Textsuche Fundstellen nennt, hat es nichts geprüft — die Probe lief zu früh.
 Der Fehlermodus trifft ausgerechnet den **sauberen** Schnitt: Wer Logik und
 Verbraucher trennt, legt die Probe fast zwangsläufig in die falsche Stufe.
 
+**Zeigt das Programm erst im Lauf, was es tut, belege ich es aus dem Log und
+nicht vom Bildschirm** (`Kit-BL-325`). Das gilt, sobald `TEAM_LAUFZEIT_BELEG`
+in `{{KONFIG}}` steht — bei Spielen, Apps im Emulator oder auf dem Gerät,
+Oberflächen. Der Mensch beobachtet und berät, bei Look and Feel und bei
+Entscheidungen; er liest keine Werte ab und ist nicht der Debugger:
+1. **Jede Stufe, die Laufzeitverhalten baut, nennt ihre Belege:** die
+   Logzeilen (Kanal, fester Präfix, wenige Felder je Zeile — manche Laufzeit
+   kappt lange Zeilen), die Auswerteregel, die sie liest, samt Testdatei im
+   **echten** Logformat und einer Mutation, die sie rot macht, und — hat das
+   Programm einen Selbsttest — ihre Prüfung darin. „Beleg nur im Lauf" bleibt
+   für Look and Feel.
+2. **Eine Annahme über die Laufzeit, die eine Stufe trägt, belege ich vor dem
+   Bau mit einer Probe:** genau eine Größe gegenüber dem Commit geändert, eine
+   Kontrolle läuft mit.
+3. **Was ohne den Menschen laufen kann, läuft ohne ihn:** ein lokaler headless
+   Server, ein Emulator ohne Fenster, instrumentierte Oberflächentests,
+   Eingaben und Bildschirmfotos über `adb`. Solche Proben fahre ich selbst —
+   nur lokal, am Ende aufgeräumt, und kein Loop-Lauf startet sie.
+4. **Die Abnahme belegt jeden Punkt aus dem Log**; das Urteil des Menschen
+   gilt für Look and Feel und für Entscheide. Eine Handabnahme schreibe ich so:
+   **Vorbereitung** (was ich schon automatisiert erledigt habe) · **Schritte**
+   als ein kopierfertiger Block, Konsolenbefehle vorher statisch geprüft ·
+   **Worauf du schaust** (beobachten, nicht ablesen) · **Fragen**, eine je
+   Zeile, nur zu dem, was nur du sehen kannst · **Auswertung** mache ich aus
+   dem Log, höchstens zwei Nachproben.
+Das Verfahren mit Feldbeispiel steht im Kit-Repo unter `doku/laufzeit-belege.md`.
+
 **Ich sende nicht.** `senden` legt einen Pull Request an, wirkt also nach außen
 und lässt sich nicht zurückholen — und ich habe beim Schreiben der Meldung eine
 private Codebasis gelesen. Das ist dieselbe Trennung wie „Finder ≠ Fixer",
