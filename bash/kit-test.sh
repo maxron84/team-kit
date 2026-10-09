@@ -646,8 +646,11 @@ pruefe "angehobener Hard-Cap ueberlebt das Update" \
 # so einen geloescht. Es bleibt liegen und wird gemeldet.
 pruefe "projekteigener Test in team/tests bleibt erhalten" \
        "$([ -f "$ZIEL/team/tests/test_projekteigener_fund.py" ] && echo da || echo weg)" "da"
+# Gezaehlt wird die Zeile der Meldung, nicht jede Nennung: Seit BL-318 nennt
+# die Commit-Empfehlung am Ende dieselbe (ungetrackte) Datei noch einmal unter
+# "Nicht im Commit" — das ist richtig und kein zweiter Befund.
 pruefe "und wird als unbekannt gemeldet" \
-       "$(grep -c 'test_projekteigener_fund.py' "$ZIEL/.update.log")" "1"
+       "$(grep -c '· .*test_projekteigener_fund\.py' "$ZIEL/.update.log")" "1"
 # BL-270: Mit Pruefsummenliste (die Erstinstallation schreibt sie) meldet das
 # Update eine seit dem letzten Lauf geaenderte Kit-Datei unter eigener
 # Ueberschrift — und sichert sie, bevor es sie ersetzt.

@@ -780,8 +780,11 @@ try {
     # BL-12: Ein Testfile, das das Kit nicht kennt, kann ein projekteigener
     # Infrastruktur-Test sein — im Feld hat ein pauschales Loeschen genau so
     # einen entfernt. Es bleibt liegen UND wird gemeldet.
+    # Gezaehlt wird die Zeile der Meldung, nicht jede Nennung: Seit BL-318
+    # nennt die Commit-Empfehlung eine ungetrackte Datei dort noch einmal unter
+    # "Nicht im Commit" — das ist richtig und kein zweiter Befund.
     Pruefe 'projekteigener Test wird als unbekannt gemeldet' `
-        (Treffer $updateLog 'test_projekteigener_fund\.py') 1
+        (Treffer $updateLog '- .*test_projekteigener_fund\.py') 1
     # BL-270: Mit Pruefsummenliste (die Erstinstallation schreibt sie) meldet
     # das Update eine seit dem letzten Lauf geaenderte Kit-Datei unter eigener
     # Ueberschrift — und sichert sie, bevor es sie ersetzt.
