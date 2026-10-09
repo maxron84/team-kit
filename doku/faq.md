@@ -213,7 +213,7 @@ env -u ANTHROPIC_API_KEY claude -p "sag ok" --output-format json
 
 | Exit | Zeile im Protokoll |
 |---|---|
-| `42` | `⏸ Session-Limit erreicht — Lauf pausiert (Ralph). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht).` |
+| `42` | `⏸ Lauf pausiert (Ralph) — Session-Limit oder abgelaufene Abo-Anmeldung; der Grund steht in der Zeile der Rolle darüber (Kit-BL-316). Danach './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht).` |
 | `43` | `⚠ Stufe fertig, Quittung fehlt (BL-41) — Lauf gestoppt. NICHT neu bauen, bevor die von Ralph genannten zwei Prüfungen gelaufen sind.` |
 
 **Einordnung vorweg:** Beides sind **eigene Ausgänge neben `0` und `1`**, und
@@ -256,6 +256,23 @@ Ist der Reset-Zeitpunkt unbekannt oder liegt er jenseits des Maximums, wartet
 das Kit **gar nicht** und geht sofort in den Pausen-Exit — lieber ein sauberes
 Warten durch dich als eine Stunde blockierter Prozess.
 
+### `42` — oder die Abo-Anmeldung ist abgelaufen
+
+Steht in der Zeile der Rolle **„Abo-Anmeldung abgelaufen"** statt eines
+Session-Limits, hilft Warten nicht (`Kit-BL-316`). Die Anmeldung der CLI ist
+abgelaufen oder ungültig, und sie geht nicht von selbst vorüber.
+
+**Was du tust:** `claude` starten, `/login`, und danach denselben Lauf erneut
+starten. Der Zustand steht wie bei jedem `42`.
+
+**Warum das Kit hier nicht auf die API ausweicht**, obwohl es das bei einem
+Limit tut: Ein Limit geht vorüber, der nächste Aufruf versucht es wieder im
+Abo. Eine abgelaufene Anmeldung nicht — im Feld lief so der Rest eines Laufs
+über die API, rund 12,5 USD für ein Neu-Anmelden. Lehnt dagegen das Modell
+einen Aufruf über seine **Schutzregeln** ab (`safeguards flagged … [cyber]`),
+fährt das Kit ihn einmal über die API nach und sagt das; der Abschlussbericht
+zählt solche Fallbacks mit Grund und Betrag.
+
 ### `43` — die Stufe ist fertig, nur die Quittung fehlt
 
 Die Rolle hat gearbeitet, das Log meldet Erfolg, aber das
@@ -295,8 +312,17 @@ Dann entscheidest du **entlang des Ergebnisses**, nicht nach Gefühl:
 > Nutzerverzeichnisse. Im Feld hat das einen **grünen** Baum als rot gemeldet,
 > mitsamt der Empfehlung, im Testaufbau zu suchen; ein Neubau hätte 2,36 USD
 > fertige Arbeit weggeworfen. Die Selbstprüfung erkennt den Fall inzwischen
-> selbst und meldet dann **UNBEKANNT statt rot** — steht das im Protokoll,
-> ist nichts kaputt, es ist nur nichts gemessen.
+> selbst — und **wartet** auf den laufenden Test, bis `TEAM_SMOKE_TEST_TIMEOUT`,
+> und misst danach selbst (`Kit-BL-315`). Meist ist es der verwaiste Lauf der
+> Rolle, und die Stufe quittiert sich dann ohne dich. Nur wenn er nach der Frist
+> noch läuft, meldet sie **UNBEKANNT statt rot** — steht das im Protokoll, ist
+> nichts kaputt, es ist nur nichts gemessen.
+
+> **Und eine Meldung, die nach rot klingt und keine ist (`Kit-BL-320`):**
+> *„Der Smoke-Test trägt pytest-xdist-Optionen …, aber pytest-xdist liegt nicht
+> im Interpreter"*. Dann ist der Baum nicht rot, sondern **ungeprüft** — das
+> Paket fehlt. `pytest-xdist` in diesen Interpreter installieren oder den
+> Befehl ohne `-n`/`--dist` setzen, dann den Smoke-Test von Hand fahren.
 
 > **Warum die Rolle überhaupt in den Hintergrund ausweicht:** weil die Suite
 > irgendwann länger läuft als die Vordergrundgrenze des Agenten-Werkzeugs.
