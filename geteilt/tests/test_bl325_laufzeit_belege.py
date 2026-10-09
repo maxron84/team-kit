@@ -73,10 +73,18 @@ def test_leer_bleibt_alles_wie_es_war(tmp_path, schale):
 def test_beide_bahnen_sagen_dasselbe(tmp_path):
     """Dieselbe Auflage auf beiden Bahnen — der Quelltext-Vergleich aus BL-112
     sieht nur Platzhalter, nicht den eingesetzten Text."""
-    from conftest import Schale, ueberspringe_ohne_bahn
+    from conftest import (Schale, ueberspringe_ohne_beide_bahnen,
+                          verlange_bash, verlange_pwsh)
+    # Ein VERGLEICH: In einer einbahnigen Ablage gehoert der Uebersprung in
+    # die Zeile "einbahnige Ablage", nicht unter "<bahn>-Bahn nicht
+    # installiert" — die zaehlt Tests, die EINE Bahn fahren (BL-129). Mit dem
+    # falschen Helfer stand der Rueckweg im nur-pwsh-Lauf dreimal statt
+    # zweimal, und kit-test.sh Stufe 8 wurde rot.
+    ueberspringe_ohne_beide_bahnen()
+    verlange_bash()
+    verlange_pwsh()
     texte = []
     for bahn in ("bash", "pwsh"):
-        ueberspringe_ohne_bahn(bahn)
         schale = Schale(bahn)
         if not schale.kit_lib.is_file():
             pytest.skip(f"{schale.lib_name} liegt hier nicht")
