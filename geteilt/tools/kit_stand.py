@@ -33,11 +33,18 @@ NUTZUNG (aus den Installern, nicht von Hand)
                                                 nach backups/update-S/
     kit_stand.py schreiben --ziel Z --kit K     die Liste neu, ueber alles,
                                                 was das Kit im Projekt hat
+    kit_stand.py vorher --ziel Z                den Arbeitsbaum festhalten,
+                                                BEVOR der Installer schreibt
+    kit_stand.py commit-vorschlag --ziel Z --nachricht N
+                                                die Commit-Zeilen nur ueber
+                                                die eigenen Pfade (Kit-BL-318)
 """
 import glob
 import hashlib
+import json
 import os
 import shutil
+import subprocess
 import sys
 
 # BL-133: Die Ausgabe ist UTF-8 — unabhaengig von der Locale des Wirts. Unter
@@ -134,6 +141,139 @@ def schreiben(ziel, kit):
     return 0
 
 
+# --- Kit-BL-318: Der Commit nach dem Installer nimmt nur, was er geschrieben hat
+#
+# Die Commit-Zeile am Ende von Update und Einrichtung lautete `add -A`. Im Feld
+# lag eine Szenarioaenderung des Menschen uncommittet im Produktivcode; er
+# uebernahm die Zeile woertlich, und die halbe Produktaenderung landete im
+# Commit "chore: T.E.A.M. aktualisiert" — einem Commit, den jeder, der die
+# Geschichte nach Produktaenderungen durchsieht, ueberspringt.
+#
+# Welche Pfade dem Installer gehoeren, misst er jetzt, statt sie zu raten:
+# `vorher` haelt den Arbeitsbaum fest, BEVOR er etwas schreibt (Pfad und
+# Fingerabdruck jeder Aenderung); `commit-vorschlag` vergleicht danach. Was neu
+# geaendert ist oder sich seither veraendert hat, gehoert in den Commit; was
+# vorher schon genau so dalag, nicht. Die Pfadliste liegt im Git-Verzeichnis
+# (nicht im Arbeitsbaum, wo sie selbst eine Aenderung waere), NUL-getrennt und
+# woertlich (`:(literal)`), damit kein Name mit Leerzeichen oder `*` stoert.
+# `git commit --pathspec-from-file` nimmt nur diese Pfade — auch dann, wenn
+# vorher schon anderes gestaged war.
+VORHER = "team-arbeitsbaum-vorher.json"
+PFADE = "team-commit-pfade"
+
+
+def _git(ziel, *args):
+    return subprocess.run(["git", "-C", ziel, *args], capture_output=True)
+
+
+def _git_datei(ziel, name):
+    r = _git(ziel, "rev-parse", "--git-path", name)
+    if r.returncode != 0:
+        return None
+    pfad = r.stdout.decode("utf-8", "surrogateescape").strip()
+    return os.path.abspath(pfad if os.path.isabs(pfad)
+                           else os.path.join(ziel, pfad))
+
+
+def _fingerabdruck(pfad):
+    if os.path.isdir(pfad):
+        return "ordner"
+    try:
+        with open(pfad, "rb") as fh:
+            return hashlib.sha256(fh.read()).hexdigest()
+    except OSError:
+        return "fehlt"
+
+
+def _geaendert(ziel):
+    """{pfad: fingerabdruck} fuer alles, was `git status` meldet — auch
+    ungetrackte Dateien einzeln. None, wenn ziel kein Git-Arbeitsbaum ist."""
+    r = _git(ziel, "status", "--porcelain=v1", "-z", "--untracked-files=all")
+    if r.returncode != 0:
+        return None
+    eintraege = r.stdout.split(b"\0")
+    ergebnis = {}
+    i = 0
+    while i < len(eintraege):
+        e = eintraege[i]
+        i += 1
+        if len(e) < 4:
+            continue
+        status = e[:2].decode("ascii", "replace")
+        pfad = e[3:].decode("utf-8", "surrogateescape")
+        if "R" in status or "C" in status:
+            i += 1          # -z: der Herkunftspfad folgt als eigener Eintrag
+        ergebnis[pfad] = _fingerabdruck(os.path.join(ziel, pfad))
+    return ergebnis
+
+
+def vorher(ziel):
+    stand = _geaendert(ziel)
+    datei = _git_datei(ziel, VORHER) if stand is not None else None
+    if datei is None:
+        return 0            # kein Git-Arbeitsbaum: nichts festzuhalten
+    with open(datei, "w", encoding="utf-8", errors="surrogateescape") as fh:
+        json.dump(stand, fh, ensure_ascii=False)
+    return 0
+
+
+def _auflisten(pfade, hoechstens=20):
+    for p in pfade[:hoechstens]:
+        print(f"      {p}")
+    if len(pfade) > hoechstens:
+        print(f"      … und {len(pfade) - hoechstens} weitere (git status)")
+
+
+def commit_vorschlag(ziel, nachricht):
+    nachher = _geaendert(ziel)
+    if nachher is None:
+        print(f'    git -C "{ziel}" add -A; git -C "{ziel}" commit -m "{nachricht}"')
+        print("    (Kein Git-Arbeitsbaum erkannt — vorher `git status` ansehen.)")
+        return 0
+    stand_datei = _git_datei(ziel, VORHER)
+    stand = None
+    if stand_datei and os.path.isfile(stand_datei):
+        try:
+            with open(stand_datei, encoding="utf-8",
+                      errors="surrogateescape") as fh:
+                stand = json.load(fh)
+        except (OSError, ValueError):
+            stand = None
+    if stand is None:
+        eigene, fremde, gemischt = sorted(nachher), [], []
+    else:
+        eigene = sorted(p for p, f in nachher.items() if stand.get(p) != f)
+        fremde = sorted(p for p, f in nachher.items() if stand.get(p) == f)
+        gemischt = sorted(p for p in eigene if p in stand)
+    if not eigene:
+        print("    Nichts zu committen — der Installer hat im Arbeitsbaum nichts "
+              "geändert.")
+    else:
+        liste = _git_datei(ziel, PFADE)
+        with open(liste, "wb") as fh:
+            fh.write(b"\0".join((":(literal)" + p).encode(
+                "utf-8", "surrogateescape") for p in eigene))
+        spec = f'--pathspec-file-nul --pathspec-from-file="{liste}"'
+        print(f'    git -C "{ziel}" add {spec}')
+        print(f'    git -C "{ziel}" commit -m "{nachricht}" {spec}')
+        anzahl = (f"{len(eigene)} Pfad" if len(eigene) == 1
+                  else f"{len(eigene)} Pfade")
+        print(f"    ({anzahl} — genau, was der Installer geändert hat; "
+              f"Kit-BL-318)")
+    if stand is None:
+        print("    ACHTUNG: Kein Vorher-Stand — die Liste enthält ALLES, was "
+              "gerade geändert ist. Vorher `git status` ansehen.")
+    if fremde:
+        print(f"    Nicht im Commit — lag schon vorher geändert im Arbeitsbaum "
+              f"und gehört nicht zum Installer. Getrennt committen:")
+        _auflisten(fremde)
+    if gemischt:
+        print("    Im Commit, aber schon VORHER geändert — prüfe, ob deine "
+              "eigene Änderung daran mit hinein soll:")
+        _auflisten(gemischt)
+    return 0
+
+
 def main(argv):
     # Die Pfadliste liest die bash-Bahn per Befehlsersetzung. Unter Windows
     # schreibt Pythons Textmodus "\r\n"; das \r blieb am Pfad haengen, und
@@ -143,11 +283,13 @@ def main(argv):
         sys.stdout.reconfigure(encoding="utf-8", newline="\n")
     except (AttributeError, ValueError, OSError):
         pass
-    if not argv or argv[0] not in ("pruefen", "sichern", "schreiben"):
+    if not argv or argv[0] not in ("pruefen", "sichern", "schreiben",
+                                   "vorher", "commit-vorschlag"):
         print(__doc__, file=sys.stderr)
         return 2
     verb, rest = argv[0], argv[1:]
-    werte = {"--ziel": None, "--kit": None, "--stempel": None}
+    werte = {"--ziel": None, "--kit": None, "--stempel": None,
+             "--nachricht": None}
     alle = False
     pfade = []
     i = 0
@@ -162,6 +304,14 @@ def main(argv):
             pfade.append(rest[i])
             i += 1
     ziel, kit, stempel = werte["--ziel"], werte["--kit"], werte["--stempel"]
+    if verb == "vorher":
+        return vorher(ziel) if ziel else 2
+    if verb == "commit-vorschlag":
+        if not ziel or not werte["--nachricht"]:
+            print("Fehler: commit-vorschlag braucht --ziel und --nachricht",
+                  file=sys.stderr)
+            return 2
+        return commit_vorschlag(ziel, werte["--nachricht"])
     if not ziel or (verb != "sichern" and not kit):
         print(f"Fehler: {verb} braucht --ziel und --kit", file=sys.stderr)
         return 2

@@ -574,6 +574,27 @@ else
     PYTHON="python3"; PYTHON_GEFUNDEN=0
 fi
 
+# BL-318: Den Arbeitsbaum festhalten, BEVOR der Installer etwas schreibt. Die
+# Commit-Zeile am Ende nimmt dann genau das, was er geaendert hat, und nennt,
+# was schon vorher dalag. Dort stand `add -A` — und im Feld landete eine halbe
+# Produktaenderung im Commit "chore: T.E.A.M. aktualisiert", den jeder
+# ueberspringt, der die Geschichte nach Produktaenderungen durchsieht.
+if [ "$PYTHON_GEFUNDEN" -eq 1 ]; then
+    "$PYTHON" "$KIT/geteilt/tools/kit_stand.py" vorher --ziel "$ZIEL" >/dev/null 2>&1 || true
+fi
+
+# commit_vorschlag <nachricht> — die Commit-Zeilen ueber genau die Pfade des
+# Installers (BL-318). Ohne Python bleibt nur der Rat, vorher hinzusehen.
+commit_vorschlag() {
+    if [ "$PYTHON_GEFUNDEN" -eq 1 ] && \
+       "$PYTHON" "$KIT/geteilt/tools/kit_stand.py" commit-vorschlag \
+           --ziel "$ZIEL" --nachricht "$1"; then
+        return 0
+    fi
+    echo "    git -C \"$ZIEL\" status    # erst ansehen: nur die Dateien des T.E.A.M. gehoeren hinein"
+    echo "    git -C \"$ZIEL\" add -- <diese Pfade> && git -C \"$ZIEL\" commit -m \"$1\""
+}
+
 # finde_claude_cli: derselbe Handgriff fuer die AGENTEN-CLI.
 #
 # BL-173, und der Grund wiegt hier schwerer als bei Python. Claude Code wird
@@ -1583,8 +1604,8 @@ PY
     fi
 
     kopf "Update fertig"
-    rot  "  JETZT COMMITTEN — vor dem naechsten Lauf, nicht danach."
-    echo "    git -C \"$ZIEL\" add -A && git -C \"$ZIEL\" commit -m \"chore: T.E.A.M. aktualisiert\""
+    rot  "  JETZT COMMITTEN — vor dem naechsten Lauf, nicht danach. Genau die Pfade des Updates:"
+    commit_vorschlag "chore: T.E.A.M. aktualisiert"
     echo
     echo "  Warum das keine Formalie ist: Die neuen Dateien liegen uncommittet in"
     echo "  team/. Der naechste Read-Only-Lauf (Harry/Marv/Axel) sieht sie ausserhalb"
@@ -2245,7 +2266,10 @@ Nächste Schritte im Zielprojekt:
 
   1. Werte prüfen:      \$EDITOR "$ZIEL/team.config.sh"
   2. Regeln prüfen:     \$EDITOR "$ZIEL/CLAUDE.md"   (TODO-Stellen füllen)
-  3. Alles committen:   git -C "$ZIEL" add -A && git -C "$ZIEL" commit -m "chore: T.E.A.M. eingerichtet"
+  3. Committen — genau das, was die Einrichtung angelegt hat (Kit-BL-318):
+EOF
+commit_vorschlag "chore: T.E.A.M. eingerichtet" | sed 's/^/  /'
+cat <<EOF
      ^ WICHTIG: vor dem ersten Lauf committen. Der Wächter hält uncommittete
        Dateien für einen Übergriff der Rollen und räumt sie weg.
   4. Team-Tests:        cd "$ZIEL" && ./team-test.sh

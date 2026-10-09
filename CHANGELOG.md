@@ -544,6 +544,15 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Die Commit-Zeile nach Update und Einrichtung nahm mit `add -A` fremde
+  Arbeit mit** (`BL-318`, `Feld F`, beide Bahnen). Im Feld landete so eine
+  halbe Produktaenderung im Commit „chore: T.E.A.M. aktualisiert". Beide
+  Installer halten den Arbeitsbaum jetzt fest, bevor sie schreiben
+  (`kit_stand.py vorher`), und drucken am Ende Commit-Zeilen ueber genau die
+  Pfade, die sie geaendert haben (`commit-vorschlag`, Pfadliste im
+  Git-Verzeichnis). Was vorher schon geaendert dalag, bleibt draussen und wird
+  genannt — auch, wenn es schon gestaged war.
+
 - **Das Red Team gab bei abgelehnten Lesebefehlen auf und meldete die Stelle
   als geprueft** (`BL-319`, `Feld F`, beide Bahnen). Was das Kit jetzt selbst
   tut: Jede Shell-Freigabe gilt auch fuer das PowerShell-Werkzeug der CLI (im

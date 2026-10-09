@@ -20,6 +20,11 @@ von selbst. Später mal einen neueren Kit-Stand holen? →
 git add -A && git commit -m "chore: T.E.A.M. eingerichtet"
 ```
 
+Lag vorher schon eigene Arbeit uncommittet im Baum, nimm stattdessen die zwei
+Zeilen, die der Installer am Ende gedruckt hat: Sie committen genau seine
+Dateien und nennen, was draußen bleibt (`Kit-BL-318`). Dasselbe druckt jedes
+Update.
+
 Der Read-Only-Guard prüft nach jedem Sweep, ob eine Rolle außerhalb ihrer
 erlaubten Pfade geschrieben hat — und setzt Verletzer zurück. **Uncommittete
 Dateien außerhalb der Whitelist sehen für ihn genauso aus wie ein Regelbruch.**

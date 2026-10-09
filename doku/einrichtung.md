@@ -7,7 +7,7 @@ gern verwechselt werden:
 | Vorgang | Was passiert | Wie oft |
 |---|---|---|
 | **Klonen und einrichten** | Das Kit-Repo landet auf der Maschine, die Bordmittel werden geprüft, die Auth des Agenten-Werkzeugs steht | einmal pro Maschine |
-| **Einbinden** | `install.sh` legt die 263 Dateien in ein **Zielprojekt** | einmal pro Projekt |
+| **Einbinden** | `install.sh` legt die 264 Dateien in ein **Zielprojekt** | einmal pro Projekt |
 
 Der kurze Weg steht ganz oben; alles darunter ist die Begründung und der
 Fehlerfall.
@@ -621,7 +621,9 @@ fehlenden Konfiguration.
    Bedeutung steht im [README](../README.md#installation); der wichtigste Wert
    ist der **Smoke-Test**.
 3. **Werte prüfen:** `team.config.sh` und die TODO-Stellen in `CLAUDE.md`.
-4. **Committen — vor dem ersten Lauf, nicht danach:**
+4. **Committen — vor dem ersten Lauf, nicht danach:** Die zwei Zeilen dafür
+   druckt der Installer am Ende; sie nehmen genau seine Dateien und nennen,
+   was draußen bleibt (`Kit-BL-318`). Liegt nichts Fremdes im Baum, geht auch:
    ```bash
    git add -A && git commit -m "chore: T.E.A.M. eingerichtet"
    ```

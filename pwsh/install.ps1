@@ -1211,6 +1211,29 @@ function Kopiere-Infrastruktur {
     Kopiere (Join-Path $KIT 'geteilt\tests\conftest.py') 'team/tests/conftest.py' -Immer:$Immer
 }
 
+# BL-318: Den Arbeitsbaum festhalten, BEVOR der Installer etwas schreibt — die
+# Commit-Zeile am Ende nimmt dann genau das, was er geaendert hat, und nennt,
+# was schon vorher dalag. Dort stand `add -A`, und im Feld landete eine halbe
+# Produktaenderung im Commit "chore: T.E.A.M. aktualisiert".
+$commitPy = Finde-Python
+$commitTool = Join-Path $KIT 'geteilt\tools\kit_stand.py'
+if ($commitPy) { & $commitPy $commitTool vorher --ziel $Ziel 2>$null | Out-Null }
+
+function Commit-Vorschlag {
+    # Die Commit-Zeilen ueber genau die Pfade des Installers (BL-318). Ohne
+    # Python bleibt nur der Rat, vorher hinzusehen.
+    param([string]$Nachricht, [string]$Einzug = '')
+    if ($commitPy) {
+        $zeilen = @(& $commitPy $commitTool commit-vorschlag --ziel $Ziel --nachricht $Nachricht 2>$null)
+        if ($LASTEXITCODE -eq 0 -and $zeilen.Count) {
+            foreach ($z in $zeilen) { Write-Host "$Einzug$z" }
+            return
+        }
+    }
+    Write-Host "$Einzug    git -C `"$Ziel`" status    # erst ansehen: nur die Dateien des T.E.A.M. gehoeren hinein"
+    Write-Host "$Einzug    git -C `"$Ziel`" add -- <diese Pfade>; git -C `"$Ziel`" commit -m `"$Nachricht`""
+}
+
 # ================================================================ Update-Pfad
 if ($Update) {
     Kopf "Update — nur Team-Infrastruktur"
@@ -1818,8 +1841,8 @@ if ($Update) {
     }
 
     Kopf "Update fertig"
-    Rot  "  JETZT COMMITTEN — vor dem naechsten Lauf, nicht danach."
-    Write-Host "    git -C `"$Ziel`" add -A; git -C `"$Ziel`" commit -m `"chore: T.E.A.M. aktualisiert`""
+    Rot  "  JETZT COMMITTEN — vor dem naechsten Lauf, nicht danach. Genau die Pfade des Updates:"
+    Commit-Vorschlag 'chore: T.E.A.M. aktualisiert'
     Write-Host ""
     Write-Host "  Warum das keine Formalie ist: Die neuen Dateien liegen uncommittet in"
     Write-Host "  team\. Der naechste Read-Only-Lauf sieht sie ausserhalb seiner Whitelist,"
@@ -2308,7 +2331,10 @@ Naechste Schritte im Zielprojekt:
 
   1. Werte pruefen:      notepad "$Ziel\team.config.ps1"
   2. Regeln pruefen:     notepad "$Ziel\CLAUDE.md"   (TODO-Stellen fuellen)
-  3. Alles committen:    git -C "$Ziel" add -A; git -C "$Ziel" commit -m "chore: T.E.A.M. eingerichtet"
+  3. Committen — genau das, was die Einrichtung angelegt hat (Kit-BL-318):
+"@
+Commit-Vorschlag 'chore: T.E.A.M. eingerichtet' '  '
+Write-Host @"
      ^ WICHTIG: vor dem ersten Lauf committen. Der Waechter haelt uncommittete
        Dateien fuer einen Uebergriff der Rollen und raeumt sie weg.
   4. Team-Tests:         cd "$Ziel"; .\team-test.cmd
