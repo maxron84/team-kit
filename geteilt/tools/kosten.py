@@ -1549,6 +1549,39 @@ def abgelehnte_schreibversuche(log, ordner, wurzel="."):
     return funde
 
 
+def abgelehnte_lesebefehle(log):
+    """[(werkzeug, was)] der abgelehnten Aufrufe, die KEIN Schreibversuch
+    sind — Lesebefehle in der Shell (`cd … && git diff`, `git -C … diff`),
+    Read, Grep, Glob (BL-319).
+
+    Im Feld gab eine Rolle die Stelle nach drei abgelehnten Lesebefehlen auf,
+    statt die freigegebene Form zu nehmen, und meldete den Fokus-Punkt
+    trotzdem als „geprueft, ohne Befund". Der Sweep sah sauber aus; gefunden
+    hat es nur, wer das `result` von sich aus las. Welche Abdeckungszeile eine
+    Ablehnung betrifft, steht nirgends — die Zahl ist deshalb ein Hinweis zum
+    Gegenlesen, kein Urteil."""
+    try:
+        with open(log, encoding="utf-8-sig") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return []
+    if not isinstance(data, dict):
+        return []
+    funde = []
+    for eintrag in data.get("permission_denials") or []:
+        if not isinstance(eintrag, dict):
+            continue
+        werkzeug = eintrag.get("tool_name") or "?"
+        if werkzeug in SCHREIBWERKZEUGE:
+            continue
+        eingabe = eintrag.get("tool_input") or {}
+        was = (eingabe.get("command") or eingabe.get("file_path")
+               or eingabe.get("pattern") or eingabe.get("path") or "")
+        was = " ".join(str(was).split())
+        funde.append((werkzeug, was[:140] + (" …" if len(was) > 140 else "")))
+    return funde
+
+
 def modell_bericht(files, cli=None, heim=None):
     """(zeilen, warnungen) fuer `kosten.py modelle`."""
     zeilen, warnungen = [], []
@@ -3532,6 +3565,7 @@ VERBEN = {
     "modelle": ("modelle [DIR...] [--cli BEFEHL]   (Default .ralph-logs "
                 ".team-logs)"),
     "verweigert": "verweigert LOG --ordner ORDNER...   (Kit-BL-292)",
+    "lesen-verweigert": "lesen-verweigert LOG   (Kit-BL-319)",
     "abdeckung": "abdeckung [DIR...] [--since EPOCH]   (Kit-BL-299)",
     "fallbacks": "fallbacks [DIR...] [--since EPOCH]   (Kit-BL-316)",
     "fehlergrund": "fehlergrund LOG   (Kit-BL-316)",
@@ -3719,6 +3753,16 @@ def _main(argv):
             print(f"  {turns:4d} Turns  {betrag:>18}  {os.path.basename(datei)}")
         return 0
 
+    if befehl == "lesen-verweigert":
+        # BL-319: abgelehnte Aufrufe, die kein Schreibversuch sind — fuer den
+        # Bericht des Sweeps. Exit 0 immer: ein Hinweis zum Gegenlesen.
+        if len(rest) != 1:
+            print("Nutzung: kosten.py lesen-verweigert LOG", file=sys.stderr)
+            return 1
+        for werkzeug, was in abgelehnte_lesebefehle(rest[0]):
+            print(f"{werkzeug}: {was}")
+        return 0
+
     if befehl == "fehlergrund":
         # BL-316: der Grund eines gescheiterten Aufrufs, fuer lib.sh.
         if len(rest) != 1:
@@ -3780,7 +3824,21 @@ def _main(argv):
             if zeilen:
                 print(f"{name}:")
                 for z in zeilen:
-                    print(f"  {z}")
+                    # BL-319: Was nicht oder nur teilweise geprueft ist,
+                    # faellt im Bericht auf, statt zwischen den anderen zu
+                    # stehen.
+                    klein = z.lower()
+                    marke = "⚠ " if ("nicht gepr" in klein
+                                     or "teilweise gepr" in klein) else ""
+                    print(f"  {marke}{z}")
+                # BL-319: Abgelehnte Lesebefehle — welche Zeile sie betreffen,
+                # steht nirgends; ein "geprueft, ohne Befund" daneben ist
+                # deshalb gegenzulesen, nicht zu glauben.
+                lesen = abgelehnte_lesebefehle(datei)
+                if lesen:
+                    print(f"  ⚠ {len(lesen)} Lesebefehl(e) abgelehnt — Zeilen "
+                          f"'geprüft, ohne Befund' im result gegenlesen "
+                          f"(Kit-BL-319)")
         return 0
 
     if befehl == "ledger":

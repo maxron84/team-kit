@@ -276,16 +276,24 @@ team_schreibregeln() {
 }
 
 team_allowed_tools() {
-    local basis="Read Grep Glob Bash(${TEAM_BEUTEBUCH_TOOL}:*) Bash(git log:*) Bash(git diff:*) Bash(git show:*)"
-    [ -n "${TEAM_SMOKE_TEST:-}" ] && basis="$basis Bash(${TEAM_SMOKE_TEST})"
+    local -a befehle=("${TEAM_BEUTEBUCH_TOOL}:*" "git log:*" "git diff:*" "git show:*")
+    [ -n "${TEAM_SMOKE_TEST:-}" ] && befehle+=("${TEAM_SMOKE_TEST}")
     # BL-232/BL-273: der schnelle Stufen-Befehl und der Zwei-Schritt-Weg —
     # eine Read-Only-Rolle, die den Weg aus ihrem Auftrag nicht gehen darf,
     # haette nur die Wahl zwischen Fristriss und Hintergrund.
-    [ -n "${TEAM_SMOKE_TEST_SCHNELL:-}" ] && basis="$basis Bash(${TEAM_SMOKE_TEST_SCHNELL})"
+    [ -n "${TEAM_SMOKE_TEST_SCHNELL:-}" ] && befehle+=("${TEAM_SMOKE_TEST_SCHNELL}")
     if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
         local py="${TEAM_PYTHON:-${TEAM_KOSTEN_TOOL%% *}}"
-        basis="$basis Bash(${py:-python3} team/tools/smoke_warten.py:*)"
+        befehle+=("${py:-python3} team/tools/smoke_warten.py:*")
     fi
+    # BL-319: Jede Freigabe gilt fuer BEIDE Shell-Werkzeuge der CLI. Unter
+    # Windows liegt einer Rolle das PowerShell-Werkzeug naeher als Bash, und
+    # eine Bash-Regel deckt es nicht: Im Feld startete Marv den Smoke-Test
+    # woertlich, aber in PowerShell — abgelehnt, und in keinem Sweep des Laufs
+    # lief er. Wo es das Werkzeug nicht gibt, ist die Regel wirkungslos.
+    local basis="Read Grep Glob" b
+    for b in "${befehle[@]}"; do basis="$basis Bash($b)"; done
+    for b in "${befehle[@]}"; do basis="$basis PowerShell($b)"; done
     # Unter Git Bash ist `pwd` nicht immer `/c/...`: Gemountete Ordner heissen
     # `/tmp/...` — und `//tmp/...` versteht die native CLI nicht. `pwd -W`
     # liefert dort den Windows-Pfad (`C:/...`); unter Linux gibt es -W nicht.

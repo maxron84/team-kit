@@ -433,15 +433,21 @@ function team_allowed_tools {
     # Leerzeichen im Projektpfad zerlegte die leerzeichengetrennte Liste —
     # dann bleibt es bei der relativen Form, mit einer Meldung statt still.
     param([string]$Rolle)
-    $basis = "Read Grep Glob Bash(${TEAM_BEUTEBUCH_TOOL}:*) Bash(git log:*) Bash(git diff:*) Bash(git show:*)"
-    if ($TEAM_SMOKE_TEST) { $basis = "$basis Bash($TEAM_SMOKE_TEST)" }
+    $befehle = @("${TEAM_BEUTEBUCH_TOOL}:*", 'git log:*', 'git diff:*', 'git show:*')
+    if ($TEAM_SMOKE_TEST) { $befehle += $TEAM_SMOKE_TEST }
     # BL-232/BL-273: der schnelle Stufen-Befehl und der Zwei-Schritt-Weg.
-    if ($TEAM_SMOKE_TEST_SCHNELL) { $basis = "$basis Bash($TEAM_SMOKE_TEST_SCHNELL)" }
+    if ($TEAM_SMOKE_TEST_SCHNELL) { $befehle += $TEAM_SMOKE_TEST_SCHNELL }
     if ($TEAM_SMOKE_TEST) {
         $py = @(($TEAM_KOSTEN_TOOL -split ' ') | Where-Object { $_ })[0]
         if (-not $py) { $py = 'python' }
-        $basis = "$basis Bash($py team/tools/smoke_warten.py:*)"
+        $befehle += "$py team/tools/smoke_warten.py:*"
     }
+    # BL-319: Jede Freigabe gilt fuer BEIDE Shell-Werkzeuge der CLI — siehe
+    # lib.sh. Unter Windows liegt einer Rolle das PowerShell-Werkzeug naeher
+    # als Bash, und eine Bash-Regel deckt es nicht.
+    $basis = 'Read Grep Glob ' +
+             (@($befehle | ForEach-Object { "Bash($_)" }) -join ' ') + ' ' +
+             (@($befehle | ForEach-Object { "PowerShell($_)" }) -join ' ')
     $wurzel = (Get-Location).ProviderPath -replace '\\', '/'
     if ($wurzel -match '^([A-Za-z]):/(.*)$') {
         $wurzel = "$($Matches[1].ToLowerInvariant())/$($Matches[2])"

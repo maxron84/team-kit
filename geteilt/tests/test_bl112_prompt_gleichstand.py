@@ -188,6 +188,9 @@ PROSA = [
      "KONTROLLFLUSS_ZEILE", "kontrollflussZeile"),
     ("redteam", ("bash/redteam.sh", "team/redteam.sh",), ("pwsh/redteam.ps1", "team/redteam.ps1",),
      "BESTAND_ZEILE", "bestandZeile"),
+    # BL-319: der Smoke-Test in genau der freigegebenen Form.
+    ("redteam", ("bash/redteam.sh", "team/redteam.sh",), ("pwsh/redteam.ps1", "team/redteam.ps1",),
+     "SMOKE_FORM_ZEILE", "smokeFormZeile"),
     ("bibliothek", ("bash/lib.sh", "team/lib.sh",), ("pwsh/lib.psm1", "team/lib.psm1",), "SMOKE_ZEILE", "SMOKE_ZEILE"),
     ("bibliothek", ("bash/lib.sh", "team/lib.sh",), ("pwsh/lib.psm1", "team/lib.psm1",), "SMOKE_SUFFIX", "SMOKE_SUFFIX"),
 ]

@@ -163,6 +163,17 @@ lässt dich hier gewähren; die Grenze hältst du selbst.
 "
 fi
 
+# BL-319: Den Smoke-Test gibt die Allowlist nur woertlich frei. Im Feld
+# startete Harry ihn mit -x, 2>&1 und nachgeschaltetem tail — abgelehnt, und er
+# wiederholte ihn nicht in der freigegebenen Form; seine Abdeckungszeile nannte
+# als Grund, Bash habe den Smoke-Test abgelehnt.
+SMOKE_FORM_ZEILE=""
+if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
+    SMOKE_FORM_ZEILE="
+Den Smoke-Test lässt die CLI nur wörtlich so zu: ${TEAM_SMOKE_TEST}${TEAM_SMOKE_TEST_SCHNELL:+ oder ${TEAM_SMOKE_TEST_SCHNELL}} —
+ohne weitere Schalter, ohne Umleitung und ohne nachgeschaltetes tail oder grep."
+fi
+
 PROMPT="$(team_briefing "$ROLLE")
 
 Auftrag: $AUFTRAG
@@ -200,11 +211,19 @@ Lehnt die CLI ein Edit oder Write im Beutebuch oder im Test-Ordner ab, weiche
 NICHT auf Bash aus: Schreibe jeden Fundblock vollständig, samt
 Reproducer-Zeile, in deine Abschlussantwort — dort holt ihn der Mensch ab
 (Kit-BL-292).
+Lehnt die CLI einen LESEbefehl ab, gib die Stelle nicht auf: Wiederhole ihn in
+der freigegebenen Form — git diff, git log und git show ohne -C und ohne
+vorangestelltes cd —, sonst mit Read, Grep oder Glob (Kit-BL-319). Wechsle nie
+das Verzeichnis, weder mit cd noch mit Set-Location, auch nicht vor cat oder
+grep: Die Shell steht in der Wurzel und bliebe danach für alle folgenden
+Befehle im anderen Ordner.${SMOKE_FORM_ZEILE}
 Nennt dein Auftrag nummerierte Fokus-Punkte, schließe die Abschlussantwort
 mit EINER Abdeckungszeile je Punkt, in genau dieser Form:
-ABDECKUNG <Nr>: Fund HM-<Nr> | geprüft, ohne Befund | nicht geprüft — <Grund>
+ABDECKUNG <Nr>: Fund HM-<Nr> | geprüft, ohne Befund | teilweise geprüft — ungelesen: <Dateien> | nicht geprüft — <Grund>
 Ein Punkt ohne Fund hinterlässt sonst keine Spur, und „nichts gefunden“ ist
-von „zu vage gefragt“ nicht zu unterscheiden (Kit-BL-299). Das ist keine Datei —
+von „zu vage gefragt“ nicht zu unterscheiden (Kit-BL-299). Was du nicht lesen
+konntest, nennt die Zeile als ungelesen — nie „geprüft, ohne Befund“ für eine
+Stelle, die du nicht gelesen hast. Das ist keine Datei —
 die Read-Only-Grenze bleibt, wie sie ist.
 Beende IMMER mit exakt: <promise>REDTEAM_SWEEP_COMPLETE</promise> — AUCH WENN
 du einen Fund ins Beutebuch geschrieben hast; das Promise ist die
@@ -374,6 +393,15 @@ fi
 # merkt es spätestens beim nächsten Aufruf: Der Kontostand deckelt ihn.
 if [ "$BUDGET_UEBERSCHRITTEN" -eq 1 ]; then
     echo "[$ROLLE] ERINNERUNG: Dieser Sweep lag über dem Cap ($TEAM_LAST_COST USD ≥ $ROLLE_BUDGET_USD USD). Fortschritt ist gebucht, der nächste Aufruf ist gedeckelt." >&2
+fi
+# BL-319: Abgelehnte LESEbefehle machen den Sweep nicht unsauber — welche
+# Stelle sie betreffen, steht nirgends. Aber eine Abdeckungszeile "geprueft,
+# ohne Befund" daneben ist gegenzulesen: Im Feld meldete eine Rolle genau so
+# einen Punkt, dessen Dateien sie nie gelesen hatte.
+LESEN_ABGELEHNT="$($TEAM_KOSTEN_TOOL lesen-verweigert "$OUT" 2>/dev/null || true)"
+if [ -n "$LESEN_ABGELEHNT" ]; then
+    echo "[$ROLLE] $(printf '%s\n' "$LESEN_ABGELEHNT" | wc -l | tr -d ' ') Lesebefehl(e) abgelehnt (Kit-BL-319) — was die Rolle dadurch nicht lesen konnte, steht womöglich nur im result. Abdeckungszeilen 'geprüft, ohne Befund' dort gegenlesen: $OUT" >&2
+    printf '%s\n' "$LESEN_ABGELEHNT" | head -5 | sed 's/^/  /' >&2
 fi
 if [ -n "$VERWEIGERT" ]; then
     echo "[$ROLLE] SWEEP NICHT SAUBER — die CLI hat Schreibversuche IM erlaubten Bereich abgelehnt (Kit-BL-292):" >&2

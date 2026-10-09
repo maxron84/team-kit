@@ -544,6 +544,16 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Das Red Team gab bei abgelehnten Lesebefehlen auf und meldete die Stelle
+  als geprueft** (`BL-319`, `Feld F`, beide Bahnen). Was das Kit jetzt selbst
+  tut: Jede Shell-Freigabe gilt auch fuer das PowerShell-Werkzeug der CLI (im
+  Feld lief der woertlich gestartete Smoke-Test dort in keinem Sweep), der
+  Sweep nennt abgelehnte Lesebefehle, und der Abschlussbericht stellt sie neben
+  die Abdeckungszeilen und hebt „nicht" und „teilweise geprueft" hervor. Was
+  im Prompt steht: die freigegebenen Lese-Formen, kein `cd`/`Set-Location`,
+  der Smoke-Test in genau der freigegebenen Form, und eine vierte
+  Abdeckungsform „teilweise geprueft — ungelesen: …".
+
 - **Eine abgelaufene Abo-Anmeldung schickte den Rest des Laufs ueber die API**
   (`BL-316`, `Feld B`, beide Bahnen). Jeder Abo-Fehler hiess „Timeout/Limit/
   429?" und bekam den API-Fallback. Eine abgelaufene Anmeldung geht aber nicht
