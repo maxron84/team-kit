@@ -107,9 +107,15 @@ $fixOrte = $TEAM_PRODUKTIVCODE
 if ($TEAM_WEITERER_CODE) {
     $fixOrte = "$TEAM_PRODUKTIVCODE (oder, wenn der Fund dort liegt: $TEAM_WEITERER_CODE)"
 }
+# BL-324: siehe frank.sh — die Fokus-Fassung ist der Normalfall der Fixphase,
+# und ihre Bedingung fuer den Smoke-Test nannte nur den Produktivcode.
+$smokeOrte = $TEAM_PRODUKTIVCODE
+if ($TEAM_WEITERER_CODE) {
+    $smokeOrte = "$TEAM_PRODUKTIVCODE (oder $TEAM_WEITERER_CODE)"
+}
 $schritt1 = "Code-Fix unter $fixOrte umsetzen.$SMOKE_SUFFIX"
 if ($env:TEAM_REDTEAM_FOCUS) {
-    $schritt1 = "Code-Fix im Fokus-Bereich dieser Kaskade umsetzen ($($env:TEAM_REDTEAM_FOCUS)). Betrifft der Fix ${TEAM_PRODUKTIVCODE}, zusätzlich:$SMOKE_SUFFIX"
+    $schritt1 = "Code-Fix im Fokus-Bereich dieser Kaskade umsetzen ($($env:TEAM_REDTEAM_FOCUS)). Betrifft der Fix $smokeOrte, zusätzlich:$SMOKE_SUFFIX"
 }
 
 $prompt = @"

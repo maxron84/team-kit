@@ -127,7 +127,7 @@ if [ -n "${TEAM_SMOKE_TEST:-}" ]; then
     # Store-Alias (BL-130).
     local py="${TEAM_PYTHON:-${TEAM_KOSTEN_TOOL%% *}}"
     [ -n "$py" ] || py=python3
-    local zwei_schritte="Reicht die Höchstfrist deines Werkzeugs nicht (oft 600000 Millisekunden), gilt der Zwei-Schritt-Weg (Kit-BL-273): '${py} team/tools/smoke_warten.py start --befehl \"${stufe}\"' startet den Testlauf im Hintergrund; danach rufst du '${py} team/tools/smoke_warten.py warten' IM VORDERGRUND auf, so oft, bis es nicht mehr mit 75 endet — sein Exit-Code ist der des Smoke-Tests. Nur der Testlauf gehört in den Hintergrund: 'Ich warte, bis sich der Warteruf meldet' ist derselbe Fehler eine Ebene höher (Kit-BL-281)."
+    local zwei_schritte="Reicht die Höchstfrist deines Werkzeugs nicht (oft 600000 Millisekunden), gilt der Zwei-Schritt-Weg (Kit-BL-273): '${py} team/tools/smoke_warten.py start --befehl \"${stufe}\"' startet den Testlauf im Hintergrund; danach rufst du '${py} team/tools/smoke_warten.py warten' IM VORDERGRUND auf, so oft, bis es nicht mehr mit 75 endet — sein Exit-Code ist der des Smoke-Tests. Nur der Testlauf gehört in den Hintergrund: 'Ich warte, bis sich der Warteruf meldet' ist derselbe Fehler eine Ebene höher (Kit-BL-281). Den Warteruf startest du NIE mit run_in_background oder einer anderen Hintergrund-Option deines Werkzeugs — er kehrt nach höchstens 540 Sekunden von selbst zurück (Kit-BL-315)."
     # Der Nachsatz ist eine Notbremse gegen einen teuren Fehlermodus, nicht
     # Ausschmückung (BL-41, Feld A K27/K28): Eine bauende Rolle
     # startete den Smoke-Test als HINTERGRUND-Task und wartete danach auf eine
@@ -1047,15 +1047,62 @@ team_quittung_fehlt_melden() {
 # Raetsel.
 TEAM_SMOKE_PARALLEL_ZEILE=""
 team_smoke_parallel_lauf() {
-    local muster="${TEAM_SMOKE_TEST:-}" tabelle treffer
+    local tabelle treffer="" muster
     TEAM_SMOKE_PARALLEL_ZEILE=""
-    [ -z "$muster" ] && return 1
+    [ -z "${TEAM_SMOKE_TEST:-}" ] && [ -z "${TEAM_SMOKE_TEST_SCHNELL:-}" ] && return 1
     tabelle="$(ps -eo args= 2>/dev/null || ps ax 2>/dev/null || true)"
     [ -z "$tabelle" ] && return 1
-    treffer="$(echo "$tabelle" | grep -F -- "$muster" | head -1 || true)"
+    # BL-315: Seit BL-232 verifizieren die Stufen mit TEAM_SMOKE_TEST_SCHNELL
+    # — der verwaiste Lauf einer Rolle traegt dann DIESEN Befehl.
+    for muster in "${TEAM_SMOKE_TEST:-}" "${TEAM_SMOKE_TEST_SCHNELL:-}"; do
+        [ -n "$muster" ] || continue
+        treffer="$(echo "$tabelle" | grep -F -- "$muster" | head -1 || true)"
+        [ -n "$treffer" ] && break
+    done
     [ -z "$treffer" ] && return 1
     TEAM_SMOKE_PARALLEL_ZEILE="$treffer"
     return 0
+}
+
+# team_selbstpruefung_wartefrist — BL-315: Wie lange die Selbstpruefung auf
+# einen laufenden Verifikationslauf wartet, bevor sie UNBEKANNT meldet.
+# Default ist die Frist, die ein Smoke-Test ueberhaupt brauchen darf; der
+# verwaiste Lauf hat davon schon einen Teil hinter sich.
+# TEAM_SELBSTPRUEFUNG_WARTEN=0 schaltet das Warten ab (altes Verhalten).
+team_selbstpruefung_wartefrist() {
+    local kandidat
+    for kandidat in "${TEAM_SELBSTPRUEFUNG_WARTEN:-}" "${TEAM_SMOKE_TEST_TIMEOUT:-}"; do
+        case "$kandidat" in
+            ''|*[!0-9]*) ;;
+            *) echo "$kandidat"; return 0 ;;
+        esac
+    done
+    echo 600
+}
+
+# team_smoke_umgebung_pruefen <befehl> — BL-320: Kann der Befehl in dieser
+# Umgebung ueberhaupt laufen? Traegt er pytest-xdist-Optionen und fehlt xdist
+# im Interpreter, bricht pytest am Parser ab — und die Selbstpruefung meldete
+# "ROT, kein Flackern" und schickte den Menschen in den Produktivcode. Im
+# Feld dreimal lokal nachgetragen und dreimal von einem Update entfernt.
+# team_smoke_umgebung_befund druckt den Befund auf stdout (leer = keiner oder
+# nicht feststellbar — im Zweifel wird nichts behauptet); die Pruefung steckt
+# im geteilten Werkzeug, damit beide Bahnen dieselbe fahren.
+# team_smoke_umgebung_pruefen: 0 = kein Befund, 1 = Befund, Text auf stderr.
+team_smoke_umgebung_befund() {
+    local werkzeug aus rc=0
+    werkzeug="$(dirname "${BASH_SOURCE[0]}")/tools/smoke_warten.py"
+    [ -f "$werkzeug" ] || return 0
+    aus="$("$TEAM_PYTHON" "$werkzeug" umgebung --befehl "$1" 2>/dev/null)" || rc=$?
+    [ "$rc" -eq 3 ] && printf '%s\n' "$aus"
+    return 0
+}
+team_smoke_umgebung_pruefen() {
+    local befund
+    befund="$(team_smoke_umgebung_befund "$1")"
+    [ -z "$befund" ] && return 0
+    printf '%s\n' "$befund" | sed 's/^/    /' >&2
+    return 1
 }
 
 # --- Der vierte Ausgang, selbst geprüft (BL-41 automatisiert) -----------------
@@ -1149,24 +1196,58 @@ team_quittung_selbstpruefung() {
         echo "      automatisch quittiert." >&2
         return 1
     fi
-    # BL-207: Kein zweiter Lauf neben einen laufenden stellen. Zwei
-    #     gleichzeitige Testlaeufe kollidieren, und das Ergebnis waere eine
-    #     Eigenschaft der MASCHINE statt eine des Codes.
-    if team_smoke_parallel_lauf; then
-        echo "    ? Es läuft bereits ein Verifikationslauf — Ergebnis UNBEKANNT, nicht rot (Kit-BL-207)." >&2
-        echo "      Gefunden: $TEAM_SMOKE_PARALLEL_ZEILE" >&2
-        echo "      Ein zweiter Lauf daneben kollidiert (Datenbankdateien, Ports," >&2
-        echo "      Nutzerverzeichnisse) und meldete ROT für einen Baum, der allein gefahren" >&2
-        echo "      grün ist. Es wird deshalb NICHT automatisch quittiert und NICHTS behauptet." >&2
-        echo "      Miss von Hand nach, wenn der laufende Test fertig ist: $smoke" >&2
-        return 1
-    fi
     # BL-232: Verifiziert wird mit dem STUFEN-Befehl (schnell, wenn
     # konfiguriert). Die Messung ist die ZWEITE desselben Stands — die Rolle
     # hat ihn selbst gefahren; im Feld waren das bei vier Stufen rund 32
     # Minuten reine Doppelmessung. Sie bleibt (die Rolle hat nicht quittiert,
     # ihr Ergebnis ist also nicht belegt), wird aber BENANNT und gemessen.
+    local voll="$smoke"
     smoke="${TEAM_SMOKE_TEST_SCHNELL:-$smoke}"
+    # BL-320: Kann dieser Befehl hier ueberhaupt laufen? Sonst ist der Baum
+    # nicht rot, sondern ungeprueft — und die Meldung muss das sagen.
+    if ! team_smoke_umgebung_pruefen "$smoke"; then
+        echo "      Es wird NICHT automatisch quittiert: Der Baum ist nicht rot, er ist ungeprüft." >&2
+        return 1
+    fi
+    # BL-207: Kein zweiter Lauf neben einen laufenden stellen. Zwei
+    #     gleichzeitige Testlaeufe kollidieren, und das Ergebnis waere eine
+    #     Eigenschaft der MASCHINE statt eine des Codes.
+    # BL-315: ...aber auch nicht aufgeben. Der laufende ist meist der der
+    #     Rolle, die ihn gestartet und nicht abgewartet hat (im Feld schob sie
+    #     sogar die Warteschleife in den Hintergrund) — das Warten ist genau
+    #     der Schritt, den sie nicht geschafft hat. Die Selbstpruefung
+    #     uebernimmt ihn, bis zur Frist, und misst danach selbst.
+    if team_smoke_parallel_lauf; then
+        local frist t0w laeuft=1 vergangen gemeldet=0
+        frist="$(team_selbstpruefung_wartefrist)"
+        t0w=$(date +%s)
+        if [ "$frist" -gt 0 ]; then
+            echo "    … Es läuft noch ein Verifikationslauf — meist der der Rolle, die ihn gestartet und nicht abgewartet hat." >&2
+            echo "      Gefunden: $TEAM_SMOKE_PARALLEL_ZEILE" >&2
+            echo "      Die Selbstprüfung wartet bis zu ${frist} s auf sein Ende, statt einen zweiten danebenzustellen (Kit-BL-315) …" >&2
+        fi
+        while [ "$laeuft" -eq 1 ]; do
+            vergangen=$(( $(date +%s) - t0w ))
+            [ "$vergangen" -ge "$frist" ] && break
+            if [ $((vergangen - gemeldet)) -ge 60 ]; then
+                echo "      … läuft nach ${vergangen} s noch" >&2
+                gemeldet=$vergangen
+            fi
+            sleep 2
+            team_smoke_parallel_lauf || laeuft=0
+        done
+        if [ "$laeuft" -eq 1 ]; then
+            echo "    ? Es läuft bereits ein Verifikationslauf — Ergebnis UNBEKANNT, nicht rot (Kit-BL-207)." >&2
+            [ "$frist" -gt 0 ] && echo "      Er lief nach ${frist} s Wartezeit immer noch (Kit-BL-315)." >&2
+            echo "      Gefunden: $TEAM_SMOKE_PARALLEL_ZEILE" >&2
+            echo "      Ein zweiter Lauf daneben kollidiert (Datenbankdateien, Ports," >&2
+            echo "      Nutzerverzeichnisse) und meldete ROT für einen Baum, der allein gefahren" >&2
+            echo "      grün ist. Es wird deshalb NICHT automatisch quittiert und NICHTS behauptet." >&2
+            echo "      Miss von Hand nach, wenn der laufende Test fertig ist: $voll" >&2
+            return 1
+        fi
+        echo "    ✓ Der laufende Verifikationslauf ist beendet ($(( $(date +%s) - t0w )) s gewartet) — jetzt misst die Selbstprüfung selbst (Kit-BL-315)." >&2
+    fi
     echo "    … Smoke-Test läuft ($smoke) — zweite Messung desselben Stands, die Rolle hat ihn schon gefahren (Kit-BL-232) …" >&2
     local t0 dauer
     t0=$(date +%s)

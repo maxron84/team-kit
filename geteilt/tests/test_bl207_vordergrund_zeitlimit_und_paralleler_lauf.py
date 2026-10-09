@@ -212,16 +212,24 @@ def test_der_smoke_test_der_fixtures_heisst_je_suite_anders():
         assert str(os.getpid()) in _smoke_befehl(Schale(bahn)), bahn
 
 
-def _selbstpruefung(repo, schale, extra=()):
+def _selbstpruefung(repo, schale, extra=(), env=None):
     """Faehrt team_quittung_selbstpruefung gegen eine Stufe mit Arbeit."""
+    umgebung = {"TEAM_SMOKE_TEST": _smoke_befehl(schale),
+                "TEAM_TEST_ORDNER": "tests/"}
+    umgebung.update(env or {})
     return schale.lauf(
         [Schreib("src/modul.py", "y = 2\n"),
          Schreib("tests/test_stufe1_sache.py", "def test_x(): pass\n"),
          *extra,
          Ruf("team_quittung_selbstpruefung", "ralph", "1")],
-        cwd=repo, lib=repo / "team" / schale.lib_name,
-        env={"TEAM_SMOKE_TEST": _smoke_befehl(schale),
-             "TEAM_TEST_ORDNER": "tests/"})
+        cwd=repo, lib=repo / "team" / schale.lib_name, env=umgebung)
+
+
+# BL-315: Seit dort wartet die Selbstpruefung auf einen laufenden
+# Verifikationslauf, bevor sie UNBEKANNT meldet. Die Faelle hier pruefen den
+# Ausgang NACH der Frist — ohne Wartezeit, damit sie nicht auf einen
+# 30-Sekunden-Lauf warten und ihn danach selbst ein zweites Mal fahren.
+OHNE_WARTEN = {"TEAM_SELBSTPRUEFUNG_WARTEN": "0"}
 
 
 def _verlange_prozesstabelle_mit_argumenten(schale):
@@ -281,7 +289,7 @@ def test_ein_laufender_verifikationslauf_ergibt_UNBEKANNT(tmp_path, schale):
             if prozess.poll() is None:
                 break
             time.sleep(0.1)
-        ergebnis = _selbstpruefung(repo, schale)
+        ergebnis = _selbstpruefung(repo, schale, env=OHNE_WARTEN)
     finally:
         prozess.kill()
         prozess.wait()
@@ -337,7 +345,7 @@ def test_die_erkennung_nennt_die_gefundene_zeile(tmp_path, schale):
             if prozess.poll() is None:
                 break
             time.sleep(0.1)
-        ergebnis = _selbstpruefung(repo, schale)
+        ergebnis = _selbstpruefung(repo, schale, env=OHNE_WARTEN)
     finally:
         prozess.kill()
         prozess.wait()

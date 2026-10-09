@@ -328,6 +328,15 @@ voller_smoke_am_phasenende() {
         log "✗ Volle Suite ROT am Ende der $phase — das Gate wird gesetzt (Kit-BL-232, Kit-BL-256). Ausgabe: $ausgabe"
         printf '%s | vollautomatik | volle Suite rot am Ende der %s (%s)\n' \
             "$(date +%Y-%m-%dT%H:%M:%S)" "$phase" "$TEAM_SMOKE_TEST" >> "$TEAM_GATE_DATEI"
+        # BL-320: Lief der Befehl in dieser Umgebung gar nicht erst an, ist
+        # das Gate trotzdem zu (ungeprueft ist nicht gruen) — aber die Ursache
+        # liegt an der Umgebung, und der Bericht muss das sagen.
+        local befund
+        befund="$(team_smoke_umgebung_befund "$TEAM_SMOKE_TEST")"
+        if [ -n "$befund" ]; then
+            log "  Ursache ist die Umgebung, nicht der Code (Kit-BL-320):"
+            printf '%s\n' "$befund" | while IFS= read -r zeile; do log "  $zeile"; done
+        fi
     fi
 }
 

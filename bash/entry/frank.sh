@@ -99,9 +99,17 @@ team_guard_begin
 # sonst repariert er den Fund am falschen Platz oder gar nicht.
 FIX_ORTE="${TEAM_PRODUKTIVCODE}"
 [ -n "${TEAM_WEITERER_CODE:-}" ] && FIX_ORTE="${TEAM_PRODUKTIVCODE} (oder, wenn der Fund dort liegt: ${TEAM_WEITERER_CODE})"
+# BL-324: Die Fokus-Fassung knuepft den Smoke-Test an eine Bedingung — und die
+# nannte nur den Produktivcode. Die Vollautomatik setzt den Fokus fuer den
+# ganzen Lauf, die Fokus-Fassung ist also der NORMALFALL der Fixphase: Ein Fix
+# unter TEAM_WEITERER_CODE lief dort ohne Suite (im Feld ein Fehlalarm, den
+# die volle Suite als Doppelfund gezeigt haette). Beide Fassungen nennen jetzt
+# dieselben Orte.
+SMOKE_ORTE="${TEAM_PRODUKTIVCODE}"
+[ -n "${TEAM_WEITERER_CODE:-}" ] && SMOKE_ORTE="${TEAM_PRODUKTIVCODE} (oder ${TEAM_WEITERER_CODE})"
 SCHRITT1="Code-Fix unter ${FIX_ORTE} umsetzen.${SMOKE_SUFFIX}"
 if [ -n "${TEAM_REDTEAM_FOCUS:-}" ]; then
-    SCHRITT1="Code-Fix im Fokus-Bereich dieser Kaskade umsetzen (${TEAM_REDTEAM_FOCUS}). Betrifft der Fix ${TEAM_PRODUKTIVCODE}, zusätzlich:${SMOKE_SUFFIX}"
+    SCHRITT1="Code-Fix im Fokus-Bereich dieser Kaskade umsetzen (${TEAM_REDTEAM_FOCUS}). Betrifft der Fix ${SMOKE_ORTE}, zusätzlich:${SMOKE_SUFFIX}"
 fi
 
 PROMPT="$(team_briefing frank)

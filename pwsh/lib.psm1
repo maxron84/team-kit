@@ -344,7 +344,7 @@ if ($TEAM_SMOKE_TEST) {
     # Kosten-Werkzeug — beide Bahnen nennen damit dieselbe Zeile (BL-117).
     $py = @(($TEAM_KOSTEN_TOOL -split '\s+') | Where-Object { $_ })[0]
     if (-not $py) { $py = 'python' }
-    $zweiSchritte = "Reicht die Höchstfrist deines Werkzeugs nicht (oft 600000 Millisekunden), gilt der Zwei-Schritt-Weg (Kit-BL-273): '$py team/tools/smoke_warten.py start --befehl `"$stufe`"' startet den Testlauf im Hintergrund; danach rufst du '$py team/tools/smoke_warten.py warten' IM VORDERGRUND auf, so oft, bis es nicht mehr mit 75 endet — sein Exit-Code ist der des Smoke-Tests. Nur der Testlauf gehört in den Hintergrund: 'Ich warte, bis sich der Warteruf meldet' ist derselbe Fehler eine Ebene höher (Kit-BL-281)."
+    $zweiSchritte = "Reicht die Höchstfrist deines Werkzeugs nicht (oft 600000 Millisekunden), gilt der Zwei-Schritt-Weg (Kit-BL-273): '$py team/tools/smoke_warten.py start --befehl `"$stufe`"' startet den Testlauf im Hintergrund; danach rufst du '$py team/tools/smoke_warten.py warten' IM VORDERGRUND auf, so oft, bis es nicht mehr mit 75 endet — sein Exit-Code ist der des Smoke-Tests. Nur der Testlauf gehört in den Hintergrund: 'Ich warte, bis sich der Warteruf meldet' ist derselbe Fehler eine Ebene höher (Kit-BL-281). Den Warteruf startest du NIE mit run_in_background oder einer anderen Hintergrund-Option deines Werkzeugs — er kehrt nach höchstens 540 Sekunden von selbst zurück (Kit-BL-315)."
     # Der Nachsatz ist eine Notbremse gegen einen teuren Fehlermodus, nicht
     # Ausschmueckung (BL-41, Feld A K27/K28): Eine bauende Rolle
     # startete den Smoke-Test als HINTERGRUND-Task und wartete danach auf eine
@@ -2085,7 +2085,11 @@ function team_smoke_parallel_lauf {
       traegt — in einem Blick als solcher erkennbar ist statt als Raetsel.
     #>
     $script:TEAM_SMOKE_PARALLEL_ZEILE = ''
-    if (-not $TEAM_SMOKE_TEST) { return $false }
+    # BL-315: Seit BL-232 verifizieren die Stufen mit TEAM_SMOKE_TEST_SCHNELL
+    # — der verwaiste Lauf einer Rolle traegt dann DIESEN Befehl. Gesucht
+    # wird deshalb nach beiden.
+    $muster = @(@($TEAM_SMOKE_TEST, $TEAM_SMOKE_TEST_SCHNELL) | Where-Object { $_ })
+    if (-not $muster.Count) { return $false }
     $zeilen = @()
     try {
         $zeilen = @(Get-CimInstance Win32_Process -ErrorAction Stop |
@@ -2104,10 +2108,65 @@ function team_smoke_parallel_lauf {
         } catch { $zeilen = @() }
     }
     if (-not $zeilen.Count) { return $false }
-    $treffer = @($zeilen | Where-Object { $_.Contains($TEAM_SMOKE_TEST) })
+    $treffer = @($zeilen | Where-Object {
+        $zeile = $_
+        @($muster | Where-Object { $zeile.Contains($_) }).Count -gt 0
+    })
     if (-not $treffer.Count) { return $false }
     $script:TEAM_SMOKE_PARALLEL_ZEILE = $treffer[0]
     return $true
+}
+
+function team_selbstpruefung_wartefrist {
+    # BL-315: Wie lange die Selbstpruefung auf einen laufenden
+    # Verifikationslauf wartet, bevor sie UNBEKANNT meldet. Default ist die
+    # Frist, die ein Smoke-Test ueberhaupt brauchen darf — der verwaiste Lauf
+    # hat dann schon einen Teil davon hinter sich. TEAM_SELBSTPRUEFUNG_WARTEN=0
+    # schaltet das Warten ab (das alte Verhalten).
+    foreach ($kandidat in @($env:TEAM_SELBSTPRUEFUNG_WARTEN, "$TEAM_SMOKE_TEST_TIMEOUT")) {
+        $wert = 0
+        if ("$kandidat" -match '^\d+$' -and [int]::TryParse("$kandidat", [ref]$wert)) { return $wert }
+    }
+    return 600
+}
+
+function team_smoke_umgebung_pruefen {
+    <#
+      BL-320: Kann der Befehl in dieser Umgebung ueberhaupt laufen? Traegt er
+      pytest-xdist-Optionen und fehlt xdist im Interpreter, bricht pytest am
+      Parser ab — und die Selbstpruefung meldete "ROT, kein Flackern" und
+      schickte den Menschen in den Produktivcode. Im Feld dreimal lokal
+      nachgetragen und dreimal von einem Update entfernt.
+
+      $true = kein Befund ODER nicht feststellbar (im Zweifel nichts
+      behaupten) · $false = Befund, Text auf stderr. Die Pruefung selbst
+      steckt im geteilten Werkzeug, damit beide Bahnen dieselbe fahren;
+      team_smoke_umgebung_befund liefert ihren Text (leer = kein Befund).
+    #>
+    param([string]$Befehl)
+    $befund = @(team_smoke_umgebung_befund $Befehl)
+    if (-not $befund.Count) { return $true }
+    foreach ($z in $befund) { Team-Fehler "    $z" }
+    return $false
+}
+
+function team_smoke_umgebung_befund {
+    param([string]$Befehl)
+    $werkzeug = Join-Path $PSScriptRoot 'tools/smoke_warten.py'
+    if (-not (Test-Path -LiteralPath $werkzeug)) { return @() }
+    # Der Interpreter wie beim Kosten-Werkzeug; ohne Konfiguration (Harnisch,
+    # fremder Wirt) der erste, den es hier wirklich gibt.
+    $py = $null
+    $kandidaten = @(@(($TEAM_KOSTEN_TOOL -split '\s+') | Where-Object { $_ })[0],
+                    $env:TEAM_PYTHON, 'python', 'python3') | Where-Object { $_ }
+    foreach ($k in $kandidaten) {
+        if (Get-Command $k -CommandType Application -ErrorAction SilentlyContinue) { $py = $k; break }
+    }
+    if (-not $py) { return @() }
+    $global:LASTEXITCODE = 0
+    try { $aus = @(& $py $werkzeug 'umgebung' '--befehl' $Befehl 2>$null) } catch { return @() }
+    if ($LASTEXITCODE -ne 3) { return @() }
+    return $aus
 }
 
 # BL-301: Beim Laden ANLEGEN, nicht erst in der Funktion. Export-ModuleMember
@@ -2188,22 +2247,56 @@ function team_quittung_selbstpruefung {
         Team-Fehler "      automatisch quittiert."
         return $false
     }
-    # BL-207: Kein zweiter Lauf neben einen laufenden stellen. Zwei
-    #     gleichzeitige Testlaeufe kollidieren, und das Ergebnis waere eine
-    #     Eigenschaft der MASCHINE statt eine des Codes.
-    if (team_smoke_parallel_lauf) {
-        Team-Fehler "    ? Es läuft bereits ein Verifikationslauf — Ergebnis UNBEKANNT, nicht rot (Kit-BL-207)."
-        Team-Fehler "      Gefunden: $TEAM_SMOKE_PARALLEL_ZEILE"
-        Team-Fehler "      Ein zweiter Lauf daneben kollidiert (Datenbankdateien, Ports,"
-        Team-Fehler "      Nutzerverzeichnisse) und meldete ROT für einen Baum, der allein gefahren"
-        Team-Fehler "      grün ist. Es wird deshalb NICHT automatisch quittiert und NICHTS behauptet."
-        Team-Fehler "      Miss von Hand nach, wenn der laufende Test fertig ist: $TEAM_SMOKE_TEST"
-        return $false
-    }
     # BL-232: Verifiziert wird mit dem STUFEN-Befehl (schnell, wenn
     # konfiguriert). Die Messung ist die ZWEITE desselben Stands — die Rolle
     # hat ihn selbst gefahren; sie bleibt, wird aber BENANNT und gemessen.
     $smoke = if ($TEAM_SMOKE_TEST_SCHNELL) { $TEAM_SMOKE_TEST_SCHNELL } else { $TEAM_SMOKE_TEST }
+    # BL-320: Kann dieser Befehl hier ueberhaupt laufen? Sonst ist der Baum
+    # nicht rot, sondern ungeprueft — und die Meldung muss das sagen.
+    if (-not (team_smoke_umgebung_pruefen $smoke)) {
+        Team-Fehler "      Es wird NICHT automatisch quittiert: Der Baum ist nicht rot, er ist ungeprüft."
+        return $false
+    }
+    # BL-207: Kein zweiter Lauf neben einen laufenden stellen. Zwei
+    #     gleichzeitige Testlaeufe kollidieren, und das Ergebnis waere eine
+    #     Eigenschaft der MASCHINE statt eine des Codes.
+    # BL-315: ...aber auch nicht aufgeben. Der laufende ist meist der der
+    #     Rolle, die ihn gestartet und nicht abgewartet hat (im Feld schob sie
+    #     sogar die Warteschleife in den Hintergrund) — das Warten ist genau
+    #     der Schritt, den sie nicht geschafft hat. Die Selbstpruefung uebernimmt
+    #     ihn, bis zur Frist, und misst danach selbst.
+    if (team_smoke_parallel_lauf) {
+        $frist = team_selbstpruefung_wartefrist
+        $t0w = [DateTime]::UtcNow
+        if ($frist -gt 0) {
+            Team-Fehler "    … Es läuft noch ein Verifikationslauf — meist der der Rolle, die ihn gestartet und nicht abgewartet hat."
+            Team-Fehler "      Gefunden: $TEAM_SMOKE_PARALLEL_ZEILE"
+            Team-Fehler "      Die Selbstprüfung wartet bis zu $frist s auf sein Ende, statt einen zweiten danebenzustellen (Kit-BL-315) …"
+        }
+        $laeuft = $true
+        $gemeldet = 0
+        while ($laeuft) {
+            $vergangen = [int]([DateTime]::UtcNow - $t0w).TotalSeconds
+            if ($vergangen -ge $frist) { break }
+            if ($vergangen - $gemeldet -ge 60) {
+                Team-Fehler "      … läuft nach $vergangen s noch"
+                $gemeldet = $vergangen
+            }
+            Start-Sleep -Seconds 2
+            $laeuft = team_smoke_parallel_lauf
+        }
+        if ($laeuft) {
+            Team-Fehler "    ? Es läuft bereits ein Verifikationslauf — Ergebnis UNBEKANNT, nicht rot (Kit-BL-207)."
+            if ($frist -gt 0) { Team-Fehler "      Er lief nach $frist s Wartezeit immer noch (Kit-BL-315)." }
+            Team-Fehler "      Gefunden: $TEAM_SMOKE_PARALLEL_ZEILE"
+            Team-Fehler "      Ein zweiter Lauf daneben kollidiert (Datenbankdateien, Ports,"
+            Team-Fehler "      Nutzerverzeichnisse) und meldete ROT für einen Baum, der allein gefahren"
+            Team-Fehler "      grün ist. Es wird deshalb NICHT automatisch quittiert und NICHTS behauptet."
+            Team-Fehler "      Miss von Hand nach, wenn der laufende Test fertig ist: $TEAM_SMOKE_TEST"
+            return $false
+        }
+        Team-Fehler "    ✓ Der laufende Verifikationslauf ist beendet ($([int]([DateTime]::UtcNow - $t0w).TotalSeconds) s gewartet) — jetzt misst die Selbstprüfung selbst (Kit-BL-315)."
+    }
     Team-Fehler "    … Smoke-Test läuft ($smoke) — zweite Messung desselben Stands, die Rolle hat ihn schon gefahren (Kit-BL-232) …"
     $t0 = [DateTime]::UtcNow
     Team-Werkzeug $smoke @() 2>&1 | Out-Null

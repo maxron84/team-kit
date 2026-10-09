@@ -513,6 +513,14 @@ in diesem Fall meistens fertig**; ein Neustart wirft sie weg und zahlt sie noch
 einmal (im Feld viermal passiert, zusammen 19,47 USD). Die Meldung des Loops
 nennt die zwei Prüfungen, die vorher zu machen sind.
 
+Meist erledigt der Loop sie selbst: Seine **Selbstprüfung** sieht nach Arbeit,
+Test und grünem Smoke-Test und quittiert die Stufe, wenn alles stimmt. Läuft
+der Testlauf der Rolle beim Sitzungsende noch, **wartet** sie auf ihn — bis
+`TEAM_SMOKE_TEST_TIMEOUT` — und misst danach selbst (`Kit-BL-315`).
+`TEAM_SELBSTPRUEFUNG_WARTEN=<Sekunden>` vor dem Aufruf ändert die Frist, `0`
+schaltet das Warten ab. Fehlt dem Smoke-Test ein Paket wie `pytest-xdist`,
+sagt sie das, statt einen roten Baum zu melden (`Kit-BL-320`).
+
 ---
 
 ## Wo was liegt

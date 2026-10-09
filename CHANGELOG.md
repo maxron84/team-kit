@@ -544,6 +544,32 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Mit Red-Team-Fokus lief ein Fix unter `TEAM_WEITERER_CODE` ohne Suite**
+  (`BL-324`, `Feld B`, beide Bahnen). Franks Auftrag knuepfte den Smoke-Test
+  in der Fokus-Fassung an *„Betrifft der Fix <Produktivcode>"* — und die
+  Vollautomatik setzt den Fokus fuer den ganzen Lauf, also im Normalfall jeder
+  Fixphase. Im Feld haette die volle Suite einen Fehlalarm als Doppelfund
+  gezeigt. Beide Fassungen nennen jetzt dieselben Orte.
+
+- **Ein fehlendes pytest-xdist galt der Selbstpruefung als roter Baum**
+  (`BL-320`, `Feld B`, beide Bahnen). Traegt der Smoke-Test `-n`/`--dist` und
+  fehlt xdist im Interpreter, bricht pytest am Parser ab; die Selbstpruefung
+  meldete „ROT, kein Flackern" und schickte den Menschen in den Produktivcode.
+  Das Feld hatte die Pruefung dreimal lokal nachgetragen, jedes Update hat sie
+  entfernt. Jetzt prueft `smoke_warten.py umgebung` im Interpreter des
+  Befehls (`pytest -n 0 --version` endet auch ohne xdist mit 0 — gemessen),
+  die Selbstpruefung nennt die Umgebung statt eines roten Baums, und die volle
+  Suite am Phasenende nennt dieselbe Ursache.
+
+- **Die Selbstpruefung gab an einem verwaisten Testlauf auf, statt auf ihn zu
+  warten** (`BL-315`, `Feld B`, beide Bahnen). Ralph schob die Warteschleife
+  selbst in den Hintergrund, die Sitzung endete, und die Selbstpruefung sah
+  den noch laufenden Test und meldete UNBEKANNT — quittiert hat ein Mensch.
+  Sie wartet jetzt bis zur Frist auf sein Ende und misst danach selbst
+  (`TEAM_SELBSTPRUEFUNG_WARTEN`, Default `TEAM_SMOKE_TEST_TIMEOUT`). Sie
+  erkennt dabei auch den schnellen Stufen-Befehl (`BL-232`), der bisher
+  unsichtbar blieb. Der Baustein nennt `run_in_background` beim Namen.
+
 - **Der Update-Selbsttest war in Bestandsprojekten mit eigenen Preisen rot,
   ohne dass etwas kaputt war** (`BL-323`, `Feld B`, beide Bahnen). Seit
   `BL-238` liest `kosten.py` `TEAM_PREISE` aus der Projektkonfiguration, wenn

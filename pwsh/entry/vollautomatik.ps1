@@ -432,6 +432,13 @@ function Voller-Smoke-Am-Phasenende {
     } else {
         Log "✗ Volle Suite ROT am Ende der $Phase — das Gate wird gesetzt (Kit-BL-232, Kit-BL-256). Ausgabe: $ausgabe"
         Add-Content -LiteralPath $TEAM_GATE_DATEI -Encoding utf8 -Value ("$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ss') | vollautomatik | volle Suite rot am Ende der $Phase ($TEAM_SMOKE_TEST)")
+        # BL-320: siehe vollautomatik.sh — ungeprueft ist nicht gruen, aber
+        # die Ursache liegt dann an der Umgebung, und der Bericht sagt das.
+        $befund = @(team_smoke_umgebung_befund $TEAM_SMOKE_TEST)
+        if ($befund.Count) {
+            Log '  Ursache ist die Umgebung, nicht der Code (Kit-BL-320):'
+            foreach ($zeile in $befund) { Log "  $zeile" }
+        }
     }
 }
 

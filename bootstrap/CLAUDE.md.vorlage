@@ -569,7 +569,11 @@ Guard/Read-Only-Regeln **nicht** auf.
   Vordergrund** auf, so oft, bis es nicht mehr mit 75 endet — sein Exit-Code
   ist der des Smoke-Tests. **Nur der Testlauf gehört in den Hintergrund;** „ich
   warte, bis sich der Warteruf meldet" ist derselbe Fehler eine Ebene höher
-  (`Kit-BL-281`, im Feld 2,01 USD für null Fortschritt).
+  (`Kit-BL-281`, im Feld 2,01 USD für null Fortschritt). Den Warteruf startet
+  die Rolle **nie** mit `run_in_background` oder einer anderen
+  Hintergrund-Option ihres Werkzeugs — er kehrt nach höchstens 540 Sekunden von
+  selbst zurück. Bleibt trotzdem ein Testlauf verwaist liegen, wartet die
+  Selbstprüfung des Loops auf sein Ende und misst danach selbst (`Kit-BL-315`).
   **Zweistufig, wenn die Suite wächst** (`Kit-BL-232`): `TEAM_SMOKE_TEST_SCHNELL`
   ist der schnelle Befehl je Stufe; die Vollautomatik fährt dann den vollen
   `TEAM_SMOKE_TEST` verbindlich am Ende der Bauphase und der Fix-Phase, und

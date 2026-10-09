@@ -125,6 +125,7 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | Der Read-Only-Guard läuft dabei auf **jedem** Pfad (auch Pause) |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | Der Smoke-Test läuft im **Vordergrund**, nie als Hintergrund-Task, nie als Monitor und nie mit einem |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | Die Rolle erhöht das Zeitlimit ihres Werkzeugs auf diesen Wert in **Sekunden** |
+| Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | die Rolle **nie** mit `run_in_background` oder einer anderen |
 | Loop-Mechanik & Auth (Ralph) | HERLEITUNG | Regeldatei | eine Auflage, die eine Rolle nicht einhalten kann, erzeugt genau das Verhalten, das sie verbieten soll. |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | **Kein** Aufweichen echter Fehler — die Bremse misst ausschließlich Fortschritt. |
 | Loop-Mechanik & Auth (Ralph) | NORM | TEAM.md | **Die Arbeit ist in diesem Fall meistens fertig** |
