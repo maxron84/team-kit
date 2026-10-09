@@ -122,6 +122,7 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Loop-Mechanik & Auth (Ralph) | NORM | TEAM.md | Der Key gehört **nie** per `export` in `.bashrc` & Co. |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | sie weicht Guard/Read-Only-Regeln **nicht** auf |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | reichen 42 **unverändert als eigenen Exit 42** durch |
+| Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | endet mit dem Pausen-Exit `42` statt über die API, und der Mensch meldet |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | Der Read-Only-Guard läuft dabei auf **jedem** Pfad (auch Pause) |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | Der Smoke-Test läuft im **Vordergrund**, nie als Hintergrund-Task, nie als Monitor und nie mit einem |
 | Loop-Mechanik & Auth (Ralph) | NORM | Regeldatei | Die Rolle erhöht das Zeitlimit ihres Werkzeugs auf diesen Wert in **Sekunden** |

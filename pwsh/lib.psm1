@@ -2363,6 +2363,52 @@ function Team-ClaudeSchreiben {
     return $code
 }
 
+# --- Abo-Fehler mit Grund (BL-316) ---------------------------------------------
+function team_abo_fehlergrund {
+    <#
+      'anmeldung', 'schutzregeln[ <kategorie>]' oder ''.
+
+      Bis hierher hiess JEDER Fehler eines Abo-Aufrufs "Timeout/Limit/429?"
+      und lief in den API-Fallback. Zwei Ursachen sehen im Log genauso aus und
+      verlangen etwas anderes: Eine ABGELAUFENE ANMELDUNG geht nicht von selbst
+      vorueber — im Feld liefen danach die naechsten Stufen ganz ueber die API
+      (rund 12,5 USD, wo ein Mensch sich nur haette neu anmelden muessen). Eine
+      ABLEHNUNG DURCH DIE SCHUTZREGELN des Modells traf einen Sweep ueber
+      Sicherheitscode; der Fallback half, aber die Zeile nannte die falsche
+      Ursache. Geprueft wird nur ein Log mit is_error und nur der ANFANG von
+      `result` — ein Erklaertext, der so eine Meldung zitiert, faellt heraus
+      (dieselbe Vorsicht wie HM-21).
+    #>
+    param([string]$Datei)
+    $daten = Team-JsonLesen $Datei
+    if ($null -eq $daten) { return '' }
+    $namen = $daten.PSObject.Properties.Name
+    if (-not ($namen -contains 'is_error' -and $daten.is_error)) { return '' }
+    $text = ([string]$daten.result).Trim()
+    $opt = [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+    if (($namen -contains 'api_error_status' -and $daten.api_error_status -eq 401) -or
+        [regex]::IsMatch($text, '^(Failed to authenticate|API Error:\s*401\b|Invalid API key|OAuth (session|token)\b[^\n]*expired)', $opt)) {
+        return 'anmeldung'
+    }
+    $opt = $opt -bor [System.Text.RegularExpressions.RegexOptions]::Singleline
+    if ([regex]::IsMatch($text, '^API Error:.*\b(safeguards flagged|Usage Policy)', $opt)) {
+        $m = [regex]::Match($text, '\[([A-Za-z][\w-]*)\]')
+        if ($m.Success) { return "schutzregeln $($m.Groups[1].Value)" }
+        return 'schutzregeln'
+    }
+    return ''
+}
+
+function team_pause_grund {
+    # Der Grund des letzten Pausen-Signals (Exit 42), in der Form, in der ihn
+    # die Rollen melden (BL-316): 42 heisst nicht mehr nur "Session-Limit".
+    if ($script:TEAM_LAST_PAUSE_GRUND -eq 'anmeldung') {
+        return 'Abo-Anmeldung abgelaufen — neu anmelden (claude starten, /login)'
+    }
+    $reset = if ($script:TEAM_LAST_RESET) { $script:TEAM_LAST_RESET } else { 'unbekannt' }
+    return "Session-Limit (Reset: $reset)"
+}
+
 # --- Zentraler Claude-Aufruf --------------------------------------------------
 function team_claude {
     <#
@@ -2386,6 +2432,7 @@ function team_claude {
           [Parameter(ValueFromRemainingArguments = $true)][string[]]$Weitere = @())
 
     $script:TEAM_LAST_PAUSE = 0
+    $script:TEAM_LAST_PAUSE_GRUND = ''
     $script:TEAM_LAST_RESET = ''
     $script:TEAM_LAST_KEIN_ZUG = 0
 
@@ -2429,11 +2476,46 @@ function team_claude {
     #
     # Der Airbag war damit ausgerechnet im empfohlenen Normalfall ausgebaut,
     # und unsichtbar: Der Fehler zeigt sich erst, wenn das Kontingent voll ist.
+    #
+    # BL-316: Erst fragen, WARUM der Abo-Aufruf scheiterte (team_abo_fehlergrund).
+    $grund = ''
+    $kategorie = ''
+    $auszug = ''
+    if ($fehler -and $env:AUTH_MODE -eq 'abo') {
+        $teile = @((team_abo_fehlergrund $Out) -split ' ', 2)
+        $grund = $teile[0]
+        if ($teile.Count -gt 1) { $kategorie = $teile[1] }
+        $auszug = team_result_auszug $Out
+        if ($auszug.Length -gt 160) { $auszug = $auszug.Substring(0, 160) }
+    }
+    if ($grund -eq 'anmeldung') {
+        # Kein Fallback, mit oder ohne Schluessel: Die Anmeldung geht nicht von
+        # selbst vorueber, und jeder weitere Aufruf liefe still ueber die API.
+        # Exit 42 haelt den Lauf an, wo alle Aufrufer ihn ohnehin anhalten —
+        # kein Fehlversuch, State steht.
+        $script:TEAM_LAST_PAUSE = 1
+        $script:TEAM_LAST_PAUSE_GRUND = 'anmeldung'
+        $script:TEAM_LAST_RESET = 'nach neuer Anmeldung'
+        $script:TEAM_LAST_COST = team_summe_cost_usd $versuchLogs
+        $script:TEAM_LAST_OUT = $Out
+        Team-Fehler "[$Rolle] Abo-Anmeldung abgelaufen oder ungültig: „$auszug“"
+        Team-Fehler "  KEIN API-Fallback (Kit-BL-316): Eine Anmeldung geht nicht von selbst vorüber — jeder"
+        Team-Fehler "  weitere Aufruf dieses Laufs liefe sonst über die API. Der Lauf hält an wie beim"
+        Team-Fehler "  Session-Limit (Exit 42). Neu anmelden (claude starten, /login), dann denselben Lauf"
+        Team-Fehler "  erneut starten. Log: $Out"
+        return 42
+    }
+    $grundText = if ($auszug) { $auszug } else { 'kein Grund im Log' }
     if ($fehler -and $env:AUTH_MODE -eq 'abo' -and -not (team_api_weg_vorhanden)) {
-        Team-Fehler "[$Rolle] Abo-Aufruf fehlgeschlagen — kein API-Schluessel hinterlegt, also kein Fallback. Weiter mit der regulaeren Limit-Behandlung."
+        Team-Fehler "[$Rolle] Abo-Aufruf fehlgeschlagen ($grundText) — kein API-Schluessel hinterlegt, also kein Fallback. Weiter mit der regulaeren Limit-Behandlung."
     }
     elseif ($fehler -and $env:AUTH_MODE -eq 'abo') {
-        [Console]::Out.WriteLine("[$Rolle] Abo-Aufruf fehlgeschlagen (Timeout/Limit/429?) — einmaliger API-Fallback. Log: $Out")
+        if ($grund -eq 'schutzregeln') {
+            $kat = if ($kategorie) { " ($kategorie)" } else { '' }
+            [Console]::Out.WriteLine("[$Rolle] Abo-Aufruf von den Schutzregeln des Modells abgelehnt$kat — einmaliger API-Fallback; ob der API-Weg durchkommt, ist nicht zugesichert (Kit-BL-316). Log: $Out")
+        } else {
+            [Console]::Out.WriteLine("[$Rolle] Abo-Aufruf fehlgeschlagen ($grundText) — einmaliger API-Fallback. Log: $Out")
+        }
         $env:AUTH_MODE = 'api'
         if (-not (team_resolve_auth_mode)) { return 1 }
         $Out = ($Out -replace '\.json$', '') + '-api-fallback.json'
@@ -2488,6 +2570,7 @@ function team_claude {
 
         if ($fehler -and $pausieren) {
             $script:TEAM_LAST_PAUSE = 1
+            $script:TEAM_LAST_PAUSE_GRUND = 'limit'
             $script:TEAM_LAST_RESET = if ($resetHhmm) { $resetHhmm } else { 'unbekannt' }
             $script:TEAM_LAST_COST = team_summe_cost_usd $versuchLogs
             $script:TEAM_LAST_OUT = $Out
@@ -2519,6 +2602,7 @@ $script:TEAM_AUTH_USER = if ($env:AUTH_MODE) { $env:AUTH_MODE } else { '' }
 $script:TEAM_LAST_COST = ''
 $script:TEAM_LAST_OUT = ''
 $script:TEAM_LAST_PAUSE = 0
+$script:TEAM_LAST_PAUSE_GRUND = ''
 $script:TEAM_LAST_RESET = ''
 $script:TEAM_LAST_KEIN_ZUG = 0
 $script:TEAM_SMOKE_PARALLEL_ZEILE = ''

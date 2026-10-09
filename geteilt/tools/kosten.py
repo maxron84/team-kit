@@ -538,6 +538,79 @@ def log_kosten(dirs, split=False, since=None, files=None, return_geparst=False):
     return ergebnis
 
 
+# --- BL-316: Warum lief ein Aufruf ueber die API? -----------------------------
+#
+# Jeder Fehler eines Abo-Aufrufs hiess "Timeout/Limit/429?" und lief in den
+# einmaligen API-Fallback. Zwei Ursachen sehen im Log genauso aus und verlangen
+# etwas anderes: eine ABGELAUFENE ANMELDUNG (geht nicht vorueber — die
+# Bibliotheken halten den Lauf seither an, Exit 42) und eine ABLEHNUNG DURCH
+# DIE SCHUTZREGELN des Modells (der Fallback bleibt, aber benannt). Die Kosten
+# solcher Fallbacks stehen danach unter `api`, und der Abschlussbericht nannte
+# keinen Grund — die Kostenachse verrutschte still.
+#
+# Geprueft wird nur ein Log mit is_error und nur der ANFANG von `result`: Ein
+# Erklaertext des Modells, der eine solche Meldung zitiert, faellt heraus
+# (dieselbe Vorsicht wie beim 429-Muster, HM-21). Die pwsh-Bahn traegt dieselbe
+# Regel in PowerShell (team_abo_fehlergrund); test_bl316 haelt beide gegen
+# dieselben Faelle.
+ANMELDUNG_MUSTER = re.compile(
+    r"(Failed to authenticate|API Error:\s*401\b|Invalid API key"
+    r"|OAuth (session|token)\b[^\n]*expired)", re.I)
+SCHUTZREGEL_MUSTER = re.compile(
+    r"API Error:.*\b(safeguards flagged|Usage Policy)", re.I | re.S)
+
+
+def abo_fehlergrund(daten):
+    """'anmeldung', 'schutzregeln[ <kategorie>]' oder '' fuer das geparste
+    Ergebnis-JSON eines Aufrufs."""
+    if not isinstance(daten, dict) or not daten.get("is_error"):
+        return ""
+    text = str(daten.get("result") or "").strip()
+    if daten.get("api_error_status") == 401 or ANMELDUNG_MUSTER.match(text):
+        return "anmeldung"
+    if SCHUTZREGEL_MUSTER.match(text):
+        kategorie = re.search(r"\[([A-Za-z][\w-]*)\]", text)
+        return "schutzregeln" + (" " + kategorie.group(1) if kategorie else "")
+    return ""
+
+
+def _json_oder_none(datei):
+    try:
+        with open(datei, encoding="utf-8-sig") as fh:
+            return json.load(fh)
+    except Exception:
+        return None
+
+
+def fallback_bericht(dirs, since=None):
+    """Je API-Fallback dieses Laufs eine Zeile: welcher Aufruf, warum, und was
+    er ueber die API gekostet hat (BL-316). Leer, wenn keiner lief."""
+    zeilen = []
+    for datei in sorted(team_log_dateien(dirs, since=since)):
+        name = os.path.basename(datei)
+        if "-api-fallback" not in name:
+            continue
+        abo = os.path.join(os.path.dirname(datei),
+                           name.replace("-api-fallback", "", 1))
+        daten = _json_oder_none(abo)
+        grund = abo_fehlergrund(daten) if daten is not None else None
+        if grund is None:
+            text = "Abo-Log fehlt"
+        elif grund.startswith("schutzregeln"):
+            kategorie = grund[len("schutzregeln"):].strip()
+            text = ("Ablehnung durch die Schutzregeln des Modells"
+                    + (f" ({kategorie})" if kategorie else ""))
+        elif grund == "anmeldung":
+            text = "Abo-Anmeldung abgelaufen"
+        else:
+            roh = " ".join(str((daten or {}).get("result") or "").split())
+            text = f"Abo-Fehler: {roh[:100]}" if roh else "Abo-Fehler ohne Grund im Log"
+        kosten, ok = _datei_kosten(datei)
+        betrag = f"{kosten:.4f} USD" if ok else "Kosten unbekannt"
+        zeilen.append(f"{os.path.basename(abo)}: {text} — über die API {betrag}")
+    return zeilen
+
+
 def _archiviere_dateien(files):
     """Verschiebt GENAU die uebergebene Dateiliste nach <verzeichnis>/archiv/
     (nicht den Ordnerinhalt zum Aufrufzeitpunkt — das war der HM-39/AX-4-Race:
@@ -3460,6 +3533,8 @@ VERBEN = {
                 ".team-logs)"),
     "verweigert": "verweigert LOG --ordner ORDNER...   (Kit-BL-292)",
     "abdeckung": "abdeckung [DIR...] [--since EPOCH]   (Kit-BL-299)",
+    "fallbacks": "fallbacks [DIR...] [--since EPOCH]   (Kit-BL-316)",
+    "fehlergrund": "fehlergrund LOG   (Kit-BL-316)",
     "ledger": ("ledger [PFAD] [--domaene D] [--rolle R] [--kaskade N] "
                "[--split] [--anzahl]"),
     "ledger-pruefen": "ledger-pruefen [--pfad P] [--kaskade N]",
@@ -3642,6 +3717,36 @@ def _main(argv):
         for datei, turns, usd in zeilen:
             betrag = f"{usd:.4f} USD" if usd is not None else "Kosten unbekannt"
             print(f"  {turns:4d} Turns  {betrag:>18}  {os.path.basename(datei)}")
+        return 0
+
+    if befehl == "fehlergrund":
+        # BL-316: der Grund eines gescheiterten Aufrufs, fuer lib.sh.
+        if len(rest) != 1:
+            print("Nutzung: kosten.py fehlergrund LOG", file=sys.stderr)
+            return 1
+        grund = abo_fehlergrund(_json_oder_none(rest[0]))
+        if grund:
+            print(grund)
+        return 0
+
+    if befehl == "fallbacks":
+        # BL-316: die API-Fallbacks eines Laufs, mit Grund und Betrag — fuer
+        # den Abschlussbericht. Die Kosten stehen danach unter `api`; ohne
+        # diese Zeilen sagte niemand, warum.
+        since = None
+        if "--since" in rest:
+            stelle = rest.index("--since")
+            try:
+                since = float(rest[stelle + 1])
+            except (IndexError, ValueError):
+                print("Fehler: --since braucht einen Zeitstempel (Epoch)",
+                      file=sys.stderr)
+                return 1
+            rest = rest[:stelle] + rest[stelle + 2:]
+        dirs = [a for a in rest if not a.startswith("--")] or [
+            ".ralph-logs", ".team-logs"]
+        for zeile in fallback_bericht(dirs, since=since):
+            print(zeile)
         return 0
 
     if befehl == "abdeckung":

@@ -10,7 +10,7 @@
             TEAM_MODEL_LOOP   Modell (Default sonnet)
             AUTH_MODE         api|abo (siehe team/lib.psm1)
   Exit:     0 = Kaskade fertig/Cap erreicht · 1 = Fehler
-            42 = Session-Limit — Stufe pausiert (kein Fehler, State steht)
+            42 = Session-Limit oder Abo-Anmeldung abgelaufen — Stufe pausiert (kein Fehler, State steht)
             43 = Stufe fertig, Quittung fehlt (BL-41): Das Log meldet Erfolg,
                  das Promise fehlt. Arbeit meist FERTIG — nicht neu bauen,
                  sondern pruefen und von Hand quittieren
@@ -154,7 +154,7 @@ Regeln:
     $rc = team_claude 'ralph' $TEAM_MODEL_LOOP $out $prompt '--permission-mode' 'bypassPermissions'
     team_raw_pruefen 'ralph' | Out-Null
     if ($rc -eq 42) {
-        Team-Fehler "Ralph: Session-Limit — Stufe $stufe pausiert (Reset: $(if ($TEAM_LAST_RESET) { $TEAM_LAST_RESET } else { 'unbekannt' })). Kein Fehler, $stateFile bleibt auf $stufe. Bitte später erneut starten."
+        Team-Fehler "Ralph: $(team_pause_grund) — Stufe $stufe pausiert. Kein Fehler, $stateFile bleibt auf $stufe. Danach erneut starten."
         exit 42
     } elseif ($rc -ne 0) {
         exit 1

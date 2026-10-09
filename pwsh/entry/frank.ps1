@@ -14,7 +14,7 @@
         5 = Auftrag am Kopf der Warteschlange unbrauchbar (BL-210)
         43 = Fix fertig, Quittung fehlt (BL-41/BL-214) — kein Rollback,
              kein Fehlversuch, keine Eskalation an Axel
-        42 = Session-Limit (kein Fehlversuch)
+        42 = Session-Limit oder Abo-Anmeldung abgelaufen (kein Fehlversuch)
   Ein Netzfehler VOR dem ersten Token (0 Turns, 0.0000 USD) endet mit 1 —
   aber OHNE Zaehler und ohne Eskalation an Axel (BL-228).
 #>
@@ -174,7 +174,7 @@ team_raw_pruefen 'frank' | Out-Null
 # Session-Pause (HM-24): kein inhaltlicher Fehlversuch — Frank kam nie zum Zug,
 # also weder Rollback noch Versuchszaehler noch Axel-Eskalation.
 if ($rcClaude -eq 42) {
-    Team-Fehler "[frank] Session-Limit — Fix pausiert (Reset: $(if ($TEAM_LAST_RESET) { $TEAM_LAST_RESET } else { 'unbekannt' })). Kein Fehlversuch, Zähler unverändert."
+    Team-Fehler "[frank] $(team_pause_grund) — Fix pausiert. Kein Fehlversuch, Zähler unverändert."
     team_rollback_rolle 'frank' $startHash $hm | Out-Null
     exit 42
 }

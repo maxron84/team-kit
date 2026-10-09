@@ -12,7 +12,7 @@
 # State: .<rolle>-state = zuletzt geprüfter Commit-Hash. Angriff nur auf
 # STABILEN Code (neue Commits seit State) — idealerweise am Kaskaden-Übergang.
 # Exit: 0 = gearbeitet · 3 = nichts Neues zu prüfen · 1 = Fehler/Guard-Bruch
-#       42 = Session-Limit — Sweep pausiert (kein Fehler, State steht)
+#       42 = Session-Limit oder Abo-Anmeldung abgelaufen — Sweep pausiert (kein Fehler, State steht)
 set -euo pipefail
 cd "$(dirname "$0")"
 # shellcheck source=team/lib.sh
@@ -237,7 +237,7 @@ if [ "$RC" -eq 42 ]; then
     # zum Exit-42-Pfad in frank.sh vor dem exit 42 verwerfen. (Der Zeiger
     # stand bis BL-114 als "frank.sh (Zeile 68)" hier und zeigte längst ins
     # Leere — BL-50-Bauart: Ein Name altert nicht, eine Zeilennummer schon.)
-    echo "[$ROLLE] Session-Limit — Sweep pausiert (Reset: ${TEAM_LAST_RESET:-unbekannt}). Kein Fehler, $STATE_FILE bleibt unverändert; halbfertige ${TEAM_TEST_ORDNER}/${TEAM_PLAN_ORDNER}-Seiteneffekte werden verworfen." >&2
+    echo "[$ROLLE] $(team_pause_grund) — Sweep pausiert. Kein Fehler, $STATE_FILE bleibt unverändert; halbfertige ${TEAM_TEST_ORDNER}/${TEAM_PLAN_ORDNER}-Seiteneffekte werden verworfen." >&2
     # BL-114: wie in axel.sh — der `git clean` war eingeschränkt, das
     # `git reset --hard` daneben nicht. Jetzt derselbe chirurgische Weg.
     team_rollback_rolle "$ROLLE" "$HEAD_HASH" - || true

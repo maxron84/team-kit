@@ -500,11 +500,27 @@ nächsten `--update`.
 | `0` | durchgelaufen | Closeout machen |
 | `1` | **echter Fehler** | Log lesen, Ursache beheben |
 | `3` | nichts zu tun | normal, kein Fehler |
-| `42` | **Session-Limit** — Lauf pausiert | **kein Fehler.** Kein Datenverlust, State steht. Später erneut starten. |
+| `42` | **Session-Limit** oder **Abo-Anmeldung abgelaufen** — Lauf pausiert | **kein Fehler.** Kein Datenverlust, State steht. Beim Limit später erneut starten; bei abgelaufener Anmeldung erst neu anmelden (`claude` starten, `/login`) — die Zeile der Rolle sagt, welcher Fall vorliegt. |
 | `43` | **Stufe fertig, Quittung fehlt** | **Nicht neu bauen.** Erst prüfen: hat die Rolle committet, ist der Smoke-Test grün? Wenn ja: von Hand quittieren (`echo <nächste Stufe> > .ralph-state`) und weiterlaufen lassen. |
 
 `42` ist die häufigste Verwechslung: Das ist kein Absturz, sondern eine saubere
 Pause. Nichts ist verloren, der Lauf setzt beim nächsten Start fort.
+
+**Eine abgelaufene Abo-Anmeldung hält den Lauf an, statt auf die API
+auszuweichen** (`Kit-BL-316`). Liegt ein API-Schlüssel bereit, fährt das Team
+einen gescheiterten Abo-Aufruf einmal über die API nach — bei einem Limit oder
+Netzfehler ist das richtig, denn der nächste Aufruf versucht es wieder im Abo.
+Eine abgelaufene Anmeldung geht aber nicht von selbst vorüber: Im Feld lief so
+der Rest eines Laufs über die API, rund 12,5 USD für ein Neu-Anmelden.
+
+**Lehnt das Modell einen Aufruf über seine Schutzregeln ab**, steht im Log
+`API Error: … safeguards flagged this message … [cyber]`. Das trifft vor allem
+Harry und Marv, deren Arbeit Angriffswege sind. Der Aufruf läuft dann einmal
+über die API (wenn ein Schlüssel bereitliegt) und wird so benannt; der
+Abschlussbericht zählt solche Fallbacks mit Grund und Betrag. Prüft dein Red
+Team regelmäßig Sicherheitscode, nennt die Fehlermeldung selbst einen Weg:
+Anthropic bietet ein *Cyber Verification Program* an, das diese
+Unterbrechungen für legitime Sicherheitsarbeit verringern soll.
 
 `43` ist die zweite: Die Rolle hat ihre Sitzung beendet, ohne zu quittieren —
 meist, weil sie auf einen Hintergrund-Task wartete, den es in einer

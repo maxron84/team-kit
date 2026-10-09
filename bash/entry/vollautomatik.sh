@@ -42,7 +42,7 @@
 #          43 = Stufe/Fix fertig, Quittung fehlt (BL-41, durchgereicht von
 #               ralph.sh und — seit BL-214 — von frank.sh): kein Neubau,
 #               kein Neustart — prüfen und von Hand quittieren
-#          42 = Session-Limit — Lauf pausiert (kein Fehler, kein
+#          42 = Session-Limit oder Abo-Anmeldung abgelaufen — Lauf pausiert (kein Fehler, kein
 #               Datenverlust, State steht; siehe Kaskade 9/Stufe 31,
 #               CLAUDE.md „Loop-Mechanik & Auth") — greift in Phase 4 jetzt auch
 #               bei einem Exit 42 von frank.sh/axel.sh (Kaskade 11/Stufe 38).
@@ -405,7 +405,7 @@ if phasen_faellig 1; then
 log "=== PHASE 1: Ralph (Bau der Kaskade) ==="
 ./ralph.sh; rc=$?
 if [ "$rc" -eq 42 ]; then
-    log "⏸ Session-Limit erreicht — Lauf pausiert (Ralph). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."
+    log "⏸ Lauf pausiert (Ralph) — Session-Limit oder abgelaufene Abo-Anmeldung; der Grund steht in der Zeile der Rolle darüber (Kit-BL-316). Danach './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."
     exit 42
 fi
 if [ "$rc" -eq 43 ]; then
@@ -444,7 +444,7 @@ for rolle in harry marv; do
     case "$rc" in
         0) log "$rolle hat einen Sweep abgeschlossen."; beutebuch_lint_nach "$rolle" ;;
         3) log "$rolle: nichts Neues zu prüfen." ;;
-        42) log "⏸ Session-Limit erreicht — Lauf pausiert ($rolle). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."; exit 42 ;;
+        42) log "⏸ Lauf pausiert ($rolle) — Session-Limit oder abgelaufene Abo-Anmeldung; der Grund steht in der Zeile der Rolle darüber (Kit-BL-316). Danach './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."; exit 42 ;;
         *) log "$rolle endete mit ECHTEM Fehler ($rc: is_error/Guard-Verletzung/Aufruf-Fehlschlag — ein bloß fehlendes Promise bei sauberem Fund liefert bereits 0) — Vollautomatik stoppt."; exit 1 ;;
     esac
     phasen_naechste $((phase_nr + 1))
@@ -463,7 +463,7 @@ if [ -n "${TEAM_REDTEAM_FOCUS_2:-}" ] && phasen_faellig 3; then
         case "$rc" in
             0) log "$rolle hat den zweiten Durchgang abgeschlossen."; beutebuch_lint_nach "$rolle (2. Durchgang)" ;;
             3) log "$rolle: im zweiten Durchgang nichts zu prüfen." ;;
-            42) log "⏸ Session-Limit erreicht — Lauf pausiert ($rolle, 2. Durchgang). Bitte später './vollautomatik.sh' erneut starten."; exit 42 ;;
+            42) log "⏸ Lauf pausiert ($rolle, 2. Durchgang) — Session-Limit oder abgelaufene Abo-Anmeldung; der Grund steht in der Zeile der Rolle darüber (Kit-BL-316). Danach './vollautomatik.sh' erneut starten."; exit 42 ;;
             *) log "$rolle endete im zweiten Durchgang mit ECHTEM Fehler ($rc) — Vollautomatik stoppt."; exit 1 ;;
         esac
         budget_ok || { abbruch_bericht "Budget-Deckel"; exit 1; }
@@ -499,7 +499,7 @@ while [ "$runde" -lt "$MAX_RUNDEN" ]; do
         # leer und meldet den Fund benannt, statt ihn zu verschweigen.
         5) getan=1
            log "Runde $runde: Franks Auftrag am Kopf der Warteschlange ist unbrauchbar (Kit-BL-210) — der Fundblock gehoert nachgebessert. Dahinter liegende Funde bleiben ungesehen, solange er dort steht." ;;
-        42) log "⏸ Session-Limit erreicht — Lauf pausiert (Frank). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."; exit 42 ;;
+        42) log "⏸ Lauf pausiert (Frank) — Session-Limit oder abgelaufene Abo-Anmeldung; der Grund steht in der Zeile der Rolle darüber (Kit-BL-316). Danach './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."; exit 42 ;;
         # BL-214: derselbe vierte Ausgang wie bei Ralph, dieselbe Behandlung —
         # NICHT als Fehlversuch zaehlen und den Lauf stoppen, statt bezahlte,
         # wahrscheinlich fertige Arbeit wegzuwerfen.
@@ -515,7 +515,7 @@ while [ "$runde" -lt "$MAX_RUNDEN" ]; do
         case "$rc" in
             0) getan=1; fortschritt=1; log "Runde $runde: Axel hat eine Ermittlungsakte geliefert." ;;
             3) : ;;
-            42) log "⏸ Session-Limit erreicht — Lauf pausiert (Axel). Bitte später './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."; exit 42 ;;
+            42) log "⏸ Lauf pausiert (Axel) — Session-Limit oder abgelaufene Abo-Anmeldung; der Grund steht in der Zeile der Rolle darüber (Kit-BL-316). Danach './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht)."; exit 42 ;;
             *) getan=1; log "Runde $runde: Axel-Fehler ($rc) — Fall bleibt offen." ;;
         esac
         beutebuch_lint_nach "Axel (Runde $runde)"
@@ -602,6 +602,13 @@ ABDECKUNG="$($TEAM_KOSTEN_TOOL abdeckung .team-logs --since "$LAUF_START" 2>/dev
 if [ -n "$ABDECKUNG" ]; then
     log "Red Team — Abdeckung je Fokus-Punkt (Kit-BL-299):"
     printf '%s\n' "$ABDECKUNG" | sed 's/^/  /'
+fi
+# BL-316: Was ueber die API lief, steht danach unter `api` — mit Grund, sonst
+# verrutscht die Kostenachse still.
+FALLBACKS="$($TEAM_KOSTEN_TOOL fallbacks .ralph-logs .team-logs .ralph-logs/archiv .team-logs/archiv --since "$LAUF_START" 2>/dev/null || true)"
+if [ -n "$FALLBACKS" ]; then
+    log "API-Fallbacks dieses Laufs — echt abgerechnet, nicht im Abo (Kit-BL-316):"
+    printf '%s\n' "$FALLBACKS" | sed 's/^/  /'
 fi
 if [ -n "$LINT_BEFUNDE" ]; then
     log "Beutebuch-Lint meldete im Lauf Mängel (Kit-BL-254) — vor dem Closeout ansehen: $TEAM_BEUTEBUCH_TOOL lint"

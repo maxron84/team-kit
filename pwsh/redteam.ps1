@@ -13,7 +13,7 @@
   STABILEN Code (neue Commits seit State).
 
   Exit: 0 = gearbeitet · 3 = nichts Neues zu pruefen · 1 = Fehler/Guard-Bruch
-        42 = Session-Limit — Sweep pausiert (kein Fehler, State steht)
+        42 = Session-Limit oder Abo-Anmeldung abgelaufen — Sweep pausiert (kein Fehler, State steht)
 
   WARUM -Rolle/-Auftrag STATT DOT-SOURCING: In Bash sourcen harry.sh/marv.sh
   diese Datei, nachdem sie ROLLE und AUFTRAG als Umgebungsvariablen gesetzt
@@ -238,7 +238,7 @@ if ($rc -eq 42) {
     # HM-27: Der Guard oben resettet nur Pfade AUSSERHALB der Whitelist — ein
     # bereits geschriebener Beutebuch-Eintrag INNERHALB der Schreibzone bliebe
     # sonst als impliziter, nie verifizierter Fortschritt liegen.
-    Team-Fehler "[$Rolle] Session-Limit — Sweep pausiert (Reset: $(if ($TEAM_LAST_RESET) { $TEAM_LAST_RESET } else { 'unbekannt' })). Kein Fehler, $stateFile bleibt unverändert; halbfertige $TEAM_TEST_ORDNER/$TEAM_PLAN_ORDNER-Seiteneffekte werden verworfen."
+    Team-Fehler "[$Rolle] $(team_pause_grund) — Sweep pausiert. Kein Fehler, $stateFile bleibt unverändert; halbfertige $TEAM_TEST_ORDNER/$TEAM_PLAN_ORDNER-Seiteneffekte werden verworfen."
     # BL-114: wie in axel.ps1 — der `git clean` war eingeschraenkt, das
     # `git reset --hard` daneben nicht. Jetzt derselbe chirurgische Weg.
     team_rollback_rolle $Rolle $headHash '-' | Out-Null

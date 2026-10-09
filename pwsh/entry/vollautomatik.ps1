@@ -34,7 +34,7 @@
            43 = Stufe/Fix fertig, Quittung fehlt (BL-41, von ralph.ps1 und —
                 seit BL-214 — von frank.ps1 durchgereicht): kein Neubau, kein
                 Neustart — pruefen und von Hand quittieren
-           42 = Session-Limit — Lauf pausiert (kein Fehler, State steht)
+           42 = Session-Limit oder Abo-Anmeldung abgelaufen — Lauf pausiert (kein Fehler, State steht)
 
   Sequenziell und sperrgesichert. Haelt die Sperre ueber den ganzen Lauf und
   gibt sie an die Kind-Skripte weiter (TEAM_LOCK_HELD=1), damit die sich nicht
@@ -506,7 +506,7 @@ if (Phasen-Faellig 1) {
 Log '=== PHASE 1: Ralph (Bau der Kaskade) ==='
 $rc = Rolle-Starten './ralph.ps1'
 if ($rc -eq 42) {
-    Log '⏸ Session-Limit erreicht — Lauf pausiert (Ralph). Bitte später .\vollautomatik.cmd erneut starten. Kein Fehler, kein Datenverlust (State steht).'
+    Log '⏸ Lauf pausiert (Ralph) — Session-Limit oder abgelaufene Abo-Anmeldung; der Grund steht in der Zeile der Rolle darüber (Kit-BL-316). Danach .\vollautomatik.cmd erneut starten. Kein Fehler, kein Datenverlust (State steht).'
     exit 42
 }
 if ($rc -eq 43) {
@@ -552,7 +552,7 @@ foreach ($rolle in @('harry', 'marv')) {
         0 { Log "$rolle hat einen Sweep abgeschlossen."; Beutebuch-Lint-Nach $rolle }
         3 { Log "${rolle}: nichts Neues zu prüfen." }
         42 {
-            Log "⏸ Session-Limit erreicht — Lauf pausiert ($rolle). Bitte später .\vollautomatik.cmd erneut starten. Kein Fehler, kein Datenverlust (State steht)."
+            Log "⏸ Lauf pausiert ($rolle) — Session-Limit oder abgelaufene Abo-Anmeldung; der Grund steht in der Zeile der Rolle darüber (Kit-BL-316). Danach .\vollautomatik.cmd erneut starten. Kein Fehler, kein Datenverlust (State steht)."
             exit 42
         }
         default {
@@ -583,7 +583,7 @@ if ($env:TEAM_REDTEAM_FOCUS_2 -and (Phasen-Faellig 3)) {
             0 { Log "$rolle hat den zweiten Durchgang abgeschlossen."; Beutebuch-Lint-Nach "$rolle (2. Durchgang)" }
             3 { Log "${rolle}: im zweiten Durchgang nichts zu prüfen." }
             42 {
-                Log "⏸ Session-Limit erreicht — Lauf pausiert ($rolle, 2. Durchgang). Bitte später .\vollautomatik.cmd erneut starten."
+                Log "⏸ Lauf pausiert ($rolle, 2. Durchgang) — Session-Limit oder abgelaufene Abo-Anmeldung; der Grund steht in der Zeile der Rolle darüber (Kit-BL-316). Danach .\vollautomatik.cmd erneut starten."
                 exit 42
             }
             default {
@@ -622,7 +622,7 @@ while ($runde -lt $maxRunden) {
             Log "Runde ${runde}: Franks Auftrag am Kopf der Warteschlange ist unbrauchbar (Kit-BL-210) — der Fundblock gehoert nachgebessert. Dahinter liegende Funde bleiben ungesehen, solange er dort steht."
         }
         42 {
-            Log '⏸ Session-Limit erreicht — Lauf pausiert (Frank). Bitte später .\vollautomatik.cmd erneut starten. Kein Fehler, kein Datenverlust (State steht).'
+            Log '⏸ Lauf pausiert (Frank) — Session-Limit oder abgelaufene Abo-Anmeldung; der Grund steht in der Zeile der Rolle darüber (Kit-BL-316). Danach .\vollautomatik.cmd erneut starten. Kein Fehler, kein Datenverlust (State steht).'
             exit 42
         }
         # BL-214: derselbe vierte Ausgang wie bei Ralph, dieselbe Behandlung.
@@ -643,7 +643,7 @@ while ($runde -lt $maxRunden) {
             0 { $getan = 1; $fortschritt = 1; Log "Runde ${runde}: Axel hat eine Ermittlungsakte geliefert." }
             3 { }
             42 {
-                Log '⏸ Session-Limit erreicht — Lauf pausiert (Axel). Bitte später .\vollautomatik.cmd erneut starten. Kein Fehler, kein Datenverlust (State steht).'
+                Log '⏸ Lauf pausiert (Axel) — Session-Limit oder abgelaufene Abo-Anmeldung; der Grund steht in der Zeile der Rolle darüber (Kit-BL-316). Danach .\vollautomatik.cmd erneut starten. Kein Fehler, kein Datenverlust (State steht).'
                 exit 42
             }
             default { $getan = 1; Log "Runde ${runde}: Axel-Fehler ($rc) — Fall bleibt offen." }
@@ -740,6 +740,13 @@ $abdeckung = @(Team-Werkzeug $TEAM_KOSTEN_TOOL @('abdeckung', '.team-logs', '--s
 if ($abdeckung.Count) {
     Log 'Red Team — Abdeckung je Fokus-Punkt (Kit-BL-299):'
     foreach ($z in $abdeckung) { Log "  $z" }
+}
+# BL-316: Was ueber die API lief, steht danach unter `api` — mit Grund, sonst
+# verrutscht die Kostenachse still.
+$fallbacks = @(Team-Werkzeug $TEAM_KOSTEN_TOOL @('fallbacks', '.ralph-logs', '.team-logs', '.ralph-logs/archiv', '.team-logs/archiv', '--since', "$laufStart") 2>$null | Where-Object { $_ })
+if ($fallbacks.Count) {
+    Log 'API-Fallbacks dieses Laufs — echt abgerechnet, nicht im Abo (Kit-BL-316):'
+    foreach ($z in $fallbacks) { Log "  $z" }
 }
 if ($script:lintBefunde.Count) {
     Log "Beutebuch-Lint meldete im Lauf Mängel (Kit-BL-254) — vor dem Closeout ansehen: $TEAM_BEUTEBUCH_TOOL lint"

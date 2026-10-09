@@ -525,6 +525,13 @@ fest `api`. Modell und Auth sind zwei getrennte Achsen.
 > („echter Fehler, Mensch gefragt"), und der Airbag war ausgerechnet im
 > empfohlenen Normalfall ausgebaut.
 
+> **Zwei Gründe bekommen keinen stillen API-Retry** (`Kit-BL-316`). Eine
+> **abgelaufene Abo-Anmeldung** geht nicht von selbst vorüber: Der Aufruf
+> endet mit dem Pausen-Exit `42` statt über die API, und der Mensch meldet
+> sich neu an — im Feld lief sonst der Rest eines Laufs über die API. Eine
+> **Ablehnung durch die Schutzregeln** des Modells bekommt den Retry, aber
+> benannt; der Abschlussbericht zählt jeden API-Fallback mit Grund und Betrag.
+
 > **Wie die Agenten-CLI heißt, entscheidet die Maschine** (`Kit-BL-174`,
 > `Kit-BL-173`): `TEAM_CLAUDE_BIN` in `{{KONFIG}}` — eingetragen hat ihn der
 > Installer mit dem, was er auf **dieser** Maschine gefunden hat. Claude

@@ -647,10 +647,52 @@ team_versuch_melden() {
     fi
 }
 
+# team_abo_fehlergrund <json>: druckt "anmeldung", "schutzregeln[ <kategorie>]"
+# oder nichts (BL-316).
+#
+# Bis hierher hiess JEDER Fehler eines Abo-Aufrufs "Timeout/Limit/429?" und lief
+# in den API-Fallback. Zwei Ursachen sehen im Log genauso aus und verlangen
+# etwas anderes:
+#   - Eine ABGELAUFENE ANMELDUNG ("Failed to authenticate: OAuth session expired
+#     and could not be refreshed") geht nicht von selbst vorueber. Im Feld
+#     rettete der Fallback die eine Stufe, und die naechsten liefen nach einem
+#     Turn im Abo ganz ueber die API — rund 12,5 USD fuer Stunden, in denen ein
+#     Mensch sich nur haette neu anmelden muessen.
+#   - Eine ABLEHNUNG DURCH DIE SCHUTZREGELN des Modells ("API Error: … safeguards
+#     flagged this message … [cyber]") traf einen Sweep ueber Sicherheitscode.
+#     Der Fallback half dort — aber die Zeile nannte Timeout oder Limit, und wer
+#     sie liest, sucht das Kontingent.
+# Geprueft wird nur ein Log mit is_error und nur der ANFANG von `result`: Ein
+# Erklaertext des Modells, der eine solche Meldung zitiert, faellt heraus —
+# dieselbe Vorsicht wie beim 429-Muster (HM-21). Die Regel steht EINMAL, in
+# kosten.py (abo_fehlergrund); die pwsh-Bahn traegt sie in PowerShell, und
+# test_bl316 haelt alle Fassungen gegen dieselben Faelle. Liegt das Werkzeug
+# nicht daneben, wird nichts behauptet — es bleibt beim alten Fallback.
+team_abo_fehlergrund() {
+    local werkzeug
+    werkzeug="$(dirname "${BASH_SOURCE[0]}")/tools/kosten.py"
+    [ -f "$werkzeug" ] || return 0
+    "$TEAM_PYTHON" "$werkzeug" fehlergrund "$1" 2>/dev/null || true
+}
+
+# team_pause_grund — der Grund des letzten Pausen-Signals (Exit 42), in der
+# Form, in der ihn die Rollen dem Menschen melden (BL-316). Seit dort heisst 42
+# nicht mehr nur "Session-Limit": Eine abgelaufene Abo-Anmeldung haelt den Lauf
+# genauso an, und der Mensch muss etwas anderes tun.
+TEAM_LAST_PAUSE_GRUND=""
+team_pause_grund() {
+    if [ "${TEAM_LAST_PAUSE_GRUND:-}" = "anmeldung" ]; then
+        echo "Abo-Anmeldung abgelaufen — neu anmelden (claude starten, /login)"
+    else
+        echo "Session-Limit (Reset: ${TEAM_LAST_RESET:-unbekannt})"
+    fi
+}
+
 team_claude() {
     local rolle="$1" modell="$2" out="$3" prompt="$4"
     shift 4
     TEAM_LAST_PAUSE=0
+    TEAM_LAST_PAUSE_GRUND=""
     TEAM_LAST_RESET=""
     TEAM_LAST_KEIN_ZUG=0
 
@@ -718,10 +760,40 @@ PY
     #
     # Ein fehlender Schluessel ist hier kein Fehler, sondern der erwartete
     # Zustand. Er darf den Ablauf nicht abschneiden.
+    #
+    # BL-316: Erst fragen, WARUM der Abo-Aufruf scheiterte (team_abo_fehlergrund).
+    local grund="" kategorie="" auszug=""
+    if [ "$fehler" -eq 1 ] && [ "$AUTH_MODE" = "abo" ]; then
+        grund="$(team_abo_fehlergrund "$out")"
+        kategorie="${grund#schutzregeln}"; kategorie="${kategorie# }"
+        grund="${grund%% *}"
+        auszug="$(team_result_auszug "$out")"; auszug="${auszug:0:160}"
+    fi
+    if [ "$grund" = "anmeldung" ]; then
+        # Kein Fallback, mit oder ohne Schluessel: Die Anmeldung geht nicht von
+        # selbst vorueber, und jeder weitere Aufruf liefe still ueber die API.
+        # Exit 42 haelt den Lauf an, wo alle Aufrufer ihn ohnehin anhalten —
+        # kein Fehlversuch, State steht.
+        TEAM_LAST_PAUSE=1
+        TEAM_LAST_PAUSE_GRUND="anmeldung"
+        TEAM_LAST_RESET="nach neuer Anmeldung"
+        TEAM_LAST_COST="$(team_summe_cost_usd "${versuch_logs[@]}")"
+        TEAM_LAST_OUT="$out"
+        echo "[$rolle] Abo-Anmeldung abgelaufen oder ungültig: „${auszug}“" >&2
+        echo "  KEIN API-Fallback (Kit-BL-316): Eine Anmeldung geht nicht von selbst vorüber — jeder" >&2
+        echo "  weitere Aufruf dieses Laufs liefe sonst über die API. Der Lauf hält an wie beim" >&2
+        echo "  Session-Limit (Exit 42). Neu anmelden (claude starten, /login), dann denselben Lauf" >&2
+        echo "  erneut starten. Log: $out" >&2
+        return 42
+    fi
     if [ "$fehler" -eq 1 ] && [ "$AUTH_MODE" = "abo" ] && ! team_api_weg_vorhanden; then
-        echo "[$rolle] Abo-Aufruf fehlgeschlagen — kein API-Schluessel hinterlegt, also kein Fallback. Weiter mit der regulaeren Limit-Behandlung." >&2
+        echo "[$rolle] Abo-Aufruf fehlgeschlagen (${auszug:-kein Grund im Log}) — kein API-Schluessel hinterlegt, also kein Fallback. Weiter mit der regulaeren Limit-Behandlung." >&2
     elif [ "$fehler" -eq 1 ] && [ "$AUTH_MODE" = "abo" ]; then
-        echo "[$rolle] Abo-Aufruf fehlgeschlagen (Timeout/Limit/429?) — einmaliger API-Fallback. Log: $out"
+        if [ "$grund" = "schutzregeln" ]; then
+            echo "[$rolle] Abo-Aufruf von den Schutzregeln des Modells abgelehnt${kategorie:+ ($kategorie)} — einmaliger API-Fallback; ob der API-Weg durchkommt, ist nicht zugesichert (Kit-BL-316). Log: $out"
+        else
+            echo "[$rolle] Abo-Aufruf fehlgeschlagen (${auszug:-kein Grund im Log}) — einmaliger API-Fallback. Log: $out"
+        fi
         AUTH_MODE=api
         team_resolve_auth_mode || return 1
         out="${out%.json}-api-fallback.json"
@@ -783,6 +855,7 @@ PY
 
         if [ "$fehler" -eq 1 ] && [ "$pausieren" -eq 1 ]; then
             TEAM_LAST_PAUSE=1
+            TEAM_LAST_PAUSE_GRUND="limit"
             TEAM_LAST_RESET="${reset_hhmm:-unbekannt}"
             TEAM_LAST_COST="$(team_summe_cost_usd "${versuch_logs[@]}")"
             TEAM_LAST_OUT="$out"

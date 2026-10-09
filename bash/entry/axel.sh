@@ -108,7 +108,7 @@ if [ "$RC" -eq 42 ]; then
     # "frank.sh (Zeile 68)" hier und zeigte längst ins Leere — eine
     # Zeilennummer in einem Kommentar altert bei jeder Einfügung darüber,
     # ein Name nicht. Dieselbe Bauart wie BL-50.)
-    echo "[axel] Session-Limit — Ermittlung pausiert (Reset: ${TEAM_LAST_RESET:-unbekannt}). Halbfertige ${TEAM_PLAN_ORDNER}-Seiteneffekte werden verworfen." >&2
+    echo "[axel] $(team_pause_grund) — Ermittlung pausiert. Halbfertige ${TEAM_PLAN_ORDNER}-Seiteneffekte werden verworfen." >&2
     # BL-114: Der `git clean` war schon auf den Plan-Ordner eingeschränkt —
     # das `git reset --hard` daneben aber nicht, und es verwirft jede
     # uncommittete Änderung an getrackten Dateien im ganzen Baum. Beides

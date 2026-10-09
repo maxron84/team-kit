@@ -11,7 +11,7 @@
 #           TEAM_MODEL_LOOP   Modell (Default sonnet)
 #           AUTH_MODE         api|abo (siehe team/lib.sh)
 # Exit:     0 = Kaskade fertig/Cap erreicht · 1 = Fehler
-#           42 = Session-Limit — Stufe pausiert (kein Fehler, State steht),
+#           42 = Session-Limit oder Abo-Anmeldung abgelaufen — Stufe pausiert (kein Fehler, State steht),
 #                siehe team_claude()/CLAUDE.md „Loop-Mechanik & Auth"
 #           43 = Stufe fertig, Quittung fehlt (BL-41): Das Log meldet Erfolg,
 #                das Promise fehlt. Arbeit meist FERTIG — nicht neu bauen,
@@ -159,7 +159,7 @@ Regeln:
         --permission-mode bypassPermissions || RC=$?
     team_raw_pruefen ralph || true
     if [ "$RC" -eq 42 ]; then
-        echo "Ralph: Session-Limit — Stufe $STUFE pausiert (Reset: ${TEAM_LAST_RESET:-unbekannt}). Kein Fehler, $STATE_FILE bleibt auf $STUFE. Bitte später erneut starten." >&2
+        echo "Ralph: $(team_pause_grund) — Stufe $STUFE pausiert. Kein Fehler, $STATE_FILE bleibt auf $STUFE. Danach erneut starten." >&2
         exit 42
     elif [ "$RC" -ne 0 ]; then
         exit 1

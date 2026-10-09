@@ -544,6 +544,18 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Eine abgelaufene Abo-Anmeldung schickte den Rest des Laufs ueber die API**
+  (`BL-316`, `Feld B`, beide Bahnen). Jeder Abo-Fehler hiess „Timeout/Limit/
+  429?" und bekam den API-Fallback. Eine abgelaufene Anmeldung geht aber nicht
+  vorueber — im Feld liefen danach die naechsten Stufen ganz ueber die API
+  (rund 12,5 USD). Sie haelt den Lauf jetzt an (Exit 42, mit oder ohne
+  Schluessel) und sagt, dass neu angemeldet werden muss. Eine Ablehnung durch
+  die Schutzregeln des Modells (`safeguards flagged … [cyber]`, Nachtrag) behaelt
+  den Fallback, wird aber benannt; jeder andere Fehler nennt seinen Grund aus
+  `result`. Der Abschlussbericht zaehlt die API-Fallbacks eines Laufs mit Grund
+  und Betrag (`kosten.py fallbacks`), und `TEAM.md` nennt das Programm, auf das
+  die Fehlermeldung selbst verweist.
+
 - **Mit Red-Team-Fokus lief ein Fix unter `TEAM_WEITERER_CODE` ohne Suite**
   (`BL-324`, `Feld B`, beide Bahnen). Franks Auftrag knuepfte den Smoke-Test
   in der Fokus-Fassung an *„Betrifft der Fix <Produktivcode>"* — und die

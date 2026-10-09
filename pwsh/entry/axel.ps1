@@ -11,7 +11,7 @@
   Modell: TEAM_MODEL_STRONG (Default opus). Auth auch bei Axel Abo-first mit
   API-Fallback.
   Exit: 0 = Akte erstellt · 3 = kein Axel-Fall · 1 = Fehler/Guard-Bruch
-        42 = Session-Limit
+        42 = Session-Limit oder Abo-Anmeldung abgelaufen
 #>
 $ErrorActionPreference = 'Stop'
 # BL-122: Seit PowerShell 7.4 ist $PSNativeCommandUseErrorActionPreference
@@ -113,7 +113,7 @@ if ($rc -eq 42) {
     # HM-27: Der Guard oben resettet nur Pfade AUSSERHALB der Whitelist — eine
     # bereits geschriebene, nie committete Akte INNERHALB des Plan-Ordners
     # bliebe sonst als impliziter, nie verifizierter Fortschritt liegen.
-    Team-Fehler "[axel] Session-Limit — Ermittlung pausiert (Reset: $(if ($TEAM_LAST_RESET) { $TEAM_LAST_RESET } else { 'unbekannt' })). Halbfertige $TEAM_PLAN_ORDNER-Seiteneffekte werden verworfen."
+    Team-Fehler "[axel] $(team_pause_grund) — Ermittlung pausiert. Halbfertige $TEAM_PLAN_ORDNER-Seiteneffekte werden verworfen."
     # BL-114: Der `git clean` war schon auf den Plan-Ordner eingeschraenkt —
     # das `git reset --hard` daneben aber nicht, und es verwirft jede
     # uncommittete Aenderung an getrackten Dateien im ganzen Baum. Beides

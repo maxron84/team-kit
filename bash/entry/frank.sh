@@ -169,7 +169,7 @@ echo "Frank: $HM Versuch $VERSUCH kostete $TEAM_LAST_COST USD."
 # zum Zug, also weder Rollback noch Versuchszähler noch Axel-Eskalation. Die
 # Pause wird unverändert an vollautomatik.sh durchgereicht.
 if [ "$RC_CLAUDE" -eq 42 ]; then
-    echo "[frank] Session-Limit — Fix pausiert (Reset: ${TEAM_LAST_RESET:-unbekannt}). Kein Fehlversuch, Zähler unverändert." >&2
+    echo "[frank] $(team_pause_grund) — Fix pausiert. Kein Fehlversuch, Zähler unverändert." >&2
     team_rollback_rolle frank "$START_HASH" "$HM" || true
     exit 42
 fi
