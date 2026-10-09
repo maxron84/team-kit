@@ -173,11 +173,19 @@ def _funde_anlegen(repo, beutebuch):
 
 
 def _projekt(tmp_path):
-    """Ein Wegwerf-Projekt, in dem BEIDE Bahnen dieselbe Rolle fahren können."""
+    """Ein Wegwerf-Projekt, in dem BEIDE Bahnen dieselbe Rolle fahren können.
+
+    Kopiert wird, was liegt — wie bei den Rollen darunter. Die Tests dieser
+    Datei verlangen vorher beide Bahnen; `test_bl324` borgt das Projekt aber
+    für EINE Bahn, und in einer `--nur-bash`-Ablage fehlt `team.config.ps1`.
+    Bis Kit-BL-324 brach die Kopie dort mit FileNotFoundError ab (Selbsttest
+    Stufe 8), statt die vorhandene Bahn zu fahren.
+    """
     repo = tmp_path / "repo"
     repo.mkdir()
     for name in ("team.config.sh", "team.config.ps1"):
-        shutil.copy(WURZEL / name, repo / name)
+        if (WURZEL / name).is_file():
+            shutil.copy(WURZEL / name, repo / name)
     for rolle in ROLLEN:
         for endung in (".sh", ".ps1"):
             quelle = WURZEL / f"{rolle}{endung}"

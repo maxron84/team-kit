@@ -42,11 +42,14 @@ BAHNEN = ("bash", "pwsh")
 
 
 def _verlange_ablage(bahn):
+    # Die Abwahl zuerst: In einer `--nur-bash`-Ablage fehlt frank.ps1 auch,
+    # und der Grund darunter klaenge dann nach Kit-Ablage statt nach Abwahl —
+    # der Uebersprung fiele aus der Zaehlung der Zusammenfassung (BL-129).
+    ueberspringe_ohne_bahn(bahn)
     endung = ".sh" if bahn == "bash" else ".ps1"
     for name in (f"frank{endung}", f"team.config{endung}"):
         if not (WURZEL / name).is_file():
             pytest.skip(f"{name} liegt nur in der INSTALLIERTEN Ablage")
-    ueberspringe_ohne_bahn(bahn)
     (verlange_bash if bahn == "bash" else verlange_pwsh)()
 
 
