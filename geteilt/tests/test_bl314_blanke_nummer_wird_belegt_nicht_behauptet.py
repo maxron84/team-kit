@@ -146,7 +146,13 @@ def test_eine_hm_nummer_wird_im_beutebuch_nachgeschlagen(tmp_path):
 
 def test_der_waechter_behauptet_die_zuordnung_nicht_mehr():
     """Die Ausgabe ist eine Entscheidungshilfe, keine Anweisung."""
-    quelle = (REPO_ROOT / "bash" / "install.sh").read_text(encoding="utf-8-sig")
+    # BL-323: In einer installierten Ablage gibt es keine Installer — ohne
+    # diesen Uebersprung war der Fall dort rot statt uebersprungen, und der
+    # Selbsttest am Ende jedes Updates meldete einen Fehler, den es nicht gab.
+    installer = REPO_ROOT / "bash" / "install.sh"
+    if not installer.is_file():
+        pytest.skip("install.sh liegt hier nicht (installiertes Projekt)")
+    quelle = installer.read_text(encoding="utf-8-sig")
     assert "meinen den KIT-Backlog" not in quelle, (
         "Der Waechter behauptet wieder, die Nummern meinten das Kit — bei "
         "drei von vier Feldfaellen war das falsch.")

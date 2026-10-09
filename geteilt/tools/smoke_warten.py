@@ -74,6 +74,14 @@ def start(befehl):
     kennung = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     log = ORDNER / f"smoke-{kennung}.log"
     rc_datei = ORDNER / f"smoke-{kennung}.rc"
+    # Kit-BL-322: Die Logdatei ist das Zeichen "dieser Lauf existiert", und
+    # sie entsteht HIER, bevor das Kind startet. Vorher legte erst das
+    # abgekoppelte Kind sie an — ein sofortiges `warten` fand dann keinen
+    # Lauf und riet "zuerst start". Unter Windows ist das python.exe eines
+    # venv ein Starter, der den Basis-Interpreter als weiteren Prozess
+    # startet; dort ging der Wettlauf zuverlaessig verloren. Ein zweites
+    # `start` auf diesen Rat haette zwei Suiten nebeneinander gestellt (Kit-BL-207).
+    log.write_text("", encoding="utf-8")
     argv = [sys.executable, os.path.abspath(__file__), "_lauf", str(log),
             str(rc_datei), befehl]
     optionen = dict(stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,

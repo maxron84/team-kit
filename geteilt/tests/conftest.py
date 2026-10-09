@@ -266,6 +266,21 @@ os.environ.setdefault("TEAM_PYTHON", PYTHON_BEFEHL)
 # Schreibtisch vollschreibt, ist in keiner Sitzung gewollt.
 os.environ["TEAM_BENACHRICHTIGUNG"] = "0"
 
+# BL-323: Die Suite rechnet mit den Preisen des KITS, nicht mit denen des
+# Projekts, in dem sie laeuft. Seit BL-238 liest kosten.py `TEAM_PREISE` aus
+# team.config.* der Projektwurzel, sobald die Umgebung den Wert gar nicht
+# kennt — und die Suite laeuft aus der Projektwurzel, der Installer startet
+# seinen Selbsttest sogar ausdruecklich ohne die TEAM_*-Werte der Sitzung. Ein
+# Projekt mit projektlokalen Preisen, wie BL-211 sie vorsieht, machte damit
+# 15 Preis-Tests rot (`assert 3.0 == 2.0`), ohne dass etwas kaputt war:
+# dieselbe Gattung wie BL-307, ein Test las das PROJEKT statt seiner Fixture.
+# Ein LEERER Wert heisst fuer kosten.py "die Umgebung kennt ihn" — dann gilt
+# die Kit-Tabelle, und der Rueckfall auf die Datei bleibt aus. Wer den
+# Rueckfall selbst prueft (test_bl238), baut seine Umgebung ohnehin eigens.
+# Wie oben kein `setdefault`: Ein Wert aus der Sitzung des Wirts ist genauso
+# ein Projektwert und gehoert genauso wenig in den Harnisch.
+os.environ["TEAM_PREISE"] = ""
+
 
 # Die Variablen, ohne die ein Windows-Kindprozess nicht arbeiten kann. Die
 # Minimal-Umgebung in `Schale.lauf` ist Absicht — sie haelt TEAM_*-Werte der

@@ -2866,14 +2866,21 @@ def logs_einsammeln(repo="."):
 
 def kaskade_aus_plan(repo="."):
     """Leitet die Kaskaden-Nummer aus der Zeiger-Datei .ralph-plan ab (Muster
-    "ralph-kaskade-<N>-..." im Dateinamen). None, wenn die Datei fehlt oder
-    das Muster nicht passt — der Aufrufer verlangt dann ein explizites
-    --kaskade."""
+    "<praefix><N>-..." im Dateinamen, Praefixe aus PLAN_PRAEFIXE). None, wenn
+    die Datei fehlt oder das Muster nicht passt — der Aufrufer verlangt dann
+    ein explizites --kaskade.
+
+    BL-321: Hier stand bis dahin nur `ralph-kaskade-` — die halbe Umstellung
+    aus BL-202, gegen die PLAN_PRAEFIXE gebaut wurde. Ein Plan nach der
+    Benennung der Vorlage (`team-kaskade-N-…`) bekam keine Nummer, und der
+    Kostenabschluss verlangte `--kaskade` von Hand. Der Regex entsteht deshalb
+    aus derselben Liste wie jede andere Plan-Erkennung."""
     pfad = os.path.join(repo, ".ralph-plan")
     if not os.path.isfile(pfad):
         return None
     inhalt = open(pfad, encoding="utf-8").read().strip()
-    treffer = re.search(r"ralph-kaskade-(\d+)-", inhalt)
+    praefixe = "|".join(re.escape(p) for p in PLAN_PRAEFIXE)
+    treffer = re.search(rf"(?:{praefixe})(\d+)-", inhalt)
     return treffer.group(1) if treffer else None
 
 
@@ -3076,6 +3083,46 @@ def _sanitize_pipe_feld(wert):
     return wert.replace("|", "/").replace("\r", " ").replace("\n", " ").strip()
 
 
+def _ohne_vorspann(notiz, vorspann):
+    """Die Notiz ohne einen fuehrenden Vorspann ("Rollen:", "Rollen —").
+
+    BL-317: Der Vorspann entsteht in rollen_abschluss() aus der Zielrolle
+    (BL-19) — und wurde der Notiz ohne Pruefung vorangestellt. Das Briefing
+    zeigt die abgeleitete Form selbst (`Bau: K3 chat`), also schreibt der
+    Architekt sie auch so; im Feld standen danach vier Zeilen mit
+    "Rollen: Rollen: …" und "Bau: Bau: …"."""
+    m = re.match(rf"\s*{re.escape(vorspann)}\s*(?::|—)\s*", notiz,
+                 re.IGNORECASE)
+    return notiz[m.end():] if m else notiz
+
+
+def _notiz_fortschreiben(felder, neu, alt, alt_auth, vorspann=None):
+    """Die Notiz einer Summenzeile (`--addieren`): die alte, dann die neue.
+
+    BL-317: Die Summen-Notiz entstand nur aus der NEUEN Notiz plus
+    "(addiert auf Bestand …)" — die Notiz der Altzeile wurde nie gelesen. Im
+    Feld trugen danach elf Zeilen nur noch die Beschreibung der letzten
+    Sitzung, darunter die Architekten-Zeilen aller sieben Kaskaden, die aus je
+    fuenf bis acht Sitzungen entstehen. Betraege, Quellen und
+    `--ledger-pruefen` blieben stimmig; gemeldet hat den Verlust nichts.
+
+    Deshalb wird angehaengt statt ersetzt — und NICHT gekuerzt: Eine lange
+    Notiz ist ein sichtbarer Befund, eine abgeschnittene waere derselbe stille
+    Verlust an anderer Stelle. Steht der Vorspann schon vorn in der Altzeile,
+    wird er im angehaengten Teil nicht wiederholt."""
+    alt_notiz = felder[6].strip() if len(felder) > 6 else ""
+    zusatz = f"addiert auf Bestand {alt:.4f} USD, auth {alt_auth or '—'}"
+    if alt_notiz and vorspann:
+        neu = _ohne_vorspann(neu, vorspann)
+    if alt_notiz and neu:
+        return f"{alt_notiz}; {neu} ({zusatz})"
+    if alt_notiz:
+        return f"{alt_notiz}; {zusatz}"
+    if neu:
+        return f"{neu} ({zusatz})"
+    return zusatz
+
+
 def _notiz_aus_datei(pfad):
     """Notiztext aus einer Datei (BL-249, BL-245) — oder None mit Meldung.
 
@@ -3242,9 +3289,8 @@ def akteur_abschluss(usd, domaene, kaskade, rolle, auth, notiz="",
         summe = alt + usd
         alt_auth = felder[3] if len(felder) > 3 else ""
         auth_summe = auth if alt_auth == auth else "abo/api"
-        notiz_summe = (f"{notiz_sauber} (addiert auf Bestand {alt:.4f} USD, "
-                       f"auth {alt_auth or '—'})") if notiz_sauber else \
-            (f"addiert auf Bestand {alt:.4f} USD, auth {alt_auth or '—'}")
+        # BL-317: die Notiz der Altzeile bleibt, die neue wird angehaengt.
+        notiz_summe = _notiz_fortschreiben(felder, notiz_sauber, alt, alt_auth)
         return _ledger_zeile(kaskade, summe, auth_summe, domaene, rolle,
                              notiz_summe, _quellen_fortschreiben(felder, alt, neu))
 
@@ -3347,6 +3393,9 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
     # bleibt einhaendig (ein Notiztext), und auch ein direkter kosten.py-
     # Aufruf bekommt die Zuordnung, ohne sie mitschreiben zu muessen.
     vorspann = ROLLEN_VORSPANN.get(rolle, rolle.capitalize())
+    # BL-317: Bringt die Notiz den Vorspann schon mit, wird er nicht
+    # verdoppelt ("Rollen: Rollen: …").
+    notiz_sauber = _ohne_vorspann(notiz_sauber, vorspann)
     notiz_voll = f"{vorspann}: {notiz_sauber} — {split_hinweis}" \
         if notiz_sauber else f"{vorspann} — {split_hinweis}"
     # BL-247: die Token der gezaehlten Logs, je Modell — siehe log_tokens().
@@ -3375,8 +3424,10 @@ def rollen_abschluss(kaskade, abo, api, domaene="team", notiz="",
         # Auth-Art tragen, bleibt sie erhalten — sonst ehrlich "abo/api".
         alt_auth = felder[3] if len(felder) > 3 else ""
         auth_summe = auth if alt_auth == auth else "abo/api"
-        notiz_summe = (f"{notiz_voll} (addiert auf Bestand {alt:.4f} USD, "
-                       f"auth {alt_auth or '—'})")
+        # BL-317: die Notiz der Altzeile bleibt, die neue wird angehaengt —
+        # ohne den Vorspann ein zweites Mal, wenn die Altzeile ihn traegt.
+        notiz_summe = _notiz_fortschreiben(felder, notiz_voll, alt, alt_auth,
+                                           vorspann=vorspann)
         # rolle NICHT hart verdrahten: Ein --addieren auf die ralph-Zeile
         # haette sie sonst in eine zweite roles-Zeile verwandelt und die
         # Baukosten damit erneut unsichtbar gemacht — genau der BL-4-Fehler,

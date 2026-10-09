@@ -28,6 +28,9 @@ WAS GEALTERT WIRD
     - Die Konfigurationen ohne jeden Wert, fuer den die Bibliothek einen
       Rueckfall hat (BL-200) — so sieht sie in einem Projekt aus, das vor
       diesen Werten installiert wurde.
+    - Projektlokale Preise in beiden Konfigurationen (BL-211), wie ein
+      Feldprojekt sie fuehrt: Ein Test, der die Kit-Tabelle meint und die des
+      Projekts liest, wird hier rot statt erst im Feld (BL-323).
     Ein Schritt, der nichts trifft, ist ein Fehler (Exit 1): Sonst liefe die
     Suite gegen eine frische Installation und waere gruen, ohne etwas geprueft
     zu haben.
@@ -107,6 +110,34 @@ def _konfiguration_altern(pfad, rueckfaelle):
     return len(weg)
 
 
+# Kit-BL-323: projektlokale Preise, wie Kit-BL-211 sie vorsieht und ein
+# Feldprojekt sie fuehrt. Seit Kit-BL-238 liest kosten.py sie aus der
+# Projektkonfiguration — und 15 Preis-Tests lasen sie mit, weil sie nur die
+# Umgebung isolierten. Eine frische Installation laesst den Wert leer; der
+# Fehler war deshalb erst im Feld zu sehen.
+PROJEKTPREISE = "claude-sonnet-5=3.00"
+
+
+def _projektpreise_setzen(pfad):
+    """Setzt den Vorgabewert der TEAM_PREISE-Zeile in beiden Schreibweisen der
+    Vorlagen. False, wenn die Zeile fehlt — dann altert die Ablage an dieser
+    Stelle nicht, und das soll laut sein."""
+    roh = pfad.read_bytes()
+    bom = roh.startswith(b"\xef\xbb\xbf")
+    text = roh.decode("utf-8-sig")
+    neu, n = re.subn(r'^(TEAM_PREISE="\$\{TEAM_PREISE:-)\}"',
+                     lambda m: f'{m.group(1)}{PROJEKTPREISE}}}"', text,
+                     flags=re.M)
+    if not n:
+        neu, n = re.subn(r"^(\$TEAM_PREISE = Team-Wert 'TEAM_PREISE' )''",
+                         lambda m: f"{m.group(1)}'{PROJEKTPREISE}'", text,
+                         flags=re.M)
+    if n != 1:
+        return False
+    pfad.write_bytes((b"\xef\xbb\xbf" if bom else b"") + neu.encode("utf-8"))
+    return True
+
+
 def altern(ziel, plan="plans"):
     fehler = []
     if _git(ziel, "rev-parse", "--is-inside-work-tree").returncode != 0:
@@ -164,6 +195,8 @@ def altern(ziel, plan="plans"):
         pfad = ziel / cfg
         if pfad.is_file() and not _konfiguration_altern(pfad, rueckfaelle):
             fehler.append(f"{cfg}: kein Rueckfall-Wert entfernt")
+        if pfad.is_file() and not _projektpreise_setzen(pfad):
+            fehler.append(f"{cfg}: keine TEAM_PREISE-Zeile gefunden")
 
     _git(ziel, "add", "-A")
     if _git(ziel, "commit", "-q", "-m", "chore: Bestandsprojekt (Kit-BL-307)",
@@ -186,6 +219,13 @@ def selbstpruefung():
         if not re.search(muster, (kit / datei).read_text(encoding="utf-8-sig"),
                          flags=re.M):
             fehlt.append(f"{datei}: kein Rueckfall in der erwarteten Schreibweise")
+    for datei, zeile in (("bash/entry/team.config.sh",
+                          'TEAM_PREISE="${TEAM_PREISE:-}"'),
+                         ("pwsh/entry/team.config.ps1",
+                          "$TEAM_PREISE = Team-Wert 'TEAM_PREISE' ''")):
+        if zeile not in (kit / datei).read_text(encoding="utf-8-sig"):
+            fehlt.append(f"{datei}: TEAM_PREISE-Zeile nicht in der erwarteten "
+                         f"Schreibweise (BL-323)")
     if fehlt:
         print("Diese Annahmen tragen nicht mehr — die Alterung im Selbsttest "
               "griffe ins Leere (Kit-BL-307):", file=sys.stderr)

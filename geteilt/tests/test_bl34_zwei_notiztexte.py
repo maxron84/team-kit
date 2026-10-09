@@ -140,6 +140,9 @@ def test_modus_bleibt_hinter_beiden_texten_erkennbar(tmp_path):
     notiz = _notiz(repo, "roles")
     assert "addiert auf Bestand" in notiz
     assert "--addieren" not in notiz
+    # BL-317: Hier stand nur "addiert auf Bestand" — und der Test blieb gruen,
+    # waehrend die Notiz der Erstbuchung ("Sweeps") verloren ging.
+    assert "Sweeps" in notiz and "Nachlauf Frank" in notiz, notiz
 
 
 def test_ohne_notiz_bleibt_die_bauzeile_trotzdem_abgeleitet(tmp_path):

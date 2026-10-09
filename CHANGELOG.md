@@ -544,6 +544,36 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Der Update-Selbsttest war in Bestandsprojekten mit eigenen Preisen rot,
+  ohne dass etwas kaputt war** (`BL-323`, `Feld B`, beide Bahnen). Seit
+  `BL-238` liest `kosten.py` `TEAM_PREISE` aus der Projektkonfiguration, wenn
+  die Umgebung den Wert nicht kennt — und 15 Preis-Tests lasen so die Preise
+  des Projekts statt der Kit-Tabelle. Der Testharnisch setzt den Wert jetzt
+  leer, dann gilt die Kit-Tabelle. Dazu: `test_bl314` liest den Installer nur
+  noch, wo es ihn gibt, und das gealterte Bestandsprojekt des Selbsttests
+  (`BL-307`) fuehrt projektlokale Preise — im Feld waren es 16 rote Faelle,
+  in dieser Konfiguration jetzt null.
+
+- **`smoke_warten.py warten` direkt nach `start` fand den Lauf nicht**
+  (`BL-322`, `Feld B`, beide Bahnen). Die Logdatei legte erst das
+  abgekoppelte Kind an; unter Windows mit dem Interpreter eines venv kam
+  `warten` regelmaessig zuerst und riet „zuerst `start`" — ein zweites `start`
+  haette zwei Suiten nebeneinander gestellt (`BL-207`). `start` legt die
+  Datei jetzt selbst an, bevor es das Kind startet.
+
+- **Der Kostenabschluss erkannte die Plan-Benennung der Vorlage nicht**
+  (`BL-321`, `Feld B`). `kaskade_aus_plan` suchte nur `ralph-kaskade-`; bei
+  `team-kaskade-N-…` verlangte der Abschluss `--kaskade` von Hand, und die
+  Gegenprobe aus `BL-220` (Stufen- statt Kaskadennummer) war still aus. Der
+  Regex entsteht jetzt aus `PLAN_PRAEFIXE`.
+
+- **`--addieren` ersetzte die Notiz der Ledger-Zeile** (`BL-317`, `Feld F`).
+  Die Summenzeile trug nur die Notiz der letzten Buchung — im Feld hatten
+  elf Zeilen die Beschreibung aller frueheren Sitzungen verloren, vier den
+  Vorspann doppelt („Rollen: Rollen: …"). Die alte Notiz bleibt jetzt stehen,
+  die neue wird angehaengt (nicht gekuerzt); ein Vorspann, den die Notiz schon
+  mitbringt, wird nicht verdoppelt. `--ersetzen` ersetzt weiterhin.
+
 - **Der Waechter behauptete die Zuordnung blanker Backlognummern** (`BL-314`,
   `Feld B`/`Feld F`, beide Bahnen). *„Diese blanken Nummern meinen den
   KIT-Backlog … Kit- davorsetzen"* traf bei drei von vier Feldfaellen nicht zu

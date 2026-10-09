@@ -165,7 +165,13 @@ def test_addieren_behaelt_den_vorspann(tmp_path):
                          "--pfad", str(ledger), "--archivieren", "--addieren",
                          "--notiz", "Nachlauf")
     assert rc == 0, err
-    assert _notiz(ledger, "ralph").startswith("Bau: Nachlauf")
+    # BL-317: Hier stand `startswith("Bau: Nachlauf")` — die Zusicherung
+    # schrieb fest, dass der Nachtrag die Notiz der Erstbuchung ERSETZT. Die
+    # Herkunft steht weiter vorn; der Nachtrag wird angehaengt, ohne den
+    # Vorspann zu wiederholen.
+    notiz = _notiz(ledger, "ralph")
+    assert notiz.startswith("Bau"), notiz
+    assert "Nachlauf" in notiz and notiz.count("Bau") == 1, notiz
 
 
 @pytest.mark.skipif(TEAM_STATUS is None,
