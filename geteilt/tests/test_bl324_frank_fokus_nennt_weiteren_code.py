@@ -36,6 +36,9 @@ import test_bl117_prompt_gleichstand_am_lauf as lauf  # noqa: E402
 WURZEL = Path(__file__).resolve().parents[2]
 WEITERER = "werkzeuge/ start.py"
 FOKUS = "Die Exportsperre der Kaskade 9"
+# Als Tupel: Eine Liste, die mit "bash" beginnt, haelt der Waechter aus
+# BL-130 zu Recht fuer einen Aufruf ueber den WSL-Launcher.
+BAHNEN = ("bash", "pwsh")
 
 
 def _verlange_ablage(bahn):
@@ -89,7 +92,7 @@ def _schritt1(prompt):
     pytest.fail("Der Prompt hat keinen Schritt 1 'Code-Fix':\n" + prompt[-3000:])
 
 
-@pytest.mark.parametrize("bahn", ["bash", "pwsh"])
+@pytest.mark.parametrize("bahn", BAHNEN)
 def test_mit_fokus_gilt_der_smoke_test_auch_fuer_weiteren_code(tmp_path, bahn):
     """Der Feldfall. Gegen den alten Stand gemessen: Die Bedingung nannte nur
     den Produktivcode."""
@@ -106,7 +109,7 @@ def test_mit_fokus_gilt_der_smoke_test_auch_fuer_weiteren_code(tmp_path, bahn):
     assert "Smoke-Test grün" in schritt
 
 
-@pytest.mark.parametrize("bahn", ["bash", "pwsh"])
+@pytest.mark.parametrize("bahn", BAHNEN)
 def test_ohne_fokus_gilt_er_weiter_unbedingt(tmp_path, bahn):
     """Die andere Fassung derselben Achse: unveraendert unbedingt, und sie
     nennt dieselben Orte."""
@@ -116,7 +119,7 @@ def test_ohne_fokus_gilt_er_weiter_unbedingt(tmp_path, bahn):
     assert WEITERER in schritt and "Smoke-Test grün" in schritt, schritt[:400]
 
 
-@pytest.mark.parametrize("bahn", ["bash", "pwsh"])
+@pytest.mark.parametrize("bahn", BAHNEN)
 def test_ohne_weiteren_code_bleibt_die_bedingung_schlicht(tmp_path, bahn,
                                                           monkeypatch):
     """Gegenprobe: Ein leeres TEAM_WEITERER_CODE darf keine leere Klammer
