@@ -23,7 +23,7 @@
 - **Plattform**: win32
 - **Feldkürzel**: noch keins — vergibt der Maintainer
 - **Lage des Projekts**: Greenfield, Windows, pwsh-Bahn, Spielskript-Stack mit Prüfwerkzeug in
-  Python. Zwölf Kaskaden sind gelaufen, die Suite hat rund 2000 Tests.
+  Python. Dreizehn Kaskaden sind gelaufen, die Suite hat rund 2100 Tests.
 
 ## Was passiert ist
 
@@ -48,6 +48,14 @@ oder einem Text standen (etwa `.\vollautomatik.cmd` in einem Python-String). Ver
 in allen Fällen dieselbe: Text, der über einen Heredoc der Shell oder einen nicht rohen Python-String in
 die Datei geschrieben wird, verliert seine Backslashes an die Escape-Verarbeitung.
 
+**Nachtrag:** Dieselbe Bauart traf danach das CHANGELOG des Feldprojekts mit `\r`: Aus einem Pfad mit
+Backslash vor einem `r` wurde ein Wagenrücklauf mitten in einer Zeile. Die Regel „außer Tab, LF und
+CR“, die diese Meldung zuerst vorschlug, hätte ihn durchgelassen. Die Folge reicht weiter als bei den
+übrigen Zeichen: Ein CR, auf das kein LF folgt, lässt git die Datei als binär einstufen
+(`git ls-files --eol` zeigt `-text`). Mit `core.autocrlf` wandelt git sie dann beim Einchecken nicht
+mehr, die ganze Datei ging mit CRLF ins Repo, und der Diff über diese Änderung zeigte sie vollständig
+als geändert. Richtig ist: ein CR nur direkt vor einem LF, auch am Dateiende nicht allein.
+
 ## Wo es steckt
 
 Nicht in einer einzelnen Datei des Kits, sondern im Weg, auf dem eine Rolle Text in Dateien schreibt.
@@ -65,13 +73,15 @@ besonders groß, aber `\b` in einem regulären Ausdruck gibt es auf jeder Plattf
 
 ## Was ich schon versucht habe
 
-Im Feldprojekt prüft ein Test alle versionierten Textdateien, Tests eingeschlossen, auf Bytes unter
-0x20 außer Tab, LF und CR. Er hat eine kaputte Testdatei, an der er rot wird. Seitdem fängt die Suite
-die Bauart. Das ist ein Fix im Projekt. Andere Installationen haben ihn nicht.
+Im Feldprojekt prüft ein Test das CHANGELOG, die Pläne, die Tests und die String-Konstanten der
+Werkzeuge auf Bytes unter 0x20 außer Tab und LF und meldet jedes CR, auf das kein LF folgt. Er hat
+kaputte Beispiele, an denen er rot wird. Die Gegenlesung nach jedem Lauf prüft zusätzlich alle
+versionierten Dateien auf dieselbe Regel. Seitdem fängt das Projekt die Bauart. Das ist ein Fix im
+Projekt. Andere Installationen haben ihn nicht.
 
 Vorschläge fürs Kit:
 - **Prüfung vor dem Commit:** Die bauenden Rollen (Ralph, Frank) prüfen jede geänderte Textdatei auf
-  Bytes unter 0x20 außer Tab, LF und CR, bevor sie committen, oder der Guard tut es für sie und meldet
-  die Fundstelle.
+  Bytes unter 0x20 außer Tab und LF und auf jedes CR, auf das kein LF folgt, bevor sie committen, oder
+  der Guard tut es für sie und meldet die Fundstelle.
 - **Im Briefing:** Code mit Backslashes (reguläre Ausdrücke, Pfade) schreibt eine Rolle mit dem
   Werkzeug zum Bearbeiten von Dateien, nicht über einen Heredoc oder einen Python-String.
