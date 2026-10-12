@@ -129,6 +129,10 @@ solche Muster (`[\x00-\x08…]`, `\r(?!\n)`).
 
 - `bash bash/kit-test.sh` **und** `pwsh -File pwsh/kit-test.ps1`. Beide
   Bibliotheken werden angefasst, also zählt keine Bahn als „gleich gebaut".
+- **Dazu `python3 -m pytest geteilt/tests -q` im Kit selbst.** `kit-test.sh`
+  fährt nur `team/tests` in einer Installation, und dort werden die Tests der
+  Kit-Werkzeuge übersprungen („liegt nur im Kit"). Auf diesem Weg ist
+  `test_bl307` seit `4de27dc` rot geblieben.
 - Die README-Zahlen nach dem Bau an einer frischen Installation **messen**,
   nicht rechnen: Fälle, Testdateien, Dateien. Dann
   `python3 geteilt/kit-readme-pruefen.py --faelle N --testdateien N --dateien N`
