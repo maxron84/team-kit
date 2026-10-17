@@ -47,7 +47,7 @@ Rechnernamen, Projektnamen und Schnipsel wandern sonst ungefiltert mit.
 
 Deshalb: keine absoluten Pfade, keine Benutzer- oder Rechnernamen, keine
 Schlüssel, kein Produktivcode. **Auch der Name deines Projekts nicht** — dieses
-Repo führt seine Feldbelege aus genau diesem Grund unter `Feld A`…`Feld F`
+Repo führt seine Feldbelege aus genau diesem Grund unter `Feld A`…`Feld G`
 statt unter Namen; für den Beleg zählt die *Lage* eines Projekts, nicht sein
 Name. Deine Meldung bekommt beim Triage denselben Schutz.
 

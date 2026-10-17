@@ -6,6 +6,45 @@ Bau-Maschine, weil die vollen Nachweisläufe viel Rechenzeit brauchen. Diese
 Datei ist der Auftrag. Der Bau-Commit löscht sie wieder; als Beleg bleiben
 Archiv, CHANGELOG und Commit.
 
+## Nachtrag 2026-10-17 — vor dem Bau lesen
+
+Bei der Triage von `BL-328` bis `BL-343` (Auftrag in
+[`uebergabe-bl328-bl343.md`](uebergabe-bl328-bl343.md)) sind vier Punkte
+aufgefallen, die diesen Auftrag ändern. Ist `BL-326` oder `BL-327` schon nach
+der alten Fassung gebaut, gilt der Punkt als Nacharbeit.
+
+1. **`BL-327`: Die Prüfung gehört in die schreibenden Rollen.** Unten steht,
+   `team_guard_verify` kenne die geänderten Pfade der Rolle. Das stimmt, aber
+   `team_guard_verify` rufen nur `redteam.*` (`bash/redteam.sh:248`,
+   `pwsh/redteam.ps1:255`) und `axel.*` (`bash/entry/axel.sh:98`,
+   `pwsh/entry/axel.ps1:110`). Frank hat nur `team_guard_begin`
+   (`bash/entry/frank.sh:90`, `pwsh/entry/frank.ps1:100`), Ralph gar keinen
+   Guard. Genau diese beiden schreiben die Steuerzeichen (`BL-327`,
+   `BL-341`). Die Prüfung läuft deshalb aus `frank.*` nach dem Rollenaufruf
+   über `START_HASH..HEAD` und aus `ralph.*` über die Commits der Stufe. Ein
+   Fund macht den Schritt rot, ohne Rollback.
+2. **`BL-327`: Der Kit-Test über die eigenen versionierten Dateien läuft
+   nur im Kit.** Alles unter `geteilt/tests/` wird nach `team/tests/`
+   mitinstalliert. Dort urteilte der Test über das ganze Feldprojekt, und ein
+   fremdes Steuerzeichen machte `./team-test.sh` rot — genau der
+   Fehlermodus, an dem in `Feld F` eine Abnahme verworfen wurde (`BL-340`).
+   Er überspringt sich in einer Installation, mit derselben Marke wie
+   `test_bl267`: `bootstrap/CLAUDE.md.vorlage` liegt nur im Kit.
+3. **`BL-326`: den CLI-Aufruf als eine Funktion je Bahn bauen.** bash hat ihn
+   viermal (`bash/lib.sh:747`, `:823`, `:856`, `:858`), pwsh einmal
+   (`Team-ClaudeSchreiben`). Die Funktion schreibt den Stub, lässt die CLI in
+   eine Nebendatei schreiben und ruft danach einen benannten
+   Abschlussschritt, heute nur das `mv`. Die Nebendatei endet **nicht** auf
+   `.json`: `kosten.py` liest jedes `*.json` unter den Logs
+   (`team_log_dateien`, `logs_einsammeln`). `BL-337` setzt später seinen
+   Normalisierer in genau diesen Abschlussschritt. Der Wiederanlauf-Check aus
+   Schritt 2 wird der erste Haken der gemeinsamen Startprüfung aus `BL-330`,
+   `BL-333` und `BL-336` — eine Stelle, nicht zwei.
+4. **Zeilenbudget:** `BL-335` schreibt Franks Absatz zur Gegenprobe mit
+   sechs statt sieben Zeilen und gibt in `rolle-frank.md` eine Zeile frei. In
+   `rolle-ralph.md` wird keine frei; der Satz aus `BL-327` braucht dort
+   weiter eine eigene Straffung.
+
 ## Stand beim Pull
 
 - **Triage:** `BL-326` und `BL-327` stehen in [`backlog.md`](backlog.md), mit

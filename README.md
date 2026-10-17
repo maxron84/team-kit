@@ -127,9 +127,10 @@ und ein Gleichstands-Prüfer, der **an seinem eigenen Befund starb**, weil `diff
 mit 1 endet, wenn es etwas findet. Keiner der fallenden Fälle wurde grün
 gedreht.
 
-**Offen sind 4 Einträge.** Zwei kommen aus der Triage vom 2026-10-12
-(`BL-326`, `BL-327`, zwei Meldungen aus `Feld F`); zwei sind mit Absicht zur
-Hälfte gebaut.
+**Offen sind 20 Einträge.** Sechzehn kommen aus der Triage vom 2026-10-17
+(`BL-328` bis `BL-343`: zwölf Meldungen aus `Feld G`, zwei aus `Feld F` und
+zwei Beifänge), zwei aus der vom 2026-10-12 (`BL-326`, `BL-327`); zwei sind
+mit Absicht zur Hälfte gebaut.
 `BL-247` hat seinen ersten Schritt: Das Ledger trägt jetzt die Messung — Token
 je Modell und Sorte — statt nur ihres Dollarwerts. Den zweiten Schritt, die
 Dollar aus den Token nachzurechnen, verschiebt die Meldung selbst, bis es
@@ -440,9 +441,10 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 | **`Feld D`** | Greenfield, Linux, bash-Bahn: Electron + Python 3 + SQLite — Neubau, dessen tkinter-Vorgänger als reine Lesereferenz danebenliegt | Erste Kaskade geplant und gebaut (2026-08-23), Stufen 1–4 grün, Stufe 5 an der Umgebung blockiert. `BL-149`…`BL-151` — **drei Erstlauf-Funde**, alle aus dem Zeitfenster, das ein laufendes Projekt gar nicht mehr hat |
 | **`Feld E`** | Greenfield, Linux, bash-Bahn: Dart/Flutter + SQLite für ein **Android-Tablet** — Neubau, dessen Python/tkinter-Vorgänger (~25.500 LOC, 17 Spec-Dokumente) als reine Lesereferenz danebenliegt | **Zwei Kaskaden geplant, gebaut und abgeschlossen** (2026-08-24): Datenfundament und Einrichtungs-Wizard, zusammen 10 Stufen ohne Fehlversuch, 86 Tests in `Feld E`, 5 Red-Team-Funde, rund 50 USD Abo-Gegenwert — vollständig geledgert. `BL-158`…`BL-168` — **elf Funde**: die ersten acht vor der ersten gebauten Stufe, aus dem Lesen der Kopplungen zwischen Konfiguration, Testläufer und Rollen-Prompt; die letzten drei aus dem Betrieb (Preistabelle, Zeitpunkt der Gegenprobe, Rückkanal). Der erste Stack ohne pytest: Was das Kit an Python-Annahmen mitträgt, wird hier zum ersten Mal sichtbar. Zugleich der erste Beleg für den Rückkanal als Werkzeug statt als Handarbeit |
 | **`Feld F`** | Greenfield, Windows 11, beide Bahnen installiert, gefahren wird pwsh: ein Spielskript-Stack ohne eigene Testinfrastruktur, dazu ein Prüfwerkzeug in Python — der Smoke-Test entsteht erst in Stufe 1 der ersten Kaskade | Sechs Kaskaden bis 2026-10-02, dazu eine Handprobe mit 45 Frank-Fixen außerhalb des Loops. `BL-264` und `BL-283`…`BL-292` — **elf Funde**, darunter der erste, der das **Modell** der Rollen betrifft: Alle 126 Rollenläufe in `Feld F` über fünf Kaskaden liefen auf einer älteren Sonnet-Version, weil die CLI im `PATH` älter war als die der IDE (`BL-264`). Zugleich das erste Feld mit beiden Bahnen in einer Ablage, in der `test_bl117` sie gegeneinander hielt — so fiel `BL-285` auf. Seit 2026-09-30 einbahnig pwsh; das erste Update mit Prüfsummenliste (2026-10-04) brachte `BL-307` und `BL-308` — den ersten roten Update-Selbsttest eines Bestandsprojekts, ohne Defekt im Projekt |
+| **`Feld G`** | Greenfield, Linux, bash-Bahn: Prüfwerkzeuge in Python über den Ausgaben einer Analyse-Werkzeugkette für Binärdateien, gehalten gegen ein quelloffenes Referenz-Binary — die Eingaben sind große Fremddaten | Sieben Kaskaden mit 45 Stufen in `Feld G` vom 2026-10-12 bis 2026-10-17, dann abgeschlossen; alle Loop-Rollen auf `claude-sonnet-5-5`, rund 306 USD Abo-Gegenwert laut Ledger, davon rund drei Viertel für Planung und Abschluss durch den Architekten. `BL-328`…`BL-339` — **zwölf Funde**, darunter drei über das, was die Vollautomatik beim Start nicht prüft (`BL-330`, `BL-333`, `BL-336`; drei Kaskaden hintereinander lief der Bau ohne gebuchte Aushärtung), und der erste Beleg, dass die Messung einer ganzen Modellreihe falsch war, während die Selbsteichung „geeicht" meldete (`BL-339`) |
 
-Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen sieben Quellen
-kommen die Backlog-Einträge `BL-1`…`BL-327`; was davon behoben ist, steht im
+Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen acht Quellen
+kommen die Backlog-Einträge `BL-1`…`BL-343`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
 [plans/backlog-archiv.md](plans/backlog-archiv.md) (260 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
@@ -822,7 +824,7 @@ kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
 ## Der Rückkanal Feld → Kit
 
 **Jeder Lauf in einem echten Projekt fördert Kit-Fehler zutage** — `BL-1` bis
-`BL-327` sind fast alle so entstanden. Damit das nicht von der Disziplin
+`BL-343` sind fast alle so entstanden. Damit das nicht von der Disziplin
 einzelner abhängt, ist der Weg zurück ein Befehl aus dem installierten Projekt
 heraus:
 
@@ -850,7 +852,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   gerade eine **private** Codebasis gelesen hat. `pruefen` sucht absolute
   Pfade, Konto- und Rechnernamen, Schlüssel, E-Mail — und den **Namen deines
   Projekts**: Das Kit führt seine eigenen Feldbelege aus genau diesem Grund
-  unter `Feld A`…`Feld F`. `senden` geht darüber nicht hinweg, ohne dass man es
+  unter `Feld A`…`Feld G`. `senden` geht darüber nicht hinweg, ohne dass man es
   ausdrücklich sagt.
 - **Die Meldung wird immer als Datei abgelegt**, auch wenn das Kit gerade nicht
   erreichbar ist. Ein Eintrag, der nur im Feld liegt, hat eine Verfallszeit —
@@ -875,7 +877,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   `Feld D` **eine** und `Feld E` **zwei** auf der bash-Bahn — `Feld C` gar
   keine. Zwei Plattformen und zwei Bahnen sind damit berührt, aber nur **eine**
   Kombination ist eingelaufen. Jeder Lauf hat Kit-Fehler zutage gefördert —
-  `BL-1`…`BL-327`, von der toten Fixphase über zwei Löcher in der
+  `BL-1`…`BL-343`, von der toten Fixphase über zwei Löcher in der
   Kostenerfassung und die Zeilenenden bis zur vierten Fehlerklasse „Stufe
   fertig, Quittung fehlt". Die Erwartung ist nicht, dass das aufhört; die
   Mechanik dafür ist der [Rückkanal Feld → Kit](#der-rückkanal-feld--kit) —
