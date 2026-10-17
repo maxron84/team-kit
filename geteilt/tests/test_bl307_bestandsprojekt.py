@@ -230,9 +230,12 @@ def test_die_alterung_greift(tmp_path):
     for name in ("lib.sh", "lib.psm1"):
         (projekt / "team" / name).write_bytes(kit_pfad(name).read_bytes())
     (projekt / "CLAUDE.md").write_text("# frisch\n", encoding="utf-8")
+    # Die TEAM_PREISE-Zeile hat jede Installation; seit BL-323 altert das
+    # Werkzeug auch sie und bricht laut ab, wenn sie fehlt.
     (projekt / "team.config.sh").write_text(
         'TEAM_ROLE_BUDGET_USD="${TEAM_ROLE_BUDGET_USD:-20}"\n'
-        'TEAM_SMOKE_TEST="${TEAM_SMOKE_TEST:-./smoke.sh}"\n', encoding="utf-8")
+        'TEAM_SMOKE_TEST="${TEAM_SMOKE_TEST:-./smoke.sh}"\n'
+        'TEAM_PREISE="${TEAM_PREISE:-}"\n', encoding="utf-8")
     r = subprocess.run([sys.executable, str(werkzeug), str(projekt)],
                        capture_output=True, text=True, encoding="utf-8",
                        errors="replace")
@@ -246,3 +249,6 @@ def test_die_alterung_greift(tmp_path):
     assert "TEAM_ROLE_BUDGET_USD" not in cfg, "Rueckfall-Wert nicht entfernt"
     assert "TEAM_SMOKE_TEST" in cfg, (
         "Eine Antwort des Installers wurde entfernt — die hat jedes Projekt")
+    assert 'TEAM_PREISE="${TEAM_PREISE:-}"' not in cfg, (
+        "Keine projektlokalen Preise gesetzt — die Preis-Tests laufen wieder "
+        "gegen eine leere Projektdatei (Kit-BL-323)")
