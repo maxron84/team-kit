@@ -214,6 +214,7 @@ env -u ANTHROPIC_API_KEY claude -p "sag ok" --output-format json
 | Exit | Zeile im Protokoll |
 |---|---|
 | `42` | `⏸ Lauf pausiert (Ralph) — Session-Limit oder abgelaufene Abo-Anmeldung; der Grund steht in der Zeile der Rolle darüber (Kit-BL-316). Danach './vollautomatik.sh' erneut starten. Kein Fehler, kein Datenverlust (State steht).` |
+| `42` | `⏸ Lauf angehalten, bevor eine Rolle startet — ein abgebrochener Rollenaufruf hat Änderungen liegen lassen (Kit-BL-326, Einzelheiten darüber). …` |
 | `43` | `⚠ Stufe fertig, Quittung fehlt (BL-41) — Lauf gestoppt. NICHT neu bauen, bevor die von Ralph genannten zwei Prüfungen gelaufen sind.` |
 
 **Einordnung vorweg:** Beides sind **eigene Ausgänge neben `0` und `1`**, und
@@ -272,6 +273,29 @@ Abo. Eine abgelaufene Anmeldung nicht — im Feld lief so der Rest eines Laufs
 einen Aufruf über seine **Schutzregeln** ab (`safeguards flagged … [cyber]`),
 fährt das Kit ihn einmal über die API nach und sagt das; der Abschlussbericht
 zählt solche Fallbacks mit Grund und Betrag.
+
+### `42` — oder ein abgebrochener Rollenaufruf hat Arbeit liegen lassen
+
+Steht über der Pause **„[wiederanlauf] ANGEHALTEN"**, ist der Lauf gar nicht
+erst losgegangen (`Kit-BL-326`). Der vorige Lauf endete, während eine Rolle
+arbeitete — Fenster zu, Neustart, Ctrl+C —, und im Arbeitsbaum liegen
+uncommittete Änderungen. Das ist vermutlich die halbe Arbeit dieses Aufrufs:
+Sein Guard lief nie zu Ende, geprüft hat sie niemand. Ohne die Pause übernähme
+die nächste Rolle sie still und committete sie mit — im Feld war das nur
+deshalb richtig, weil der erste Aufruf zufällig richtig angefangen hatte.
+
+**Was du tust: sichten.** Die Meldung nennt Rolle, Sitzung und Pfade. Was
+taugt, committest du; was nicht taugt, verwirfst du (`git checkout -- <pfad>`,
+neu angelegte Dateien von Hand entfernen). Dann dieselbe Zeile erneut starten.
+Derselbe Abbruch hält kein zweites Mal an.
+
+Ist der Arbeitsbaum beim Neustart sauber, läuft der Lauf mit einem Hinweis
+weiter. In beiden Fällen bleibt im Log-Ordner der **Stub** des Aufrufs liegen,
+den das Kit vor jedem Aufruf schreibt und erst das Ende des Aufrufs ersetzt:
+`team_versuch: "abgebrochen"`, Rolle, Start und die Sitzungskennung. Die
+Kostenwerkzeuge zählen ihn als **Kosten unbekannt**, nie als 0. Messen lässt
+er sich über das Transkript der Sitzung (`kosten.py sitzung-messen`), und der
+nächste `--rollen-abschluss --archivieren` räumt ihn mit weg.
 
 ### `43` — die Stufe ist fertig, nur die Quittung fehlt
 

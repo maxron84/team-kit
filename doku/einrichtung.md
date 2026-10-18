@@ -693,7 +693,7 @@ steht.
 |---|---|---|
 | **Anderes Modell** | `TEAM_MODEL_LOOP` / `TEAM_MODEL_STRONG` in [team/lib.sh](../bash/lib.sh) oder pro Lauf setzen | eine Zeile. Welche **Fähigkeiten** ein Kandidat mitbringen muss, steht im [README](../README.md#modelle--agnostisch-aber-nicht-anspruchslos) |
 | **Andere IDE / keine** | nichts | Das Kit wird im Terminal bedient |
-| **Andere Agenten-CLI** | `team_claude()` in [team/lib.sh](../bash/lib.sh) austauschen — die **einzige** Stelle im Kit, die eine CLI aufruft | überschaubar, aber **nicht belegt**: An dieser Funktion hängen das Ergebnis-JSON (`is_error`, `subtype`, `total_cost_usd`), der Auth-Fallback und die 429-Mechanik. Wer tauscht, muss diese drei Dinge nachbauen, dazu den `--permission-mode` der Read-Only-Rollen — siehe [anhang-a.md, A.11](anhang-a.md) |
+| **Andere Agenten-CLI** | `team_claude()` in [team/lib.sh](../bash/lib.sh) austauschen — die CLI-Zeile selbst steht **einmal**, in `team_claude_schreiben()` (pwsh: `Team-ClaudeSchreiben`) | überschaubar, aber **nicht belegt**: An dieser Funktion hängen das Ergebnis-JSON (`is_error`, `subtype`, `total_cost_usd`), der Auth-Fallback und die 429-Mechanik. Wer tauscht, muss diese drei Dinge nachbauen, dazu den `--permission-mode` der Read-Only-Rollen und eine vorab vergebene Sitzungskennung (`--session-id`, `BL-326`) — siehe [anhang-a.md, A.11](anhang-a.md) |
 | **Anderes Auth-Verfahren** | `bash/scripts/team-auth-setup.sh` ist ein Beispielskript für Claude Code, keine Kit-Mechanik | ersetzen |
 
 Das Kit ist **modellagnostisch, aber noch nicht CLI-agnostisch**. Das ist eine

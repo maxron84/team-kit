@@ -2412,9 +2412,62 @@ function team_quittung_selbstpruefung {
     return $true
 }
 
+# --- Der CLI-Aufruf: Stub vorher, Abschluss danach (BL-326) -------------------
+# Ausfuehrlich in der bash-Fassung (team_claude_schreiben). WAS IM FELD
+# PASSIERT IST (`Feld F`, 2026-10-10, genau diese Bahn): Eine Vollautomatik
+# wurde mitten in einer Ralph-Stufe beendet. Team-ClaudeSchreiben schrieb das
+# Kostenlog erst nach dem Ende der CLI — also nie. Im Ledger fehlten
+# 0,3661 USD, und kein Pruefer zeigte die Luecke.
+#
+# Der eine Aufruf hat deshalb drei Schritte:
+#   1. STUB in $Out: der Ersatzzettel aus BL-46, vorab geschrieben —
+#      `team_versuch: "abgebrochen"`, Rolle, Start und eine Sitzungskennung,
+#      die als `--session-id` an die CLI geht (ueber sie ist das Transkript
+#      spaeter zu finden und mit `kosten.py sitzung-messen` zu messen).
+#   2. Die Ausgabe der CLI geht in eine NEBENDATEI, die NICHT auf .json endet:
+#      kosten.py liest jedes *.json der Log-Ordner. `.jsonl` ist die Form, in
+#      der BL-337 dort den Rohstrom ablegen will.
+#   3. Erst der benannte ABSCHLUSSSCHRITT bringt sie nach $Out und ersetzt
+#      damit den Stub. Endet der Lauf vorher, bleibt der Stub stehen.
+
+function Team-ClaudeStub {
+    # Schreibt den Stub nach $Out und gibt die Sitzungskennung zurueck. Die
+    # Zeit invariant formatiert: Ein Kulturformat schriebe sonst etwa
+    # "10.10.2026 21.47" — dieselbe Datei liest die bash-Bahn und kosten.py.
+    param([string]$Rolle, [string]$Out)
+    $sitzung = [guid]::NewGuid().ToString()
+    $stub = [ordered]@{
+        is_error = $true; result = ''; total_cost_usd = $null
+        team_versuch = 'abgebrochen'; team_rolle = $Rolle
+        team_start = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss', [cultureinfo]::InvariantCulture)
+        session_id = $sitzung
+    }
+    [System.IO.File]::WriteAllText((Team-Pfad $Out), ($stub | ConvertTo-Json -Compress),
+        (New-Object System.Text.UTF8Encoding($false)))
+    return $sitzung
+}
+
+function Team-ClaudeAbschluss {
+    <#
+      Der benannte Abschlussschritt des CLI-Aufrufs (BL-326). Heute nur das
+      Umbenennen der Nebendatei auf $Out. BL-337 setzt hier seinen
+      Normalisierer ein, der aus dem Rohstrom das eine Ergebnisobjekt macht —
+      er laeuft dann VOR team_versuch_melden, wie das Umbenennen heute.
+    #>
+    param([string]$Out, [string]$Neben)
+    try {
+        Move-Item -LiteralPath (Team-Pfad $Neben) -Destination (Team-Pfad $Out) -Force -ErrorAction Stop
+        return $true
+    } catch {
+        Team-Fehler "[team_claude] WARNUNG: Die Ausgabe der CLI ('$Neben') liess sich nicht nach '$Out' bringen — dort steht weiter der Stub (Kit-BL-326)."
+        return $false
+    }
+}
+
 function Team-ClaudeSchreiben {
     <#
-      Ruft die CLI und schreibt ihre Ausgabe als UTF-8 OHNE BOM. Gibt den
+      Der EINE Aufruf der CLI (BL-326): Stub nach $Out, Ausgabe der CLI als
+      UTF-8 OHNE BOM in die Nebendatei, dann der Abschlussschritt. Gibt den
       Exit-Code der CLI zurueck.
 
       WARUM NICHT EINFACH `> $Out`: Die Umlenkung schreibt mit der
@@ -2433,12 +2486,125 @@ function Team-ClaudeSchreiben {
       haengen. Sie wird hier festgelegt.
     #>
     param([string]$Claude, [string]$Prompt, [string]$Modell, [string]$Out,
-          [string[]]$Weitere = @())
-    $roh = & $Claude -p $Prompt --model $Modell --output-format json @Weitere
+          [string[]]$Weitere = @(), [string]$Rolle = 'team')
+    $neben = ($Out -replace '\.json$', '') + '.jsonl'
+    $sitzung = Team-ClaudeStub $Rolle $Out
+    $roh = & $Claude -p $Prompt --model $Modell --output-format json --session-id $sitzung @Weitere
     $code = $LASTEXITCODE
-    [System.IO.File]::WriteAllText((Team-Pfad $Out), (($roh -join "`n")),
+    [System.IO.File]::WriteAllText((Team-Pfad $neben), (($roh -join "`n")),
         (New-Object System.Text.UTF8Encoding($false)))
+    Team-ClaudeAbschluss $Out $neben | Out-Null
     return $code
+}
+
+# --- Wiederanlauf nach einem abgebrochenen Rollenaufruf (BL-326) --------------
+function Team-AbgebrocheneAufrufe {
+    <#
+      Die noch nicht gesichteten Stubs in .ralph-logs/ und .team-logs/ (nicht
+      im Archiv), als Objekte mit Pfad, Rolle, Start und Sitzung. Gelesen wird
+      nur, was das Wort ueberhaupt enthaelt — ein Log-Ordner mit Hunderten
+      Dateien kostet so keinen JSON-Lauf je Datei.
+
+      ConvertFrom-Json macht aus einem ISO-Zeitstempel ein [datetime]; fuer
+      die Anzeige wird er deshalb invariant zurueckgeschrieben, damit beide
+      Bahnen dieselbe Zeile drucken.
+    #>
+    $treffer = @()
+    foreach ($ordner in @('.ralph-logs', '.team-logs')) {
+        if (-not (Test-Path -LiteralPath $ordner -PathType Container)) { continue }
+        $dateien = @(Get-ChildItem -LiteralPath $ordner -Filter '*.json' -File -ErrorAction SilentlyContinue |
+                     Where-Object { $_.Name.EndsWith('.json') } | Sort-Object Name)
+        foreach ($datei in $dateien) {
+            $daten = $null
+            try {
+                $text = [System.IO.File]::ReadAllText($datei.FullName)
+                if ($text.Contains('"abgebrochen"')) { $daten = $text | ConvertFrom-Json -ErrorAction Stop }
+            } catch { $daten = $null }
+            if ($null -eq $daten) { continue }
+            $namen = @($daten.PSObject.Properties.Name)
+            if ($namen -notcontains 'team_versuch' -or $daten.team_versuch -ne 'abgebrochen') { continue }
+            if ($namen -contains 'team_gesichtet' -and $daten.team_gesichtet) { continue }
+            # Jedes Feld nur, wenn es da ist: Unter Set-StrictMode wirft schon
+            # der Zugriff auf ein fehlendes.
+            $start = if ($namen -contains 'team_start') { $daten.team_start } else { $null }
+            if ($start -is [datetime]) {
+                $start = $start.ToString('yyyy-MM-ddTHH:mm:ss', [cultureinfo]::InvariantCulture)
+            }
+            $start = if ($start) { [string]$start } else { '?' }
+            $rolle = if ($namen -contains 'team_rolle' -and $daten.team_rolle) { [string]$daten.team_rolle } else { '?' }
+            $sitzung = if ($namen -contains 'session_id' -and $daten.session_id) { [string]$daten.session_id } else { '?' }
+            $treffer += [pscustomobject]@{
+                Pfad = "$ordner/$($datei.Name)"; Voll = $datei.FullName
+                Rolle = $rolle; Start = $start; Sitzung = $sitzung
+            }
+        }
+    }
+    return $treffer
+}
+
+function Team-StubSichten {
+    <#
+      Der Vermerk "gesichtet" im Stub, mit unveraendertem Zeitstempel (siehe
+      team_wiederanlauf_pruefen). Eingefuegt wird er als Text vor der
+      schliessenden Klammer, NICHT ueber ConvertFrom-Json/ConvertTo-Json: Der
+      Umweg machte aus dem Startzeitpunkt ein [datetime] und schriebe ihn in
+      einer anderen Form zurueck. Der Stub ist ein flaches Objekt, das diese
+      Bibliothek selbst geschrieben hat.
+    #>
+    param([string[]]$Pfade = @())
+    $jetzt = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss', [cultureinfo]::InvariantCulture)
+    foreach ($pfad in $Pfade) {
+        try {
+            $alt = [System.IO.File]::GetLastWriteTimeUtc($pfad)
+            $text = [System.IO.File]::ReadAllText($pfad).TrimEnd()
+            if (-not $text.EndsWith('}')) { continue }
+            $neu = $text.Substring(0, $text.Length - 1).TrimEnd() + ', "team_gesichtet": "' + $jetzt + '"}'
+            [System.IO.File]::WriteAllText($pfad, $neu, (New-Object System.Text.UTF8Encoding($false)))
+            [System.IO.File]::SetLastWriteTimeUtc($pfad, $alt)
+        } catch { }
+    }
+}
+
+function team_wiederanlauf_pruefen {
+    <#
+      VOR dem ersten Rollenaufruf eines Laufs (BL-326). Rueckgabe [int]:
+      0 = weiter, 42 = anhalten — die Pause: Der State bleibt stehen, der
+      Mensch sichtet und startet dieselbe Zeile neu.
+
+      Liegt ein Stub `abgebrochen` vor und ist der Arbeitsbaum (ohne
+      Laufzeitartefakte) schmutzig, nennt die Pruefung Rolle, Sitzung und
+      Pfade und gibt 42 zurueck. Bei sauberem Baum geht der Lauf weiter, und
+      der Stub bleibt als Kostenluecke liegen. Ein Stub haelt HOECHSTENS
+      EINMAL an: Er wird in beiden Faellen als gesichtet vermerkt. Begruendung
+      und Feldfall ausfuehrlich in der bash-Fassung.
+    #>
+    $stubs = @(Team-AbgebrocheneAufrufe)
+    if ($stubs.Count -eq 0) { return 0 }
+    $schmutzig = @(& git status --porcelain 2>$null | Where-Object { $_ } |
+                   ForEach-Object { $_.Substring(3) } |
+                   Where-Object { $_ -notmatch $TEAM_GUARD_LAUFZEIT -and
+                                  $_ -notmatch $TEAM_GUARD_IGNORIERT })
+    if ($schmutzig.Count) {
+        Team-Fehler '[wiederanlauf] ANGEHALTEN — ein Rollenaufruf wurde abgebrochen, und im Arbeitsbaum liegen uncommittete Änderungen (Kit-BL-326):'
+    } else {
+        Team-Fehler '[wiederanlauf] Hinweis: Ein Rollenaufruf wurde abgebrochen; der Arbeitsbaum ist sauber — der Lauf geht weiter (Kit-BL-326).'
+    }
+    foreach ($s in $stubs) {
+        Team-Fehler "  abgebrochen: $($s.Rolle), gestartet $($s.Start), Sitzung $($s.Sitzung) ($($s.Pfad))"
+    }
+    Team-StubSichten -Pfade @($stubs | ForEach-Object { $_.Voll })
+    if (-not $schmutzig.Count) {
+        Team-Fehler '  Der Stub bleibt als Kostenlücke liegen: Kosten UNBEKANNT, zu messen über das Transkript der Sitzung (kosten.py sitzung-messen).'
+        return 0
+    }
+    Team-Fehler '  uncommittet:'
+    foreach ($p in @($schmutzig | Select-Object -First 20)) { Team-Fehler "    $p" }
+    if ($schmutzig.Count -gt 20) { Team-Fehler "    … und $($schmutzig.Count - 20) weitere" }
+    Team-Fehler '  Das ist vermutlich die halbe Arbeit des abgebrochenen Aufrufs — sein Guard lief nie zu Ende, geprüft hat sie niemand.'
+    Team-Fehler '  Sichten: übernehmen (committen) oder verwerfen, dann dieselbe Zeile erneut starten.'
+    Team-Fehler '  Der Stub ist als gesichtet vermerkt — er hält den nächsten Start nicht noch einmal an.'
+    Team-Fehler '  Seine Kosten sind UNBEKANNT; zu messen über das Transkript der Sitzung (kosten.py sitzung-messen).'
+    return 42
 }
 
 # --- Abo-Fehler mit Grund (BL-316) ---------------------------------------------
@@ -2534,7 +2700,9 @@ function team_claude {
     $fehler = $false
 
     $t0 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-    $cliExit = Team-ClaudeSchreiben $claude $Prompt $Modell $Out $Weitere
+    # BL-326: jeder Versuch ueber Team-ClaudeSchreiben — Stub vorher,
+    # Abschluss danach; hier und in beiden Pfaden unten.
+    $cliExit = Team-ClaudeSchreiben $claude $Prompt $Modell $Out $Weitere -Rolle $Rolle
     team_versuch_melden $Rolle $Out $t0 | Out-Null
     $versuchLogs += $Out
     $fehler = -not (team_bewerte_ergebnis $Rolle $Out $cliExit)
@@ -2598,7 +2766,7 @@ function team_claude {
         if (-not (team_resolve_auth_mode)) { return 1 }
         $Out = ($Out -replace '\.json$', '') + '-api-fallback.json'
         $t0 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-        $cliExit = Team-ClaudeSchreiben $claude $Prompt $Modell $Out $Weitere
+        $cliExit = Team-ClaudeSchreiben $claude $Prompt $Modell $Out $Weitere -Rolle $Rolle
         team_versuch_melden $Rolle $Out $t0 | Out-Null
         $versuchLogs += $Out
         $fehler = -not (team_bewerte_ergebnis $Rolle $Out $cliExit)
@@ -2628,7 +2796,7 @@ function team_claude {
 
             $Out = ($Out -replace '\.json$', '') + "-429-retry$versuch.json"
             $t0 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-            $cliExit = Team-ClaudeSchreiben $claude $Prompt $Modell $Out $Weitere
+            $cliExit = Team-ClaudeSchreiben $claude $Prompt $Modell $Out $Weitere -Rolle $Rolle
             team_versuch_melden $Rolle $Out $t0 | Out-Null
             $versuchLogs += $Out
             $fehler = -not (team_bewerte_ergebnis $Rolle $Out $cliExit)

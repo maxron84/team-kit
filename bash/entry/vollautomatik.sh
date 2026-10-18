@@ -46,6 +46,9 @@
 #               Datenverlust, State steht; siehe Kaskade 9/Stufe 31,
 #               CLAUDE.md „Loop-Mechanik & Auth") — greift in Phase 4 jetzt auch
 #               bei einem Exit 42 von frank.sh/axel.sh (Kaskade 11/Stufe 38).
+#               Ebenso, bevor eine Rolle startet, wenn ein abgebrochener
+#               Rollenaufruf Arbeit liegen gelassen hat (BL-326): sichten
+#               (committen oder verwerfen), dann erneut starten.
 #          45 = Stufe/Fix fertig, aber Steuerzeichen im Ergebnis (BL-327,
 #               durchgereicht von ralph.sh und frank.sh): kein Neubau — die
 #               genannten Stellen reparieren, committen, erneut starten
@@ -402,6 +405,16 @@ abbruch_bericht() {
 }
 
 phasen_zeiger_lesen
+
+# BL-326: Wiederanlauf nach einem abgebrochenen Rollenaufruf — VOR der ersten
+# Rolle. Das ist der erste Haken der gemeinsamen Startpruefung (BL-330,
+# BL-333, BL-336); deren Pruefungen kommen hier dahinter, nicht an eine
+# zweite Stelle. Er kommt zuerst, weil halbe Arbeit sonst als geaenderter
+# Plan oder schmutziger Baum fehlgedeutet wird.
+if ! team_wiederanlauf_pruefen; then
+    log "⏸ Lauf angehalten, bevor eine Rolle startet — ein abgebrochener Rollenaufruf hat Änderungen liegen lassen (Kit-BL-326, Einzelheiten darüber). Sichten (committen oder verwerfen), dann './vollautomatik.sh' erneut starten. Kein Fehler, State steht."
+    exit 42
+fi
 
 # --- Phase 1: Ralph baut die Kaskade -----------------------------------------
 if phasen_faellig 1; then

@@ -506,7 +506,7 @@ nächsten `--update`.
 | `0` | durchgelaufen | Closeout machen |
 | `1` | **echter Fehler** | Log lesen, Ursache beheben |
 | `3` | nichts zu tun | normal, kein Fehler |
-| `42` | **Session-Limit** oder **Abo-Anmeldung abgelaufen** — Lauf pausiert | **kein Fehler.** Kein Datenverlust, State steht. Beim Limit später erneut starten; bei abgelaufener Anmeldung erst neu anmelden (`claude` starten, `/login`) — die Zeile der Rolle sagt, welcher Fall vorliegt. |
+| `42` | **Session-Limit**, **Abo-Anmeldung abgelaufen** oder **Wiederanlauf nach einem Abbruch** — Lauf pausiert | **kein Fehler.** Kein Datenverlust, State steht. Beim Limit später erneut starten; bei abgelaufener Anmeldung erst neu anmelden (`claude` starten, `/login`); nach einem abgebrochenen Rollenaufruf erst die liegengebliebenen Änderungen sichten (committen oder verwerfen) — die Zeile darüber sagt, welcher Fall vorliegt. |
 | `43` | **Stufe fertig, Quittung fehlt** | **Nicht neu bauen.** Erst prüfen: hat die Rolle committet, ist der Smoke-Test grün? Wenn ja: von Hand quittieren (`echo <nächste Stufe> > .ralph-state`) und weiterlaufen lassen. |
 | `45` | **Arbeit fertig, aber Steuerzeichen im Ergebnis** (`Kit-BL-327`) | **Nicht neu bauen** — Stufe bzw. Fund ist schon quittiert. Die genannten Stellen reparieren (das Byte durch sein Escape ersetzen, mit dem Werkzeug zum Bearbeiten von Dateien), committen, erneut starten. Gehört ein Zeichen absichtlich hinein: `<pfad> steuerzeichen-erlaubt` in `.gitattributes`. |
 
@@ -519,6 +519,17 @@ einen gescheiterten Abo-Aufruf einmal über die API nach — bei einem Limit ode
 Netzfehler ist das richtig, denn der nächste Aufruf versucht es wieder im Abo.
 Eine abgelaufene Anmeldung geht aber nicht von selbst vorüber: Im Feld lief so
 der Rest eines Laufs über die API, rund 12,5 USD für ein Neu-Anmelden.
+
+**Nach einem abgebrochenen Lauf sichtest du, bevor es weitergeht**
+(`Kit-BL-326`). Endet ein Lauf, während eine Rolle arbeitet — Fenster zu,
+Neustart —, liegt ihre halbe Arbeit im Arbeitsbaum, und ihr Guard lief nie zu
+Ende. Startest du dieselbe Zeile neu, hält der Lauf vor der ersten Rolle mit
+`42` an und nennt Rolle, Sitzung und Pfade: Was taugt, committest du, den Rest
+verwirfst du, dann startest du erneut. Ohne die Pause übernähme die nächste
+Rolle die Änderungen ungeprüft. Ist der Baum sauber, geht es mit einem Hinweis
+weiter. Die Kosten des abgebrochenen Aufrufs sind unbekannt, nicht null: Sein
+Stub im Log-Ordner trägt die Sitzungskennung, über die
+`kosten.py sitzung-messen` sie aus dem Transkript misst.
 
 **Lehnt das Modell einen Aufruf über seine Schutzregeln ab**, steht im Log
 `API Error: … safeguards flagged this message … [cyber]`. Das trifft vor allem

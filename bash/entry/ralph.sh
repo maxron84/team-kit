@@ -12,7 +12,9 @@
 #           AUTH_MODE         api|abo (siehe team/lib.sh)
 # Exit:     0 = Kaskade fertig/Cap erreicht · 1 = Fehler
 #           42 = Session-Limit oder Abo-Anmeldung abgelaufen — Stufe pausiert (kein Fehler, State steht),
-#                siehe team_claude()/CLAUDE.md „Loop-Mechanik & Auth"
+#                siehe team_claude()/CLAUDE.md „Loop-Mechanik & Auth" — oder ein
+#                abgebrochener Rollenaufruf hat Arbeit liegen lassen (BL-326):
+#                sichten (committen oder verwerfen), dann erneut starten
 #           43 = Stufe fertig, Quittung fehlt (BL-41): Das Log meldet Erfolg,
 #                das Promise fehlt. Arbeit meist FERTIG — nicht neu bauen,
 #                sondern prüfen und von Hand quittieren (Meldung nennt den Weg)
@@ -61,6 +63,14 @@ if [ -z "$RALPH_CAP" ] || ! [ "$RALPH_CAP" -eq "$RALPH_CAP" ] 2>/dev/null; then
     echo "FEHLER: Keine gültige RALPH_CAP=-Zeile in $PLAN_DATEI." >&2
     exit 1
 fi
+
+# BL-326: Hat ein abgebrochener Rollenaufruf Arbeit liegen lassen, haelt der
+# Lauf hier an, statt dass diese Stufe sie ungeprueft uebernimmt. Fuer den
+# Einzel- und den Halbautomatik-Start; unter der Vollautomatik hat deren
+# Startpruefung den Stub schon gesichtet. Bewusst nur dieser eine Aufruf: Die
+# gemeinsame Startpruefung (BL-330, BL-333, BL-336) setzt ihre Ralph-Anteile
+# dahinter.
+team_wiederanlauf_pruefen || exit 42
 
 # Sofortiger Hard-Cap beim zentralen Soft-Cap-Wert (kein Soft-Fenster für Ralph):
 # team_budget_check wird OHNE hard-limit aufgerufen, ein überschrittenes Limit

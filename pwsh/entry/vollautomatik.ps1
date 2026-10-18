@@ -34,7 +34,10 @@
            43 = Stufe/Fix fertig, Quittung fehlt (BL-41, von ralph.ps1 und —
                 seit BL-214 — von frank.ps1 durchgereicht): kein Neubau, kein
                 Neustart — pruefen und von Hand quittieren
-           42 = Session-Limit oder Abo-Anmeldung abgelaufen — Lauf pausiert (kein Fehler, State steht)
+           42 = Session-Limit oder Abo-Anmeldung abgelaufen — Lauf pausiert (kein Fehler, State steht).
+                Ebenso, bevor eine Rolle startet, wenn ein abgebrochener
+                Rollenaufruf Arbeit liegen gelassen hat (BL-326): sichten
+                (committen oder verwerfen), dann erneut starten.
            45 = Stufe/Fix fertig, aber Steuerzeichen im Ergebnis (BL-327, von
                 ralph.ps1 und frank.ps1 durchgereicht): kein Neubau — die
                 genannten Stellen reparieren, committen, erneut starten
@@ -503,6 +506,17 @@ function Abbruch-Bericht {
 }
 
 Phasen-Zeiger-Lesen
+
+# BL-326: Wiederanlauf nach einem abgebrochenen Rollenaufruf — VOR der ersten
+# Rolle. Das ist der erste Haken der gemeinsamen Startpruefung (BL-330,
+# BL-333, BL-336); deren Pruefungen kommen hier dahinter, nicht an eine
+# zweite Stelle. Er kommt zuerst, weil halbe Arbeit sonst als geaenderter
+# Plan oder schmutziger Baum fehlgedeutet wird. Die Einzelheiten schreibt der
+# Helfer nach stderr; ins Lauf-Log geht die Zeile darunter.
+if ((team_wiederanlauf_pruefen) -eq 42) {
+    Log '⏸ Lauf angehalten, bevor eine Rolle startet — ein abgebrochener Rollenaufruf hat Änderungen liegen lassen (Kit-BL-326, Einzelheiten darüber). Sichten (committen oder verwerfen), dann .\vollautomatik.cmd erneut starten. Kein Fehler, State steht.'
+    exit 42
+}
 
 # --- Phase 1: Ralph baut die Kaskade ------------------------------------------
 if (Phasen-Faellig 1) {

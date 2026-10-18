@@ -11,6 +11,8 @@
             AUTH_MODE         api|abo (siehe team/lib.psm1)
   Exit:     0 = Kaskade fertig/Cap erreicht · 1 = Fehler
             42 = Session-Limit oder Abo-Anmeldung abgelaufen — Stufe pausiert (kein Fehler, State steht)
+                 — oder ein abgebrochener Rollenaufruf hat Arbeit liegen lassen
+                 (BL-326): sichten (committen oder verwerfen), dann erneut starten
             43 = Stufe fertig, Quittung fehlt (BL-41): Das Log meldet Erfolg,
                  das Promise fehlt. Arbeit meist FERTIG — nicht neu bauen,
                  sondern pruefen und von Hand quittieren
@@ -57,6 +59,14 @@ if (-not ($ralphCap -match '^\d+$')) {
     exit 1
 }
 $ralphCap = [int]$ralphCap
+
+# BL-326: Hat ein abgebrochener Rollenaufruf Arbeit liegen lassen, haelt der
+# Lauf hier an, statt dass diese Stufe sie ungeprueft uebernimmt. Fuer den
+# Einzel- und den Halbautomatik-Start; unter der Vollautomatik hat deren
+# Startpruefung den Stub schon gesichtet. Bewusst nur dieser eine Aufruf: Die
+# gemeinsame Startpruefung (BL-330, BL-333, BL-336) setzt ihre Ralph-Anteile
+# dahinter.
+if ((team_wiederanlauf_pruefen) -eq 42) { exit 42 }
 
 # Sofortiger Hard-Cap beim zentralen Soft-Cap-Wert (kein Soft-Fenster fuer
 # Ralph): team_budget_check wird OHNE hard-limit aufgerufen, ein

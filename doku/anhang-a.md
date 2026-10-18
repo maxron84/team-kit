@@ -623,6 +623,18 @@ Bau-Details von `team/tools/kosten.py`:
   sonst hält ihn der Ledger-Wächter dauerhaft für einen Verdachtsfall und
   empfiehlt eine Abhilfe, die nach `BL-5` echtes Geld vernichtet. Ein Wächter,
   dessen Warnung sich nicht abstellen lässt, erzieht zum Wegsehen (`BL-14`).
+- **Der Beleg entsteht vor dem Aufruf, nicht danach (`BL-326`).** Ein Zettel,
+  der erst nach dem Aufruf geschrieben wird, fehlt genau dann, wenn der ganze
+  Lauf endet — Fenster zu, Neustart. Im Feld fehlten so 0,3661 USD, und kein
+  Prüfer zeigte die Lücke; die Umlenkung `> "$out"` legte das Log zudem beim
+  Start **leer** an. **Bauregel:** Der eine CLI-Aufruf schreibt **vorher** einen
+  Stub (`team_versuch: "abgebrochen"`, Rolle, Start, Sitzungskennung), gibt
+  dieselbe Kennung als `--session-id` an die CLI, lässt sie in eine Nebendatei
+  schreiben, die **nicht** auf `.json` endet, und ersetzt den Stub erst im
+  benannten Abschlussschritt. Steht der Stub noch, kam der Aufruf nicht zu
+  Ende: Kosten **unbekannt**, nachmessbar über das Transkript der Sitzung. Und
+  die halbe Arbeit im Arbeitsbaum übernimmt die nächste Rolle nicht still —
+  der Wiederanlauf hält einmal an, damit ein Mensch sie sichtet.
 - **Jede Kennzahl sagt, ob sie in der Summe daneben schon drinsteckt
   (`BL-18`).** Die Architekt-Zeile in `--budget` hat zwei Modi, und der Modus
   schaltet ausgerechnet **beim Kaskaden-Abschluss** um — in dem Moment, in dem

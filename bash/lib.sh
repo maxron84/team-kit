@@ -709,6 +709,195 @@ team_pause_grund() {
     fi
 }
 
+# --- Der CLI-Aufruf: Stub vorher, Abschluss danach (BL-326) -------------------
+# WAS IM FELD PASSIERT IST (`Feld F`, 2026-10-10). Eine Vollautomatik wurde
+# mitten in einer Ralph-Stufe beendet. Ein Kostenlog dieses Aufrufs gab es
+# danach nicht: Die pwsh-Bahn schrieb es erst nach dem Ende der CLI, und hier
+# legte die Umlenkung `> "$out"` es beim START an — leer, und `kosten.py`
+# ueberspringt eine leere Datei als unlesbar. Der Ersatzzettel aus BL-46
+# entsteht ebenfalls erst NACH dem Aufruf, also nie, wenn der ganze Lauf
+# endet. Im Ledger fehlten 0,3661 USD, und kein Pruefer zeigte die Luecke.
+#
+# DESHALB EIN AUFRUF IN DREI SCHRITTEN, an EINER Stelle — bis hierher stand
+# die CLI-Zeile viermal in team_claude (Abo-Versuch, API-Fallback, zweimal im
+# 429-Pfad), und jede Stelle haette den Stub einzeln gebraucht:
+#   1. STUB: Vor dem Aufruf steht in "$out" der Ersatzzettel aus BL-46, nur
+#      vorab geschrieben — `team_versuch: "abgebrochen"`, Rolle, Start und
+#      eine Sitzungskennung, die als `--session-id` an die CLI geht. Ueber sie
+#      ist das Transkript des Aufrufs spaeter zu finden und zu messen
+#      (`kosten.py sitzung-messen`). Kein Aufrufer uebergibt `--resume` oder
+#      `--continue`; die Kennung ist frisch.
+#   2. NEBENDATEI: Die CLI schreibt NICHT nach "$out". Die Umlenkung leert ihr
+#      Ziel, sobald die CLI startet — direkt auf "$out" gerichtet, waere der
+#      Stub weg, bevor er gebraucht wird. Die Nebendatei endet NICHT auf
+#      `.json`: `kosten.py` liest jedes `*.json` der Log-Ordner
+#      (team_log_dateien, logs_einsammeln), und eine halbe Ausgabe ist kein
+#      Kostenlog. `.jsonl` ist die Form, in der BL-337 dort den Rohstrom
+#      ablegen will; heute steht darin das eine Ergebnisobjekt der CLI.
+#   3. ABSCHLUSS: Erst team_claude_abschluss bringt die Ausgabe nach "$out" und
+#      ersetzt damit den Stub. Endet der Lauf vorher, bleibt der Stub stehen —
+#      genau dann soll er stehen bleiben.
+
+# team_claude_stub <rolle> <out> — schreibt den Stub nach <out> und gibt die
+# Sitzungskennung aus. Die Kennung entsteht ueber $TEAM_PYTHON, nicht ueber
+# `uuidgen` (Git Bash hat keins), und ohne Zeilenende: Ein Windows-Python
+# schriebe sonst ein CR mit, und die CLI wiese die Kennung ab.
+team_claude_stub() {
+    "$TEAM_PYTHON" - "$1" "$2" <<'PY'
+import json, sys, time, uuid
+rolle, pfad = sys.argv[1], sys.argv[2]
+sitzung = str(uuid.uuid4())
+with open(pfad, "w", encoding="utf-8") as fh:
+    json.dump({"is_error": True, "result": "", "total_cost_usd": None,
+               "team_versuch": "abgebrochen", "team_rolle": rolle,
+               "team_start": time.strftime("%Y-%m-%dT%H:%M:%S"),
+               "session_id": sitzung}, fh)
+sys.stdout.write(sitzung)
+PY
+}
+
+# team_claude_abschluss <out> <nebendatei> — der benannte Abschlussschritt.
+# Heute nur das Umbenennen. BL-337 setzt hier seinen Normalisierer ein, der aus
+# dem Rohstrom der Nebendatei das eine Ergebnisobjekt fuer "$out" macht — er
+# laeuft dann VOR team_versuch_melden, wie das Umbenennen heute.
+team_claude_abschluss() {
+    local out="$1" neben="$2"
+    mv -f -- "$neben" "$out" 2>/dev/null && return 0
+    echo "[team_claude] WARNUNG: Die Ausgabe der CLI ('$neben') liess sich nicht nach '$out' bringen — dort steht weiter der Stub (Kit-BL-326)." >&2
+    return 1
+}
+
+# team_claude_schreiben <rolle> <modell> <out> <prompt> [weitere claude-Flags …]
+# Der eine CLI-Aufruf: Stub, Aufruf in die Nebendatei, Abschluss. Rueckgabe 1,
+# wenn die CLI mit Exit != 0 endete — das Urteil faellt danach am
+# geschriebenen JSON (HM-33). Den API-Schluessel stellt der Aufrufer voran
+# (`ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" team_claude_schreiben …`): bash
+# reicht eine solche Zuweisung fuer die Dauer der Funktion an deren Kinder
+# weiter, also an die CLI.
+team_claude_schreiben() {
+    local rolle="$1" modell="$2" out="$3" prompt="$4" sitzung neben rc=0
+    shift 4
+    neben="${out%.json}.jsonl"
+    sitzung="$(team_claude_stub "$rolle" "$out")" || sitzung=""
+    "$TEAM_CLAUDE_BIN" -p "$prompt" --model "$modell" --output-format json --session-id "$sitzung" "$@" > "$neben" || rc=1
+    team_claude_abschluss "$out" "$neben" || true
+    return "$rc"
+}
+
+# --- Wiederanlauf nach einem abgebrochenen Rollenaufruf (BL-326) --------------
+# team_wiederanlauf_pruefen — VOR dem ersten Rollenaufruf eines Laufs.
+# Rueckgabe 0 = weiter, 42 = anhalten. 42 ist die Pause: Der State bleibt
+# stehen, der Mensch sichtet und startet dieselbe Zeile neu.
+#
+# WAS IM FELD PASSIERT IST. Dieselbe Startzeile nahm die abgebrochene Stufe am
+# Morgen wieder auf, und der neue Ralph uebernahm zwei Dateien, die der
+# abgebrochene schon geaendert hatte — und committete sie mit. Richtig war das
+# nur, weil der erste Aufruf zufaellig richtig angefangen hatte. Geprueft hat
+# es niemand: Der Guard des abgebrochenen Aufrufs lief nie zu Ende, und der
+# neue kennt nur fremd (unveraendert) und eigen (veraendert) — ein toter
+# Vorgaenger ist keins von beiden. Die Warnung "Arbeitsbaum NICHT sauber"
+# steht nur auf stderr, und der Lauf geht weiter.
+#
+# DIE REGEL. Liegt in .ralph-logs/ oder .team-logs/ ein Stub `abgebrochen`
+# (siehe team_claude_schreiben), dann:
+#   - schmutziger Arbeitsbaum (ohne Laufzeitartefakte): Rolle, Sitzung und
+#     Pfade nennen, 42;
+#   - sauberer Baum: ein Hinweis, weiter. Der Stub bleibt liegen — als
+#     Kostenluecke, die kosten.py benennt, bis ein Abschluss ihn archiviert.
+# Ein Stub haelt HOECHSTENS EINMAL an: Die Pruefung vermerkt ihn als gesichtet
+# (`team_gesichtet` im Stub), in beiden Faellen. Hatte der erste Start einen
+# sauberen Baum, hat der Aufruf nichts hinterlassen — dann gehoert spaeterer
+# Schmutz jemand anderem. Und wer nach dem Anhalten blind neu startet, hat die
+# Pause gesehen; ein zweites Anhalten erzoege nur zum Wegklicken (BL-14). Der
+# Zeitstempel des Stubs bleibt dabei der des Aufrufs: Die Kostenfenster
+# (`--since`, der Zeitraum-Abgleich des Abschlusses) haengen an ihm.
+#
+# Archivierte Stubs (archiv/) zaehlen nicht — sie sind gebucht. Die Pruefung
+# laeuft unter der Sperre des Laufs; ein Stub, den sie sieht, gehoert also
+# nicht zu einem Aufruf, der gerade laeuft.
+team_wiederanlauf_pruefen() {
+    local stubs schmutzig pfad rolle start sitzung anzahl
+    local -a pfade=()
+    stubs="$(team_abgebrochene_aufrufe .ralph-logs .team-logs)"
+    [ -n "$stubs" ] || return 0
+    schmutzig="$(git status --porcelain 2>/dev/null | cut -c4- \
+                 | grep -Ev "$TEAM_GUARD_LAUFZEIT" | grep -Ev "$TEAM_GUARD_IGNORIERT" || true)"
+    if [ -n "$schmutzig" ]; then
+        echo "[wiederanlauf] ANGEHALTEN — ein Rollenaufruf wurde abgebrochen, und im Arbeitsbaum liegen uncommittete Änderungen (Kit-BL-326):" >&2
+    else
+        echo "[wiederanlauf] Hinweis: Ein Rollenaufruf wurde abgebrochen; der Arbeitsbaum ist sauber — der Lauf geht weiter (Kit-BL-326)." >&2
+    fi
+    while IFS=$'\t' read -r pfad rolle start sitzung; do
+        [ -n "$pfad" ] || continue
+        pfade+=("$pfad")
+        echo "  abgebrochen: $rolle, gestartet $start, Sitzung $sitzung ($pfad)" >&2
+    done <<< "$stubs"
+    [ "${#pfade[@]}" -gt 0 ] && team_abgebrochene_sichten "${pfade[@]}"
+    if [ -z "$schmutzig" ]; then
+        echo "  Der Stub bleibt als Kostenlücke liegen: Kosten UNBEKANNT, zu messen über das Transkript der Sitzung (kosten.py sitzung-messen)." >&2
+        return 0
+    fi
+    echo "  uncommittet:" >&2
+    printf '%s\n' "$schmutzig" | sed -n '1,20p' | sed 's/^/    /' >&2
+    anzahl="$(printf '%s\n' "$schmutzig" | wc -l | tr -d ' ')"
+    [ "$anzahl" -gt 20 ] && echo "    … und $((anzahl - 20)) weitere" >&2
+    echo "  Das ist vermutlich die halbe Arbeit des abgebrochenen Aufrufs — sein Guard lief nie zu Ende, geprüft hat sie niemand." >&2
+    echo "  Sichten: übernehmen (committen) oder verwerfen, dann dieselbe Zeile erneut starten." >&2
+    echo "  Der Stub ist als gesichtet vermerkt — er hält den nächsten Start nicht noch einmal an." >&2
+    echo "  Seine Kosten sind UNBEKANNT; zu messen über das Transkript der Sitzung (kosten.py sitzung-messen)." >&2
+    return 42
+}
+
+# team_abgebrochene_aufrufe <ordner…> — die noch nicht gesichteten Stubs, je
+# Zeile "<pfad><TAB><rolle><TAB><start><TAB><sitzung>". Gelesen wird nur, was
+# das Wort ueberhaupt enthaelt; ein Log mit Hunderten Eintraegen kostet so
+# keinen JSON-Lauf je Datei. Ausgabe binaer mit LF — unter Windows schriebe
+# print() sonst CRLF, und das CR klebte am letzten Feld.
+team_abgebrochene_aufrufe() {
+    "$TEAM_PYTHON" - "$@" <<'PY' 2>/dev/null || true
+import glob, json, os, sys
+zeilen = []
+for ordner in sys.argv[1:]:
+    for pfad in sorted(glob.glob(os.path.join(ordner, "*.json"))):
+        try:
+            with open(pfad, encoding="utf-8-sig") as fh:
+                text = fh.read()
+            if '"abgebrochen"' not in text:
+                continue
+            daten = json.loads(text)
+        except Exception:
+            continue
+        if not isinstance(daten, dict) or daten.get("team_versuch") != "abgebrochen":
+            continue
+        if daten.get("team_gesichtet"):
+            continue
+        felder = [pfad.replace(os.sep, "/"), daten.get("team_rolle"),
+                  daten.get("team_start"), daten.get("session_id")]
+        zeilen.append("\t".join(" ".join(str(f or "?").split()) for f in felder))
+sys.stdout.buffer.write("".join(z + "\n" for z in zeilen).encode("utf-8"))
+PY
+}
+
+# team_abgebrochene_sichten <pfad…> — der Vermerk "gesichtet" im Stub, mit
+# unveraendertem Zeitstempel (siehe team_wiederanlauf_pruefen).
+team_abgebrochene_sichten() {
+    "$TEAM_PYTHON" - "$@" <<'PY' 2>/dev/null || true
+import json, os, sys, time
+jetzt = time.strftime("%Y-%m-%dT%H:%M:%S")
+for pfad in sys.argv[1:]:
+    try:
+        stand = os.stat(pfad)
+        with open(pfad, encoding="utf-8-sig") as fh:
+            daten = json.load(fh)
+        daten["team_gesichtet"] = jetzt
+        with open(pfad, "w", encoding="utf-8") as fh:
+            json.dump(daten, fh)
+        os.utime(pfad, ns=(stand.st_atime_ns, stand.st_mtime_ns))
+    except Exception:
+        pass
+PY
+}
+
 team_claude() {
     local rolle="$1" modell="$2" out="$3" prompt="$4"
     shift 4
@@ -744,7 +933,9 @@ PY
     # ist die Summe darueber, nicht nur der letzte Versuch (BL-55).
     local -a versuch_logs=()
     t0="$(date +%s)"
-    "$TEAM_CLAUDE_BIN" -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
+    # BL-326: jeder Versuch ueber team_claude_schreiben — Stub vorher,
+    # Abschluss danach; hier und in beiden Pfaden unten.
+    team_claude_schreiben "$rolle" "$modell" "$out" "$prompt" "$@" || cli_exit=1
     team_versuch_melden "$rolle" "$out" "$t0"
     versuch_logs+=("$out")
     if team_bewerte_ergebnis "$rolle" "$out" "$cli_exit"; then fehler=0; else fehler=1; fi
@@ -820,7 +1011,7 @@ PY
         out="${out%.json}-api-fallback.json"
         cli_exit=0
         t0="$(date +%s)"
-        ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$TEAM_CLAUDE_BIN" -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
+        ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" team_claude_schreiben "$rolle" "$modell" "$out" "$prompt" "$@" || cli_exit=1
         team_versuch_melden "$rolle" "$out" "$t0"
         versuch_logs+=("$out")
         if team_bewerte_ergebnis "$rolle" "$out" "$cli_exit"; then fehler=0; else fehler=1; fi
@@ -853,9 +1044,9 @@ PY
             # Wie beim API-Fallback oben: Key explizit voranstellen, falls der
             # aktuelle AUTH_MODE api ist (sonst greift die CLI ggf. die Abo-Session).
             if [ "$AUTH_MODE" = "api" ]; then
-                ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$TEAM_CLAUDE_BIN" -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
+                ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" team_claude_schreiben "$rolle" "$modell" "$out" "$prompt" "$@" || cli_exit=1
             else
-                "$TEAM_CLAUDE_BIN" -p "$prompt" --model "$modell" --output-format json "$@" > "$out" || cli_exit=1
+                team_claude_schreiben "$rolle" "$modell" "$out" "$prompt" "$@" || cli_exit=1
             fi
             team_versuch_melden "$rolle" "$out" "$t0"
             versuch_logs+=("$out")

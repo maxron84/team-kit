@@ -442,6 +442,14 @@ def team_log_dateien(dirs, since=None):
     return files
 
 
+# Zettel, die einen bezahlten Aufruf belegen, aber keine Kosten: der
+# Ersatzzettel nach einem unlesbaren Log (BL-46) und der Stub, den der
+# CLI-Aufruf VOR dem Start schreibt und erst sein Ende ersetzt (BL-326). Steht
+# der Stub noch, kam der Aufruf nicht zu Ende. Fuer beide gilt: Kosten
+# UNBEKANNT, nie 0.0 -- nicht schaetzen, sichtbar machen.
+VERSUCH_OHNE_BELEG = ("verworfen", "abgebrochen")
+
+
 def _datei_kosten(datei):
     """Liest total_cost_usd aus EINER Datei. Gibt (kosten, ok) zurueck --
     ok=False bei jedem Parse-Fehler (abgeschnittenes/kaputtes JSON, leere
@@ -466,10 +474,14 @@ def _datei_kosten(datei):
     jeder Summe heraus und die Stufe erschien als die billigste der Kaskade,
     obwohl sie als teuerste angesetzt war. ok=False heisst hier "Kosten
     unbekannt", nicht "kaputt"; wer beides unterscheiden muss, fragt
-    _ist_verworfener_versuch()."""
+    _ist_verworfener_versuch().
+    BL-326: Der STUB, den der CLI-Aufruf vor dem Start schreibt
+    (team_versuch == "abgebrochen"), zaehlt genauso -- es entscheidet die
+    Marke, nicht die Zahl darin."""
     try:
         data = json.load(open(datei, encoding="utf-8-sig"))
-        if isinstance(data, dict) and data.get("team_versuch") == "verworfen":
+        if isinstance(data, dict) and \
+                data.get("team_versuch") in VERSUCH_OHNE_BELEG:
             return 0.0, False
         kosten = data.get("total_cost_usd", 0)
         if kosten is None:
@@ -482,21 +494,37 @@ def _datei_kosten(datei):
         return 0.0, False
 
 
+def _versuch_daten(datei):
+    """Das JSON eines Zettels ohne Kostenbeleg (siehe VERSUCH_OHNE_BELEG) --
+    sonst None."""
+    try:
+        with open(datei, encoding="utf-8-sig") as fh:
+            data = json.load(fh)
+    except Exception:
+        return None
+    if isinstance(data, dict) and data.get("team_versuch") in VERSUCH_OHNE_BELEG:
+        return data
+    return None
+
+
 def _ist_verworfener_versuch(datei):
     """True, wenn die Datei ein Ersatzzettel ueber einen verworfenen Versuch
-    ist (BL-46). Der Zettel ist KEIN Kostenbeleg -- er haelt fest, dass ein
-    bezahlter Anlauf stattfand, dessen Kosten niemand kennt."""
-    try:
-        data = json.load(open(datei, encoding="utf-8-sig"))
-    except Exception:
-        return False
-    return isinstance(data, dict) and data.get("team_versuch") == "verworfen"
+    ist (BL-46) -- oder der Stub eines abgebrochenen Aufrufs (BL-326). Beide
+    sind KEIN Kostenbeleg: Sie halten fest, dass ein bezahlter Anlauf
+    stattfand, dessen Kosten niemand kennt. Wer die Art braucht, fragt
+    _versuch_daten()."""
+    return _versuch_daten(datei) is not None
+
+
+def _ist_abgebrochen(datei):
+    return (_versuch_daten(datei) or {}).get("team_versuch") == "abgebrochen"
 
 
 def verworfene_versuche(dirs=None, files=None, since=None):
     """Liste (datei, dauer_s) der Ersatzzettel unter dirs bzw. in files.
     dauer_s ist None, wenn der Zettel keine Dauer traegt -- geschaetzt wird
-    NICHTS, sichtbar gemacht schon (BL-46)."""
+    NICHTS, sichtbar gemacht schon (BL-46). Der Stub eines abgebrochenen
+    Aufrufs (BL-326) gehoert dazu; er traegt nie eine Dauer."""
     kandidaten = files if files is not None \
         else team_log_dateien(dirs or [], since=since)
     treffer = []
@@ -513,15 +541,59 @@ def verworfene_versuche(dirs=None, files=None, since=None):
 
 
 def verworfen_hinweis(treffer):
-    """Einzeiler ueber verworfene Versuche -- oder None, wenn es keine gibt."""
+    """Hinweis ueber Versuche ohne Kostenbeleg -- eine Zeile je Art
+    (verworfen, abgebrochen), oder None, wenn es keine gibt."""
     if not treffer:
         return None
-    dauern = [d for _, d in treffer if isinstance(d, (int, float))]
-    zeit = f", zusammen {sum(dauern) // 60} min" if dauern else ""
-    return (f"Hinweis: {len(treffer)} verworfener Versuch(e){zeit}, Kosten "
+    abgebrochen = [f for f, _ in treffer if _ist_abgebrochen(f)]
+    verworfen = [(f, d) for f, d in treffer if f not in abgebrochen]
+    zeilen = []
+    if verworfen:
+        dauern = [d for _, d in verworfen if isinstance(d, (int, float))]
+        zeit = f", zusammen {sum(dauern) // 60} min" if dauern else ""
+        zeilen.append(
+            f"Hinweis: {len(verworfen)} verworfener Versuch(e){zeit}, Kosten "
             f"UNBEKANNT -- nicht in dieser Summe enthalten und bewusst nicht "
             f"geschaetzt (Kit-BL-46): "
-            + ", ".join(os.path.basename(f) for f, _ in treffer))
+            + ", ".join(os.path.basename(f) for f, _ in verworfen))
+    if abgebrochen:
+        zeilen.append(abgebrochen_hinweis(abgebrochen))
+    return "\n".join(zeilen)
+
+
+def _abgebrochen_angabe(stub):
+    """'<rolle>, gestartet <zeit>, Sitzung <kennung>' aus einem Stub."""
+    return (f"{stub.get('team_rolle') or '?'}, gestartet "
+            f"{stub.get('team_start') or '?'}, Sitzung "
+            f"{stub.get('session_id') or 'unbekannt'}")
+
+
+def _messweg(sitzung):
+    """Der Befehl, mit dem sich ein abgebrochener Aufruf nachmessen laesst
+    (BL-326): Die CLI fuehrt das Transkript der Sitzung unter ihrer
+    Kennung. Liegt es in der Ablage dieses Projekts, steht sein Pfad da."""
+    pfad = transkript_finden(sitzung) if sitzung else None
+    if pfad:
+        return f'`kosten.py sitzung-messen "{pfad}"`'
+    return (f"`kosten.py sitzung-messen <transkript>` -- das Transkript heisst "
+            f"{sitzung or '<kennung>'}.jsonl und liegt in der Ablage der CLI "
+            f"(~/.claude/projects/<projekt>/)")
+
+
+def abgebrochen_hinweis(dateien):
+    """BL-326: Einzeiler ueber Rollenaufrufe, deren Stub noch steht. Der Stub
+    sagt "abgebrochen", solange der Aufruf nicht zu Ende kam -- liest ein
+    Werkzeug ihn WAEHREND des Aufrufs, laeuft der noch. Die Zeile sagt
+    beides, statt einen laufenden Aufruf fuer tot zu erklaeren."""
+    angaben = []
+    for datei in dateien:
+        stub = _versuch_daten(datei) or {}
+        angaben.append(f"{os.path.basename(datei)} ({_abgebrochen_angabe(stub)}; "
+                       f"nachmessen mit {_messweg(stub.get('session_id'))})")
+    return (f"Hinweis: {len(dateien)} Rollenaufruf(e) ohne Ergebnis -- "
+            f"abgebrochen oder noch laufend --, Kosten UNBEKANNT, nicht in "
+            f"dieser Summe enthalten und bewusst nicht geschaetzt "
+            f"(Kit-BL-326): " + ", ".join(angaben))
 
 
 def log_kosten(dirs, split=False, since=None, files=None, return_geparst=False):
@@ -1171,11 +1243,16 @@ def ledger_pruefen(pfad=".budget-ledger", ralph_logs=".ralph-logs",
         offen = [f for f in alle_offen if f not in rest_offen]
         if rest_offen:
             verworfen = [f for f in rest_offen if _ist_verworfener_versuch(f)]
+            # BL-326: Ein Stub ist lesbar -- ihn "nicht lesbar" zu nennen,
+            # schickte den Menschen an die falsche Datei.
+            abgebrochen = [f for f in verworfen if _ist_abgebrochen(f)]
             befunde.append(_befund(
                 "unarchiviert-ohne-beleg", "hinweis",
                 f"{len(rest_offen)} unarchivierte(s) Log(s) in "
                 f"{ralph_logs}/{team_logs} sind KEIN Kostenbeleg "
-                f"({len(verworfen)} verworfene(r) Versuch(e), "
+                f"({len(verworfen) - len(abgebrochen)} verworfene(r) "
+                f"Versuch(e), {len(abgebrochen)} abgebrochene(r) "
+                f"Rollenaufruf(e), "
                 f"{len(rest_offen) - len(verworfen)} nicht lesbar) -- kein "
                 f"Hinweis auf verlorenes Geld, kein Grund fuer einen zweiten "
                 f"Abschluss. Ein Ersatzzettel wird beim naechsten "
@@ -4824,6 +4901,19 @@ def _main(argv):
                            if _ist_verworfener_versuch(f)]
         kaputt = [f for f in nicht_geparst if f not in verworfen_liste]
         for datei, dauer in verworfene_versuche(files=verworfen_liste):
+            # BL-326: Der Stub eines abgebrochenen Aufrufs geht denselben Weg
+            # ins Archiv, aber er kennt seine Sitzung -- und ueber die laesst
+            # sich die Luecke nachmessen.
+            stub = _versuch_daten(datei) or {}
+            if stub.get("team_versuch") == "abgebrochen":
+                print(f"Hinweis: '{datei}' ist ein abgebrochener Rollenaufruf "
+                      f"({_abgebrochen_angabe(stub)}, Kosten UNBEKANNT) -- er "
+                      f"fehlt in dieser Summe und wird nicht geschaetzt. Der "
+                      f"Betrag dieser Kaskade ist damit nachweislich "
+                      f"UNVOLLSTAENDIG; nachmessen mit "
+                      f"{_messweg(stub.get('session_id'))} (Kit-BL-326).",
+                      file=sys.stderr)
+                continue
             zeit = f"{dauer} s" if isinstance(dauer, (int, float)) else "unbekannter Dauer"
             print(f"Hinweis: '{datei}' ist ein verworfener Versuch ({zeit}, "
                   f"Kosten UNBEKANNT) -- er fehlt in dieser Summe und wird "
