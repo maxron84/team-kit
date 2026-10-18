@@ -158,9 +158,14 @@ def _funde_anlegen(repo, beutebuch):
     mitbringt.
     """
     werkzeug = _konfig("TEAM_BEUTEBUCH_TOOL").split()
+    # BL-342: mit dem Planordner der Installation, ausdruecklich — die Rollen
+    # bekommen ihn aus team.config.sh, dieser Aufruf nicht.
     roh = subprocess.run(werkzeug + ["next-id"], cwd=repo, check=True,
                          capture_output=True, text=True, encoding="utf-8",
-                         errors="replace").stdout.strip()
+                         errors="replace",
+                         env=dict(os.environ,
+                                  TEAM_PLAN_ORDNER=_konfig("TEAM_PLAN_ORDNER"))
+                         ).stdout.strip()
     nr = int(roh.lstrip("HM-") or "1")
     test_ordner = _konfig("TEAM_TEST_ORDNER").rstrip("/")
     text = beutebuch.read_text(encoding="utf-8")

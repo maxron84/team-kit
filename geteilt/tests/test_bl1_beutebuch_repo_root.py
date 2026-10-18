@@ -12,10 +12,20 @@ Der stille Pfad ist das Gefaehrliche: Die vorhandenen Werkzeug-Tests arbeiten
 alle mit --pfad auf Fixtures und waren deshalb gruen, waehrend der Default-Pfad
 — der einzige, den die Rollen-Skripte benutzen — ins Leere zeigte.
 
-Laeuft im Kit-Repo UND im installierten Projekt: die ersten beiden Tests
-brauchen kein echtes plans/, der dritte ueberspringt sich im Kit selbst.
+BL-342: Dieselbe Gattung eine Ebene hoeher. Der Default-Pfad war `plans/`,
+verdrahtet — mit einem anderen `TEAM_PLAN_ORDNER` zeigte er wieder ins Leere,
+und der dritte Fall hier uebersprang sich genau dann, weil er
+`plans/beutebuch.md` als Bedingung hatte. Die Pfade kommen jetzt aus dem
+Planordner (Rueckfall `plans`, wie `plan_ordner()` in kosten.py); die Tests
+setzen ihn ausdruecklich oder entfernen ihn, statt ihn aus der Sitzung zu erben
+(Kit-BL-328).
+
+Laeuft im Kit-Repo UND im installierten Projekt: die ersten drei Tests
+brauchen kein echtes Planverzeichnis, der vierte ueberspringt sich im Kit.
 """
 import importlib.util
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -45,11 +55,21 @@ def _lade_modul():
     return modul
 
 
-def test_default_pfade_zeigen_auf_die_projektwurzel():
+def test_default_pfade_zeigen_auf_die_projektwurzel(monkeypatch):
+    monkeypatch.delenv("TEAM_PLAN_ORDNER", raising=False)
     modul = _lade_modul()
     assert modul.REPO_ROOT == WURZEL
     assert modul.BEUTEBUCH == WURZEL / "plans" / "beutebuch.md"
     assert modul.ARCHIV == WURZEL / "plans" / "beutebuch-archiv.md"
+
+
+def test_der_planordner_verschiebt_beide_pfade(monkeypatch):
+    """BL-342: Buch UND Archiv folgen dem Planordner — so, wie die
+    Konfiguration ihn exportiert, mit abschliessendem Schraegstrich."""
+    monkeypatch.setenv("TEAM_PLAN_ORDNER", "docs/plans/")
+    modul = _lade_modul()
+    assert modul.BEUTEBUCH == WURZEL / "docs" / "plans" / "beutebuch.md"
+    assert modul.ARCHIV == WURZEL / "docs" / "plans" / "beutebuch-archiv.md"
 
 
 def test_default_pfad_findet_das_buch_unabhaengig_vom_arbeitsverzeichnis(tmp_path):
@@ -68,22 +88,53 @@ def test_default_pfad_findet_das_buch_unabhaengig_vom_arbeitsverzeichnis(tmp_pat
     fremdes_cwd = tmp_path / "woanders"
     fremdes_cwd.mkdir()
 
+    umgebung = {k: v for k, v in os.environ.items() if k != "TEAM_PLAN_ORDNER"}
     ergebnis = subprocess.run(
         [sys.executable, str(projekt / "team" / "tools" / "beutebuch.py"), "list"],
-        cwd=fremdes_cwd, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True,
+        cwd=fremdes_cwd, env=umgebung, capture_output=True, text=True,
+        encoding="utf-8", errors="replace", check=True,
     )
     assert ergebnis.stdout.strip() == "HM-1\tan Frank uebergeben"
 
 
-@pytest.mark.skipif(
-    not (WURZEL / "plans" / "beutebuch.md").is_file(),
-    reason="Kit-Repo selbst hat kein plans/ — gilt nur im installierten Projekt",
-)
-def test_im_projekt_zeigt_der_default_auf_eine_existierende_datei():
+def _konfigurierter_planordner():
+    """Der Planordner, den die Installation eingetragen hat — statisch gelesen,
+    denn `team-test.*` laedt die Konfiguration bewusst nicht. Beide Formen,
+    damit auch eine `--nur-pwsh`-Ablage geprueft wird."""
+    for name, muster in (
+            ("team.config.sh",
+             r'^TEAM_PLAN_ORDNER="\$\{TEAM_PLAN_ORDNER:-([^}]*)\}"'),
+            ("team.config.ps1",
+             r"^\$TEAM_PLAN_ORDNER\s*=\s*Team-Wert\s+'TEAM_PLAN_ORDNER'\s+'([^']*)'")):
+        konfig = WURZEL / name
+        if konfig.is_file():
+            treffer = re.search(muster, konfig.read_text(encoding="utf-8-sig"),
+                                re.MULTILINE)
+            if treffer:
+                return treffer.group(1)
+    return None
+
+
+def test_im_projekt_zeigt_der_default_auf_eine_existierende_datei(monkeypatch):
     """Im installierten Projekt muss der Default-Pfad eine echte Datei treffen.
 
     Faengt den Fall ab, dass Werkzeug und Beutebuch auseinanderlaufen (etwa
     weil TEAM_PLAN_ORDNER umgezogen wurde, ohne die Werkzeuge nachzuziehen).
+
+    BL-342: Bis hierher war die Bedingung `plans/beutebuch.md existiert` — in
+    einem Projekt mit anderem Planordner sprang der Waechter also genau dann
+    ab, wenn er gebraucht wurde. Jetzt gilt der eingetragene Planordner.
     """
+    if (WURZEL / "bootstrap" / "CLAUDE.md.vorlage").is_file():
+        pytest.skip("Kit-Repo selbst hat kein Planverzeichnis — gilt nur im "
+                    "installierten Projekt")
+    ordner = _konfigurierter_planordner()
+    if ordner is None:
+        pytest.skip("keine Konfiguration mit lesbarem TEAM_PLAN_ORDNER in "
+                    "dieser Ablage")
+    monkeypatch.setenv("TEAM_PLAN_ORDNER", ordner)
     modul = _lade_modul()
-    assert modul.BEUTEBUCH.is_file()
+    assert modul.BEUTEBUCH.is_file(), (
+        f"Mit dem eingetragenen Planordner {ordner!r} zeigt beutebuch.py auf "
+        f"{modul.BEUTEBUCH} — dort liegt kein Beutebuch. Die Rollen meldeten "
+        f"'nichts zu tun' (Kit-BL-1, Kit-BL-342).")

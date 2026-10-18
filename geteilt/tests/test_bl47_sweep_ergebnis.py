@@ -98,9 +98,12 @@ def _fixture(tmp_path, stub_body):
         "result": "fertig <promise>REDTEAM_SWEEP_COMPLETE</promise>"})
     # BL-62: Die Fundnummern kommen aus dem kopierten Beutebuch, nicht aus
     # dem Test — sonst haengt er an der Annahme "Zielprojekt hat keine Funde".
+    # BL-342: mit dem Planordner der Installation, ausdruecklich — die Rolle
+    # bekommt ihn aus team.config.sh, dieser Aufruf nicht.
     naechste = subprocess.run(
         [sys.executable, "team/tools/beutebuch.py", "next-id"],
-        cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.strip()
+        cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace",
+        env=dict(os.environ, TEAM_PLAN_ORDNER=_konfig("TEAM_PLAN_ORDNER"))).stdout.strip()
     nr1 = int(naechste.split("-")[-1] or 1)
     stub.write_text("#!/usr/bin/env bash\n"
                     + stub_body.format(tests=_konfig("TEAM_TEST_ORDNER"),

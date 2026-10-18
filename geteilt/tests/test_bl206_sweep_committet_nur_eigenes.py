@@ -220,10 +220,14 @@ def _sweep_fixture(tmp_path, stub_body):
     ergebnis = json.dumps({
         "subtype": "success", "is_error": False, "total_cost_usd": 1.5,
         "result": "fertig <promise>REDTEAM_SWEEP_COMPLETE</promise>"})
+    # BL-342: mit dem Planordner der Installation, ausdruecklich — die Rolle
+    # bekommt ihn aus team.config.sh, dieser Aufruf nicht.
     naechste = subprocess.run(
         [sys.executable, "team/tools/beutebuch.py", "next-id"],
         cwd=repo, capture_output=True, text=True, encoding="utf-8",
-        errors="replace").stdout.strip()
+        errors="replace",
+        env=dict(os.environ, TEAM_PLAN_ORDNER=_konfig("TEAM_PLAN_ORDNER"))
+    ).stdout.strip()
     nr = int(naechste.split("-")[-1] or 1)
     stub = bin_dir / "claude"
     stub.write_text("#!/usr/bin/env bash\n"

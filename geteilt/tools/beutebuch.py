@@ -3,10 +3,11 @@
 """Beutebuch-Zustandsmaschine für die T.E.A.M.-Vollautomatik.
 
 Parst und setzt die `- **Status**:`-Zeilen der `### HM-<Nr>`-Blöcke in
-plans/beutebuch.md. Der Vorlagen-Block (## Vorlage) wird ignoriert.
-Abgeschlossene Funde können nach plans/beutebuch-archiv.md rotiert werden
-(Kaskade 22/Stufe 91) — beide Dateien zusammen bilden den vollständigen
-HM-Nummernraum.
+<Planordner>/beutebuch.md. Der Vorlagen-Block (## Vorlage) wird ignoriert.
+Abgeschlossene Funde können nach <Planordner>/beutebuch-archiv.md rotiert
+werden (Kaskade 22/Stufe 91) — beide Dateien zusammen bilden den vollständigen
+HM-Nummernraum. Der Planordner kommt aus TEAM_PLAN_ORDNER (beide
+team.config.* exportieren ihn), Rückfall `plans` (BL-342).
 
 Aufrufe:
   beutebuch.py list [--alle]        → "HM-1<TAB>an Frank übergeben" je Zeile
@@ -46,13 +47,17 @@ stehen die Fälle, die noch Arbeit bedeuten).
 
 Optionale globale Flags (vor allem für Fixture-Tests, ersetzen die
 Standardpfade auf die echten Dateien):
-  --pfad DATEI          aktives Buch statt plans/beutebuch.md
-  --archiv-pfad DATEI   Archiv statt plans/beutebuch-archiv.md
+  --pfad DATEI          aktives Buch statt <Planordner>/beutebuch.md
+  --archiv-pfad DATEI   Archiv statt <Planordner>/beutebuch-archiv.md
+
+Fehlt das aktive Buch, meldet jedes Kommando das auf stderr (BL-342) —
+Ausgabe und Exit bleiben die eines leeren Buchs.
 
 Status-Vergleich bei first/count/archiviere: exakter Vergleich, außer der
 gespeicherte Status beginnt mit dem gesuchten (deckt 'erledigt (Frank-Fix,
 abc123)' ab).
 """
+import os
 import re
 import sys
 from pathlib import Path
@@ -86,8 +91,29 @@ for _strom in (sys.stdout, sys.stderr):
 # nie gibt: das Werkzeug meldete dann still "keine Funde", und die komplette
 # Frank-/Axel-Fixphase lief an jedem übergebenen Fund vorbei (BL-1).
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-BEUTEBUCH = REPO_ROOT / "plans" / "beutebuch.md"
-ARCHIV = REPO_ROOT / "plans" / "beutebuch-archiv.md"
+
+
+def plan_ordner():
+    """Der konfigurierte Planordner, mit `plans` als Auslieferungswert.
+
+    BL-342: Bis hierher stand `plans` fest verdrahtet — dieselbe Gattung wie
+    BL-1, eine Ebene hoeher. In einem Projekt mit anderem Planordner fand das
+    Werkzeug still keinen Fund: Frank meldete „nichts zu tun", der Sweep
+    „keine neuen Funde", und die Fix-Phase lief an jedem Fund vorbei.
+    `kosten.py`, `kit_meldung.py` und `schreibzone.py` lesen den Ordner seit
+    BL-209; beide team.config.* exportieren ihn dafuer ausdruecklich.
+
+    Dieselbe Regel wie `plan_ordner()` in kosten.py: gelesen aus der
+    Umgebung, ein abschliessender Schraegstrich zaehlt nicht, leer heisst
+    `plans`. Eine Kopie statt eines Imports, weil das Werkzeug allein
+    lauffaehig bleiben muss (Fixtures kopieren es einzeln).
+    """
+    roh = os.environ.get("TEAM_PLAN_ORDNER", "").strip().rstrip("/")
+    return roh or "plans"
+
+
+BEUTEBUCH = REPO_ROOT / plan_ordner() / "beutebuch.md"
+ARCHIV = REPO_ROOT / plan_ordner() / "beutebuch-archiv.md"
 HM_RE = re.compile(r"^###\s+(HM-\d+)")
 STATUS_RE = re.compile(r"^(-\s+\*\*Status\*\*:\s*)(.+?)\s*$")
 # Der optionale `::…`-Teil fängt Pytest-Node-IDs (`datei.py::test_x`,
@@ -542,6 +568,51 @@ def _arg(rest, idx, cmd):
     sys.exit(2)
 
 
+def _fehlendes_buch_melden(pfad, eigens):
+    """BL-342: Ein fehlendes Beutebuch wird GEMELDET, nicht als leeres gelesen.
+
+    `_lies_zeilen` liefert fuer eine fehlende Datei eine leere Liste, und jede
+    Antwort darauf — keine Funde, `first` mit Exit 1, `next-id` HM-1 — sieht
+    aus wie ein leeres Buch. Das war der stille Pfad aus BL-1 und BL-342: Die
+    Rolle meldete „nichts zu tun", und niemand erfuhr, dass sie an der
+    falschen Stelle gesucht hatte.
+
+    WARUM WARNUNG UND NICHT FEHLER: Die Rollen werten Exit und stdout dieses
+    Werkzeugs aus, und ein neuer Exit-Code braeche sie, statt sie aufzuklaeren.
+    `redteam.sh` liest `next-id` unter `set -e` — ein Exit ungleich 0 beendete
+    den Sweep; `redteam.ps1` ruft `.Trim()` auf die Ausgabe, und eine leere
+    waere dort unter 'Stop' ein Abbruch; `frank.*`, `axel.*` und die
+    Vollautomatik lesen `first` ueber den Exit (1 = keiner) und `list` ueber
+    stdout. Deshalb bleiben Ausgabe und Exit die eines leeren Buchs, und die
+    Meldung geht auf stderr — dorthin, wo die Rollen-Skripte sie ins Log
+    schreiben, solange sie stderr nicht ausdruecklich verwerfen.
+    """
+    pfad = Path(pfad)
+    if pfad.is_file():
+        return
+    try:
+        anzeige = pfad.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        anzeige = pfad.as_posix()
+    roh = os.environ.get("TEAM_PLAN_ORDNER", "").strip()
+    if eigens:
+        herkunft = "so mit --pfad angegeben"
+    elif roh.rstrip("/"):
+        herkunft = f"Planordner aus TEAM_PLAN_ORDNER ('{roh}')"
+    else:
+        herkunft = ("TEAM_PLAN_ORDNER ist nicht gesetzt, es gilt der "
+                    "Auslieferungswert 'plans'")
+    print(f"WARNUNG: Kein Beutebuch unter {anzeige} — {herkunft}. Die Antwort "
+          f"gilt einem LEEREN Buch und heisst nicht 'keine Funde' (Kit-BL-342).",
+          file=sys.stderr)
+
+
+# Die Kommandos, die das aktive Buch lesen oder schreiben — also alle. Ein
+# unbekanntes Kommando bekommt seine eigene Meldung, keine zweite dazu.
+KOMMANDOS = ("list", "first", "count", "next-id", "dateien", "reproducer",
+             "lint", "archiviere", "set")
+
+
 def _pop_flag(argv, name):
     if name in argv:
         idx = argv.index(name)
@@ -556,10 +627,13 @@ def _pop_flag(argv, name):
 
 def main() -> int:
     argv = sys.argv[1:]
-    aktiv_pfad = _pop_flag(argv, "--pfad") or BEUTEBUCH
+    eigener_pfad = _pop_flag(argv, "--pfad")
+    aktiv_pfad = eigener_pfad or BEUTEBUCH
     archiv_pfad = _pop_flag(argv, "--archiv-pfad") or ARCHIV
     cmd = argv[0] if argv else "list"
     rest = argv[1:]
+    if cmd in KOMMANDOS:
+        _fehlendes_buch_melden(aktiv_pfad, eigener_pfad is not None)
 
     if cmd == "list":
         eintraege = parse(aktiv_pfad)
