@@ -121,14 +121,25 @@ status_einmal() {
     # dessen Lebendigkeitsmerkmal hier nicht auswertbar ist, darf weder als
     # "idle" noch als "laeuft" durchgehen — beides waere eine Behauptung, und
     # ein Bericht, der einmal falsch lag, wird nicht mehr gelesen.
-    team_pipeline_laeuft; local sperre=$?
-    case "$sperre" in
-        0) echo "  Pipeline: 🟢 läuft gerade (Lock gehalten)" ;;
-        2) echo "  Pipeline: 🟡 unbekannt — es liegt eine Sperre der anderen Bahn ($TEAM_LOCK_ORDNER),"
-           echo "            deren Prozess von hier aus nicht prüfbar ist (Kit-BL-199). Vor einem"
-           echo "            Start selbst nachsehen; ist der Lauf durch, den Ordner entfernen." ;;
-        *) echo "  Pipeline: ⚪ idle" ;;
-    esac
+    # BL-338: Haelt der AUFRUFER die Sperre (TEAM_LOCK_HELD=1, exportiert von
+    # team_lock), waere "laeuft gerade" eine Aussage ueber den Bericht selbst.
+    # So stand es am Ende jedes Laufs im Abschlussbericht der Vollautomatik und
+    # las sich wie ein haengender Prozess. Die Halbautomatik setzt die
+    # Variable ebenfalls, ihr Status-Menue sieht dann denselben Satz — dort
+    # ist "dieser Lauf" die Sitzung, die das Menue zeigt. Ohne die Variable
+    # fragt der Bericht wie bisher die gemeinsame Funktion.
+    if [ "${TEAM_LOCK_HELD:-0}" = "1" ]; then
+        echo "  Pipeline: 🟢 dieser Lauf (Sperre gehalten vom Aufrufer)"
+    else
+        team_pipeline_laeuft; local sperre=$?
+        case "$sperre" in
+            0) echo "  Pipeline: 🟢 läuft gerade (Lock gehalten)" ;;
+            2) echo "  Pipeline: 🟡 unbekannt — es liegt eine Sperre der anderen Bahn ($TEAM_LOCK_ORDNER),"
+               echo "            deren Prozess von hier aus nicht prüfbar ist (Kit-BL-199). Vor einem"
+               echo "            Start selbst nachsehen; ist der Lauf durch, den Ordner entfernen." ;;
+            *) echo "  Pipeline: ⚪ idle" ;;
+        esac
+    fi
 
     # Beutebuch
     echo "  ──────── Beutebuch ────────"
@@ -194,6 +205,18 @@ status_einmal() {
     # pock/wache -> halbautomatik/vollautomatik, BL-19) heißen noch wache-*.log —
     # beide Muster berücksichtigen, damit historische Logs weiter gefunden werden.
     local letzte_lauf; letzte_lauf="$(ls -t .team-logs/vollautomatik-*.log .team-logs/wache-*.log 2>/dev/null | head -1 || true)"
+    # BL-338: Ruft die Vollautomatik diesen Bericht, ist das juengste Lauf-Log
+    # ihr EIGENES — gerade im Wachsen, per tee mit genau dieser Ausgabe
+    # gefuellt. Die "letzten 3 Zeilen" waren dann Zeilen dieses Berichts und
+    # zuletzt seine eigene Ueberschrift. Die Vollautomatik nennt ihr Log in
+    # TEAM_LAUF_LOG; ist es das juengste, entfaellt der Abschnitt.
+    # TEAM_LOCK_HELD reicht dafuer nicht: Die Halbautomatik setzt es auch, und
+    # in ihrem Menue ist das juengste Log das eines frueheren Laufs — genau
+    # das, was man dort sehen will.
+    if [ -n "$letzte_lauf" ] && [ -n "${TEAM_LAUF_LOG:-}" ] \
+       && [ "$letzte_lauf" -ef "$TEAM_LAUF_LOG" ]; then
+        letzte_lauf=""
+    fi
     if [ -n "$letzte_lauf" ]; then
         echo "  ──────── Vollautomatik (letzte 3 Zeilen: $(basename "$letzte_lauf")) ────────"
         tail -n 3 "$letzte_lauf" | sed 's/^/    /'

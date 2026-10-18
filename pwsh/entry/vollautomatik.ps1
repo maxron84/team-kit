@@ -717,7 +717,18 @@ Voller-Smoke-Am-Phasenende 'Fix-Phase'
 Zielstand-Am-Ende
 Remove-Item -LiteralPath $phasenState -Force -ErrorAction SilentlyContinue
 Log '=== ABSCHLUSSBERICHT ==='
-Rolle-Starten './team-status.ps1' | Out-Null
+# BL-338: Der Bericht erfaehrt, welches Lauf-Log das eigene ist — sonst
+# zitierte er die Zeilen, die Rolle-Starten gerade aus ihm ins Log schreibt,
+# als "letzte 3 Zeilen". Nur fuer diesen einen Aufruf: Die Rollen erben die
+# Variable nicht, und in einer Sitzung, die dieses Skript direkt startet
+# (fixphase.ps1 tut das mit `&`), bliebe sie sonst stehen — der naechste
+# Bericht von Hand liesse den Abschnitt weg (dieselbe Falle wie Kit-BL-284).
+$env:TEAM_LAUF_LOG = Team-Pfad $laufLog
+try {
+    Rolle-Starten './team-status.ps1' | Out-Null
+} finally {
+    Remove-Item Env:TEAM_LAUF_LOG -ErrorAction SilentlyContinue
+}
 # BL-240: Betrag und Aufzaehlung darunter beschreiben jetzt DIESELBE Menge —
 # alle Rollen dieses Laufs. Vorher stand ueber einer Liste aus dem Ralph-
 # Ordner (egal aus welchem Lauf) ein Betrag ueber alle Rollen dieses Laufs; im

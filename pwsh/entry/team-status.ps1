@@ -111,14 +111,24 @@ function Status-Einmal {
     # Dateiprobe ausgeschrieben — und meldete `idle` auf eine Sperre der
     # bash-Bahn, die sie nicht kennt. Ein Bericht, der eine laufende Pipeline
     # als idle ausweist, ist schlimmer als gar keiner.
-    switch (team_pipeline_laeuft) {
-        0 { [Console]::Out.WriteLine('  Pipeline: 🟢 läuft gerade (Sperre gehalten)') }
-        2 {
-            [Console]::Out.WriteLine("  Pipeline: 🟡 unbekannt — es liegt eine Sperre der anderen Bahn ($TEAM_LOCK_ORDNER),")
-            [Console]::Out.WriteLine('            deren Prozess von hier aus nicht prüfbar ist (Kit-BL-199). Vor einem')
-            [Console]::Out.WriteLine('            Start selbst nachsehen; ist der Lauf durch, den Ordner entfernen.')
+    # BL-338: Haelt der AUFRUFER die Sperre (TEAM_LOCK_HELD=1, gesetzt von
+    # team_lock und an Kindprozesse vererbt), waere "laeuft gerade" eine
+    # Aussage ueber den Bericht selbst — so stand es am Ende jedes Laufs im
+    # Abschlussbericht. Die Halbautomatik setzt die Variable ebenfalls; in
+    # ihrem Status-Menue ist "dieser Lauf" die Sitzung, die das Menue zeigt.
+    # Ohne die Variable fragt der Bericht wie bisher die gemeinsame Funktion.
+    if ($env:TEAM_LOCK_HELD -eq '1') {
+        [Console]::Out.WriteLine('  Pipeline: 🟢 dieser Lauf (Sperre gehalten vom Aufrufer)')
+    } else {
+        switch (team_pipeline_laeuft) {
+            0 { [Console]::Out.WriteLine('  Pipeline: 🟢 läuft gerade (Sperre gehalten)') }
+            2 {
+                [Console]::Out.WriteLine("  Pipeline: 🟡 unbekannt — es liegt eine Sperre der anderen Bahn ($TEAM_LOCK_ORDNER),")
+                [Console]::Out.WriteLine('            deren Prozess von hier aus nicht prüfbar ist (Kit-BL-199). Vor einem')
+                [Console]::Out.WriteLine('            Start selbst nachsehen; ist der Lauf durch, den Ordner entfernen.')
+            }
+            default { [Console]::Out.WriteLine('  Pipeline: ⚪ idle') }
         }
-        default { [Console]::Out.WriteLine('  Pipeline: ⚪ idle') }
     }
 
     # Beutebuch
@@ -193,6 +203,20 @@ function Status-Einmal {
     $letzte = @(Get-ChildItem -Path '.team-logs' -Filter '*.log' -File -ErrorAction SilentlyContinue |
                 Where-Object { $_.Name -like 'vollautomatik-*' -or $_.Name -like 'wache-*' } |
                 Sort-Object LastWriteTime -Descending | Select-Object -First 1)
+    # BL-338: Ruft die Vollautomatik diesen Bericht, ist das juengste Lauf-Log
+    # ihr EIGENES — Rolle-Starten haengt jede Zeile dieses Berichts sofort
+    # daran an. Die "letzten 3 Zeilen" waren dann Zeilen dieses Berichts. Die
+    # Vollautomatik nennt ihr Log in TEAM_LAUF_LOG; ist es das juengste,
+    # entfaellt der Abschnitt. TEAM_LOCK_HELD reicht dafuer nicht: Die
+    # Halbautomatik setzt es auch, und in ihrem Menue ist das juengste Log das
+    # eines frueheren Laufs. Verglichen werden volle Pfade — relativ zur
+    # PowerShell-Position (Team-Pfad), dann normalisiert.
+    if ($letzte.Count -and $env:TEAM_LAUF_LOG) {
+        $eigenes = [System.IO.Path]::GetFullPath((Team-Pfad $env:TEAM_LAUF_LOG))
+        if ([System.IO.Path]::GetFullPath($letzte[0].FullName) -eq $eigenes) {
+            $letzte = @()
+        }
+    }
     if ($letzte.Count) {
         [Console]::Out.WriteLine("  ──────── Vollautomatik (letzte 3 Zeilen: $($letzte[0].Name)) ────────")
         foreach ($z in @(Get-Content -Tail 3 $letzte[0].FullName)) { [Console]::Out.WriteLine("    $z") }
