@@ -14,6 +14,9 @@
             43 = Stufe fertig, Quittung fehlt (BL-41): Das Log meldet Erfolg,
                  das Promise fehlt. Arbeit meist FERTIG — nicht neu bauen,
                  sondern pruefen und von Hand quittieren
+            45 = Stufe gebaut und quittiert, aber Steuerzeichen im Ergebnis
+                 (BL-327): State steht schon auf der naechsten Stufe — nicht
+                 neu bauen, die genannten Stellen reparieren und committen
 #>
 $ErrorActionPreference = 'Stop'
 # BL-122: Seit PowerShell 7.4 ist $PSNativeCommandUseErrorActionPreference
@@ -78,6 +81,20 @@ function Uebersprungen-Zusatz {
     if ($nummern.Count -eq 0) { return '' }
     return (" Planmäßig übersprungen: Stufe $($nummern -join ', ') (Kit-BL-255) — " +
             "der vierte Ausgang wurde dafür NICHT gemeldet.")
+}
+
+function Steuerzeichen-Halt {
+    # BL-327: gerufen, NACHDEM der Zustand weitergeschaltet ist. Traegt der
+    # Commit der Stufe ein Steuerzeichen, haelt der Loop mit Exit 45 an. Erst
+    # weiterschalten, weil die Stufe gebaut und quittiert ist — ein
+    # stehengebliebener Zustand liesse den Neustart sie ein zweites Mal bauen
+    # und bezahlen. Anhalten, weil die naechste Stufe sonst auf einer
+    # Zusicherung baute, die nie rot werden kann. Ausfuehrlich in ralph.sh.
+    param([int]$Stufe, [int]$Naechste)
+    if (team_steuerzeichen_pruefen 'ralph' $headVorher) { return }
+    Team-Fehler "Ralph: Stufe $Stufe ist gebaut und quittiert ($stateFile steht auf $Naechste), aber ihr Ergebnis trägt Steuerzeichen (siehe oben) — Exit 45 (Kit-BL-327)."
+    Team-Fehler '  NICHT neu bauen: die genannten Stellen reparieren (Escape statt Steuerzeichen) und committen, dann erneut starten.'
+    exit 45
 }
 $logDir = '.ralph-logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
@@ -180,6 +197,7 @@ Regeln:
         if ($capGesprengt -eq 1) { exit 1 }
         $next = $stufe + 1
         Set-Content -Path $stateFile -Value $next -Encoding ascii
+        Steuerzeichen-Halt $stufe $next
         [Console]::Out.WriteLine("Ralph: Promise erhalten — Stufe $stufe abgeschlossen, weiter mit $next.")
         continue
     }
@@ -223,6 +241,7 @@ Regeln:
         Add-Content -Path $uebersprungenDatei -Value $stufe -Encoding ascii
         $next = $stufe + 1
         Set-Content -Path $stateFile -Value $next -Encoding ascii
+        Steuerzeichen-Halt $stufe $next
         [Console]::Out.WriteLine("Ralph: Stufe $stufe planmäßig übersprungen (Abbruchbedingung des Plans, committet) — weiter mit $next.")
         continue
     }
@@ -271,6 +290,7 @@ Loop kennt den Inhalt der Stufe nicht - der Plan tut es.
         }
         $next = $stufe + 1
         Set-Content -Path $stateFile -Value $next -Encoding ascii
+        Steuerzeichen-Halt $stufe $next
         [Console]::Out.WriteLine("Ralph: Quittung fehlte (Kit-BL-41), Selbstprüfung bestanden — Stufe $stufe abgeschlossen, weiter mit $next.")
         continue
     }
@@ -295,6 +315,9 @@ Loop kennt den Inhalt der Stufe nicht - der Plan tut es.
             "Baum ROT? Erst prüfen, WO: Sind ausschließlich die von DIESER Stufe neu angelegten Testdateien rot (git status zeigt sie als '??'), ist der Testaufbau der wahrscheinlichere Schuldige als der Produktivcode — dann den Aufbau von Hand reparieren, OHNE eine Zusicherung abzuschwächen, statt die Stufe neu zu bauen." `
             'Ist BESTEHENDER Testbestand rot, hat die Stufe etwas gebrochen: dann neu bauen.' `
             $capZeile) {
+        # BL-327: Wer hier von Hand quittiert, quittierte ein Steuerzeichen in
+        # den Commits der Stufe mit — gemeldet wird es, der Ausgang bleibt 43.
+        team_steuerzeichen_pruefen 'ralph' $headVorher | Out-Null
         exit 43
     }
     Team-Fehler "Ralph: KEIN Promise für Stufe $stufe — Loop stoppt. Log prüfen: $TEAM_LAST_OUT"

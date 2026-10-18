@@ -18,6 +18,9 @@
 #       5 = Auftrag am Kopf der Warteschlange unbrauchbar (BL-210) —
 #           kein Aufruf, kein Fehlversuch, aber auch NICHT dasselbe wie
 #           "nichts zu tun": Dahinter koennen brauchbare Funde liegen.
+#       45 = Fix fertig, aber Steuerzeichen im Ergebnis (BL-327) — kein
+#            Rollback, kein Fehlversuch, der Fund bleibt erledigt; die
+#            genannten Stellen reparieren und committen, dann weiter
 set -euo pipefail
 cd "$(dirname "$0")"
 # shellcheck source=team/lib.sh
@@ -206,6 +209,27 @@ if [ "$BUDGET_GESPRENGT" -eq 0 ]; then
        && team_diff_beruehrt_fund "$HM" "$START_HASH" \
        && team_reproducer_liegt_vor "$HM"; then
         rm -f "$ATTEMPTS_FILE"
+        # BL-327: Ein Backslash-Escape, das auf dem Weg in die Datei zum
+        # Steuerzeichen wurde, besteht den Dreisatz — eine Zusicherung mit
+        # 0x08 statt `\b` kann nie rot werden, ein BEL im CHANGELOG stoert
+        # keinen Test. Im Feld meldete frank.* "Dreisatz verifiziert" ueber
+        # einem solchen Docs-Commit, und die Vollautomatik "beendet" auf einem
+        # roten HEAD (BL-341). Geprueft wird deshalb HIER, ueber
+        # START_HASH..HEAD — dort, wo der Fix bewertet wird.
+        #
+        # WARUM EIN EIGENER AUSGANG UND KEIN FEHLVERSUCH: Ein Fehlversuch
+        # rollt zurueck, zaehlt und eskaliert nach drei Versuchen an Axel.
+        # Hier ist der Fix gelandet und richtig, und der Fehler ist mit zwei
+        # Bytes repariert — ein Rollback wuerfe bezahlte Arbeit weg (BL-214),
+        # und Axel kann nichts beitragen. Exit 0 waere aber die blosse Warnung,
+        # an der die Vollautomatik vorbeilaeuft. 45 haelt den Lauf an wie 43,
+        # mit eigenem Namen: Ein Code mit zwei Bedeutungen ist die Bauart aus
+        # BL-210.
+        if ! team_steuerzeichen_pruefen frank "$START_HASH"; then
+            echo "[frank] $HM: Fix und Dreisatz stehen, aber das Ergebnis trägt Steuerzeichen (siehe oben) — Exit 45 (Kit-BL-327)." >&2
+            echo "  Kein Rollback, kein Fehlversuch: Der Fund bleibt erledigt. Die genannten Stellen reparieren (Escape statt Steuerzeichen) und committen, dann weiter." >&2
+            exit 45
+        fi
         echo "[frank] $HM erledigt (Dreisatz verifiziert)."
         exit 0
     fi
@@ -263,6 +287,10 @@ if [ "$BUDGET_GESPRENGT" -eq 0 ]; then
             "${TEAM_SMOKE_TEST:-(kein Smoke-Test konfiguriert)} — ist der Baum grün?" \
             "Beides ja: den Fund von Hand auf 'erledigt (Frank-Fix, <commit>)' setzen, dann weiter." \
             "Nur eines davon: KEIN Neustart — erst nachsehen, was fehlt, sonst zahlst du den Lauf zweimal."; then
+        # BL-327: Auch hier bleibt die Arbeit stehen, und wer von Hand
+        # quittiert, quittierte ein Steuerzeichen mit. Gemeldet wird es; der
+        # Ausgang bleibt 43, denn der haelt ohnehin an.
+        team_steuerzeichen_pruefen frank "$START_HASH" || true
         exit 43
     fi
 fi

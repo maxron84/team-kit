@@ -2049,6 +2049,56 @@ function team_reproducer_liegt_vor {
     return $false
 }
 
+# --- Steuerzeichen im Ergebnis einer schreibenden Rolle (BL-327) -------------
+function team_steuerzeichen_pruefen {
+    <#
+      Prueft die Dateien der Commits <Start>..HEAD im committeten Stand
+      (team/tools/steuerzeichen.py). $true = sauber ODER nicht pruefbar (dann
+      gemeldet) · $false = Fund — Datei:Zeile, Byte und wahrscheinliches
+      Escape stehen auf stderr.
+
+      Ein Backslash-Escape im Code wurde auf dem Weg in die Datei zum
+      Steuerzeichen; aus der Wortgrenze eines regulaeren Ausdrucks wurde 0x08,
+      und die Zusicherung konnte nie mehr rot werden. Den Guard-Abgleich
+      fahren nur Red Team und Axel — das Zeichen schreiben Frank und Ralph,
+      also wird dort geprueft, wo ihre Arbeit bewertet wird. Ausfuehrlich in
+      der bash-Fassung.
+
+      Kann die Pruefung nicht laufen, wird das GEMELDET und nicht als Fund
+      gewertet: Ein Werkzeugfehler ist kein Fehler der Rolle.
+    #>
+    param([string]$Rolle, [string]$Start)
+    $werkzeug = Join-Path $PSScriptRoot 'tools/steuerzeichen.py'
+    # Der Interpreter wie beim Kosten-Werkzeug; ohne Konfiguration (Harnisch,
+    # fremder Wirt) der erste, den es hier wirklich gibt.
+    $py = $null
+    $kandidaten = @(@(($TEAM_KOSTEN_TOOL -split '\s+') | Where-Object { $_ })[0],
+                    $env:TEAM_PYTHON, 'python', 'python3') | Where-Object { $_ }
+    foreach ($k in $kandidaten) {
+        if (Get-Command $k -CommandType Application -ErrorAction SilentlyContinue) { $py = $k; break }
+    }
+    if (-not (Test-Path -LiteralPath $werkzeug -PathType Leaf) -or -not $Start -or -not $py) {
+        Team-Fehler "[$Rolle] Steuerzeichen-Prüfung: Werkzeug, Interpreter oder Startstand fehlt — NICHT geprüft (Kit-BL-327)."
+        return $true
+    }
+    $global:LASTEXITCODE = 0
+    $aus = @()
+    try { $aus = @(& $py $werkzeug 'pruefen' '--seit' $Start 2>$null) } catch { $global:LASTEXITCODE = 99 }
+    $rc = $LASTEXITCODE
+    if ($rc -eq 0) {
+        foreach ($z in $aus) { Team-Fehler "[$Rolle] $z" }
+        return $true
+    }
+    if ($rc -eq 3) {
+        Team-Fehler "[$Rolle] STEUERZEICHEN im Ergebnis dieses Laufs (Kit-BL-327):"
+        foreach ($z in $aus) { Team-Fehler "  $z" }
+        return $false
+    }
+    foreach ($z in $aus) { Team-Fehler "  $z" }
+    Team-Fehler "[$Rolle] Steuerzeichen-Prüfung lief nicht (Exit $rc) — NICHT geprüft (Kit-BL-327)."
+    return $true
+}
+
 # --- Vierter Ausgang: Sitzung beendet, Auftrag unquittiert (BL-41) ------------
 function team_quittung_fehlt_melden {
     <#

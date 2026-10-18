@@ -687,7 +687,7 @@ geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 ├── tools/              kosten.py, beutebuch.py, zitat_lint.py,
 │                       kit_meldung.py, smoke_warten.py, protokolle.py,
 │                       prozesse.py, schreibzone.py, kit_stand.py,
-│                       kit_basis.py — Ledger,
+│                       kit_basis.py, steuerzeichen.py — Ledger,
 │                       Beutebuch und Kostenrechnung liegen auf beiden Wegen
 │                       in denselben Dateien. Die pwsh-Bahn ist eine zweite
 │                       ORCHESTRIERUNG, kein zweiter Zustandscode
@@ -819,7 +819,13 @@ gearbeitet und das Log meldet Erfolg, aber das Promise fehlt — meist, weil sie
 auf einen Hintergrund-Task wartete, den es headless nicht gibt. **Nicht neu
 bauen.** Erst prüfen: committet? Suite grün? Dann von Hand quittieren. Im Feld
 kostete das Verwechseln mit „Fehler" viermal die bereits bezahlte Arbeit
-(zusammen 19,47 USD).
+(zusammen 19,47 USD) ·
+`45` = **Arbeit fertig, aber Steuerzeichen im Ergebnis** (`BL-327`): Ein
+Backslash-Escape wurde auf dem Weg in die Datei zum Byte — aus `\b` im
+regulären Ausdruck 0x08, und die Zusicherung kann nie mehr rot werden. Ralph
+und Frank prüfen ihre Commits mit `team/tools/steuerzeichen.py`; die Meldung
+nennt Datei und Zeile. Stufe bzw. Fund sind schon quittiert: **nicht neu
+bauen**, die Stellen reparieren und committen.
 
 ## Der Rückkanal Feld → Kit
 

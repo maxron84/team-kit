@@ -79,6 +79,9 @@ function Deute-Exit {
         # BL-41: kein Fehler im gewohnten Sinn — die Arbeit ist meist fertig,
         # nur unquittiert. Die Rolle hat den Pruefweg bereits gedruckt.
         43 { [Console]::Out.WriteLine("  → ${Schritt}: Stufe fertig, Quittung fehlt (Exit 43, Kit-BL-41) — NICHT neu bauen, erst die oben genannten zwei Prüfungen fahren.") }
+        # BL-327: Die Arbeit ist fertig und quittiert, ihr Ergebnis traegt ein
+        # Steuerzeichen — reparieren, nicht neu bauen.
+        45 { [Console]::Out.WriteLine("  → ${Schritt}: Arbeit fertig, aber Steuerzeichen im Ergebnis (Exit 45, Kit-BL-327) — NICHT neu bauen, die oben genannten Stellen reparieren und committen.") }
         default { [Console]::Out.WriteLine("  → $Schritt endete mit Fehler (Exit $Rc) — Logs prüfen (.team-logs\, .ralph-logs\).") }
     }
 }

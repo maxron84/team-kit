@@ -35,6 +35,9 @@
                 seit BL-214 — von frank.ps1 durchgereicht): kein Neubau, kein
                 Neustart — pruefen und von Hand quittieren
            42 = Session-Limit oder Abo-Anmeldung abgelaufen — Lauf pausiert (kein Fehler, State steht)
+           45 = Stufe/Fix fertig, aber Steuerzeichen im Ergebnis (BL-327, von
+                ralph.ps1 und frank.ps1 durchgereicht): kein Neubau — die
+                genannten Stellen reparieren, committen, erneut starten
 
   Sequenziell und sperrgesichert. Haelt die Sperre ueber den ganzen Lauf und
   gibt sie an die Kind-Skripte weiter (TEAM_LOCK_HELD=1), damit die sich nicht
@@ -518,6 +521,13 @@ if ($rc -eq 43) {
     Log '⚠ Stufe fertig, Quittung fehlt (Kit-BL-41) — Lauf gestoppt. NICHT neu bauen, bevor die von Ralph genannten zwei Prüfungen gelaufen sind.'
     exit 43
 }
+if ($rc -eq 45) {
+    # BL-327: Die Stufe ist gebaut und quittiert, ihr Commit traegt ein
+    # Steuerzeichen. Kein "Fehler" im Log, aus demselben Grund wie bei 43:
+    # Ein Neubau zahlte die fertige Stufe ein zweites Mal.
+    Log '⚠ Stufe gebaut, aber Steuerzeichen im Ergebnis (Kit-BL-327) — Lauf gestoppt. NICHT neu bauen: die von Ralph genannten Stellen reparieren (Escape statt Steuerzeichen) und committen, dann .\vollautomatik.cmd erneut starten.'
+    exit 45
+}
 if ($rc -ne 0) {
     Log "Ralph endete mit Fehler ($rc) — Vollautomatik stoppt, Mensch gefragt."
     exit 1
@@ -629,6 +639,13 @@ while ($runde -lt $maxRunden) {
         43 {
             Log '⚠ Fix fertig, Quittung fehlt (Kit-BL-41/Kit-BL-214) — Lauf gestoppt. NICHT neu starten, bevor die von Frank genannten Prüfungen gelaufen sind.'
             exit 43
+        }
+        # BL-327: Fix fertig, Fund erledigt, aber das Ergebnis traegt ein
+        # Steuerzeichen. Als Fehlversuch (default) liefe die Fix-Phase weiter
+        # bis "beendet" — genau der Ausgang aus BL-341.
+        45 {
+            Log '⚠ Fix fertig, aber Steuerzeichen im Ergebnis (Kit-BL-327) — Lauf gestoppt. Der Fund bleibt erledigt; die von Frank genannten Stellen reparieren (Escape statt Steuerzeichen) und committen, dann .\vollautomatik.cmd erneut starten.'
+            exit 45
         }
         default { $getan = 1; Log "Runde ${runde}: Frank-Fehlversuch (ggf. Eskalation an Axel)." }
     }

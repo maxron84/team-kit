@@ -387,6 +387,7 @@ Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 | `python3 team/tools/beutebuch.py list` | *(gleich)* | alle Funde mit Status |
 | `{{PYTHON}} team/tools/protokolle.py ablegen` | *(gleich)* | die Sitzungsprotokolle dieses Projekts nach `.team-protokolle/` holen — nicht versioniert, keine Rolle liest dort von sich aus (`Kit-BL-242`) |
 | `{{PYTHON}} team/tools/prozesse.py pruefen` | *(gleich)* | Waisen-Kandidaten unter den Prozessen dieses Projekts, mit Begründung — räumt nichts ab (`Kit-BL-278`) |
+| `{{PYTHON}} team/tools/steuerzeichen.py pruefen` | *(gleich)* | Steuerzeichen in den geänderten Dateien, mit Datei:Zeile — ein `\b`, das auf dem Weg in die Datei zum Byte 0x08 wurde. `--seit <commit>` prüft Commits, `--versioniert` alles (`Kit-BL-327`) |
 | `{{RUF}}kit-melden{{ENDUNG}} neu --titel "…"` | *(gleich, mit `.cmd`)* | Fund **am T.E.A.M. selbst** melden — siehe unten |
 
 > **Das Monitoring ist schon da.** `--watch` zeichnet denselben Block alle 5 s
@@ -507,6 +508,7 @@ nächsten `--update`.
 | `3` | nichts zu tun | normal, kein Fehler |
 | `42` | **Session-Limit** oder **Abo-Anmeldung abgelaufen** — Lauf pausiert | **kein Fehler.** Kein Datenverlust, State steht. Beim Limit später erneut starten; bei abgelaufener Anmeldung erst neu anmelden (`claude` starten, `/login`) — die Zeile der Rolle sagt, welcher Fall vorliegt. |
 | `43` | **Stufe fertig, Quittung fehlt** | **Nicht neu bauen.** Erst prüfen: hat die Rolle committet, ist der Smoke-Test grün? Wenn ja: von Hand quittieren (`echo <nächste Stufe> > .ralph-state`) und weiterlaufen lassen. |
+| `45` | **Arbeit fertig, aber Steuerzeichen im Ergebnis** (`Kit-BL-327`) | **Nicht neu bauen** — Stufe bzw. Fund ist schon quittiert. Die genannten Stellen reparieren (das Byte durch sein Escape ersetzen, mit dem Werkzeug zum Bearbeiten von Dateien), committen, erneut starten. Gehört ein Zeichen absichtlich hinein: `<pfad> steuerzeichen-erlaubt` in `.gitattributes`. |
 
 `42` ist die häufigste Verwechslung: Das ist kein Absturz, sondern eine saubere
 Pause. Nichts ist verloren, der Lauf setzt beim nächsten Start fort.

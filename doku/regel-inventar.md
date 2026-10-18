@@ -82,6 +82,10 @@ stehen; erschöpfend ist diese Spalte bewusst nicht.
 | Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | NORM | rolle-marv | mit **`strict=True`** |
 | Franks Dreisatz — Out-of-Loop-Fixes  ✅ erprobt | NORM | rolle-frank | **Reproducer scharfstellen.** |
 | Franks Dreisatz — Out-of-Loop-Fixes  ✅ erprobt | NORM | rolle-frank | muss dieser Test **rot** werden — geprüft, nicht vermutet |
+| Franks Dreisatz — Out-of-Loop-Fixes  ✅ erprobt | NORM | rolle-frank | **Backslash-Code** (Regex, Pfade) schreibe ich mit dem Werkzeug zum Bearbeiten von Dateien |
+| Franks Dreisatz — Out-of-Loop-Fixes  ✅ erprobt | NORM | rolle-frank | Vor dem Commit: `{{PYTHON}} team/tools/steuerzeichen.py pruefen` |
+| Das Team (Rollen) | NORM | rolle-ralph | **Backslash-Code** (Regex, Pfade) schreibe ich mit dem Werkzeug zum Bearbeiten von Dateien |
+| Das Team (Rollen) | NORM | rolle-ralph | Vor dem Commit: `{{PYTHON}} team/tools/steuerzeichen.py pruefen` |
 | Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | HERLEITUNG | Regeldatei | eine **neue** Testdatei ist nie vorab referenziert, ihr regelkonformer Fix würde also stillschweigend zurückgerollt |
 | Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | NORM | Regeldatei | **Reproduktion selbst eine Messreihe ist** |
 | Harry & Marv — Read-Only Red Team  ✅ erprobt (manuell **und** automatisiert) | HERLEITUNG | Regeldatei | Frank hat keine Wartezeit |

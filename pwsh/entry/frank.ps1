@@ -15,6 +15,9 @@
         43 = Fix fertig, Quittung fehlt (BL-41/BL-214) — kein Rollback,
              kein Fehlversuch, keine Eskalation an Axel
         42 = Session-Limit oder Abo-Anmeldung abgelaufen (kein Fehlversuch)
+        45 = Fix fertig, aber Steuerzeichen im Ergebnis (BL-327) — kein
+             Rollback, kein Fehlversuch, der Fund bleibt erledigt; die
+             genannten Stellen reparieren und committen, dann weiter
   Ein Netzfehler VOR dem ersten Token (0 Turns, 0.0000 USD) endet mit 1 —
   aber OHNE Zaehler und ohne Eskalation an Axel (BL-228).
 #>
@@ -211,6 +214,18 @@ if ($budgetGesprengt -eq 0) {
         (team_diff_beruehrt_fund $hm $startHash) -and
         (team_reproducer_liegt_vor $hm)) {
         Remove-Item -Force $attemptsFile -ErrorAction SilentlyContinue
+        # BL-327: Ein Backslash-Escape, das auf dem Weg in die Datei zum
+        # Steuerzeichen wurde, besteht den Dreisatz. Im Feld meldete frank.ps1
+        # "Dreisatz verifiziert" ueber einem Docs-Commit mit BEL, und die
+        # Vollautomatik "beendet" auf einem roten HEAD (BL-341). Ein eigener
+        # Ausgang statt Fehlversuch: Der Fix ist gelandet und mit zwei Bytes
+        # repariert — ein Rollback wuerfe bezahlte Arbeit weg (BL-214), und
+        # Exit 0 waere die blosse Warnung. Ausfuehrlich in der bash-Fassung.
+        if (-not (team_steuerzeichen_pruefen 'frank' $startHash)) {
+            Team-Fehler "[frank] ${hm}: Fix und Dreisatz stehen, aber das Ergebnis trägt Steuerzeichen (siehe oben) — Exit 45 (Kit-BL-327)."
+            Team-Fehler '  Kein Rollback, kein Fehlversuch: Der Fund bleibt erledigt. Die genannten Stellen reparieren (Escape statt Steuerzeichen) und committen, dann weiter.'
+            exit 45
+        }
         [Console]::Out.WriteLine("[frank] $hm erledigt (Dreisatz verifiziert).")
         exit 0
     }
@@ -255,6 +270,9 @@ if ($budgetGesprengt -eq 0) {
             "$smokeHinweis — ist der Baum grün?" `
             "Beides ja: den Fund von Hand auf 'erledigt (Frank-Fix, <commit>)' setzen, dann weiter." `
             'Nur eines davon: KEIN Neustart — erst nachsehen, was fehlt, sonst zahlst du den Lauf zweimal.')) {
+        # BL-327: Wer hier von Hand quittiert, quittierte ein Steuerzeichen
+        # mit — gemeldet wird es, der Ausgang bleibt 43.
+        team_steuerzeichen_pruefen 'frank' $startHash | Out-Null
         exit 43
     }
 }

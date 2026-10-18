@@ -16,6 +16,9 @@
 #           43 = Stufe fertig, Quittung fehlt (BL-41): Das Log meldet Erfolg,
 #                das Promise fehlt. Arbeit meist FERTIG — nicht neu bauen,
 #                sondern prüfen und von Hand quittieren (Meldung nennt den Weg)
+#           45 = Stufe gebaut und quittiert, aber Steuerzeichen im Ergebnis
+#                (BL-327): State steht schon auf der nächsten Stufe — nicht neu
+#                bauen, die genannten Stellen reparieren und committen
 set -euo pipefail
 cd "$(dirname "$0")"
 # shellcheck source=team/lib.sh
@@ -80,6 +83,26 @@ team_uebersprungen_zusatz() {
     nummern="$(sort -n -u "$UEBERSPRUNGEN_DATEI" | tr '\n' ' ' | sed 's/ $//; s/ /, /g')"
     [ -n "$nummern" ] || return 0
     printf ' Planmäßig übersprungen: Stufe %s (Kit-BL-255) — der vierte Ausgang wurde dafür NICHT gemeldet.' "$nummern"
+}
+
+# BL-327: stufe_steuerzeichen_halt <stufe> <naechste> — gerufen, NACHDEM der
+# Zustand weitergeschaltet ist. Traegt der Commit der Stufe ein Steuerzeichen
+# (ein Backslash-Escape, das auf dem Weg in die Datei zum Byte wurde), haelt
+# der Loop mit Exit 45 an.
+#
+# Warum ERST weiterschalten: Die Stufe ist gebaut, committet und quittiert;
+# repariert wird mit zwei Bytes. Ein stehengebliebener Zustand liesse den
+# Neustart dieselbe Stufe ein zweites Mal bauen und bezahlen — der teure Weg,
+# vor dem BL-41 und BL-61 warnen. Warum ANHALTEN statt nur melden: Die
+# naechste Stufe baute auf einer Zusicherung, die nie rot werden kann, und
+# der Lauf meldete sich am Ende als fertig (BL-341). Ein eigener Ausgang
+# statt Exit 1, weil "endete mit Fehler" im Feld zum Neubau statt zum
+# Nachsehen gefuehrt hat (BL-41).
+stufe_steuerzeichen_halt() {
+    team_steuerzeichen_pruefen ralph "$HEAD_VORHER" && return 0
+    echo "Ralph: Stufe $1 ist gebaut und quittiert ($STATE_FILE steht auf $2), aber ihr Ergebnis trägt Steuerzeichen (siehe oben) — Exit 45 (Kit-BL-327)." >&2
+    echo "  NICHT neu bauen: die genannten Stellen reparieren (Escape statt Steuerzeichen) und committen, dann erneut starten." >&2
+    exit 45
 }
 LOG_DIR=".ralph-logs"
 mkdir -p "$LOG_DIR"
@@ -194,6 +217,7 @@ Regeln:
         fi
         NEXT=$((STUFE + 1))
         echo "$NEXT" > "$STATE_FILE"
+        stufe_steuerzeichen_halt "$STUFE" "$NEXT"
         echo "Ralph: Promise erhalten — Stufe $STUFE abgeschlossen, weiter mit $NEXT."
     elif team_promise_in "$TEAM_LAST_OUT" "STUFE_${STUFE}_UEBERSPRUNGEN"; then
         # BL-255: Die zweite Quittungsform. Sie schaltet den Zustand weiter wie
@@ -233,6 +257,7 @@ Regeln:
         echo "$STUFE" >> "$UEBERSPRUNGEN_DATEI"
         NEXT=$((STUFE + 1))
         echo "$NEXT" > "$STATE_FILE"
+        stufe_steuerzeichen_halt "$STUFE" "$NEXT"
         echo "Ralph: Stufe $STUFE planmäßig übersprungen (Abbruchbedingung des Plans, committet) — weiter mit $NEXT."
     else
         # BL-41: Erst prüfen, ob der BENANNTE vierte Ausgang vorliegt (Sitzung
@@ -276,6 +301,7 @@ Loop kennt den Inhalt der Stufe nicht - der Plan tut es."
             fi
             NEXT=$((STUFE + 1))
             echo "$NEXT" > "$STATE_FILE"
+            stufe_steuerzeichen_halt "$STUFE" "$NEXT"
             echo "Ralph: Quittung fehlte (Kit-BL-41), Selbstprüfung bestanden — Stufe $STUFE abgeschlossen, weiter mit $NEXT."
             continue
         fi
@@ -299,6 +325,10 @@ Loop kennt den Inhalt der Stufe nicht - der Plan tut es."
             "Baum ROT? Erst prüfen, WO: Sind ausschließlich die von DIESER Stufe neu angelegten Testdateien rot (\`git status\` zeigt sie als '??'), ist der Testaufbau der wahrscheinlichere Schuldige als der Produktivcode — dann den Aufbau von Hand reparieren, OHNE eine Zusicherung abzuschwächen, statt die Stufe neu zu bauen." \
             "Ist BESTEHENDER Testbestand rot, hat die Stufe etwas gebrochen: dann neu bauen." \
             "$CAP_ZEILE"; then
+            # BL-327: Wer hier von Hand quittiert, quittierte ein
+            # Steuerzeichen in den Commits der Stufe mit — gemeldet wird es,
+            # der Ausgang bleibt 43.
+            team_steuerzeichen_pruefen ralph "$HEAD_VORHER" || true
             exit 43
         fi
         echo "Ralph: KEIN Promise für Stufe $STUFE — Loop stoppt. Log prüfen: $TEAM_LAST_OUT" >&2

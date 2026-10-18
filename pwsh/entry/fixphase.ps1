@@ -19,7 +19,8 @@
   Env:     wie vollautomatik.ps1 — TEAM_BUDGET_USD, TEAM_MAX_RUNDEN,
            TEAM_FIX_MAX_STAGNATION.
   Exit:    wie vollautomatik.ps1 — 0 durch · 1 Fehler/Stagnation/Deckel ·
-           42 Session-Pause · 43 Fix fertig, Quittung fehlt · 44 Gate rot.
+           42 Session-Pause · 43 Fix fertig, Quittung fehlt · 44 Gate rot ·
+           45 Fix fertig, Steuerzeichen im Ergebnis (BL-327).
 #>
 $ErrorActionPreference = 'Continue'
 $PSNativeCommandUseErrorActionPreference = $false

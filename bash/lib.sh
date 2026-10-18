@@ -2046,6 +2046,50 @@ team_reproducer_liegt_vor() {
     return 1
 }
 
+# --- Steuerzeichen im Ergebnis einer schreibenden Rolle (BL-327) -------------
+# team_steuerzeichen_pruefen <rolle> <start-hash>
+#   Prueft die Dateien der Commits <start-hash>..HEAD im committeten Stand
+#   (team/tools/steuerzeichen.py). Exit 0 = sauber ODER nicht pruefbar (dann
+#   gemeldet) · 1 = Fund — Datei:Zeile, Byte und wahrscheinliches Escape
+#   stehen auf stderr.
+#
+# WARUM ES SIE GIBT: Ein Backslash-Escape im Code wurde auf dem Weg in die
+# Datei zum Steuerzeichen — ueber einen Heredoc, `python -c` oder einen nicht
+# rohen String. Aus der Wortgrenze eines regulaeren Ausdrucks wurde das Byte
+# 0x08, die Zusicherung konnte nie mehr rot werden und bestand jede Probe des
+# Teams. Dieselbe Bauart setzte ein BEL in Franks letzten Docs-Commit, und die
+# Vollautomatik meldete "beendet" auf einem roten HEAD (BL-341).
+#
+# WARUM HIER UND NICHT IN team_guard_verify: Den Guard-Abgleich fahren nur
+# Red Team und Axel. Das Zeichen schreiben Frank und Ralph — geprueft wird
+# dort, wo ihre Arbeit bewertet wird, und nur ueber das, was sie committet
+# haben (BL-340: eine Schlusspruefung urteilt ueber das Geschriebene, nicht
+# ueber das ganze Repo).
+#
+# Kann die Pruefung nicht laufen (Werkzeug fehlt, Interpreter scheitert),
+# wird das GEMELDET und nicht als Fund gewertet: Ein Werkzeugfehler ist kein
+# Fehler der Rolle, und eine Rolle, die deshalb rot wuerde, hielte jeden Lauf
+# an.
+team_steuerzeichen_pruefen() {
+    local rolle="$1" start="$2" werkzeug aus rc=0
+    werkzeug="$(dirname "${BASH_SOURCE[0]}")/tools/steuerzeichen.py"
+    if [ ! -f "$werkzeug" ] || [ -z "$start" ]; then
+        echo "[$rolle] Steuerzeichen-Prüfung: Werkzeug oder Startstand fehlt — NICHT geprüft (Kit-BL-327)." >&2
+        return 0
+    fi
+    aus="$("$TEAM_PYTHON" "$werkzeug" pruefen --seit "$start" 2>&1)" || rc=$?
+    case "$rc" in
+        0)  printf '%s\n' "$aus" | sed "s/^/[$rolle] /" >&2
+            return 0 ;;
+        3)  echo "[$rolle] STEUERZEICHEN im Ergebnis dieses Laufs (Kit-BL-327):" >&2
+            printf '%s\n' "$aus" | sed 's/^/  /' >&2
+            return 1 ;;
+    esac
+    printf '%s\n' "$aus" | sed 's/^/  /' >&2
+    echo "[$rolle] Steuerzeichen-Prüfung lief nicht (Exit $rc) — NICHT geprüft (Kit-BL-327)." >&2
+    return 0
+}
+
 # --- Lock (eine Pipeline zur Zeit) -----------------------------------------------
 # Zwei Verfahren, EIN Versprechen. Der Normalfall ist `flock`; fehlt es, nimmt
 # das Kit einen Sperrordner.

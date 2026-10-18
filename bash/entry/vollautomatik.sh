@@ -46,6 +46,9 @@
 #               Datenverlust, State steht; siehe Kaskade 9/Stufe 31,
 #               CLAUDE.md „Loop-Mechanik & Auth") — greift in Phase 4 jetzt auch
 #               bei einem Exit 42 von frank.sh/axel.sh (Kaskade 11/Stufe 38).
+#          45 = Stufe/Fix fertig, aber Steuerzeichen im Ergebnis (BL-327,
+#               durchgereicht von ralph.sh und frank.sh): kein Neubau — die
+#               genannten Stellen reparieren, committen, erneut starten
 #
 # Sequenziell + flock-gesichert. Hält das Lock über den ganzen Lauf und gibt es
 # an die Kind-Skripte weiter (TEAM_LOCK_HELD=1), damit die sich nicht selbst
@@ -417,6 +420,13 @@ if [ "$rc" -eq 43 ]; then
     log "⚠ Stufe fertig, Quittung fehlt (Kit-BL-41) — Lauf gestoppt. NICHT neu bauen, bevor die von Ralph genannten zwei Prüfungen gelaufen sind."
     exit 43
 fi
+if [ "$rc" -eq 45 ]; then
+    # BL-327: Die Stufe ist gebaut und quittiert, ihr Commit traegt ein
+    # Steuerzeichen. Kein "Fehler" im Log, aus demselben Grund wie bei 43:
+    # Ein Neubau zahlte die fertige Stufe ein zweites Mal.
+    log "⚠ Stufe gebaut, aber Steuerzeichen im Ergebnis (Kit-BL-327) — Lauf gestoppt. NICHT neu bauen: die von Ralph genannten Stellen reparieren (Escape statt Steuerzeichen) und committen, dann './vollautomatik.sh' erneut starten."
+    exit 45
+fi
 if [ "$rc" -ne 0 ]; then
     log "Ralph endete mit Fehler ($rc) — Vollautomatik stoppt, Mensch gefragt."
     exit 1
@@ -504,6 +514,10 @@ while [ "$runde" -lt "$MAX_RUNDEN" ]; do
         # NICHT als Fehlversuch zaehlen und den Lauf stoppen, statt bezahlte,
         # wahrscheinlich fertige Arbeit wegzuwerfen.
         43) log "⚠ Fix fertig, Quittung fehlt (Kit-BL-41/Kit-BL-214) — Lauf gestoppt. NICHT neu starten, bevor die von Frank genannten Pruefungen gelaufen sind."; exit 43 ;;
+        # BL-327: Fix fertig, Fund erledigt, aber das Ergebnis traegt ein
+        # Steuerzeichen. Als Fehlversuch (`*`) liefe die Fix-Phase weiter bis
+        # "beendet" — genau der Ausgang aus BL-341.
+        45) log "⚠ Fix fertig, aber Steuerzeichen im Ergebnis (Kit-BL-327) — Lauf gestoppt. Der Fund bleibt erledigt; die von Frank genannten Stellen reparieren (Escape statt Steuerzeichen) und committen, dann './vollautomatik.sh' erneut starten."; exit 45 ;;
         *) getan=1; log "Runde $runde: Frank-Fehlversuch (ggf. Eskalation an Axel)." ;;
     esac
     [ "$getan" -eq 1 ] && beutebuch_lint_nach "Frank (Runde $runde)"
