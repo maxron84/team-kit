@@ -361,7 +361,7 @@ ist eine Live-Schätzung, keine Ledger-Zeile) — sobald du sie per
 enthalten` und darf **nicht** noch einmal draufgerechnet werden.
 
 ```bash
-python3 team/tools/zitat_lint.py
+{{PYTHON}} team/tools/zitat_lint.py
 ```
 
 Meldet Plandateien, die einen **erledigten** Backlog-Eintrag noch als offene
@@ -384,7 +384,7 @@ Der Terminal-Abschlussbericht ist flüchtig; das Protokoll bleibt im Git.
 | `./team-status.sh --watch` | `.\team-status.cmd --watch` | **dasselbe live**, Refresh alle 5 s · `Strg+C` beendet |
 | `./team-status.sh --budget` | `.\team-status.cmd --budget` | Kontostand, API vs. Abo getrennt |
 | `./team-test.sh` | `.\team-test.cmd` | Regressionstests der **Team-Infrastruktur** |
-| `python3 team/tools/beutebuch.py list` | *(gleich)* | alle Funde mit Status |
+| `{{PYTHON}} team/tools/beutebuch.py list` | *(gleich)* | alle Funde mit Status |
 | `{{PYTHON}} team/tools/protokolle.py ablegen` | *(gleich)* | die Sitzungsprotokolle dieses Projekts nach `.team-protokolle/` holen — nicht versioniert, keine Rolle liest dort von sich aus (`Kit-BL-242`) |
 | `{{PYTHON}} team/tools/prozesse.py pruefen` | *(gleich)* | Waisen-Kandidaten unter den Prozessen dieses Projekts, mit Begründung — räumt nichts ab (`Kit-BL-278`) |
 | `{{PYTHON}} team/tools/steuerzeichen.py pruefen` | *(gleich)* | Steuerzeichen in den geänderten Dateien, mit Datei:Zeile — ein `\b`, das auf dem Weg in die Datei zum Byte 0x08 wurde. `--seit <commit>` prüft Commits, `--versioniert` alles (`Kit-BL-327`) |

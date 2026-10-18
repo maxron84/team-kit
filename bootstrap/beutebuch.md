@@ -47,7 +47,7 @@ Jeder Fund des Read-Only Red Teams landet hier (Beutezug-Dreisatz, siehe
 > bricht, und Franks regelkonformer Fix wird still zurückgerollt.
 >
 > **Gegenprobe, wenn doch etwas verrutscht ist:**
-> `python3 team/tools/beutebuch.py lint` **ohne Fundnummer** prüft jeden Block,
+> `{{PYTHON}} team/tools/beutebuch.py lint` **ohne Fundnummer** prüft jeden Block,
 > `--alle` bezieht das Archiv mit ein. Nach einer Reparatur die **Multimenge** der
 > Zeilen vorher/nachher vergleichen, nicht den Diff — der zeigt einen
 > verschobenen Block als gelöscht plus neu.

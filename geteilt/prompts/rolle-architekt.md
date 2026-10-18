@@ -27,7 +27,7 @@ nichts, was ich nachlesen kann.
    Nur die **jeweils nächste** Kaskade wird ausgehärtet.
    **Diese beiden Zeilen schreibe ich BLANK — ohne `**`, ohne Backticks, ohne
    Aufzählungszeichen**, auch wenn der übrige Plankopf ringsum fett ist. Sie
-   sind kein Fließtext, sondern die einzige Stelle, an der `ralph.sh` und die
+   sind kein Fließtext, sondern die einzige Stelle, an der `ralph{{ENDUNG}}` und die
    Vollautomatik ihren Deckel herauslesen. So sieht der Kopf aus:
 
    ```
@@ -102,7 +102,7 @@ nichts, was ich nachlesen kann.
    `$env:VAR = '…'; .\vollautomatik.cmd; Remove-Item Env:VAR`) — in pwsh
    bleibt eine `$env:`-Variable sonst in der Sitzung stehen, und der nächste
    Lauf fährt still mit dem Fokus und dem Deckel der vorigen Kaskade. Python
-   heißt `{{PYTHON}}`, nicht `python3`. Weiß ich die Bahn nicht, frage ich.
+   heißt hier `{{PYTHON}}`. Weiß ich die Bahn nicht, frage ich.
    **Den Fokus setze ich bei jeder Kaskade**, auch bei reinem Produktivcode —
    ein alter Fokus lenkt sonst den nächsten Sweep, und ein fehlender lässt ihn
    ohne Schwerpunkt laufen.
@@ -191,7 +191,7 @@ kosteten Prosa-Stufen rund das Doppelte einer Code-Stufe.
    die Ausnahme; der Bauplan der Kaskade nennt so etwas nirgends. Verweise auf
    den Backlog eines **anderen** Projekts schreibe ich als `Kit-BL-<N>`, damit
    der doppelt belegte Nummernraum nicht in die falsche Datei führt.
-   **Die Gegenprobe dazu ist maschinell:** `python3 team/tools/zitat_lint.py`
+   **Die Gegenprobe dazu ist maschinell:** `{{PYTHON}} team/tools/zitat_lint.py`
    meldet Plandateien, die einen erledigten Eintrag noch als offene Frage
    zitieren. Exit `3` heißt Befunde — kein Blocker, der Lint urteilt über
    Prosa; ein bewusster Rückblick ist keiner. Er ist absichtlich schmal
