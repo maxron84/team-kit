@@ -39,8 +39,9 @@ from pathlib import Path
 
 import pytest
 
-from conftest import (BASH, entrypoint_pfad, kit_pfad, verlange_bash,
-                      verlange_pwsh, werkzeug_wert)
+from conftest import (BASH, entrypoint_pfad, kit_pfad,
+                      log_nach_dem_plan_commit, verlange_bash, verlange_pwsh,
+                      werkzeug_wert)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -75,6 +76,10 @@ def _repo(tmp_path, plan_nummer="11"):
     logs.mkdir()
     (logs / "frank.json").write_text(json.dumps({"total_cost_usd": 3.7260}),
                                      encoding="utf-8")
+    # BL-343: Die mtime ausdruecklich hinter den Plan-Commit. Die grobe
+    # Kernel-Uhr kann sie sonst in die Sekunde VOR dem Commit stempeln, und
+    # die passende Nummer bucht nicht ("AELTER als der Beginn der Kaskade").
+    log_nach_dem_plan_commit(tmp_path, logs / "frank.json")
     return tmp_path
 
 
@@ -163,6 +168,7 @@ def test_ralph_abschluss_traegt_denselben_riegel(tmp_path):
     (repo / ".ralph-logs").mkdir()
     (repo / ".ralph-logs" / "stufe-59.json").write_text(
         json.dumps({"total_cost_usd": 1.0}), encoding="utf-8")
+    log_nach_dem_plan_commit(repo, repo / ".ralph-logs" / "stufe-59.json")
     r = subprocess.run(
         [sys.executable, str(KOSTEN_PY), "ralph-abschluss",
          "--kaskade", "59", "--domaene", "produkt",

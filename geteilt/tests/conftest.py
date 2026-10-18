@@ -589,6 +589,41 @@ def kopiere_team_namensraum(ziel):
             shutil.copytree(quelle, ziel / ordner, dirs_exist_ok=True)
     return ziel
 
+
+# --- Ein Log nach dem Plan-Commit (BL-343) -----------------------------------
+# `kosten.py` haelt jedes Log gegen den Beginn seiner Kaskade: die Commit-Zeit
+# der Plandatei in GANZEN Sekunden (`%ct`) gegen die mtime des Logs
+# (`logs_vor_kaskadenbeginn`, `mtime < beginn`). Eine Fixture, die den Plan
+# committet und gleich danach ein Log schreibt, verliess sich darauf, dass die
+# mtime nicht vor der Commit-Sekunde liegt. Das traegt nicht: Der Kernel
+# stempelt die mtime mit einer groben Uhr, die der Systemzeit um Millisekunden
+# nachlaufen kann. Faellt der Commit knapp hinter eine Sekundengrenze, liegt
+# die mtime des spaeteren Logs davor, und das Log gilt als "aelter als die
+# Kaskade" — auf der Triage-Maschine 973-mal in 366724 Versuchen. So ist
+# `test_bl220::test_passende_nummer_bucht_ohne_murren` geflackert.
+#
+# Die Produktivlogik bleibt streng (BL-45): Ein Log aus der Sekunde VOR dem
+# Plan-Commit gehoert wirklich nicht zur Kaskade, und im Betrieb liegen
+# Minuten dazwischen. Die Fixture setzt die Zeit deshalb selbst, statt der Uhr
+# zu vertrauen — dieselbe Regel wie `_plan_um` in test_bl266.
+
+
+def log_nach_dem_plan_commit(repo, *logs):
+    """Setzt die mtime jedes Logs auf die Commit-Zeit von HEAD plus eine
+    Sekunde und gibt diese Zeit zurueck.
+
+    Fuer Fixtures, die eine Kaskade scharfschalten (den Plan committen) und
+    danach ein Log schreiben, das zu ihr gehoeren soll. HEAD muss dabei der
+    Plan-Commit sein."""
+    commit = subprocess.run(["git", "-C", str(repo), "log", "-1", "--format=%ct"],
+                            capture_output=True, text=True, encoding="utf-8",
+                            errors="replace", check=True)
+    zeit = int(commit.stdout.strip()) + 1
+    for log in logs:
+        os.utime(log, (zeit, zeit))
+    return zeit
+
+
 # --- Zitierung ---------------------------------------------------------------
 # Bewusst hier und nicht per shlex: shlex.quote kennt nur POSIX. Beide Shells
 # brauchen dieselbe Zusicherung — ein Argument kommt unveraendert an, egal was

@@ -25,7 +25,7 @@ import sys
 
 import pytest
 
-from conftest import kit_pfad
+from conftest import kit_pfad, log_nach_dem_plan_commit
 
 KOSTEN_PY = kit_pfad("tools", "kosten.py")
 KOPF = "# datum | kaskade | usd | auth | domaene | rolle | notiz\n"
@@ -101,6 +101,9 @@ def _projekt(tmp_path, planname):
     logs.mkdir()
     (logs / "frank.json").write_text(json.dumps({"total_cost_usd": 1.25}),
                                      encoding="utf-8")
+    # BL-343: wie in test_bl220 — die mtime ausdruecklich hinter den
+    # Plan-Commit, sonst kann die grobe Kernel-Uhr sie davor stempeln.
+    log_nach_dem_plan_commit(tmp_path, logs / "frank.json")
     return tmp_path
 
 
