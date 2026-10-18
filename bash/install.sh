@@ -1570,11 +1570,15 @@ PY
     elif [ "$FEHLER" -eq 0 ]; then
         gruen "  ✓ Alle Shell-Skripte syntaktisch korrekt"
     fi
-    # Der Selbsttest muss laufen wie ./team-test.sh beim Anwender: OHNE die
-    # TEAM_*-Variablen, die dieses Skript beim Sourcen der Config geerbt hat.
-    # Sonst gilt z. B. TEAM_DOMAENEN des Projekts auch fuer die Fixtures, und
-    # jeder Test mit domaene="team" scheitert an einem Projekt, das diese
-    # Domaene gar nicht fuehrt — ein Fehlalarm, der nur im Update auftraete.
+    # Der Selbsttest laeuft OHNE die TEAM_*-Variablen, die dieses Skript beim
+    # Sourcen der Config geerbt hat. Sonst gilt z. B. TEAM_DOMAENEN des
+    # Projekts auch fuer die Fixtures, und jeder Test mit domaene="team"
+    # scheitert an einem Projekt, das diese Domaene gar nicht fuehrt.
+    # Hier stand, das sei "wie ./team-test.sh beim Anwender". Das galt nur
+    # ausserhalb eines Rollenlaufs: Im Rollenlauf erbt ./team-test.sh die
+    # Exporte der Config, und die Suite war dort rot (Kit-BL-328). Seither
+    # loescht der Harnisch selbst jedes TEAM_* ausser TEAM_PYTHON
+    # (team/tests/conftest.py); das unset hier bleibt als zweite Sicherung.
     if [ "$OHNE_SELBSTTEST" -eq 1 ]; then
         gelb "  ! Regressionstests AUF VERLANGEN uebersprungen (--ohne-selbsttest)."
         gelb "    Das ist KEIN gruenes Ergebnis, sondern eine fehlende Probe."

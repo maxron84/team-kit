@@ -1805,6 +1805,12 @@ if ($Update) {
     if ($pt) {
         # OHNE die TEAM_*-Variablen, die dieser Prozess geerbt haben koennte:
         # Sonst gilt z. B. TEAM_DOMAENEN des Projekts auch fuer die Fixtures.
+        # Die Annahme dahinter, .\team-test.cmd laufe beim Anwender ohne
+        # TEAM_*, galt nur ausserhalb eines Rollenlaufs: Im Rollenlauf erbt es
+        # die Exporte der Config, und die Suite war dort rot (Kit-BL-328).
+        # Seither loescht der Harnisch selbst jedes TEAM_* ausser TEAM_PYTHON
+        # (team/tests/conftest.py); das Entfernen hier bleibt als zweite
+        # Sicherung.
         $gemerkt = @{}
         foreach ($v in (Get-ChildItem Env: | Where-Object { $_.Name -like 'TEAM_*' })) {
             $gemerkt[$v.Name] = $v.Value

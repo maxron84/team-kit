@@ -238,6 +238,48 @@ def werkzeug_wert(relativer_pfad):
     return f"{PYTHON_BEFEHL} {relativer_pfad}"
 
 
+# BL-328: Die Suite prueft das KIT, nicht die Sitzung, aus der sie startet.
+#
+# `team.config.*` exportiert Projektwerte fuer die Werkzeuge (`TEAM_DOMAENEN`,
+# `TEAM_PLAN_ORDNER`, `TEAM_PREISE`), die Bibliothek legt Laufzustand dazu
+# (`TEAM_LOCK_HELD`, `TEAM_ABO_KEY_WARNUNG_GEZEIGT`, `TEAM_KEY_AUS_FALLBACK`).
+# `team-test.*` laedt die Konfiguration bewusst nicht — ausserhalb eines
+# Rollenlaufs steht also nichts davon in der Umgebung. IM Rollenlauf schon:
+# Die Rolle erbt die Umgebung des Entrypoints, der die Konfiguration gesourct
+# hat, und `./team-test.sh` reicht sie an pytest durch. Im Feld (`Feld G`,
+# erste Kaskade) war die Suite dort mit 42 Faellen rot und ausserhalb gruen;
+# die Rolle hielt sie fuer vorbestehend. Nachgemessen: eine frische
+# Installation mit gesourcter `team.config.sh` 39 rote Faelle, die Kit-Suite
+# mit eigener Domaenenliste, anderem Planordner und gehaltener Sperre 76 —
+# Fixtures buchten auf die Domaene `team`, suchten Plaene unter `plans/`, und
+# `team_lock` hielt die Sperre fuer schon genommen.
+#
+# Deshalb hier, beim Laden, und nicht in `team-test.*`: Das deckt beide Bahnen
+# und den direkten Aufruf von pytest. GELOESCHT, nicht geleert —
+# `kit_meldung.py` und `schreibzone.py` lesen `TEAM_PLAN_ORDNER` mit Rueckfall
+# auf `plans`, ein leerer Wert waere dort die Projektwurzel. Die Werte, die
+# der Harnisch selbst braucht, setzt er danach (die Bloecke darunter). Was ein
+# Test aus der Umgebung braucht, setzt er sich selbst (`monkeypatch.setenv`,
+# `env=`) — dann steht es im Test und nicht im Zufall der Sitzung.
+#
+# Ausgenommen ist TEAM_PYTHON: kein Projektwert, sondern eine Angabe ueber die
+# MASCHINE (BL-133, der Block darunter). Die Exporte der Konfigurationen
+# bleiben, die Werkzeuge brauchen sie im Betrieb (BL-209, BL-238).
+HARNISCH_BEHAELT = ("TEAM_PYTHON",)
+
+
+def projektumgebung_neutralisieren(umgebung):
+    """Loescht jedes TEAM_* ausser HARNISCH_BEHAELT aus `umgebung` und gibt
+    die geloeschten Namen zurueck, sortiert."""
+    weg = sorted(name for name in umgebung
+                 if name.startswith("TEAM_") and name not in HARNISCH_BEHAELT)
+    for name in weg:
+        del umgebung[name]
+    return weg
+
+
+projektumgebung_neutralisieren(os.environ)
+
 # BL-133: TEAM_PYTHON ist eine Angabe ueber die MASCHINE, kein Testwert.
 #
 # BL-131 hat den festen `python3` aus `lib.sh` entfernt und durch
