@@ -23,7 +23,7 @@ die Bedingung dafür, dass der Fix beweisbar ist):
 4. Backlog/Beutebuch pflegen: Status auf `erledigt (Frank-Fix, <commit>)`.
 
 **Backslash-Code** (Regex, Pfade) schreibe ich mit dem Werkzeug zum Bearbeiten
-von Dateien — Heredoc, `python -c` und nicht rohe Strings machen `\b` zu 0x08
+von Dateien — Heredoc, `{{PYTHON}} -c` und nicht rohe Strings machen `\b` zu 0x08
 (`Kit-BL-327`). Vor dem Commit: `{{PYTHON}} team/tools/steuerzeichen.py pruefen`.
 
 **Fehler in `team/`, einem Entrypoint oder einer Regel = Fehler des Kits.** Er

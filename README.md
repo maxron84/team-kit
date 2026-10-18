@@ -4,7 +4,7 @@
 [![macOS — nicht belegt](https://img.shields.io/badge/macOS-nicht_belegt-9f9f9f?style=flat-square&logo=apple&logoColor=white)](doku/einrichtung.md#belegstand)
 
 [![Version 2.13.1](https://img.shields.io/badge/Version-2.13.1-007ec6?style=flat-square)](CHANGELOG.md)
-[![Regressionstests 2010](https://img.shields.io/badge/Regressionstests-2010-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
+[![Regressionstests 2129](https://img.shields.io/badge/Regressionstests-2129-2ea44f?style=flat-square&logo=pytest&logoColor=white)](geteilt/tests)
 [![Selbsttest 11 Stufen](https://img.shields.io/badge/Selbsttest-11_Stufen-2ea44f?style=flat-square)](bash/kit-test.sh)
 [![Lizenz MIT](https://img.shields.io/badge/Lizenz-MIT-007ec6?style=flat-square)](LICENSE)
 
@@ -88,10 +88,10 @@ im Linux-Dateisystem. Die ganze Routine für beide Plattformen, mit IDE (VS
 Codium bzw. VS Code) und Agenten-Werkzeug, steht in
 [doku/einrichtung.md](doku/einrichtung.md).
 
-Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 265 Dateien im
+Ein Befehl, ein kurzes Aufnahme-Interview, danach liegen 273 Dateien im
 Zielprojekt: der gehärtete Bau-Loop, das Read-Only Red Team, der Fixer, der
 Forensiker, die Kostenmechanik, die Bootstrap-Dateien, die Bedienanleitung
-`TEAM.md` und 2010 Regressionstests.
+`TEAM.md` und 2129 Regressionstests.
 
 > **Was „Version" hier heißt.** Das Kit veröffentlicht **keine Releases**;
 > ausgeliefert wird der **Quellstand** dieses Repos. Die Versionsnummer ist die
@@ -127,9 +127,8 @@ und ein Gleichstands-Prüfer, der **an seinem eigenen Befund starb**, weil `diff
 mit 1 endet, wenn es etwas findet. Keiner der fallenden Fälle wurde grün
 gedreht.
 
-**Offen sind 20 Einträge.** Sechzehn kommen aus der Triage vom 2026-10-17
-(`BL-328` bis `BL-343`: zwölf Meldungen aus `Feld G`, zwei aus `Feld F` und
-zwei Beifänge), zwei aus der vom 2026-10-12 (`BL-326`, `BL-327`); zwei sind
+**Offen sind 13 Einträge.** Elf kommen aus der Triage vom 2026-10-17
+(Meldungen aus `Feld G` und `Feld F`) und werden in Wellen gebaut; zwei sind
 mit Absicht zur Hälfte gebaut.
 `BL-247` hat seinen ersten Schritt: Das Ledger trägt jetzt die Messung — Token
 je Modell und Sorte — statt nur ihres Dollarwerts. Den zweiten Schritt, die
@@ -142,14 +141,16 @@ Projekttagebuch mit eigener Rolle kommt erst nach einer Probeausgabe von Hand.
 selben Tag, auch die fünf, die auf eine Entscheidung warteten (`BL-193`,
 `BL-194`, `BL-204`, `BL-206`, `BL-219`); die elf aus der Triage vom
 2026-10-09 (`BL-315` bis `BL-325`, zwölf Meldungen aus `Feld B` und
-`Feld F`) ebenfalls am selben Tag. Die Begründung jeder Entscheidung steht
-im Archiv bei ihrem Eintrag. Dass
+`Feld F`) ebenfalls am selben Tag; die zwei aus der Triage vom 2026-10-12
+(`BL-326`, `BL-327`) und fünf aus der vom 2026-10-17 (`BL-328`, `BL-331`,
+`BL-338`, `BL-342`, `BL-343`) am 2026-10-18. Die Begründung jeder
+Entscheidung steht im Archiv bei ihrem Eintrag. Dass
 Feldmeldungen offen *dastehen*, ist die Absicht des Rückkanals: Sie sind
 erfasst, begründet und nach Wirkung sortiert, statt in Sitzungsprotokollen zu
 verschwinden.
 
 Alles in [plans/backlog.md](plans/backlog.md). Abgetragenes steht in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (260 Einträge).
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (267 Einträge).
 
 ---
 
@@ -446,7 +447,7 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen acht Quellen
 kommen die Backlog-Einträge `BL-1`…`BL-343`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
-[plans/backlog-archiv.md](plans/backlog-archiv.md) (260 Einträge), der Rest in
+[plans/backlog-archiv.md](plans/backlog-archiv.md) (267 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
 
 Die konzeptionelle Grundlage steht im LLM-Wiki des Autors
@@ -692,7 +693,7 @@ geteilt/                Gilt auf BEIDEN Bahnen, bewusst nicht portiert
 │                       in denselben Dateien. Die pwsh-Bahn ist eine zweite
 │                       ORCHESTRIERUNG, kein zweiter Zustandscode
 ├── prompts/            Sechs Rollen-Briefings (inkl. Architekt)
-├── tests/              200 Testdateien, 2010 Fälle — der Doppelbahn-Harnisch
+├── tests/              207 Testdateien, 2129 Fälle — der Doppelbahn-Harnisch
 │                       fährt jeden Fall gegen BEIDE Bahnen, aus EINEM
 │                       Testkörper
 ├── kit-regelinventar.py  Prüfer für das Regel-Inventar (Stufe 9). Kit-only —
@@ -938,11 +939,11 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   was dieses Kit *belegen* könnte. Was eine Übersetzung wirklich kostet, steht
   in der [Roadmap](plans/roadmap-skizzen.md) als **Skizze G**: Nicht die Prosa
   ist die Arbeit, sondern die Kopplungen — das Regel-Inventar zitiert
-  **wörtlich**, `zitat_lint.py` prüft Zitate, und 2010 Regressionstests
+  **wörtlich**, `zitat_lint.py` prüft Zitate, und 2129 Regressionstests
   greifen auf deutsche Zeichenketten zu. Der Name bleibt in jeder Fassung
   `T.E.A.M.`; die Auflösungen dafür stehen in `TEAM.md`.
 - **Selbstverifikation**: `bash bash/kit-test.sh` installiert das Kit in ein
-  Wegwerf-Repo und fährt dort die 2010 Tests — in **vier Konfigurationen**:
+  Wegwerf-Repo und fährt dort die 2129 Tests — in **vier Konfigurationen**:
   mit den Auslieferungswerten, mit angepasster `team.config.sh` (Caps,
   Commit-Präfixe, zwei Domänen), mit verdrehten Sprachmarken (`BL-194`) und
   als gealtertes Bestandsprojekt nach einem Update (`BL-307`). Der zweite
@@ -980,7 +981,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
 
 Benutzen, ändern, weitergeben und in eigene Projekte einziehen ist ausdrücklich
 erlaubt, kommerziell wie privat; es bleibt nur die Namensnennung. Das gilt
-**auch für die 265 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
+**auch für die 273 Dateien, die der Installer im Zielprojekt hinterlässt** — sie
 lösen keine Lizenzpflicht für den Code des Zielprojekts aus. Der Code stammt aus
 einem eigenen Projekt des Autors; das Urheberrecht liegt vollständig bei ihm.
 

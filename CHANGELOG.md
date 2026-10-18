@@ -557,6 +557,84 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
+- **Ein abgebrochener Rollenaufruf hinterliess kein Kostenlog, und der
+  Wiederanlauf uebernahm seine halbe Arbeit ungeprueft** (`BL-326`, `Feld F`,
+  beide Bahnen). Wer eine Vollautomatik mitten in einer Stufe beendet, hatte
+  danach kein Log des laufenden Aufrufs (pwsh schrieb es erst am Ende, bash
+  legte es leer an) — im Feld fehlten 0,3661 USD, kein Pruefer zeigte es —,
+  und dieselbe Startzeile liess die naechste Rolle die liegengebliebenen
+  Aenderungen still mitcommitten. Der CLI-Aufruf steht jetzt je Bahn an einer
+  Stelle und schreibt vorher einen Stub (`team_versuch: "abgebrochen"`,
+  Rolle, Start, Sitzungskennung, die als `--session-id` an die CLI geht); erst
+  sein Ende ersetzt ihn. `kosten.py` nennt einen stehengebliebenen Stub als
+  Kosten unbekannt, nie 0, mit Kennung und `sitzung-messen` als Messweg. Vor
+  der ersten Rolle haelt der Lauf bei Stub und schmutzigem Arbeitsbaum mit
+  Exit 42 an und nennt Rolle, Sitzung und Pfade — einmal je Abbruch; bei
+  sauberem Baum geht er mit einem Hinweis weiter.
+
+- **Ein Backslash-Escape, das auf dem Weg in die Datei zum Steuerzeichen
+  wurde, bestand jede Probe** (`BL-327`, `Feld F`, beide Bahnen). Aus `\b` in
+  einem regulaeren Ausdruck wurde ueber Heredoc oder nicht rohen String das
+  Byte 0x08 — die Zusicherung konnte nie mehr rot werden —, und ein BEL in
+  Franks letztem Docs-Commit liess die Vollautomatik "beendet" auf einem roten
+  HEAD melden (`BL-341`). Neu ist `team/tools/steuerzeichen.py pruefen`: Bytes
+  unter 0x20 ausser Tab und LF und jedes CR ohne folgendes LF, gemeldet mit
+  Datei:Zeile, Byte und wahrscheinlichem Escape; Binaerdateien bleiben aussen
+  vor, eine Fixture mit Absicht bekommt `steuerzeichen-erlaubt` in
+  `.gitattributes`. Frank und Ralph pruefen damit ihre Commits; ein Fund
+  haelt den Lauf mit dem eigenen Ausgang 45 an — ohne Rollback und ohne
+  Fehlversuch, die Arbeit bleibt quittiert. Beide Briefings verlangen,
+  Backslash-Code mit dem Werkzeug zum Bearbeiten von Dateien zu schreiben und
+  vor dem Commit zu pruefen. Ein Kit-Test haelt die eigenen versionierten
+  Dateien sauber; er fand zwei 0x08 im Archiv (Eintrag `BL-234`), die jetzt
+  wieder `\b` heissen. Nicht erkennbar bleibt ein `\t` oder `\n`, das zum
+  erlaubten Zeichen wurde.
+
+- **Im Rollenlauf war die Kit-Suite rot und ausserhalb gruen** (`BL-328`,
+  `Feld G`, beide Bahnen). `team.config.*` exportiert Projektwerte wie
+  `TEAM_DOMAENEN` und `TEAM_PLAN_ORDNER` fuer die Werkzeuge, die Bibliothek
+  Laufzustand wie `TEAM_LOCK_HELD`; die Rolle erbt sie, und `./team-test.sh`
+  reicht sie an pytest durch. Im Feld meldete Ralph 42 Faelle als
+  vorbestehend rot, eine frische Installation mit gesourcter Konfiguration
+  hat 39. Der Testharnisch loescht jetzt beim Laden jedes `TEAM_*` ausser
+  `TEAM_PYTHON` und setzt danach seine eigenen Werte — das gilt fuer
+  `team-test.*` beider Bahnen und fuer den direkten Aufruf von pytest. Die
+  Exporte der Konfigurationen bleiben.
+
+- **Das Architekten-Briefing widersprach sich, wenn der Interpreter `python3`
+  heisst** (`BL-331`, `Feld G`, beide Bahnen). Gerendert stand dort „Python
+  heisst `python3`, nicht `python3`." — die Installer setzen den Interpreter
+  ohne Bedingung ein. Der Satz heisst jetzt „Python heisst hier `{{PYTHON}}`.".
+  Vier weitere Stellen in Architekten-Briefing, `TEAM.md` und `beutebuch.md`
+  nannten `python3` woertlich (unter Windows der Store-Alias) und tragen jetzt
+  den Interpreter der Installation; das Briefing nennt Ralph mit der Endung der
+  Bahn statt immer `ralph.sh`.
+
+- **Der Abschlussbericht der Vollautomatik zitierte sich selbst** (`BL-338`,
+  `Feld G`, beide Bahnen). Unter „letzte 3 Zeilen" standen Zeilen des
+  Berichts und zuletzt seine eigene Ueberschrift, darueber „Pipeline: läuft
+  gerade" — gemeint war der Lauf, der den Bericht schreibt. Haelt der
+  Aufrufer die Sperre, heisst die Zeile jetzt „dieser Lauf (Sperre gehalten
+  vom Aufrufer)", auch im Status-Menue der Halbautomatik; ist das juengste
+  Lauf-Log das eigene, entfaellt der Abschnitt. Von Hand aufgerufen zeigt
+  `team-status` beides wie bisher. Die Fixphase ist mit behoben.
+
+- **`beutebuch.py` las den Planordner nicht** (`BL-342`, Kit, beide Bahnen).
+  Buch und Archiv lagen fest unter `plans/`; mit einem anderen
+  `TEAM_PLAN_ORDNER` fand das Werkzeug still keinen Fund, Frank meldete
+  „nichts zu tun" und der Sweep „keine neuen Funde". Es liest den Ordner jetzt
+  wie `kosten.py` (Rueckfall `plans`), und ein fehlendes Beutebuch meldet jedes
+  Kommando auf stderr — Ausgabe und Exit bleiben die eines leeren Buchs, damit
+  keine Rolle daran bricht.
+
+- **Ein Kit-Test flackerte, weil die mtime eines Logs vor dem Plan-Commit
+  liegen kann** (`BL-343`, Kit). `test_bl220` committete den Plan und schrieb
+  das Log gleich danach; die grobe Kernel-Uhr kann dessen mtime in die
+  Sekunde vor dem Commit stempeln, und `kosten.py` hielt es dann fuer aelter
+  als die Kaskade. Fixtures setzen die mtime jetzt ausdruecklich hinter den
+  Plan-Commit (`log_nach_dem_plan_commit` im Testharnisch), auch das
+  Geschwister in `test_bl321`. Die strenge Pruefung in `kosten.py` bleibt.
+
 - **Die Commit-Zeile nach Update und Einrichtung nahm mit `add -A` fremde
   Arbeit mit** (`BL-318`, `Feld F`, beide Bahnen). Im Feld landete so eine
   halbe Produktaenderung im Commit „chore: T.E.A.M. aktualisiert". Beide

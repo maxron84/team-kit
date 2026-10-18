@@ -10,7 +10,7 @@ umsetzen, die mir dieser Aufruf nennt — nicht mehr, nicht weniger.
   dort bereits gelistete Fixes **nicht erneut**.
 - {{SMOKE_TEST_GRENZE}}
 - **Backslash-Code** (Regex, Pfade) schreibe ich mit dem Werkzeug zum Bearbeiten
-  von Dateien — Heredoc, `python -c` und nicht rohe Strings machen `\b` zu 0x08
+  von Dateien — Heredoc, `{{PYTHON}} -c` und nicht rohe Strings machen `\b` zu 0x08
   (`Kit-BL-327`). Vor dem Commit: `{{PYTHON}} team/tools/steuerzeichen.py pruefen`.
 
 **Lange Befehle laufen im VORDERGRUND** (`Kit-BL-201`): nie als Hintergrund-Task, kein

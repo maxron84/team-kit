@@ -1,10 +1,10 @@
 # Übergabe 2026-10-17 — `BL-328` bis `BL-343` bauen
 
-**Für die Bau-Maschine.** Auftrag des Owners vom 2026-10-17, auf derselben
-Grundlage wie am 2026-10-12: Auf der Linux-Maschine ist nur triagiert.
-Gebaut und nachgewiesen wird auf der Bau-Maschine. Diese Datei ist der
-Auftrag. Der letzte Bau-Commit dieser Übergabe löscht sie; als Beleg bleiben
-Archiv, CHANGELOG und Commits.
+**Bauauftrag.** Triagiert am 2026-10-17. Seit 2026-10-18 wird auf der
+Linux-Maschine gebaut (Entscheid des Owners); die pwsh-Bahn prüft danach die
+Bau-Maschine mit `pwsh -File pwsh/kit-test.ps1`. Diese Datei ist der Auftrag.
+Der letzte Bau-Commit löscht sie; als Beleg bleiben Archiv, CHANGELOG und
+Commits.
 
 ## Stand beim Pull
 
@@ -12,10 +12,10 @@ Archiv, CHANGELOG und Commits.
   mit Hergang, Meldung, Befund der Triage und den Vorschlägen. Neu ist das
   Feldkürzel `Feld G` (README, Abschnitt Herkunft). Das README nennt
   20 offene Einträge, die höchste Nummer ist `BL-343`.
-- **Vorher zu bauen:** [`uebergabe-bl326-bl327.md`](uebergabe-bl326-bl327.md),
-  mit dem Nachtrag vom 2026-10-17 dort. Zwei Korrekturen daran betreffen
-  diese Übergabe unmittelbar (Guard-Haken von `BL-327`, CLI-Aufruf von
-  `BL-326`).
+- **Gebaut am 2026-10-18:** `BL-326` und `BL-327` (mit den Korrekturen aus
+  dem Nachtrag ihrer Übergabe: Prüfung in Frank und Ralph, eigener Ausgang 45,
+  CLI-Aufruf als eine Funktion mit benanntem Abschlussschritt, Nebendatei
+  `.jsonl`) und Welle 1 (`BL-328`, `BL-331`, `BL-338`, `BL-342`, `BL-343`).
 - **Auf der Linux-Maschine geprüft:** Kit-Suite 1708 passed, 1 failed
   (`test_bl173`, der bekannte Umgebungsfall), 324 skipped. Ein früherer Lauf
   flackerte an `test_bl220` — das ist `BL-343`. Frische
