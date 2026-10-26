@@ -80,8 +80,7 @@ Jede Installation bekommt dieselbe Vorlage, und beide Bahnen scheitern an ihr �
   haben. (Die bash-Folge ist aus dem Probeskript abgeleitet, eine echte Sequenz lief so nicht.)
 
 Und unabhängig vom Parser: Kein Mensch kennt Betrag, Transkript-Kennung und Fensterende seiner
-Architektensitzung. Wer abschreibt, kann sich verschreiben, und `--addieren` auf eine bestehende
-Zeile verlangt zusätzlich eine Notiz, die die frühere Sitzung mit nennt.
+Architektensitzung. Wer abschreibt, kann sich verschreiben.
 
 ## Was ich schon versucht habe
 
