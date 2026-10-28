@@ -1,19 +1,19 @@
-# Übergabe 2026-10-28 — `BL-344` bis `BL-354` bauen
+# Übergabe 2026-10-28 — `BL-344` bis `BL-355` bauen
 
 **Bauauftrag.** Triagiert am 2026-10-28, diesmal auf der Windows-Maschine.
 Gebaut wird weiter auf der Linux-Maschine (Entscheid des Owners vom
 2026-10-18); die Windows-Maschine prüft danach mit
 `pwsh -File pwsh/kit-test.ps1`. Die offene Übergabe
 [`uebergabe-bl328-bl343.md`](uebergabe-bl328-bl343.md) (Wellen 2 bis 5) gilt
-daneben weiter. Diese Datei ist der Auftrag für die elf neuen Einträge. Der
+daneben weiter. Diese Datei ist der Auftrag für die zwölf neuen Einträge. Der
 letzte Bau-Commit löscht sie; als Beleg bleiben Archiv, CHANGELOG und Commits.
 
 ## Stand beim Pull
 
-- **Triage:** `BL-344` bis `BL-354` stehen in [`backlog.md`](backlog.md), je
+- **Triage:** `BL-344` bis `BL-355` stehen in [`backlog.md`](backlog.md), je
   mit Hergang, Meldung, Befund der Triage und den Vorschlägen. Neu ist das
   Feldkürzel `Feld H` (README, Abschnitt Herkunft). Das README nennt
-  24 offene Einträge, die höchste Nummer ist `BL-354`.
+  25 offene Einträge, die höchste Nummer ist `BL-355`.
 - **Wie geprüft:** Jede Meldung am Code beider Bahnen, auf Windows 11 mit Git
   Bash und pwsh 7 nebeneinander. **Gefahren**, nicht nur gelesen: `BL-349` und
   `BL-350` in einer Wegwerf-Installation mit beiden Bahnen; `BL-344` und
@@ -21,7 +21,9 @@ letzte Bau-Commit löscht sie; als Beleg bleiben Archiv, CHANGELOG und Commits.
   2026-10-26 auf dieser Maschine nachgestellt (Code seither unverändert);
   `BL-353` an der laufenden Sitzung gemessen. Aus dem Quelltext hergeleitet
   und nicht gefahren sind nur die bash-Hälfte von `BL-348` und der
-  Halb-Fehlschlag von `--rollen-abschluss` in `BL-349`.
+  Halb-Fehlschlag von `--rollen-abschluss` in `BL-349`. `BL-355` stammt aus
+  einer Rückfrage des Owners; der Stand auf GitHub ist über die öffentliche
+  API abgefragt, nicht über `gh` (auf der Windows-Maschine nicht installiert).
 - **Zeilennummern** gelten für `bbb6efb`. Nach den Bauten aus der anderen
   Übergabe verschieben sie sich; die Funktionsnamen bleiben.
 - Die Probeskripte der Triage lagen im Sitzungsordner der Windows-Maschine und
@@ -36,11 +38,12 @@ letzte Bau-Commit löscht sie; als Beleg bleiben Archiv, CHANGELOG und Commits.
 | C | `BL-347`, `BL-348` | Testharnisch und Selbsttests. Danach ist `kit-test.ps1` auf Windows wieder ein Signal |
 | D | `BL-344` | `kit_basis.py`, nach der Entscheidung über die Variante |
 | E | `BL-351`, `BL-353` | Regeltexte. Franks Teil von `BL-351` zusammen mit `BL-335` (Welle 4 der anderen Übergabe): Beide fassen denselben Absatz an, und Frank steht auf der 45-Zeilen-Grenze |
+| F | `BL-355` | unabhängig von allem anderen. Der Positivtest läuft auf der Bau-Maschine (die `gh`-Attrappe ist ein sh-Skript), das Eingangswerkzeug überall |
 | — | `BL-352`, `BL-354` | **nicht bauen:** erst eine Skizze in `roadmap-skizzen.md`, Entscheidung des Owners |
 
 Größen: S sind `BL-345`, `BL-346`, `BL-347`, `BL-348` und `BL-350`. M sind
-`BL-344` und `BL-349`. `BL-351` ist als Regeltext S, mit mechanischer
-Gegenprobe L; `BL-353` als Satz S, mit Werkzeug M.
+`BL-344`, `BL-349` und `BL-355`. `BL-351` ist als Regeltext S, mit
+mechanischer Gegenprobe L; `BL-353` als Satz S, mit Werkzeug M.
 
 ## Fragen an den Owner
 
@@ -54,6 +57,7 @@ Triage. Alles, was hier nicht steht, ist ohne Entscheidung baubar.
 | `BL-351` | Wer entscheidet über einen vertragsändernden Fund? Wird „Verträge" ein fester Planabschnitt? Wird Franks Gegenprobe Mechanik? | der Architekt; ja; die Mechanik als eigener Schritt nach `BL-335` |
 | `BL-353` | Nur der Satz in der Verifikationskette, oder auch ein Werkzeug? | beides — das Werkzeug ruft die Vollautomatik am Ende, statt einen weiteren Satz in den Closeout zu schreiben |
 | `BL-352`, `BL-354` | Welche Ebene zuerst? Betrifft „nur ausdrücklich" auch den heutigen Rückfall vom Abo auf die API? | erst die Skizze |
+| `BL-355` | Darf der Eingangsschritt ohne `gh` über die öffentliche API laufen? Legt bei einem Issue das Werkzeug die Datei an oder ein Mensch? | ja, gelesen wird nur; das Werkzeug, wörtlich wie gemeldet — Kommentieren und Schließen auf GitHub bleibt beim Menschen |
 
 ---
 
@@ -343,6 +347,75 @@ Marke kommt also mit Git Bash. Gelesen wurde rein lesend das Bit 0 von
   wenn Strg+C eingeschaltet ist. **Nur in einer eigenen, neuen Konsole** —
   nie in der Konsole der laufenden Sitzung: Das Ereignis erreicht jeden
   Prozess dieser Konsole, und die CLI selbst hat Strg+C eingeschaltet.
+
+## `BL-355` — der Rückkanal für fremde Nutzer
+
+**Wo:** `geteilt/tools/kit_meldung.py:587-654` (`verb_senden`),
+`:657-721` (`_pr_anlegen`), `:462-475` (`_issue_link`). Die Attrappe
+`stelle_gh` in `geteilt/tests/test_bl153_rueckkanal_meldung.py:225-243`;
+`test_bl168_ablegen_ins_lokale_kit.py:421-424` ersetzt `_pr_anlegen` durch
+eine Funktion, die nicht gerufen werden darf. Der Weg einer Meldung steht in
+`plans/meldungen/README.md:12-18`.
+
+**Bauen:**
+
+1. **Positivtest für den Sendeteil.** Die Attrappe erweitern, nicht neu bauen:
+   - `api user --jq .login` druckt ein fremdes Konto, etwa `fremd`;
+   - `repo fork <repo> --clone=false` endet mit 0;
+   - `repo clone <quelle> <ziel> -- --depth 1` klont ein lokales Bare-Repo,
+     das den Fork spielt, und reicht die Argumente hinter `--` an `git clone`
+     weiter;
+   - `pr create …` druckt eine Adresse und endet mit 0.
+
+   Git läuft echt, `push -u origin <zweig>` landet im Bare-Repo. Zugesichert
+   werden die Folge `auth status`, zweimal `api user` (Eigentümerprüfung in
+   `verb_senden`, Konto in `_pr_anlegen`), `repo fork`, `repo clone`,
+   `pr create`, dazu an `pr create` die Werte `--repo <kit-repo>`,
+   `--head fremd:meldung/<name>`, `--title "Meldung: <titel>"` und
+   `--body-file plans/meldungen/<datei>`. Im Bare-Repo liegt der Zweig
+   `meldung/<name>`, dessen einziger neuer Commit genau eine neue Datei
+   anlegt, Byte für Byte die Meldung. Der Arbeitsordner im Temp-Verzeichnis
+   ist danach weg.
+2. **Eingangswerkzeug.** Im Kit, nicht in der installierten Ablage — also
+   unter `geteilt/` neben `kit-readme-pruefen.py`. Es zählt offene PRs und
+   Issues des Kit-Repos und ordnet jeden PR ein: Meldung (genau eine neue
+   Datei unter `plans/meldungen/`, sonst nichts) oder anderes. Mit `gh`, wenn
+   es angemeldet ist, sonst über die öffentliche API ohne Anmeldung
+   (`/repos/<repo>/pulls?state=open`, `/repos/<repo>/issues?state=open`,
+   `/repos/<repo>/pulls/<n>/files`). Exit 0 heißt nichts offen, 3 heißt, es
+   liegt etwas an. Ohne Netz sagt es, dass nicht geprüft wurde — nie „nichts
+   offen".
+3. **Doku:** `plans/meldungen/README.md` bekommt vor „Sie kommt als PR an" den
+   Schritt „Eingang sichten" mit dem Werkzeug; der Stand-Absatz jeder Triage
+   nennt sein Ergebnis.
+
+**Fallen:**
+
+- Die Attrappe ist ein sh-Skript, die Fälle von `test_bl153` überspringen
+  unter Windows. Der neue Test darf das auch; er gehört auf die Bau-Maschine.
+- `git clone --depth 1` auf einen lokalen Pfad ignoriert `--depth` mit einer
+  Warnung. Das Bare-Repo als `file://`-Adresse klonen, sonst prüft der Test
+  einen anderen Klon als den echten.
+- Im frischen Klon gibt es keine lokale Git-Identität. Der Test setzt sie
+  über die Umgebung (`GIT_AUTHOR_NAME`, `GIT_COMMITTER_NAME` und die beiden
+  Adressen), sonst scheitert der Commit an der Maschine statt am Code.
+- Die öffentliche API erlaubt ohne Anmeldung 60 Abfragen je Stunde. Für einen
+  Eingangsschritt je Triage reicht das, für eine Schleife nicht.
+- Das Werkzeug liest nur. Kommentieren, Mergen und Schließen wirken nach
+  außen und bleiben beim Menschen.
+- Kein echter Probelauf gegen GitHub: Ein PR lässt sich schließen, nicht
+  löschen (`BL-187`, „Data Pollution").
+
+**Tests:** (1) wie oben; die Gegenprobe ist eine verdrehte Argumentfolge in
+einer Kopie von `_pr_anlegen`, an der der Test rot wird. (2) das Einordnen als
+reine Funktion über Dateilisten: eine neue Meldung ergibt „Meldung"; eine neue
+Meldung plus eine geänderte Datei, oder eine geänderte Meldung, ergibt
+„anderes". Dazu der Fall ohne Netz („nicht geprüft"). Kein Test im Kit greift
+ins Netz.
+
+**Ohne Bau, ein Handgriff des Owners:** Die öffentliche API nennt für das Repo
+null Beobachter. Auf GitHub nachsehen (Watch) und für PRs und Issues
+einschalten — sonst meldet GitHub einen fremden PR nicht einmal.
 
 ## `BL-352`, `BL-354` — nicht bauen, erst eine Skizze
 

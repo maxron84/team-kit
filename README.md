@@ -127,11 +127,12 @@ und ein Gleichstands-Prüfer, der **an seinem eigenen Befund starb**, weil `diff
 mit 1 endet, wenn es etwas findet. Keiner der fallenden Fälle wurde grün
 gedreht.
 
-**Offen sind 24 Einträge.** Elf kommen aus der Triage vom 2026-10-28
-(Meldungen aus `Feld B`, `Feld H` und der Windows-Prüfung des Kits), elf aus
-der vom 2026-10-17 (`Feld G` und `Feld F`); beide werden in Wellen gebaut,
-`BL-352` und `BL-354` erst nach einer Skizze. Zwei sind mit Absicht zur
-Hälfte gebaut.
+**Offen sind 25 Einträge.** Zwölf kommen aus der Triage vom 2026-10-28
+(Meldungen aus `Feld B`, `Feld H` und der Windows-Prüfung des Kits, dazu
+eine Rückfrage des Owners zum Rückkanal für fremde Nutzer), elf aus der vom
+2026-10-17 (`Feld G` und `Feld F`); beide werden in Wellen gebaut, `BL-352`
+und `BL-354` erst nach einer Skizze. Zwei sind mit Absicht zur Hälfte
+gebaut.
 `BL-247` hat seinen ersten Schritt: Das Ledger trägt jetzt die Messung — Token
 je Modell und Sorte — statt nur ihres Dollarwerts. Den zweiten Schritt, die
 Dollar aus den Token nachzurechnen, verschiebt die Meldung selbst, bis es
@@ -448,7 +449,7 @@ haben und was sie getan haben. Dafür tragen sie feste Kürzel:
 | **`Feld H`** | Greenfield, Windows 11, beide Bahnen installiert, gearbeitet wird auf der pwsh-Bahn: ein Python-Produkt, das ein lokales Sprachmodell (32K-Fenster) über einen lokalen Server arbeiten lässt — ab der dritten Kaskade baut ein Programm im Produktivcode einzelne Stufen mit diesem Modell | Drei Kaskaden bis zum 2026-10-28, Planung ab dem 2026-10-26. `BL-349`…`BL-354` — **sechs Funde**, darunter die stumme Buchung jedes Closeouts auf der pwsh-Bahn (`BL-349`), zwei Planverträge, die ein Red-Team-Fund über Franks Fix umstellte (`BL-351`), und die erste Stufe, die kein Agent gebaut hat (`BL-352`) — samt der Auflage des Owners, jede Rolle jederzeit lokal oder entfernt fahren zu können (`BL-354`) |
 
 Ein künftiges Projekt bekommt den nächsten Buchstaben. Aus diesen neun Quellen
-kommen die Backlog-Einträge `BL-1`…`BL-354`; was davon behoben ist, steht im
+kommen die Backlog-Einträge `BL-1`…`BL-355`; was davon behoben ist, steht im
 [CHANGELOG](CHANGELOG.md) und in
 [plans/backlog-archiv.md](plans/backlog-archiv.md) (267 Einträge), der Rest in
 [plans/backlog.md](plans/backlog.md).
@@ -834,7 +835,7 @@ bauen**, die Stellen reparieren und committen.
 ## Der Rückkanal Feld → Kit
 
 **Jeder Lauf in einem echten Projekt fördert Kit-Fehler zutage** — `BL-1` bis
-`BL-354` sind fast alle so entstanden. Damit das nicht von der Disziplin
+`BL-355` sind fast alle so entstanden. Damit das nicht von der Disziplin
 einzelner abhängt, ist der Weg zurück ein Befehl aus dem installierten Projekt
 heraus:
 
@@ -887,7 +888,7 @@ Issue-Link; ein GitHub-Konto im Browser genügt. Näheres in
   `Feld D` **eine** und `Feld E` **zwei** auf der bash-Bahn — `Feld C` gar
   keine. Zwei Plattformen und zwei Bahnen sind damit berührt, aber nur **eine**
   Kombination ist eingelaufen. Jeder Lauf hat Kit-Fehler zutage gefördert —
-  `BL-1`…`BL-354`, von der toten Fixphase über zwei Löcher in der
+  `BL-1`…`BL-355`, von der toten Fixphase über zwei Löcher in der
   Kostenerfassung und die Zeilenenden bis zur vierten Fehlerklasse „Stufe
   fertig, Quittung fehlt". Die Erwartung ist nicht, dass das aufhört; die
   Mechanik dafür ist der [Rückkanal Feld → Kit](#der-rückkanal-feld--kit) —
