@@ -43,7 +43,7 @@ Commits.
 | 3 | `BL-330`, `BL-333`, `BL-336` | die gemeinsame Startprüfung, nach `BL-326` (Wiederanlauf) und `BL-332` |
 | 4 | `BL-341`, `BL-335`, `BL-340` Teil A | Ende der Fix-Phase, Franks Briefing, Gegenlesen-Block des Architekten |
 | 5 | `BL-337` | baut auf dem CLI-Aufruf aus `BL-326` auf; die Formatfrage vorher klären |
-| — | `BL-340` Teil B | **nicht bauen:** erst eine Skizze in `roadmap-skizzen.md`, Entscheidung des Owners |
+| — | `BL-340` Teil B | **nicht bauen:** steht seit 2026-10-28 in Skizze H (`roadmap-skizzen.md`, Frage 5), Entscheidung des Owners |
 
 Größen: S sind `BL-328`, `BL-329`, `BL-330`, `BL-331`, `BL-332`, `BL-334`,
 `BL-335`, `BL-338`, `BL-342`, `BL-343` und `BL-340` Teil A. M sind `BL-333`, `BL-336`,
@@ -67,7 +67,7 @@ baubar.
 | `BL-337` | Format? Urteilsregel? Rohstrom? Prämisse aus `BL-41`? | `stream-json --verbose` mit Normalisierer; ein Promise in irgendeinem Ergebnis zählt, eine späte Fehlerantwort nach einem Ergebnis mit Promise löst keinen Fallback aus; Rohstrom als `.jsonl`, nie `*.json`; keine undokumentierten Umgebungsschalter der CLI; die Prämisse im selben Bau korrigieren, zeilenneutral in allen vier Briefings |
 | `BL-338` | Wortlaut | „🟢 dieser Lauf"; den Abschnitt der letzten Zeilen weglassen |
 | `BL-339` | Präfixregel? Tiefe der Eichhärtung? `TEAM_PREISE` auch für Faktoren? | Präfixregel ja; Eichung (a) bis (c) unten; `TEAM_PREISE` vorerst nicht |
-| `BL-340` B | Abnahme als Phase oder Rolle? | erst eine Skizze |
+| `BL-340` B | Abnahme als Phase oder Rolle? | steht jetzt als Frage 5 in Skizze H |
 | `BL-341` | Den Satz aus `BL-256` zum Teil kippen? Auch das Ende der Bauphase messen? | ja, eng geschnitten; die Bauphase nicht |
 
 ---
@@ -795,7 +795,8 @@ Phase nach Phase 4 (`vollautomatik.sh:473-562`, `.ps1:599-683`), den
 Phasenzeiger, Allowlist und Whitelist, ein neues Briefing mit 45-Zeilen-Grenze,
 die Rollenerkennung (`kosten.py:2314`), die Dateilisten der Installer,
 `TEAM.md`, das Regel-Inventar und die Regel `rolle-architekt.md:384-387`
-(`BL-325`). Erst eine Skizze, dann ein Entscheid des Owners.
+(`BL-325`). Erst eine Skizze, dann ein Entscheid des Owners. Die Skizze steht
+seit 2026-10-28 als Teil von Skizze H.
 
 ## `BL-341` — gemessen wird auch nach dem letzten Fix
 

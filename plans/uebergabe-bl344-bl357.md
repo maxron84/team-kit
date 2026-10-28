@@ -45,9 +45,14 @@ letzte Bau-Commit löscht sie; als Beleg bleiben Archiv, CHANGELOG und Commits.
 | C | `BL-347`, `BL-348` | Testharnisch und Selbsttests. Danach ist `kit-test.ps1` auf Windows wieder ein Signal |
 | D | `BL-344` | `kit_basis.py`, nach der Entscheidung über die Variante |
 | E | `BL-351`, `BL-353` | Regeltexte. Franks Teil von `BL-351` zusammen mit `BL-335` (Welle 4 der anderen Übergabe): Beide fassen denselben Absatz an, und Frank steht auf der 45-Zeilen-Grenze |
+<<<<<<< HEAD:plans/uebergabe-bl344-bl357.md
 | F | `BL-355`, `BL-357` | unabhängig von allem anderen, beide `kit_meldung.py`. Der Positivtest läuft auf der Bau-Maschine (die `gh`-Attrappe ist ein sh-Skript), das Eingangswerkzeug überall |
 | G | `BL-356` | `kosten.py`, Briefing des Architekten und `TEAM.md`, nach der Entscheidung des Owners. Zusammen mit `BL-330` der anderen Übergabe ansehen: Beide betreffen dieselbe Buchung |
 | — | `BL-352`, `BL-354` | **nicht bauen:** erst eine Skizze in `roadmap-skizzen.md`, Entscheidung des Owners |
+=======
+| F | `BL-355` | unabhängig von allem anderen. Der Positivtest läuft auf der Bau-Maschine (die `gh`-Attrappe ist ein sh-Skript), das Eingangswerkzeug überall |
+| — | `BL-352`, `BL-354` | **nicht bauen:** Die Skizze steht seit 2026-10-28 als Skizze H in `roadmap-skizzen.md`; gebaut wird nach der Entscheidung des Owners |
+>>>>>>> 79c4e42 (docs(roadmap): Skizze H - jede Rolle lokal oder entfernt, die Wahl des Wegs):plans/uebergabe-bl344-bl355.md
 
 Größen: S sind `BL-345`, `BL-346`, `BL-347`, `BL-348`, `BL-350` und
 `BL-357`. M sind `BL-344`, `BL-349`, `BL-355` und `BL-356`. `BL-351` ist als Regeltext S, mit
@@ -64,7 +69,7 @@ Triage. Alles, was hier nicht steht, ist ohne Entscheidung baubar.
 | `BL-348` | `kit-test.sh` nach einem roten Schritt 2 weiterfahren wie `kit-test.ps1`? | ja |
 | `BL-351` | Wer entscheidet über einen vertragsändernden Fund? Wird „Verträge" ein fester Planabschnitt? Wird Franks Gegenprobe Mechanik? | der Architekt; ja; die Mechanik als eigener Schritt nach `BL-335` |
 | `BL-353` | Nur der Satz in der Verifikationskette, oder auch ein Werkzeug? | beides — das Werkzeug ruft die Vollautomatik am Ende, statt einen weiteren Satz in den Closeout zu schreiben |
-| `BL-352`, `BL-354` | Welche Ebene zuerst? Betrifft „nur ausdrücklich" auch den heutigen Rückfall vom Abo auf die API? | erst die Skizze |
+| `BL-352`, `BL-354` | Welche Ebene zuerst? Betrifft „nur ausdrücklich" auch den heutigen Rückfall vom Abo auf die API? | stehen jetzt als Fragen 1 und 2 in Skizze H, dort mit Vorschlag |
 | `BL-355` | Darf der Eingangsschritt ohne `gh` über die öffentliche API laufen? Legt bei einem Issue das Werkzeug die Datei an oder ein Mensch? | ja, gelesen wird nur; das Werkzeug, wörtlich wie gemeldet — Kommentieren und Schließen auf GitHub bleibt beim Menschen |
 | `BL-356` | Bucht der Architekt seine Aushärtung selbst, bevor er die Sequenz ausgibt — oder bleibt die Buchung der erste Schritt der Sequenz, dann als eine Zeile ohne Platzhalter? | selbst buchen: Der Mensch kennt die Werte nicht, im Feld läuft es so schon von Hand, und „vor dem Start" (`BL-291`) gilt weiter |
 
@@ -514,6 +519,10 @@ gegen `b0a3167`.
 
 ## `BL-352`, `BL-354` — nicht bauen, erst eine Skizze
 
+**Stand 2026-10-28:** Die Skizze steht als Skizze H in
+[`roadmap-skizzen.md`](roadmap-skizzen.md). Gebaut wird erst nach dem Entscheid
+des Owners.
+
 Die Skizze trägt beide Einträge zusammen: die drei Ebenen der Wahl (Vorgabe je
 Rolle, je Stufe im Plan, auf Zuruf), die Programm-Stufe als Ebene „je Stufe",
 „entfernt nur ausdrücklich", das Einrichtungsskript je Anbieter, die
@@ -546,7 +555,7 @@ Read-Only-Rollen als fremdes Eigentum und macht den Hinweis aus
 - Jeden Eintrag mit Begründung ins [Archiv](backlog-archiv.md) verschieben,
   `CHANGELOG.md` unter `[Unreleased]` ergänzen und im README die Zahl der
   offenen Einträge nachziehen. Der README-Wächter rechnet nach.
-- `BL-352` und `BL-354` bleiben offen, bis die Skizze steht und der Owner
+- `BL-352` und `BL-354` bleiben offen, bis der Owner über Skizze H
   entschieden hat.
 - Wird in Teilen gebaut, die erledigten Abschnitte hier streichen. Der letzte
   Bau-Commit löscht diese Datei und den Hinweis auf sie in `backlog.md`.

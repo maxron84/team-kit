@@ -258,3 +258,124 @@ Initialen und der selbstironischen Pointe. Die Auflösungen stehen in
    Genauigkeit im Wortlaut; eine glatte, aber ungenaue Übersetzung ist
    schlimmer als keine. Dieselbe Sorge, aus der `CONTRIBUTING.md` die
    Redaktionsregel hat.
+
+---
+
+> **Offen seit 2026-10-28** (Triage, Auftrag des Owners). Anders als E bis G
+> steht dieser Strang nicht als Abzeichen im README-Kopf. Er trägt `BL-352` und
+> `BL-354`, dazu als Teile `BL-247` Punkt 4 und `BL-340` Teil B. Gebaut ist
+> **nichts**; alle vier bleiben offen, bis der Owner entschieden hat.
+
+## Skizze H: Jede Rolle lokal oder entfernt — die Wahl des Wegs
+
+**Ziel.** Die Auflage des Owners aus `BL-354`, wörtlich: „… welche Rolle wird
+100% lokal und umgekehrt, oder auch nur 50% nach ermessen des Architekten, oder
+auch auf Zuruf des Benutzers spontan". Dazu der Nachtrag: Entfernte Modelle nur
+auf ausdrückliche Anweisung des Benutzers; scheitert eine lokale Rolle,
+übergibt sie an den Menschen, statt auszuweichen. Das Ziel „lokal, von unten
+nach oben" (README, A.11) bekommt damit einen Schalter statt eines Stichtags.
+
+**Der Feldbeleg.** `Feld H`, Kaskade 3: Eine Stufe trug statt eines Promise
+einen Bauauftrag. Ein Programm im Projekt ließ ein lokales Modell mit
+32K-Fenster bauen — Auftrag samt roter Abnahmetests, Änderung, Smoke-Test,
+Commit — und traf im ersten Versuch; der Rest der Kaskade lief wie immer. Drei
+Nähte gingen von Hand (`BL-352`): Start und Quittung des Baus, Kosten ohne
+USD, eine Abnahmequelle ohne Schutz.
+
+**Was es heute gibt.** Jeder automatische Aufruf hängt an einer Stelle:
+`team_claude()` (in pwsh `Team-ClaudeSchreiben`). Davor stehen zwei
+Modellnamen (`TEAM_MODEL_LOOP`, `TEAM_MODEL_STRONG`) und **ein** Anbieter: Abo
+zuerst, die API als automatischer Rückfall (Entscheid 2026-07-10), seit
+`BL-316` nicht mehr nach einer abgelaufenen Anmeldung. Eingerichtet wird er von
+`team-auth-setup`, das sich selbst „ein Beispiel, keine Kit-Mechanik" nennt.
+Der Architekt ist die Sitzung des Menschen; ihr Modell wählt der Mensch, nicht
+das Kit.
+
+**Grober Umfang — drei Ebenen derselben Wahl:**
+
+1. **Je Rolle**, als Vorgabe in `team.config.*`: `entfernt` (wie heute, der
+   Standard), `lokal` oder `gemischt` — dann wählt der Architekt je Stufe. Das
+   sind die drei Fälle der Auflage: ganz lokal, umgekehrt, nach Ermessen des
+   Architekten.
+2. **Je Stufe im Plan**, wo die Vorgabe `gemischt` sagt: der Bauauftrag aus
+   `Feld H`, die **Programm-Stufe**. Der Loop ruft für diese Stufe statt
+   `team_claude()` ein Programm. Exit 0 plus ein neuer Commit ist die Quittung,
+   jeder andere Exit hält den Loop mit dem Bericht des Programms an. Ein
+   Promise braucht es nicht; das Programm weiß selbst, ob die Tests grün sind.
+   Dafür schreibt der Architekt die Abnahmetests vorher.
+3. **Auf Zuruf**: eine Option der Startbefehle, die die Vorgabe für einen Lauf
+   ersetzt.
+
+**Die Regel dazwischen:** Kein Weg wechselt von selbst. Entfernt läuft eine
+Rolle nur, wenn der Mensch es eingestellt (`entfernt`, `gemischt`) oder
+zugerufen hat; scheitert eine lokale Stufe, hält der Loop an. So wird „nur
+ausdrücklich" eine Eigenschaft der Auflösung statt eines Satzes im Prompt.
+
+**Was die Programm-Stufe außerdem braucht** — die drei Nähte aus `BL-352`:
+
+- **Kosten.** Die Bauzeile bleibt eine `ralph`-Zeile, mit 0 USD **und** der
+  Kennung „lokal" — ohne Kennung gäbe die Null die Kosten falsch wieder.
+  Sekunden und Token kommen in das Quellenfeld, das `BL-247` Schritt 1 schon
+  schreibt. Dann findet `--ledger-pruefen` seine Zeile; heute meldet es den
+  richtigen Zustand als Warnung (Exit 4). Das ist `BL-247` Punkt 4, ohne
+  Pauschale.
+- **Abnahmequelle.** Die roten Tests des Auftrags darf das Programm nicht
+  ändern. Das prüft das Kit nach dem Lauf am Diff, nicht der Prompt. Für Harry
+  und Marv genügt bis dahin ein Muster in `TEAM_PLAN_ORDNER_BESTAND`
+  (`*/stufe-*/tests/*`); eine Guard-Sperre im Planordner bräuchte eine
+  Entscheidung gegen `BL-51`.
+- **Scheitern.** Kein Rückfall. Der Loop hält an, der Bericht steht im Log, und
+  der Mensch entscheidet — etwa, die Stufe auf Zuruf entfernt zu wiederholen.
+
+**Einrichtung je Anbieter.** Die Programm-Stufe spricht mit dem Modell über
+eine Schnittstelle, nicht über die Agenten-CLI. Spricht sie ein Format, das
+auch entfernte Anbieter anbieten (das OpenAI-kompatible), ist „entfernt" für
+sie nur eine andere Adresse mit Schlüssel. Ein Einrichtungsskript je Anbieter
+legt Adresse, Modell und Schlüssel ab, wie heute `team-auth-setup` den
+Anthropic-Schlüssel. **Abo oder API:** Ein Abo lässt sich bei den großen
+Anbietern nach heutigem Stand nur über deren eigene CLI nutzen (Claude Code,
+Codex). Ein Abo-Weg führt darum zu Skizze F, die API zur Programm-Stufe. Vor
+dem Bau je Anbieter nachsehen.
+
+**Eine Phase ohne Modell** (`BL-340` Teil B) ist derselbe Baustein, nur ganz
+ohne Modell: ein konfiguriertes Programm als Schritt, Exit-Code und Bericht als
+Ergebnis, danach urteilt eine günstige Rolle nur lesend. Die kleinste erste
+Stufe ist ein Konfigurationsplatz nach dem Muster von
+`TEAM_ZIELSTAND_PRUEFUNG`, den die Vollautomatik am Ende fährt.
+
+**Verhältnis zu Skizze F.** F fragt, ob eine **zweite CLI** an derselben Stelle
+steckt, und nennt vier Verträge: Ergebnis-JSON, Auth-Rückfall, 429-Behandlung,
+`--permission-mode`. Für die Programm-Stufe gelten sie anders: Die Quittung ist
+Exit-Code und Commit, einen Rückfall gibt es nicht, ein lokales Modell kennt
+kein Kontingent, und das Modell hat keine Shell — das Programm schreibt. Beide
+Stränge brauchen dieselbe Weiche vor `team_claude()`. Wer zuerst baut, legt
+ihren Namen fest; Frage 1 aus F (`TEAM_CLAUDE_BIN` oder ein neutraler Name)
+gilt für beide.
+
+**Offene Fragen — vor dem Bauen zu entscheiden:**
+
+1. *Betrifft „nur ausdrücklich" auch den Rückfall vom Abo auf die API?* Beide
+   Wege sind entfernt, und der Rückfall war gewollt. Aber er kostet Geld, ohne
+   zu fragen: In `BL-316` rund 12,5 USD für Stunden, in denen eine
+   Neuanmeldung gereicht hätte; bei einer Ablehnung durch die Schutzregeln half
+   er. Vorschlag: Er bleibt, wird aber ausdrücklich — das Einrichtungsskript
+   fragt einmal danach; Bestandsinstallationen behalten ihn.
+2. *Welche Ebene zuerst?* Vorschlag: je Stufe, also die Programm-Stufe. Sie ist
+   als einzige im Feld belegt und schließt `BL-352`. Danach die Vorgabe je
+   Rolle, zuletzt der Zuruf.
+3. *Wessen Programm?* Die Werkbank wird ein lokaler Teil des Kits (Entscheid
+   des Owners). Vorschlag: Der erste Bau ruft ein **konfiguriertes** Programm,
+   damit das aus `Feld H` sofort passt; danach zieht die Werkbank nach
+   `geteilt/tools/` und wird der Standard.
+4. *Was heißt „lokal" für die Prüfrollen?* Harry, Marv und Frank arbeiten mit
+   Shell und Werkzeugen der CLI. Ein lokales Modell ohne Shell braucht für sie
+   eine eigene Werkbank: Das Kit schneidet den Code zu, das Modell antwortet
+   mit Funden oder einer Änderung. Ob eine Agenten-CLI gegen ein lokales Modell
+   trägt, ist nicht geprüft. Bis dahin heißt „Rolle lokal" nur für den Bau
+   etwas.
+5. *Abnahme als Phase oder Rolle?* Die Frage aus `BL-340` Teil B, mit dem
+   Konfigurationsplatz als erster Stufe.
+6. *Abnahmekriterium.* Vorschlag nach A.11: eine Kaskade im Feld, deren lokale
+   Stufe der Loop startet und quittiert; kein Handgriff an `.ralph-state`;
+   `--ledger-pruefen` still; die Abnahmetests nach dem Bau unverändert;
+   `kit-test.sh` und `kit-test.ps1` grün.

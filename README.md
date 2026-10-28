@@ -416,7 +416,10 @@ entscheidet sich, ob ein Plan überhaupt taugt. Maßstab für den Wechsel sind
 **nicht Benchmark-Zahlen, sondern die Zusicherungen dieses Kits**: `kit-test.sh`
 grün, der Guard hält, das Promise-Protokoll wird durchgehalten, und der
 Smoke-Test des Feldprojekts bleibt es auch. Bis dahin läuft die Entwicklung mit
-den üblichen Cloud-Modellen weiter.
+den üblichen Cloud-Modellen weiter. Den Schalter dafür — je Rolle, je Stufe
+oder auf Zuruf lokal, entfernt nur auf ausdrückliche Anweisung — skizziert
+**Skizze H** in den [Roadmap-Skizzen](plans/roadmap-skizzen.md); gebaut ist
+davon nichts.
 
 ## Herkunft
 
