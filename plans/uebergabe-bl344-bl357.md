@@ -1,19 +1,20 @@
-# Übergabe 2026-10-28 — `BL-344` bis `BL-355` bauen
+# Übergabe 2026-10-28 — `BL-344` bis `BL-357` bauen
 
-**Bauauftrag.** Triagiert am 2026-10-28, diesmal auf der Windows-Maschine.
+**Bauauftrag.** Triagiert am 2026-10-28, diesmal auf der Windows-Maschine;
+`BL-356` und `BL-357` kamen am 2026-10-29 dazu.
 Gebaut wird weiter auf der Linux-Maschine (Entscheid des Owners vom
 2026-10-18); die Windows-Maschine prüft danach mit
 `pwsh -File pwsh/kit-test.ps1`. Die offene Übergabe
 [`uebergabe-bl328-bl343.md`](uebergabe-bl328-bl343.md) (Wellen 2 bis 5) gilt
-daneben weiter. Diese Datei ist der Auftrag für die zwölf neuen Einträge. Der
+daneben weiter. Diese Datei ist der Auftrag für die vierzehn neuen Einträge. Der
 letzte Bau-Commit löscht sie; als Beleg bleiben Archiv, CHANGELOG und Commits.
 
 ## Stand beim Pull
 
-- **Triage:** `BL-344` bis `BL-355` stehen in [`backlog.md`](backlog.md), je
+- **Triage:** `BL-344` bis `BL-357` stehen in [`backlog.md`](backlog.md), je
   mit Hergang, Meldung, Befund der Triage und den Vorschlägen. Neu ist das
   Feldkürzel `Feld H` (README, Abschnitt Herkunft). Das README nennt
-  25 offene Einträge, die höchste Nummer ist `BL-355`.
+  27 offene Einträge, die höchste Nummer ist `BL-357`.
 - **Wie geprüft:** Jede Meldung am Code beider Bahnen, auf Windows 11 mit Git
   Bash und pwsh 7 nebeneinander. **Gefahren**, nicht nur gelesen: `BL-349` und
   `BL-350` in einer Wegwerf-Installation mit beiden Bahnen; `BL-344` und
@@ -24,6 +25,12 @@ letzte Bau-Commit löscht sie; als Beleg bleiben Archiv, CHANGELOG und Commits.
   Halb-Fehlschlag von `--rollen-abschluss` in `BL-349`. `BL-355` stammt aus
   einer Rückfrage des Owners; der Stand auf GitHub ist über die öffentliche
   API abgefragt, nicht über `gh` (auf der Windows-Maschine nicht installiert).
+- **Nachtrag 2026-10-29:** `BL-356` ist eine Meldung aus `Feld B` vom
+  2026-10-26, die erst nach der Triage gepusht wurde; `BL-357` ist ihr
+  Beifang. Geprüft auf der Maschine von `Feld B` (Windows 11, pwsh 7, Git
+  Bash): am Code beider Bahnen, die Zeile des Briefings **gefahren** — pwsh
+  als Skript, bash als Skript und eingefügt. Der Kit-Code ist seit `bbb6efb`
+  unverändert, die Zeilennummern gelten auch für diese beiden.
 - **Zeilennummern** gelten für `bbb6efb`. Nach den Bauten aus der anderen
   Übergabe verschieben sie sich; die Funktionsnamen bleiben.
 - Die Probeskripte der Triage lagen im Sitzungsordner der Windows-Maschine und
@@ -38,11 +45,12 @@ letzte Bau-Commit löscht sie; als Beleg bleiben Archiv, CHANGELOG und Commits.
 | C | `BL-347`, `BL-348` | Testharnisch und Selbsttests. Danach ist `kit-test.ps1` auf Windows wieder ein Signal |
 | D | `BL-344` | `kit_basis.py`, nach der Entscheidung über die Variante |
 | E | `BL-351`, `BL-353` | Regeltexte. Franks Teil von `BL-351` zusammen mit `BL-335` (Welle 4 der anderen Übergabe): Beide fassen denselben Absatz an, und Frank steht auf der 45-Zeilen-Grenze |
-| F | `BL-355` | unabhängig von allem anderen. Der Positivtest läuft auf der Bau-Maschine (die `gh`-Attrappe ist ein sh-Skript), das Eingangswerkzeug überall |
+| F | `BL-355`, `BL-357` | unabhängig von allem anderen, beide `kit_meldung.py`. Der Positivtest läuft auf der Bau-Maschine (die `gh`-Attrappe ist ein sh-Skript), das Eingangswerkzeug überall |
+| G | `BL-356` | `kosten.py`, Briefing des Architekten und `TEAM.md`, nach der Entscheidung des Owners. Zusammen mit `BL-330` der anderen Übergabe ansehen: Beide betreffen dieselbe Buchung |
 | — | `BL-352`, `BL-354` | **nicht bauen:** erst eine Skizze in `roadmap-skizzen.md`, Entscheidung des Owners |
 
-Größen: S sind `BL-345`, `BL-346`, `BL-347`, `BL-348` und `BL-350`. M sind
-`BL-344`, `BL-349` und `BL-355`. `BL-351` ist als Regeltext S, mit
+Größen: S sind `BL-345`, `BL-346`, `BL-347`, `BL-348`, `BL-350` und
+`BL-357`. M sind `BL-344`, `BL-349`, `BL-355` und `BL-356`. `BL-351` ist als Regeltext S, mit
 mechanischer Gegenprobe L; `BL-353` als Satz S, mit Werkzeug M.
 
 ## Fragen an den Owner
@@ -58,6 +66,7 @@ Triage. Alles, was hier nicht steht, ist ohne Entscheidung baubar.
 | `BL-353` | Nur der Satz in der Verifikationskette, oder auch ein Werkzeug? | beides — das Werkzeug ruft die Vollautomatik am Ende, statt einen weiteren Satz in den Closeout zu schreiben |
 | `BL-352`, `BL-354` | Welche Ebene zuerst? Betrifft „nur ausdrücklich" auch den heutigen Rückfall vom Abo auf die API? | erst die Skizze |
 | `BL-355` | Darf der Eingangsschritt ohne `gh` über die öffentliche API laufen? Legt bei einem Issue das Werkzeug die Datei an oder ein Mensch? | ja, gelesen wird nur; das Werkzeug, wörtlich wie gemeldet — Kommentieren und Schließen auf GitHub bleibt beim Menschen |
+| `BL-356` | Bucht der Architekt seine Aushärtung selbst, bevor er die Sequenz ausgibt — oder bleibt die Buchung der erste Schritt der Sequenz, dann als eine Zeile ohne Platzhalter? | selbst buchen: Der Mensch kennt die Werte nicht, im Feld läuft es so schon von Hand, und „vor dem Start" (`BL-291`) gilt weiter |
 
 ---
 
@@ -417,6 +426,92 @@ ins Netz.
 null Beobachter. Auf GitHub nachsehen (Watch) und für PRs und Issues
 einschalten — sonst meldet GitHub einen fremden PR nicht einmal.
 
+## `BL-356` — die Buchung ohne Abschreiben
+
+**Wo:** `geteilt/prompts/rolle-architekt.md:96-143` (Dreisatz Punkt 3, der
+Block `:137-140`), Closeout Punkt 2 `:199-201` und „Woher `<USD>` kommt" ab
+`:248`; `bootstrap/TEAM.md:220-232` (Abschnitt 4). In
+`geteilt/tools/kosten.py` der Zweig von `sitzung-messen` ab `:4069` (Schalter
+bis `:4116`, Nutzungszeile `:3667`), die Vorschläge aus
+`buchungsvorschlaege()` (`:2637`) und ihr Druck in `_buchungen_drucken()`
+(`:2680-2724`); gebucht wird im Zweig von `architekt-abschluss` und
+`akteur-abschluss` ab `:4514`.
+
+**Bauen, nach der Entscheidung des Owners:**
+
+1. **Messen und buchen in einem Aufruf.** Ein Schalter von `sitzung-messen`
+   (Name frei, die Meldung schlägt `--buchen` vor) mit Domäne, Notiz und
+   `--kaskade` als Argumenten. Er bucht jeden Vorschlag, den das Werkzeug
+   heute als `Buchen:`-Zeile druckt, selbst — über denselben Weg wie
+   `akteur-abschluss --rolle architekt`, also mit dessen Prüfungen
+   (Kollision, schon gebuchtes Fenster `BL-116`, Zuwachs `BL-298`), und er
+   druckt die Meldung samt gebuchter Achse (`BL-143`). Wo das Werkzeug heute
+   verweigert (ungeeichte Tabelle, Exit 2), bucht er nichts.
+2. **Briefing und Vorlage, je nach Entscheidung.** Bucht der Architekt sich
+   selbst: (1) als letzter Schritt der Aushärtung, vor der Ausgabe der
+   Sequenz; die Sequenz beginnt mit dem Wegräumen der Altlasten; der Rest der
+   Sitzung ist Zuwachs, den der Closeout bucht (`BL-193`, `BL-298`). Sonst:
+   Schritt 0 bleibt, als eine Zeile ohne Platzhalter, die (1) ruft.
+3. **Wächter:** In den kopierfertigen Blöcken des Architekten-Briefings,
+   gerendert für beide Bahnen, steht kein `<` außerhalb von
+   Anführungszeichen. `bootstrap/TEAM.md` Abschnitt 4 ist heute eine
+   Gebrauchsform (`[…]`, `<N>`); entweder wird er kopierfertig und fällt
+   unter den Wächter, oder der Text sagt, dass er es nicht ist.
+
+**Fallen:**
+
+- `test_bl197_architekt_fehlt_ist_eine_warnung.py` hält den Kostenabschluss
+  in der Sequenz fest: die Marke „Schritt der Sequenz, kopierfertig: der
+  Kostenabschluss", `sitzung-messen`, `--architekt-abschluss` und `--kaskade`
+  im Absatz, den Abschluss vor dem Start
+  (`test_der_abschluss_kommt_vor_dem_start`, `BL-291`), dazu „43,90" und den
+  Verweis auf `Kit-BL-165`. Bei Selbstbuchung ziehen diese Anker bewusst um —
+  „vor dem Start" gilt weiter, nur bucht der Architekt statt des Menschen.
+  Nicht blind umschreiben: Die Begründung aus `BL-197` (Ereignis statt
+  Erinnerung) bleibt der Kern, das Ereignis ist dann die Ausgabe der Sequenz.
+- `test_bl186_transkripte_unter_windows.py` und `test_stufe51_akteur_cli.py`
+  nennen die heutige Form mit `<USD>` in ihren Docstrings; prüfen, was sie
+  wirklich zusichern.
+- Die `Buchen:`-Zeile trägt `<domaene>` ungequotet und `team-status` ohne
+  Bahnform. Bleibt sie, ist sie ein Hinweis und kein Befehl — und so muss sie
+  dann auch heißen.
+- In bash scheitert eingefügt nur die Zeile, und die nächste läuft. Der
+  Wächter gilt deshalb für beide Bahnen gleich, auch wenn bash „nur" eine
+  Zeile verliert.
+- Die Startprüfung aus `BL-330` (andere Übergabe) fragt, ob die Aushärtung
+  gebucht ist. Mit Selbstbuchung ist sie es vor dem Start; beide Einträge
+  zusammen ansehen.
+
+**Tests:**
+
+- (1) bucht genau die Werte, die heute als `Buchen:` gedruckt würden
+  (Betrag, `--transkript`, `--von`/`--bis`), und druckt die Achse; ein
+  zweiter Aufruf über dasselbe Fenster verweigert (`BL-116`) und endet nicht
+  mit 0; bei ungeeichter Tabelle Exit 2 und das Ledger unverändert.
+- (3) ein synthetischer Block mit `--bis <zeit>` ist rot, derselbe mit
+  `"<zeit>"` oder ganz ohne Platzhalter grün; gegen den heutigen Stand rot am
+  Block im Dreisatz, Punkt 3.
+- Die Nachstellung der Triage, falls ein Fall die Bahnen selbst zeigen soll:
+  drei Zeilen, die mittlere in der Form des Briefings. pwsh `-File` →
+  ParserError, Exit 1, keine Zeile läuft; bash als Skript → Syntaxfehler,
+  Exit 2; bash interaktiv (`bash -i < datei`) → Syntaxfehler, die dritte
+  Zeile läuft.
+
+## `BL-357` — die Feldspanne im Werkzeug
+
+**Wo:** `geteilt/tools/kit_meldung.py:39-40` (Modulkopf), `:121`
+(Kopfkommentar der Vorlage) und `:283-285` (Regel für den Projektnamen in
+`pruefen`). Offen geschrieben ist das Kürzel schon in `:326` und `:747`.
+
+**Bauen:** alle drei Stellen offen schreiben („`Feld A` …"), statt die
+Spanne nachzuziehen. Den veralteten Docstring in
+`test_bl153_rueckkanal_meldung.py:178` gleich mitnehmen; die Zusicherung dort
+(`"Feld A" in r.stderr`, `:188`) hält auch die offene Form.
+
+**Tests:** ein Fall, dass `kit_meldung.py` keine geschlossene Spanne ab
+`Feld A` trägt — dasselbe Muster wie `FELD_SPANNE` im README-Wächter; rot
+gegen `b0a3167`.
+
 ## `BL-352`, `BL-354` — nicht bauen, erst eine Skizze
 
 Die Skizze trägt beide Einträge zusammen: die drei Ebenen der Wahl (Vorgabe je
@@ -439,7 +534,8 @@ Read-Only-Rollen als fremdes Eigentum und macht den Hinweis aus
 - Auf der Windows-Maschine danach: `pwsh -File pwsh/kit-test.ps1` aus einer
   bereinigten Umgebung (ohne `CLAUDE*`, `TEAM_*`,
   `PSExecutionPolicyPreference`). Erst dort sind `BL-345`, `BL-347`, `BL-349`,
-  `BL-350`, `BL-353` und die pwsh-Hälfte von `BL-348` belegt.
+  `BL-350`, `BL-353` und die pwsh-Hälfte von `BL-348` belegt. `BL-356` und
+  `BL-357` sind schon auf der Bau-Maschine ganz nachweisbar.
 - Jeder neue Test ist gegen den Stand vor seinem Fix **rot**.
 - Die README-Zahlen nach allen Bauten an einer frischen Installation messen,
   dann `python3 geteilt/kit-readme-pruefen.py --faelle N --testdateien N
